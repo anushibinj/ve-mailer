@@ -1,0 +1,88 @@
+[INFO] Scanning for projects...
+[INFO]
+[INFO] ----------------------< com.anushibinj:veemailer >----------------------
+[INFO] Building ve-emailer 0.0.1-SNAPSHOT
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO]
+[INFO] >>> spring-boot:3.2.5:run (default-cli) > test-compile @ veemailer >>>
+[INFO]
+[INFO] --- jacoco:0.8.11:prepare-agent (default) @ veemailer ---
+[INFO] argLine set to -javaagent:/home/jules/.m2/repository/org/jacoco/org.jacoco.agent/0.8.11/org.jacoco.agent-0.8.11-runtime.jar=destfile=/app/backend/target/jacoco.exec
+[INFO]
+[INFO] --- resources:3.3.1:resources (default-resources) @ veemailer ---
+[INFO] Copying 1 resource from src/main/resources to target/classes
+[INFO] Copying 0 resource from src/main/resources to target/classes
+[INFO]
+[INFO] --- compiler:3.11.0:compile (default-compile) @ veemailer ---
+[INFO] Nothing to compile - all classes are up to date
+[INFO]
+[INFO] --- resources:3.3.1:testResources (default-testResources) @ veemailer ---
+[INFO] skip non existing resourceDirectory /app/backend/src/test/resources
+[INFO]
+[INFO] --- compiler:3.11.0:testCompile (default-testCompile) @ veemailer ---
+[INFO] Nothing to compile - all classes are up to date
+[INFO]
+[INFO] <<< spring-boot:3.2.5:run (default-cli) < test-compile @ veemailer <<<
+[INFO]
+[INFO]
+[INFO] --- spring-boot:3.2.5:run (default-cli) @ veemailer ---
+[INFO] Attaching agents: []
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+ :: Spring Boot ::                (v3.2.5)
+
+2026-03-06T10:51:11.718Z  INFO 11687 --- [veemailer] [           main] c.a.v.NotificationBrokerApplication      : Starting NotificationBrokerApplication using Java 21.0.9 with PID 11687 (/app/backend/target/classes started by jules in /app/backend)
+2026-03-06T10:51:11.721Z  INFO 11687 --- [veemailer] [           main] c.a.v.NotificationBrokerApplication      : No active profile set, falling back to 1 default profile: "default"
+2026-03-06T10:51:12.470Z  INFO 11687 --- [veemailer] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-03-06T10:51:12.592Z  INFO 11687 --- [veemailer] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 114 ms. Found 4 JPA repository interfaces.
+2026-03-06T10:51:13.268Z  INFO 11687 --- [veemailer] [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
+2026-03-06T10:51:13.284Z  INFO 11687 --- [veemailer] [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-03-06T10:51:13.284Z  INFO 11687 --- [veemailer] [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.20]
+2026-03-06T10:51:13.341Z  INFO 11687 --- [veemailer] [           main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-03-06T10:51:13.342Z  INFO 11687 --- [veemailer] [           main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 1572 ms
+2026-03-06T10:51:13.390Z  INFO 11687 --- [veemailer] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-03-06T10:51:13.593Z  INFO 11687 --- [veemailer] [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection conn0: url=jdbc:h2:mem:notificationdb user=SA
+2026-03-06T10:51:13.595Z  INFO 11687 --- [veemailer] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-03-06T10:51:13.608Z  INFO 11687 --- [veemailer] [           main] o.s.b.a.h2.H2ConsoleAutoConfiguration    : H2 console available at '/h2-console'. Database available at 'jdbc:h2:mem:notificationdb'
+2026-03-06T10:51:13.758Z  INFO 11687 --- [veemailer] [           main] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-03-06T10:51:13.807Z  INFO 11687 --- [veemailer] [           main] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.4.4.Final
+2026-03-06T10:51:13.872Z  INFO 11687 --- [veemailer] [           main] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-03-06T10:51:14.092Z  INFO 11687 --- [veemailer] [           main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-03-06T10:51:14.133Z  WARN 11687 --- [veemailer] [           main] org.hibernate.orm.deprecation            : HHH90000025: H2Dialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2026-03-06T10:51:15.093Z  INFO 11687 --- [veemailer] [           main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+Hibernate: create table email_subscribers (id uuid not null, frequency varchar(255) check (frequency in ('HOURLY','DAILY','WEEKLY')), recipient_email varchar(255), status varchar(255) check (status in ('PENDING','ACTIVE')), filter_id uuid not null, workspace_id uuid not null, primary key (id))
+Hibernate: create table filters (id uuid not null, description varchar(255), query varchar(255), title varchar(255), primary key (id))
+Hibernate: create table otp_requests (id uuid not null, action_type varchar(255) check (action_type in ('SUBSCRIBE','UPDATE','UNSUBSCRIBE')), email varchar(255), expires_at timestamp(6), otp_hash varchar(255), payload TEXT, primary key (id))
+Hibernate: create table workspaces (id uuid not null, client_id varchar(255), client_key varchar(255), shared_space_id varchar(255), title varchar(255), workspace_id varchar(255), primary key (id))
+Hibernate: alter table if exists email_subscribers add constraint FKpw6a9g858ntm3mnrar6g5l2al foreign key (filter_id) references filters
+Hibernate: alter table if exists email_subscribers add constraint FK7pjv25rkgselq5103obk2fxy0 foreign key (workspace_id) references workspaces
+2026-03-06T10:51:15.174Z  INFO 11687 --- [veemailer] [           main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-03-06T10:51:15.614Z  INFO 11687 --- [veemailer] [           main] o.s.d.j.r.query.QueryEnhancerFactory     : Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-03-06T10:51:16.227Z  WARN 11687 --- [veemailer] [           main] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-03-06T10:51:16.270Z  WARN 11687 --- [veemailer] [           main] .s.s.UserDetailsServiceAutoConfiguration :
+
+Using generated security password: 4fb7f022-258e-490c-9689-0c7e03618894
+
+This generated password is for development use only. Your security configuration must be updated before running your application in production.
+
+2026-03-06T10:51:16.539Z  INFO 11687 --- [veemailer] [           main] o.s.s.web.DefaultSecurityFilterChain     : Will secure any request with [org.springframework.security.web.session.DisableEncodeUrlFilter@1666e021, org.springframework.security.web.context.request.async.WebAsyncManagerIntegrationFilter@148c571c, org.springframework.security.web.context.SecurityContextHolderFilter@4f6f7a86, org.springframework.security.web.header.HeaderWriterFilter@5b5f48d5, org.springframework.web.filter.CorsFilter@545e200b, org.springframework.security.web.authentication.logout.LogoutFilter@5d8cbb32, org.springframework.security.web.savedrequest.RequestCacheAwareFilter@4e0a5606, org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter@361a1e86, org.springframework.security.web.authentication.AnonymousAuthenticationFilter@3a22c944, org.springframework.security.web.access.ExceptionTranslationFilter@19070326, org.springframework.security.web.access.intercept.AuthorizationFilter@f81bd2c]
+2026-03-06T10:51:16.844Z  INFO 11687 --- [veemailer] [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8080 (http) with context path ''
+2026-03-06T10:51:16.859Z  INFO 11687 --- [veemailer] [           main] c.a.v.NotificationBrokerApplication      : Started NotificationBrokerApplication in 5.557 seconds (process running for 5.931)
+2026-03-06T10:51:16.868Z  INFO 11687 --- [veemailer] [   scheduling-1] c.a.veemailer.service.CleanupService     : Running cleanup job for expired OTP requests
+Hibernate: select or1_0.id,or1_0.action_type,or1_0.email,or1_0.expires_at,or1_0.otp_hash,or1_0.payload from otp_requests or1_0 where or1_0.expires_at<?
+2026-03-06T10:51:16.958Z  INFO 11687 --- [veemailer] [   scheduling-1] c.a.veemailer.service.PollingService     : Polling for frequency: HOURLY
+Hibernate: select es1_0.id,es1_0.filter_id,es1_0.frequency,es1_0.recipient_email,es1_0.status,es1_0.workspace_id from email_subscribers es1_0 where es1_0.frequency=? and es1_0.status=?
+2026-03-06T10:51:24.694Z  INFO 11687 --- [veemailer] [nio-8080-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-03-06T10:51:24.695Z  INFO 11687 --- [veemailer] [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-03-06T10:51:24.696Z  INFO 11687 --- [veemailer] [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 1 ms
+Hibernate: select w1_0.id,w1_0.client_id,w1_0.client_key,w1_0.shared_space_id,w1_0.title,w1_0.workspace_id from workspaces w1_0
+Hibernate: select w1_0.id,w1_0.client_id,w1_0.client_key,w1_0.shared_space_id,w1_0.title,w1_0.workspace_id from workspaces w1_0
+Hibernate: select w1_0.id,w1_0.client_id,w1_0.client_key,w1_0.shared_space_id,w1_0.title,w1_0.workspace_id from workspaces w1_0
+Hibernate: select w1_0.id,w1_0.client_id,w1_0.client_key,w1_0.shared_space_id,w1_0.title,w1_0.workspace_id from workspaces w1_0
+Hibernate: select w1_0.id,w1_0.client_id,w1_0.client_key,w1_0.shared_space_id,w1_0.title,w1_0.workspace_id from workspaces w1_0
