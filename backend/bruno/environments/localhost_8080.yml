@@ -1,0 +1,4 @@
+name: localhost_8080
+variables:
+  - name: BACKEND_ROOT_URL
+    value: http://localhost:8080

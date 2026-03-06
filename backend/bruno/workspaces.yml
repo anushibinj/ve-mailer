@@ -1,0 +1,15 @@
+info:
+  name: workspaces
+  type: http
+  seq: 1
+
+http:
+  method: GET
+  url: "{{BACKEND_ROOT_URL}}/api/v1/workspaces"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
