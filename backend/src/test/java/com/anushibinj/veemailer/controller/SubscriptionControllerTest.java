@@ -1,5 +1,6 @@
 package com.anushibinj.veemailer.controller;
 
+import com.anushibinj.veemailer.config.SecurityConfig;
 import com.anushibinj.veemailer.dto.SubscriptionRequestDto;
 import com.anushibinj.veemailer.dto.VerificationRequestDto;
 import com.anushibinj.veemailer.model.ActionType;
@@ -11,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -24,6 +26,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(SubscriptionController.class)
 @AutoConfigureMockMvc(addFilters = false) // Ignore security for unit test
+@Import(SecurityConfig.class)
 class SubscriptionControllerTest {
 
     @Autowired
