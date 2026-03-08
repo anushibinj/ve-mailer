@@ -11,10 +11,12 @@ import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
@@ -53,5 +55,42 @@ class NotificationServiceTest {
 
         assertEquals("user2@example.com", capturedMessages.get(1).getTo()[0]);
         assertTrue(capturedMessages.get(1).getText().contains(mockData));
+    }
+
+    @Test
+    void testProcessAndSendNotifications_EmptyList_NoEmailSent() {
+        notificationService.processAndSendNotifications(Collections.emptyList(), "some data");
+
+        verify(mailSender, never()).send(org.mockito.ArgumentMatchers.any(SimpleMailMessage.class));
+    }
+
+    @Test
+    void testProcessAndSendNotifications_SubjectLineCorrect() {
+        EmailSubscriber sub = new EmailSubscriber();
+        sub.setRecipientEmail("check@example.com");
+
+        notificationService.processAndSendNotifications(List.of(sub), "data");
+
+        ArgumentCaptor<SimpleMailMessage> captor = ArgumentCaptor.forClass(SimpleMailMessage.class);
+        verify(mailSender, times(1)).send(captor.capture());
+
+        assertEquals("Your Notification Digest", captor.getValue().getSubject());
+    }
+
+    @Test
+    void testProcessAndSendNotifications_BodyContainsPrefixAndData() {
+        EmailSubscriber sub = new EmailSubscriber();
+        sub.setRecipientEmail("body@example.com");
+        String data = "{\"key\": \"value\"}";
+
+        notificationService.processAndSendNotifications(List.of(sub), data);
+
+        ArgumentCaptor<SimpleMailMessage> captor = ArgumentCaptor.forClass(SimpleMailMessage.class);
+        verify(mailSender, times(1)).send(captor.capture());
+
+        String body = captor.getValue().getText();
+        assertTrue(body.startsWith("Here is your formatted digest data:\n\n"),
+                "Body should start with the expected prefix");
+        assertTrue(body.contains(data), "Body should contain the raw data");
     }
 }

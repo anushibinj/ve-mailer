@@ -97,4 +97,39 @@ class RepositoryTests {
         Optional<OtpRequest> stillActive = otpRequestRepository.findByEmail("active@test.com");
         assertTrue(stillActive.isPresent()); // Should NOT be deleted
     }
+
+    @Test
+    void testFindByRecipientEmail_ReturnsMatchingSubscribers() {
+        Workspace w = new Workspace();
+        w.setTitle("Workspace For RecipientEmail Test");
+        workspaceRepository.save(w);
+
+        Filter f = new Filter();
+        f.setTitle("Filter For RecipientEmail Test");
+        filterRepository.save(f);
+
+        EmailSubscriber sub = new EmailSubscriber();
+        sub.setRecipientEmail("findme@example.com");
+        sub.setWorkspace(w);
+        sub.setFilter(f);
+        sub.setFrequency(Frequency.HOURLY);
+        sub.setStatus(Status.ACTIVE);
+        emailSubscriberRepository.save(sub);
+
+        List<EmailSubscriber> results = emailSubscriberRepository.findByRecipientEmail("findme@example.com");
+        assertEquals(1, results.size());
+        assertEquals("findme@example.com", results.get(0).getRecipientEmail());
+    }
+
+    @Test
+    void testFindByRecipientEmail_NotFound_ReturnsEmpty() {
+        List<EmailSubscriber> results = emailSubscriberRepository.findByRecipientEmail("nobody@example.com");
+        assertTrue(results.isEmpty());
+    }
+
+    @Test
+    void testFindByEmail_NotFound_ReturnsEmpty() {
+        Optional<OtpRequest> result = otpRequestRepository.findByEmail("nonexistent@example.com");
+        assertFalse(result.isPresent());
+    }
 }

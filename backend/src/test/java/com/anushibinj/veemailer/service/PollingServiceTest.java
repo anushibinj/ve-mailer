@@ -19,7 +19,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
@@ -116,5 +118,29 @@ class PollingServiceTest {
 
         spy.pollWeekly();
         verify(spy).processByFrequency(Frequency.WEEKLY);
+    }
+
+    @Test
+    void testFetchExternalData_ReturnsMockJson() {
+        EmailSubscriber subscriber = new EmailSubscriber();
+        subscriber.setWorkspace(workspace1);
+        subscriber.setFilter(filter1);
+
+        String result = pollingService.fetchExternalData(subscriber);
+
+        assertEquals("{ \"tickets\": [{\"id\": 1, \"title\": \"Mock Ticket\"}] }", result);
+    }
+
+    @Test
+    void testFetchExternalData_ExceptionReturnsEmptyJson() {
+        // subscriber with null workspace triggers NullPointerException inside fetchExternalData,
+        // which should be caught and return "{}"
+        EmailSubscriber subscriber = new EmailSubscriber();
+        subscriber.setWorkspace(null);
+        subscriber.setFilter(filter1);
+
+        String result = pollingService.fetchExternalData(subscriber);
+
+        assertEquals("{}", result);
     }
 }

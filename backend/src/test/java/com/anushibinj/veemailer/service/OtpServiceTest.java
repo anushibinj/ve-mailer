@@ -105,4 +105,40 @@ class OtpServiceTest {
 
         assertThrows(IllegalArgumentException.class, () -> otpService.validateOtp("test@test.com", "wrong"));
     }
+
+    @Test
+    void testCreateAndSendOtp_ExistingRequest_UpdatesRecord() {
+        // Existing OTP record already exists — should reuse and update it, not create a new one
+        OtpRequest existing = new OtpRequest();
+        existing.setEmail("test@test.com");
+        existing.setOtpHash("old-hash");
+
+        when(otpRequestRepository.findByEmail("test@test.com")).thenReturn(Optional.of(existing));
+        when(passwordEncoder.encode(anyString())).thenReturn("new-hash");
+
+        otpService.createAndSendOtp("test@test.com", ActionType.UPDATE, "new-payload");
+
+        ArgumentCaptor<OtpRequest> captor = ArgumentCaptor.forClass(OtpRequest.class);
+        verify(otpRequestRepository, times(1)).save(captor.capture());
+
+        OtpRequest saved = captor.getValue();
+        // Same object reference should be updated
+        assertEquals("test@test.com", saved.getEmail());
+        assertEquals(ActionType.UPDATE, saved.getActionType());
+        assertEquals("new-payload", saved.getPayload());
+        assertEquals("new-hash", saved.getOtpHash());
+        assertTrue(saved.getExpiresAt().isAfter(LocalDateTime.now().plusMinutes(9)));
+
+        verify(emailService, times(1)).sendOtpEmail(eq("test@test.com"), anyString());
+    }
+
+    @Test
+    void testCleanupOtp_DeletesRecord() {
+        OtpRequest request = new OtpRequest();
+        request.setEmail("cleanup@test.com");
+
+        otpService.cleanupOtp(request);
+
+        verify(otpRequestRepository, times(1)).delete(request);
+    }
 }
