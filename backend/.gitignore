@@ -34,3 +34,5 @@ build/
 
 # local db
 data/
+
+*-dev.properties
