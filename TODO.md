@@ -1,0 +1,2 @@
+- [ ] Allow concatenators like AND and OR operators in the Filter Builder
+- [ ] Migrate the DB to use Flyway
