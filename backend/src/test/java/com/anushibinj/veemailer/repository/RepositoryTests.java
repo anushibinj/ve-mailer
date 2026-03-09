@@ -41,6 +41,7 @@ class RepositoryTests {
 
         Filter f = new Filter();
         f.setTitle("Filter 1");
+        f.setWorkspace(w);
         filterRepository.save(f);
 
         EmailSubscriber sub1 = new EmailSubscriber();
@@ -106,6 +107,7 @@ class RepositoryTests {
 
         Filter f = new Filter();
         f.setTitle("Filter For RecipientEmail Test");
+        f.setWorkspace(w);
         filterRepository.save(f);
 
         EmailSubscriber sub = new EmailSubscriber();

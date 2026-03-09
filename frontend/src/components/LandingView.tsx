@@ -1,13 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { fetchWorkspaces, type Workspace } from '../services/apiService';
-import { Loader2, SlidersHorizontal } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 
 interface LandingViewProps {
   onSelectWorkspace: (workspaceId: string) => void;
-  onOpenFilterBuilder: () => void;
 }
 
-const LandingView: React.FC<LandingViewProps> = ({ onSelectWorkspace, onOpenFilterBuilder }) => {
+const LandingView: React.FC<LandingViewProps> = ({ onSelectWorkspace }) => {
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -60,17 +59,6 @@ const LandingView: React.FC<LandingViewProps> = ({ onSelectWorkspace, onOpenFilt
           <p className="text-xl text-gray-600">
             Choose a workspace to manage your email notification subscriptions.
           </p>
-        </div>
-
-        {/* Filter Templates Button */}
-        <div className="flex justify-center mb-8">
-          <button
-            onClick={onOpenFilterBuilder}
-            className="inline-flex items-center gap-2 px-5 py-2.5 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 hover:border-blue-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all"
-          >
-            <SlidersHorizontal className="h-4 w-4" />
-            Manage Filter Templates
-          </button>
         </div>
 
         {workspaces.length === 0 ? (

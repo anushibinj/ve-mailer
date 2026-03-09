@@ -34,9 +34,11 @@ public class FilterService {
     private final ObjectMapper objectMapper;
 
     /**
-     * Persist a new filter template.
+     * Persist a new filter template associated with a workspace.
      */
     public Filter createFilter(FilterDto dto) {
+        Workspace workspace = workspaceRepository.findById(dto.getWorkspaceId())
+                .orElseThrow(() -> new IllegalArgumentException("Workspace not found: " + dto.getWorkspaceId()));
         try {
             String fieldsJson = objectMapper.writeValueAsString(dto.getFields());
             String criteriaJson = objectMapper.writeValueAsString(dto.getCriteria());
@@ -44,10 +46,33 @@ public class FilterService {
             Filter filter = Filter.builder()
                     .title(dto.getTitle())
                     .description(dto.getDescription())
+                    .workspace(workspace)
                     .entityType(dto.getEntityType())
                     .fields(fieldsJson)
                     .criteria(criteriaJson)
                     .build();
+
+            return filterRepository.save(filter);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("Failed to serialize filter data", e);
+        }
+    }
+
+    /**
+     * Update an existing filter template.
+     */
+    public Filter updateFilter(UUID filterId, FilterDto dto) {
+        Filter filter = filterRepository.findById(filterId)
+                .orElseThrow(() -> new IllegalArgumentException("Filter not found: " + filterId));
+        try {
+            String fieldsJson = objectMapper.writeValueAsString(dto.getFields());
+            String criteriaJson = objectMapper.writeValueAsString(dto.getCriteria());
+
+            filter.setTitle(dto.getTitle());
+            filter.setDescription(dto.getDescription());
+            filter.setEntityType(dto.getEntityType());
+            filter.setFields(fieldsJson);
+            filter.setCriteria(criteriaJson);
 
             return filterRepository.save(filter);
         } catch (JsonProcessingException e) {

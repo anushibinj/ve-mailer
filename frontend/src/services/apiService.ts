@@ -31,6 +31,14 @@ export interface FilterCreatePayload {
   criteria: FilterCriteriaClause[];
 }
 
+export interface FilterUpdatePayload {
+  title: string;
+  description: string;
+  entityType: string;
+  fields: string[];
+  criteria: FilterCriteriaClause[];
+}
+
 export interface Subscription {
   id: string;
   recipientEmail: string;
@@ -53,20 +61,25 @@ export const fetchWorkspaces = async (): Promise<Workspace[]> => {
   return response.data;
 };
 
-// --- Filters ---
+// --- Filters (workspace-scoped) ---
 
-export const fetchFilters = async (): Promise<Filter[]> => {
-  const response = await api.get('/api/v1/filters');
+export const fetchFilters = async (workspaceId: string): Promise<Filter[]> => {
+  const response = await api.get(`/api/v1/workspaces/${workspaceId}/filters`);
   return response.data;
 };
 
-export const createFilter = async (payload: FilterCreatePayload): Promise<Filter> => {
-  const response = await api.post('/api/v1/filters', payload);
+export const createFilter = async (workspaceId: string, payload: FilterCreatePayload): Promise<Filter> => {
+  const response = await api.post(`/api/v1/workspaces/${workspaceId}/filters`, payload);
   return response.data;
 };
 
-export const executeFilter = async (filterId: string, workspaceId: string): Promise<any[]> => {
-  const response = await api.post(`/api/v1/filters/${filterId}/execute?workspaceId=${workspaceId}`);
+export const updateFilter = async (workspaceId: string, filterId: string, payload: FilterUpdatePayload): Promise<Filter> => {
+  const response = await api.put(`/api/v1/workspaces/${workspaceId}/filters/${filterId}`, payload);
+  return response.data;
+};
+
+export const executeFilter = async (workspaceId: string, filterId: string): Promise<any[]> => {
+  const response = await api.post(`/api/v1/workspaces/${workspaceId}/filters/${filterId}/execute`);
   return response.data;
 };
 
