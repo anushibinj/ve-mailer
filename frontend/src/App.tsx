@@ -20,6 +20,10 @@ function App() {
     setCurrentView('landing');
   };
 
+  const handleBackToWorkspace = () => {
+    setCurrentView('workspace');
+  };
+
   const handleOpenFilterBuilder = () => {
     setCurrentView('filters');
   };
@@ -31,14 +35,20 @@ function App() {
       {currentView === 'landing' && (
         <LandingView
           onSelectWorkspace={handleSelectWorkspace}
-          onOpenFilterBuilder={handleOpenFilterBuilder}
         />
       )}
       {currentView === 'workspace' && selectedWorkspaceId && (
-        <WorkspaceDashboard workspaceId={selectedWorkspaceId} onBack={handleBackToLanding} />
+        <WorkspaceDashboard
+          workspaceId={selectedWorkspaceId}
+          onBack={handleBackToLanding}
+          onOpenFilterBuilder={handleOpenFilterBuilder}
+        />
       )}
-      {currentView === 'filters' && (
-        <FilterBuilderView onBack={handleBackToLanding} />
+      {currentView === 'filters' && selectedWorkspaceId && (
+        <FilterBuilderView
+          workspaceId={selectedWorkspaceId}
+          onBack={handleBackToWorkspace}
+        />
       )}
     </div>
   );

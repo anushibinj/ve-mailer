@@ -3,21 +3,21 @@ import {
   fetchSubscriptionsByWorkspace,
   fetchFilters,
   requestSubscription,
-  executeFilter,
   type Subscription,
   type Filter,
   type SubscriptionRequestPayload
 } from '../services/apiService';
-import { Loader2, ArrowLeft, Play } from 'lucide-react';
+import { Loader2, ArrowLeft, SlidersHorizontal } from 'lucide-react';
 import toast from 'react-hot-toast';
 import OtpModal from './OtpModal';
 
 interface WorkspaceDashboardProps {
   workspaceId: string;
   onBack: () => void;
+  onOpenFilterBuilder: () => void;
 }
 
-const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({ workspaceId, onBack }) => {
+const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({ workspaceId, onBack, onOpenFilterBuilder }) => {
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [filters, setFilters] = useState<Filter[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -33,17 +33,12 @@ const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({ workspaceId, on
   const [isOtpModalOpen, setIsOtpModalOpen] = useState(false);
   const [pendingEmail, setPendingEmail] = useState('');
 
-  // Execute Filter State
-  const [executeFilterId, setExecuteFilterId] = useState('');
-  const [isExecuting, setIsExecuting] = useState(false);
-  const [executeResults, setExecuteResults] = useState<any[] | null>(null);
-
   const loadData = async () => {
     setIsLoading(true);
     try {
       const [subsData, filtersData] = await Promise.all([
         fetchSubscriptionsByWorkspace(workspaceId),
-        fetchFilters()
+        fetchFilters(workspaceId)
       ]);
       setSubscriptions(subsData);
       setFilters(filtersData);
@@ -106,31 +101,6 @@ const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({ workspaceId, on
     }
   };
 
-  const handleExecuteFilter = async () => {
-    if (!executeFilterId) return;
-
-    setIsExecuting(true);
-    setExecuteResults(null);
-    try {
-      const results = await executeFilter(executeFilterId, workspaceId);
-      setExecuteResults(results);
-      toast.success(`Query returned ${results.length} result(s).`);
-    } catch (err: any) {
-      if (err.response?.data?.message) {
-        toast.error(`Execute failed: ${err.response.data.message}`);
-      } else {
-        toast.error('Failed to execute filter. Please check your connection and try again.');
-      }
-    } finally {
-      setIsExecuting(false);
-    }
-  };
-
-  // Extract column headers from the first result row
-  const resultColumns = executeResults && executeResults.length > 0
-    ? Object.keys(executeResults[0])
-    : [];
-
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen">
@@ -142,15 +112,24 @@ const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({ workspaceId, on
 
   return (
     <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-      <div className="mb-8 flex items-center">
+      <div className="mb-8 flex items-center justify-between">
+        <div className="flex items-center">
+          <button
+            onClick={onBack}
+            className="mr-4 p-2 rounded-full hover:bg-gray-200 transition-colors"
+            aria-label="Back to workspaces"
+          >
+            <ArrowLeft className="h-6 w-6 text-gray-600" />
+          </button>
+          <h1 className="text-3xl font-bold text-gray-900">Workspace Dashboard</h1>
+        </div>
         <button
-          onClick={onBack}
-          className="mr-4 p-2 rounded-full hover:bg-gray-200 transition-colors"
-          aria-label="Back to workspaces"
+          onClick={onOpenFilterBuilder}
+          className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 hover:border-blue-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all"
         >
-          <ArrowLeft className="h-6 w-6 text-gray-600" />
+          <SlidersHorizontal className="h-4 w-4" />
+          Manage Filter Templates
         </button>
-        <h1 className="text-3xl font-bold text-gray-900">Workspace Dashboard</h1>
       </div>
 
       <OtpModal
@@ -302,105 +281,6 @@ const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({ workspaceId, on
           </div>
         </div>
 
-      </div>
-
-      {/* Execute Filter Section */}
-      <div className="mt-8 bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-        <div className="px-6 py-5 border-b border-gray-200 bg-gray-50">
-          <h2 className="text-lg font-medium text-gray-900">Execute Filter</h2>
-          <p className="text-sm text-gray-500 mt-1">
-            Run a saved filter template against this workspace to preview matching results from ValueEdge.
-          </p>
-        </div>
-        <div className="p-6">
-          <div className="flex items-end gap-4">
-            <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Filter Template
-              </label>
-              <select
-                value={executeFilterId}
-                onChange={(e) => setExecuteFilterId(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white"
-              >
-                <option value="" disabled>Select a filter to execute...</option>
-                {filters.map((filter) => (
-                  <option key={filter.id} value={filter.id}>
-                    {filter.title}
-                    {filter.entityType ? ` (${filter.entityType})` : ''}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <button
-              type="button"
-              onClick={handleExecuteFilter}
-              disabled={!executeFilterId || isExecuting}
-              className="flex items-center gap-2 px-5 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
-            >
-              {isExecuting ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Play className="h-4 w-4" />
-              )}
-              Execute
-            </button>
-          </div>
-
-          {/* Results Panel */}
-          {executeResults !== null && (
-            <div className="mt-6">
-              <h3 className="text-sm font-medium text-gray-700 mb-2">
-                Results ({executeResults.length} items)
-              </h3>
-              {executeResults.length === 0 ? (
-                <div className="p-6 text-center text-gray-500 bg-gray-50 rounded-md border border-gray-200">
-                  No results matched the filter criteria.
-                </div>
-              ) : (
-                <div className="overflow-x-auto border border-gray-200 rounded-md">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        {resultColumns.map((col) => (
-                          <th
-                            key={col}
-                            className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap"
-                          >
-                            {col}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {executeResults.map((row, ri) => (
-                        <tr key={ri} className={ri % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                          {resultColumns.map((col) => {
-                            const value = row[col];
-                            const display = value === null || value === undefined
-                              ? ''
-                              : typeof value === 'object'
-                                ? JSON.stringify(value)
-                                : String(value);
-                            return (
-                              <td
-                                key={col}
-                                className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap max-w-xs truncate"
-                                title={display}
-                              >
-                                {display}
-                              </td>
-                            );
-                          })}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
       </div>
     </div>
   );
