@@ -2,6 +2,7 @@ package com.anushibinj.veemailer.controller;
 
 import com.anushibinj.veemailer.model.Filter;
 import com.anushibinj.veemailer.repository.FilterRepository;
+import com.anushibinj.veemailer.service.FilterService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -29,13 +30,18 @@ class FilterControllerTest {
     @MockBean
     private FilterRepository filterRepository;
 
+    @MockBean
+    private FilterService filterService;
+
     @Test
     void testGetFilters() throws Exception {
         Filter f = new Filter();
         f.setId(UUID.randomUUID());
         f.setTitle("Urgent Tickets");
         f.setDescription("Show urgent");
-        f.setQuery("status=urgent");
+        f.setEntityType("defect");
+        f.setFields("[\"id\",\"name\"]");
+        f.setCriteria("[]");
 
         when(filterRepository.findAll()).thenReturn(Arrays.asList(f));
 
@@ -44,6 +50,6 @@ class FilterControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)))
                 .andExpect(jsonPath("$[0].title").value("Urgent Tickets"))
-                .andExpect(jsonPath("$[0].query").value("status=urgent"));
+                .andExpect(jsonPath("$[0].entityType").value("defect"));
     }
 }

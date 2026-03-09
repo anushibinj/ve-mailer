@@ -57,7 +57,7 @@ class PollingServiceTest {
 
         filter1 = new Filter();
         filter1.setId(UUID.randomUUID());
-        filter1.setQuery("status=open");
+        filter1.setTitle("Open Items");
 
         filter2 = new Filter();
         filter2.setId(UUID.randomUUID());

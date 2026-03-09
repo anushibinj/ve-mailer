@@ -26,6 +26,7 @@ A full-stack application that lets users subscribe to email digest notifications
   - [Frontend Docker Image](#frontend-docker-image)
 - [How It Works](#how-it-works)
   - [Subscription Flow](#subscription-flow)
+  - [Filter Templates](#filter-templates)
   - [Notification Polling](#notification-polling)
   - [OTP Lifecycle](#otp-lifecycle)
 
@@ -40,7 +41,8 @@ Key capabilities:
 - Browse registered **Workspaces** and their active subscriptions
 - Subscribe, update, or unsubscribe via a simple **OTP-verified** flow
 - Receive **email digests** at hourly, daily, or weekly cadence
-- Admins define **Filters** (named Octane queries) that subscribers can attach to
+- Create **Filter Templates** — structured query definitions (entity type, fields, criteria) that are stored as reusable templates and dynamically compiled into Octane SDK queries
+- **Execute filters on demand** — preview matching results from ValueEdge directly in the UI before subscribing
 
 ---
 
@@ -92,18 +94,19 @@ ve-mailer/
 │   │   │   ├── SecurityConfig.java   # BCrypt bean, CSRF disabled, all requests permitted
 │   │   │   └── WebConfig.java        # CORS configuration
 │   │   ├── controller/
-│   │   │   ├── FilterController.java
+│   │   │   ├── FilterController.java       # CRUD + execute filters
 │   │   │   ├── SubscriptionController.java
-│   │   │   ├── WorkspaceController.java
-│   │   │   └── TestController.java   # Dev/debug endpoint; excluded from coverage gate
+│   │   │   └── WorkspaceController.java
 │   │   ├── dto/
+│   │   │   ├── FilterDto.java              # Create-filter request DTO
 │   │   │   ├── SubscriptionRequestDto.java
 │   │   │   ├── SubscriptionResponseDTO.java
 │   │   │   ├── VerificationRequestDto.java
 │   │   │   └── WorkspaceDto.java
 │   │   ├── model/
 │   │   │   ├── Workspace.java
-│   │   │   ├── Filter.java
+│   │   │   ├── Filter.java                 # title, description, entityType, fields (JSON), criteria (JSON)
+│   │   │   ├── FilterCriteriaClause.java   # POJO: field, operator, negate, values[]
 │   │   │   ├── EmailSubscriber.java
 │   │   │   ├── OtpRequest.java
 │   │   │   ├── ActionType.java       # SUBSCRIBE | UPDATE | UNSUBSCRIBE
@@ -117,6 +120,7 @@ ve-mailer/
 │   │   └── service/
 │   │       ├── CleanupService.java   # Purges expired OTPs every 5 min
 │   │       ├── EmailService.java     # Async OTP email sender
+│   │       ├── FilterService.java    # Create filters + execute against Octane
 │   │       ├── NotificationService.java # Async digest email sender
 │   │       ├── OctaneCacheService.java  # In-memory Octane client cache
 │   │       ├── OtpService.java       # OTP generation, hashing, validation
@@ -131,12 +135,13 @@ ve-mailer/
 │
 └── frontend/                         # React + Vite application
     ├── src/
-    │   ├── App.tsx                   # Root; workspace selection routing
+    │   ├── App.tsx                   # Root; view routing (landing / workspace / filters)
     │   ├── api.ts                    # Axios instance (reads VITE_BACKEND_ROOT_URL)
     │   ├── components/
-    │   │   ├── LandingView.tsx       # Workspace picker
+    │   │   ├── LandingView.tsx       # Workspace picker + Filter Templates link
+    │   │   ├── FilterBuilderView.tsx # Create / browse filter templates
     │   │   ├── OtpModal.tsx          # OTP entry modal
-    │   │   └── WorkspaceDashboard.tsx # Subscription management dashboard
+    │   │   └── WorkspaceDashboard.tsx # Subscription management + filter execution
     │   └── services/
     │       └── apiService.ts         # All backend API calls
     └── Dockerfile                    # Multi-stage: Node build → Nginx serve
@@ -159,7 +164,15 @@ Filter
   id (UUID PK)
   title
   description
-  query           -- Raw Octane query string
+  entityType      -- Octane entity type (e.g. "defect", "story")
+  fields          -- JSON array of field names to fetch (TEXT column)
+  criteria        -- JSON array of FilterCriteriaClause objects (TEXT column)
+
+  FilterCriteriaClause (embedded in criteria JSON):
+    field         -- Octane field name
+    operator      -- EQUAL_TO | IN
+    negate        -- boolean (wraps clause in NOT)
+    values[]      -- list of match values or Octane IDs
 
 EmailSubscriber
   id (UUID PK)
@@ -193,9 +206,24 @@ All endpoints are prefixed with `/api/v1`.
 
 ### Filters
 
-| Method | Path       | Description              |
-|--------|------------|--------------------------|
-| `GET`  | `/filters` | List all defined filters |
+| Method | Path                                      | Body / Params                                          | Description                                    |
+|--------|-------------------------------------------|--------------------------------------------------------|------------------------------------------------|
+| `GET`  | `/filters`                                | —                                                      | List all saved filter templates                |
+| `POST` | `/filters`                                | `{ title, description, entityType, fields[], criteria[] }` | Create a new filter template                   |
+| `POST` | `/filters/{filterId}/execute?workspaceId=` | Query param: `workspaceId`                             | Execute a filter against a workspace's Octane instance and return matching entities |
+
+**FilterCriteriaClause** (element of the `criteria` array):
+
+```json
+{
+  "field": "defect_type",
+  "operator": "EQUAL_TO",
+  "negate": false,
+  "values": ["Escaped"]
+}
+```
+
+Supported operators: `EQUAL_TO`, `IN`.
 
 ### Subscriptions
 
@@ -204,19 +232,13 @@ All endpoints are prefixed with `/api/v1`.
 | `POST` | `/subscriptions/request`  | `email`, `actionType`, `workspaceId`, `filterId`, `frequency` | Trigger OTP email for a subscription action |
 | `POST` | `/subscriptions/verify`   | `email`, `otp`                                       | Verify OTP and execute the action   |
 
-**`actionType`** values: `SUBSCRIBE`, `UPDATE`, `UNSUBSCRIBE`  
+**`actionType`** values: `SUBSCRIBE`, `UPDATE`, `UNSUBSCRIBE`
 **`frequency`** values: `HOURLY`, `DAILY`, `WEEKLY`
 
 **Response codes:**
 - `200 OK` — success
 - `401 Unauthorized` — invalid or expired OTP
 - `400 Bad Request` — validation failure or unexpected error
-
-### Test / Debug
-
-| Method | Path       | Description                                                    |
-|--------|------------|----------------------------------------------------------------|
-| `GET`  | `/test`    | Fetches live defects from the configured ValueEdge workspace. Requires the `dev` profile with valid credentials in `application-dev.properties`. Excluded from the JaCoCo 90% coverage gate. |
 
 ---
 
@@ -264,7 +286,7 @@ The H2 console (for inspecting the database) is available at **http://localhost:
 | Username | `sa`                        |
 | Password | `password`                  |
 
-> **Without the `dev` profile** the `valueedge.*` properties will not be loaded and the `/api/v1/test` endpoint will fail. All other endpoints work without it.
+> **Without the `dev` profile** the `valueedge.*` properties will not be loaded and the filter execute endpoint will not be able to connect to Octane. All other endpoints work without it.
 
 ---
 
@@ -337,7 +359,7 @@ spring.jpa.show-sql=false
 
 ### Backend — `application-dev.properties`
 
-Located at `backend/src/main/resources/application-dev.properties`. Active when the `dev` Spring profile is enabled. Contains credentials for the ValueEdge (Octane) integration used by the test endpoint.
+Located at `backend/src/main/resources/application-dev.properties`. Active when the `dev` Spring profile is enabled. Contains credentials for the ValueEdge (Octane) integration.
 
 ```properties
 valueedge.server-url=https://your-octane-server.example.com
@@ -347,7 +369,7 @@ valueedge.shared-space-id=4001
 valueedge.workspace-id=5015
 ```
 
-These values are bound to `ValueEdgeProperties` and injected into `TestController`. **Do not commit real credentials to source control.**
+These values are bound to `ValueEdgeProperties` and injected into `FilterService`. **Do not commit real credentials to source control.**
 
 ---
 
@@ -375,7 +397,7 @@ cd backend
 ./mvnw test
 ```
 
-The JaCoCo coverage gate requires **≥ 90% instruction coverage**. `TestController` is explicitly excluded from this gate. Coverage reports are generated at:
+The JaCoCo coverage gate requires **≥ 90% instruction coverage**. Coverage reports are generated at:
 
 ```
 backend/target/site/jacoco/index.html
@@ -450,8 +472,27 @@ User                    Frontend               Backend
  │                          │                     │  Validate OTP
  │                          │                     │  Execute action (SUBSCRIBE/UPDATE/UNSUBSCRIBE)
  │                          │                     │  Delete OTP record
- │  ✓ Confirmed  ◄──────────│ ◄─────────────────── │
+ │  Confirmed  ◄────────────│ ◄─────────────────── │
 ```
+
+### Filter Templates
+
+Filter templates replace the old hardcoded query approach. Instead of storing a raw Octane query string, each filter stores structured data:
+
+1. **Entity type** — the Octane entity to query (e.g. `defect`, `story`)
+2. **Fields** — which fields to return in the result set (e.g. `["id", "name", "phase", "owner"]`)
+3. **Criteria** — an array of clauses that are AND-joined to build the Octane SDK query
+
+When a filter is **executed** (`POST /filters/{id}/execute?workspaceId=...`), the backend:
+
+1. Loads the filter and workspace from the database
+2. Retrieves the Octane server URL from `ValueEdgeProperties`
+3. Obtains an authenticated `Octane` client via `OctaneCacheService`
+4. Dynamically builds an Octane SDK `Query` from the criteria clauses
+5. Fetches the specified entity type with the requested fields
+6. Returns the results as a JSON array
+
+The same dynamic query building is used by `PollingService` when sending scheduled digest emails.
 
 ### Notification Polling
 
@@ -467,7 +508,7 @@ On each run it:
 
 1. Fetches all `ACTIVE` subscribers matching the frequency
 2. Groups them by `(workspaceId, filterId)` to avoid duplicate external API calls
-3. Calls `fetchExternalData()` once per group — uses the workspace's `clientId`/`clientKey` and the filter's `query` string
+3. Delegates to `FilterService.executeFilter()` once per group to query Octane
 4. Passes results to `NotificationService`, which sends an async digest email to each subscriber in the group
 
 ### OTP Lifecycle

@@ -75,11 +75,12 @@ public class PollingService {
         try {
             String clientId = subscriber.getWorkspace().getClientId();
             String clientKey = subscriber.getWorkspace().getClientKey();
-            String query = subscriber.getFilter().getQuery();
+            String filterTitle = subscriber.getFilter().getTitle();
 
             // Mock external API call using RestTemplate
-            // In reality, this URL would point to an actual ticketing system
-            String url = "https://example-ticketing-api.com/tickets?query=" + query;
+            // In reality, this would use FilterService.executeFilter() to run the
+            // saved filter template against the workspace's Octane instance.
+            String url = "https://example-ticketing-api.com/tickets?filter=" + filterTitle;
 
             HttpHeaders headers = new HttpHeaders();
             headers.set("X-Client-Id", clientId);
