@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { fetchWorkspaces, type Workspace } from '../services/apiService';
-import { Loader2 } from 'lucide-react';
+import { Loader2, SlidersHorizontal } from 'lucide-react';
 
 interface LandingViewProps {
   onSelectWorkspace: (workspaceId: string) => void;
+  onOpenFilterBuilder: () => void;
 }
 
-const LandingView: React.FC<LandingViewProps> = ({ onSelectWorkspace }) => {
+const LandingView: React.FC<LandingViewProps> = ({ onSelectWorkspace, onOpenFilterBuilder }) => {
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -16,12 +17,12 @@ const LandingView: React.FC<LandingViewProps> = ({ onSelectWorkspace }) => {
       try {
         const data = await fetchWorkspaces();
         setWorkspaces(data);
-    } catch (err: any) {
-      if (err.response?.data?.message) {
-        setError(`Failed to load workspaces: ${err.response.data.message}`);
-      } else {
-        setError('Network error. Failed to load workspaces. Please ensure the backend server is running and try again.');
-      }
+      } catch (err: any) {
+        if (err.response?.data?.message) {
+          setError(`Failed to load workspaces: ${err.response.data.message}`);
+        } else {
+          setError('Network error. Failed to load workspaces. Please ensure the backend server is running and try again.');
+        }
       } finally {
         setIsLoading(false);
       }
@@ -61,6 +62,17 @@ const LandingView: React.FC<LandingViewProps> = ({ onSelectWorkspace }) => {
           </p>
         </div>
 
+        {/* Filter Templates Button */}
+        <div className="flex justify-center mb-8">
+          <button
+            onClick={onOpenFilterBuilder}
+            className="inline-flex items-center gap-2 px-5 py-2.5 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 hover:border-blue-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all"
+          >
+            <SlidersHorizontal className="h-4 w-4" />
+            Manage Filter Templates
+          </button>
+        </div>
+
         {workspaces.length === 0 ? (
           <div className="text-center text-gray-500 bg-white p-8 rounded-lg shadow-sm border border-gray-200">
             No workspaces available at the moment.
@@ -75,10 +87,10 @@ const LandingView: React.FC<LandingViewProps> = ({ onSelectWorkspace }) => {
               >
                 <div className="px-6 py-8 flex flex-col items-center">
                   <div className="flex items-center justify-center h-12 w-12 rounded-md bg-blue-100 text-blue-600 mx-auto mb-4 group-hover:scale-110 transition-transform duration-200">
-                    <span className="text-xl font-bold">{workspace.name ? workspace.name.charAt(0).toUpperCase() : '?'}</span>
+                    <span className="text-xl font-bold">{workspace.title ? workspace.title.charAt(0).toUpperCase() : '?'}</span>
                   </div>
                   <h3 className="text-lg font-medium text-gray-900 text-center">
-                    {workspace.name}
+                    {workspace.title}
                   </h3>
                 </div>
               </div>

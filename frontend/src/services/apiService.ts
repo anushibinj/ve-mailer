@@ -2,38 +2,75 @@ import api from '../api';
 
 export interface Workspace {
   id: string;
-  name: string;
+  title: string;
+  sharedSpaceId: string;
+  workspaceId: string;
+}
+
+export interface FilterCriteriaClause {
+  field: string;
+  operator: string;
+  negate: boolean;
+  values: string[];
 }
 
 export interface Filter {
   id: string;
-  name: string;
+  title: string;
+  description: string;
+  entityType: string;
+  fields: string;   // JSON string from backend
+  criteria: string;  // JSON string from backend
+}
+
+export interface FilterCreatePayload {
+  title: string;
+  description: string;
+  entityType: string;
+  fields: string[];
+  criteria: FilterCriteriaClause[];
 }
 
 export interface Subscription {
   id: string;
   recipientEmail: string;
-  filterId: string;
+  filterTitle: string;
   frequency: string;
 }
 
 export interface SubscriptionRequestPayload {
   email: string;
-  action_type: string;
-  workspace_id: string;
-  filter_id: string;
+  actionType: string;
+  workspaceId: string;
+  filterId: string;
   frequency: string;
 }
+
+// --- Workspaces ---
 
 export const fetchWorkspaces = async (): Promise<Workspace[]> => {
   const response = await api.get('/api/v1/workspaces');
   return response.data;
 };
 
+// --- Filters ---
+
 export const fetchFilters = async (): Promise<Filter[]> => {
   const response = await api.get('/api/v1/filters');
   return response.data;
 };
+
+export const createFilter = async (payload: FilterCreatePayload): Promise<Filter> => {
+  const response = await api.post('/api/v1/filters', payload);
+  return response.data;
+};
+
+export const executeFilter = async (filterId: string, workspaceId: string): Promise<any[]> => {
+  const response = await api.post(`/api/v1/filters/${filterId}/execute?workspaceId=${workspaceId}`);
+  return response.data;
+};
+
+// --- Subscriptions ---
 
 export const fetchSubscriptionsByWorkspace = async (workspaceId: string): Promise<Subscription[]> => {
   const response = await api.get(`/api/v1/workspaces/${workspaceId}/subscriptions`);
