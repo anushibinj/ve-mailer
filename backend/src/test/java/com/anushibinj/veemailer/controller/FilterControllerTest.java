@@ -82,7 +82,7 @@ class FilterControllerTest {
                   "description": "Show urgent",
                   "entityType": "defect",
                   "fields": ["id", "name"],
-                  "criteria": [{"field":"severity","operator":"EQUAL_TO","negate":false,"values":["High"]}]
+                  "criteria": [{"field":"severity","operator":"IN","values":["High"]}]
                 }
                 """.formatted(WORKSPACE_ID);
 
@@ -111,7 +111,7 @@ class FilterControllerTest {
                   "description": "Show urgent",
                   "entityType": "defect",
                   "fields": ["id", "name"],
-                  "criteria": [{"field":"severity","operator":"EQUAL_TO","negate":false,"values":["High"]}]
+                  "criteria": [{"field":"severity","operator":"IN","values":["High"]}]
                 }
                 """;
 
@@ -137,7 +137,7 @@ class FilterControllerTest {
                   "description": "Show urgent",
                   "entityType": "defect",
                   "fields": ["id", "name"],
-                  "criteria": [{"field":"severity","operator":"EQUAL_TO","negate":false,"values":["High"]}]
+                  "criteria": [{"field":"severity","operator":"IN","values":["High"]}]
                 }
                 """.formatted(WORKSPACE_ID);
 

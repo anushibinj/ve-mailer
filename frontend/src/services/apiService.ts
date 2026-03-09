@@ -10,7 +10,6 @@ export interface Workspace {
 export interface FilterCriteriaClause {
   field: string;
   operator: string;
-  negate: boolean;
   values: string[];
 }
 
