@@ -29,14 +29,13 @@ const COMMON_FIELDS = [
 ];
 
 const OPERATORS = [
-  { value: 'EQUAL_TO', label: 'Equal To' },
   { value: 'IN', label: 'In' },
+  { value: 'NOT_IN', label: 'Not In' },
 ];
 
 const emptyCriterion = (): FilterCriteriaClause => ({
   field: '',
-  operator: 'EQUAL_TO',
-  negate: false,
+  operator: 'IN',
   values: [''],
 });
 
@@ -386,7 +385,7 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
                         )}
                       </div>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
                         {/* Field Name */}
                         <input
                           type="text"
@@ -406,17 +405,6 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
                             <option key={op.value} value={op.value}>{op.label}</option>
                           ))}
                         </select>
-
-                        {/* Negate */}
-                        <label className="flex items-center text-sm text-gray-700">
-                          <input
-                            type="checkbox"
-                            checked={criterion.negate}
-                            onChange={e => updateCriterion(ci, { negate: e.target.checked })}
-                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded mr-2"
-                          />
-                          Negate (NOT)
-                        </label>
                       </div>
 
                       {/* Values */}
@@ -562,7 +550,7 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
                           <span className="font-medium">Criteria:</span>{' '}
                           {criteriaList.map((c, i) => (
                             <span key={i}>
-                              {c.negate ? 'NOT ' : ''}{c.field} {c.operator} [{c.values.join(', ')}]
+                              {c.field} {c.operator} [{c.values.join(', ')}]
                               {i < criteriaList.length - 1 ? ' AND ' : ''}
                             </span>
                           ))}

@@ -138,53 +138,21 @@ public class FilterService {
 
     private Query.QueryBuilder buildClause(FilterCriteriaClause clause) {
         String[] values = clause.getValues().toArray(new String[0]);
-        QueryMethod method = resolveMethod(clause.getOperator());
+        boolean negate = "NOT_IN".equalsIgnoreCase(clause.getOperator());
 
-        // Reference fields use nested id query: field EqualTo (id IN [...])
-        // We detect this by the operator or let the caller decide; for simplicity
-        // we check if values look like Octane IDs (contain dots or long alphanumeric).
-        // The Octane SDK pattern for reference fields is always:
-        //   Query.statement(field, EqualTo, Query.statement("id", In, values))
-        Query.QueryBuilder inner;
         if (isReferenceField(values)) {
-            inner = buildReferenceClause(clause.getField(), method, values);
-        } else {
-            inner = buildLiteralClause(clause.getField(), method, values);
-        }
-
-        if (clause.isNegate()) {
-            return Query.not(clause.getField(), QueryMethod.EqualTo,
+            // Reference fields: field EqualTo (id IN [...])  or  NOT(field EqualTo (id IN [...]))
+            Query.QueryBuilder inner = Query.statement(clause.getField(), QueryMethod.EqualTo,
                     Query.statement("id", QueryMethod.In, values));
+            return negate ? Query.not(clause.getField(), QueryMethod.EqualTo,
+                    Query.statement("id", QueryMethod.In, values)) : inner;
+        } else {
+            // Literal fields: field IN [...]  or  NOT(field IN [...])
+            if (negate) {
+                return Query.not(clause.getField(), QueryMethod.In, values);
+            }
+            return Query.statement(clause.getField(), QueryMethod.In, values);
         }
-        return inner;
-    }
-
-    /**
-     * Builds a clause for a reference field:
-     *   field EqualTo (id IN [val1, val2, ...])
-     */
-    private Query.QueryBuilder buildReferenceClause(String field, QueryMethod method, String[] values) {
-        return Query.statement(field, QueryMethod.EqualTo,
-                Query.statement("id", QueryMethod.In, values));
-    }
-
-    /**
-     * Builds a clause for a literal / simple field:
-     *   field IN [val1, val2, ...]   or   field EqualTo val
-     */
-    private Query.QueryBuilder buildLiteralClause(String field, QueryMethod method, String[] values) {
-        if (values.length == 1) {
-            return Query.statement(field, method, values[0]);
-        }
-        return Query.statement(field, QueryMethod.In, values);
-    }
-
-    private QueryMethod resolveMethod(String operator) {
-        return switch (operator.toUpperCase()) {
-            case "EQUAL_TO" -> QueryMethod.EqualTo;
-            case "IN" -> QueryMethod.In;
-            default -> throw new IllegalArgumentException("Unsupported operator: " + operator);
-        };
     }
 
     /**

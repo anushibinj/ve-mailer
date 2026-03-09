@@ -20,11 +20,8 @@ public class FilterCriteriaClause {
     /** Octane field name, e.g. "defect_type", "product_udf", "phase" */
     private String field;
 
-    /** Operator: "EQUAL_TO" or "IN" */
+    /** Operator: "IN" or "NOT_IN" */
     private String operator;
-
-    /** If true, the clause is negated (NOT) */
-    private boolean negate;
 
     /** One or more values (Octane entity IDs or literal strings) */
     private List<String> values;
