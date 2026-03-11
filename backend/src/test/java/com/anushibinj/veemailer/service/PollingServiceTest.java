@@ -6,13 +6,14 @@ import com.anushibinj.veemailer.model.Frequency;
 import com.anushibinj.veemailer.model.Status;
 import com.anushibinj.veemailer.model.Workspace;
 import com.anushibinj.veemailer.repository.EmailSubscriberRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.hpe.adm.nga.sdk.model.EntityModel;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.web.client.RestTemplate;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -35,7 +36,10 @@ class PollingServiceTest {
     private NotificationService notificationService;
 
     @Mock
-    private RestTemplate restTemplate;
+    private FilterService filterService;
+
+    @Mock
+    private ObjectMapper objectMapper;
 
     @InjectMocks
     private PollingService pollingService;
@@ -66,7 +70,7 @@ class PollingServiceTest {
     }
 
     @Test
-    void testProcessByFrequency_GroupsCorrectly() {
+    void testProcessByFrequency_GroupsCorrectly() throws Exception {
         EmailSubscriber sub1 = new EmailSubscriber();
         sub1.setWorkspace(workspace1);
         sub1.setFilter(filter1);
@@ -87,6 +91,8 @@ class PollingServiceTest {
 
         when(emailSubscriberRepository.findByFrequencyAndStatus(Frequency.HOURLY, Status.ACTIVE))
                 .thenReturn(subscribers);
+        when(filterService.executeFilter(any(), any())).thenReturn(Collections.emptyList());
+        when(objectMapper.writeValueAsString(any())).thenReturn("[]");
 
         pollingService.processByFrequency(Frequency.HOURLY);
 
@@ -123,23 +129,29 @@ class PollingServiceTest {
     }
 
     @Test
-    void testFetchExternalData_ReturnsMockJson() {
+    void testFetchExternalData_CallsFilterServiceAndSerializes() throws Exception {
         EmailSubscriber subscriber = new EmailSubscriber();
         subscriber.setWorkspace(workspace1);
         subscriber.setFilter(filter1);
 
+        List<EntityModel> mockResults = Collections.emptyList();
+        when(filterService.executeFilter(filter1.getId(), workspace1.getId())).thenReturn(mockResults);
+        when(objectMapper.writeValueAsString(mockResults)).thenReturn("[]");
+
         String result = pollingService.fetchExternalData(subscriber);
 
-        assertEquals("{ \"tickets\": [{\"id\": 1, \"title\": \"Mock Ticket\"}] }", result);
+        assertEquals("[]", result);
+        verify(filterService).executeFilter(filter1.getId(), workspace1.getId());
+        verify(objectMapper).writeValueAsString(mockResults);
     }
 
     @Test
-    void testFetchExternalData_ExceptionReturnsEmptyJson() {
-        // subscriber with null workspace triggers NullPointerException inside fetchExternalData,
-        // which should be caught and return "{}"
+    void testFetchExternalData_ExceptionReturnsEmptyJson() throws Exception {
         EmailSubscriber subscriber = new EmailSubscriber();
-        subscriber.setWorkspace(null);
+        subscriber.setWorkspace(workspace1);
         subscriber.setFilter(filter1);
+
+        when(filterService.executeFilter(any(), any())).thenThrow(new RuntimeException("Octane error"));
 
         String result = pollingService.fetchExternalData(subscriber);
 
