@@ -62,7 +62,15 @@ class WorkspaceControllerTest {
     void testGetSubscriptions_ReturnsCorrectDtos() throws Exception {
         UUID workspaceId = UUID.randomUUID();
 
-        SubscriptionResponseDTO dto = new SubscriptionResponseDTO("user@test.com", "All Bugs", Frequency.DAILY);
+        UUID subId = UUID.randomUUID();
+        UUID filterId = UUID.randomUUID();
+        SubscriptionResponseDTO dto = SubscriptionResponseDTO.builder()
+                .id(subId)
+                .recipientEmail("user@test.com")
+                .filterId(filterId)
+                .filterTitle("All Bugs")
+                .frequency(Frequency.DAILY)
+                .build();
 
         when(subscriptionService.getActiveSubscriptionsForWorkspace(any(UUID.class)))
                 .thenReturn(Arrays.asList(dto));
@@ -71,9 +79,10 @@ class WorkspaceControllerTest {
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].id").value(subId.toString()))
                 .andExpect(jsonPath("$[0].recipientEmail").value("user@test.com"))
+                .andExpect(jsonPath("$[0].filterId").value(filterId.toString()))
                 .andExpect(jsonPath("$[0].filterTitle").value("All Bugs"))
-                .andExpect(jsonPath("$[0].frequency").value("DAILY"))
-                .andExpect(jsonPath("$[0].id").doesNotExist()); // Ensuring no internal DB ID leak
+                .andExpect(jsonPath("$[0].frequency").value("DAILY"));
     }
 }

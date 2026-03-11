@@ -41,6 +41,7 @@ export interface FilterUpdatePayload {
 export interface Subscription {
   id: string;
   recipientEmail: string;
+  filterId: string;
   filterTitle: string;
   frequency: string;
 }

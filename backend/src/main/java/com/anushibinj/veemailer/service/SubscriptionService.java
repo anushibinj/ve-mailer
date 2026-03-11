@@ -116,7 +116,9 @@ public class SubscriptionService {
     public List<SubscriptionResponseDTO> getActiveSubscriptionsForWorkspace(UUID workspaceId) {
         List<EmailSubscriber> subscribers = emailSubscriberRepository.findByWorkspaceIdAndStatus(workspaceId, Status.ACTIVE);
         return subscribers.stream().map(sub -> SubscriptionResponseDTO.builder()
+                .id(sub.getId())
                 .recipientEmail(sub.getRecipientEmail())
+                .filterId(sub.getFilter().getId())
                 .filterTitle(sub.getFilter().getTitle())
                 .frequency(sub.getFrequency())
                 .build()).collect(Collectors.toList());
