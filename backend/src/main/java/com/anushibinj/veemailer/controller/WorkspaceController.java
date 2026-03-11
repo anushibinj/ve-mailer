@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -39,5 +40,17 @@ public class WorkspaceController {
     @GetMapping("/{workspaceId}/subscriptions")
     public ResponseEntity<List<SubscriptionResponseDTO>> getSubscriptions(@PathVariable UUID workspaceId) {
         return ResponseEntity.ok(subscriptionService.getActiveSubscriptionsForWorkspace(workspaceId));
+    }
+
+    @PostMapping("/{workspaceId}/subscriptions/{subscriptionId}/run")
+    public ResponseEntity<String> runSubscription(
+            @PathVariable UUID workspaceId,
+            @PathVariable UUID subscriptionId) {
+        try {
+            subscriptionService.runSubscription(subscriptionId, workspaceId);
+            return ResponseEntity.ok("Notification sent successfully.");
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(404).body(e.getMessage());
+        }
     }
 }

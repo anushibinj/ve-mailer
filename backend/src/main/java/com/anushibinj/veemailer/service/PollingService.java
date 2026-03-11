@@ -71,6 +71,15 @@ public class PollingService {
         }
     }
 
+    /**
+     * Immediately fetches data for the given subscriber's filter and sends a notification email.
+     * Used by the on-demand "Run" action triggered from the UI.
+     */
+    public void runNow(EmailSubscriber subscriber) {
+        String externalData = fetchExternalData(subscriber);
+        notificationService.processAndSendNotifications(List.of(subscriber), externalData);
+    }
+
     public String fetchExternalData(EmailSubscriber subscriber) {
         try {
             String clientId = subscriber.getWorkspace().getClientId();

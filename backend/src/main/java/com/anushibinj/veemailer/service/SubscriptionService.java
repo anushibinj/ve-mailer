@@ -31,6 +31,7 @@ public class SubscriptionService {
     private final WorkspaceRepository workspaceRepository;
     private final FilterRepository filterRepository;
     private final ObjectMapper objectMapper;
+    private final PollingService pollingService;
 
     @Data
     public static class SubscriptionPayload {
@@ -122,5 +123,20 @@ public class SubscriptionService {
                 .filterTitle(sub.getFilter().getTitle())
                 .frequency(sub.getFrequency())
                 .build()).collect(Collectors.toList());
+    }
+
+    /**
+     * Immediately sends a notification email for a single subscription on demand.
+     * Validates that the subscription belongs to the given workspace before running.
+     */
+    public void runSubscription(UUID subscriptionId, UUID workspaceId) {
+        EmailSubscriber subscriber = emailSubscriberRepository.findById(subscriptionId)
+                .orElseThrow(() -> new IllegalArgumentException("Subscription not found"));
+
+        if (!subscriber.getWorkspace().getId().equals(workspaceId)) {
+            throw new IllegalArgumentException("Subscription does not belong to the specified workspace");
+        }
+
+        pollingService.runNow(subscriber);
     }
 }
