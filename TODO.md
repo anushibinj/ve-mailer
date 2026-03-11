@@ -6,3 +6,4 @@
 - [ ] "Manager Filter Templates" should be limited only to admins
 - [ ] If the ve client expires due to timeout, it should auto retry login
 - [ ] ORDER BY for queries
+- [ ] A mail ID cannot have duplicate subscriptions to the same filter. The "composite key" should include mail id, filter id, frequency. That is, a user can subscribe to a filter for different frequencies. But not twice for the same frequency to the same filter.
