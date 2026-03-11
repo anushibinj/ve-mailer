@@ -35,8 +35,8 @@ public class NotificationService {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setFrom(from);
         message.setTo(to);
-        message.setSubject("Your Notification Digest");
-        message.setText("Here is your formatted digest data:\n\n" + data);
+        message.setSubject("[ve-emailer] Your Notification Digest");
+        message.setText("Here is your digest :\n\n" + data);
         mailSender.send(message);
     }
 }
