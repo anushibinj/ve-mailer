@@ -38,8 +38,9 @@ public class NotificationService {
     @Async
     public void processAndSendNotifications(List<EmailSubscriber> subscribers,
                                             List<EntityModel> results,
-                                            List<String> fields) {
-        String htmlBody = buildHtmlTable(results, fields);
+                                            List<String> fields,
+                                            int limit) {
+        String htmlBody = buildHtmlTable(results, fields, limit);
         for (EmailSubscriber subscriber : subscribers) {
             sendEmail(subscriber.getRecipientEmail(), htmlBody);
         }
@@ -63,7 +64,7 @@ public class NotificationService {
      * Builds a styled HTML table whose columns are the filter's field names and
      * whose rows are the Octane entities returned by the filter execution.
      */
-    String buildHtmlTable(List<EntityModel> results, List<String> fields) {
+    String buildHtmlTable(List<EntityModel> results, List<String> fields, int limit) {
         StringBuilder sb = new StringBuilder();
         sb.append("<html><body style=\"font-family:Arial,sans-serif;font-size:14px;\">")
           .append("<p>Here is your notification digest:</p>");
@@ -100,6 +101,9 @@ public class NotificationService {
             sb.append("</tbody></table>");
         }
 
+        sb.append("<p style=\"font-size:11px;color:#888;\">")
+          .append("This list is limited to ").append(limit).append(" items.")
+          .append("</p>");
         sb.append("</body></html>");
         return sb.toString();
     }

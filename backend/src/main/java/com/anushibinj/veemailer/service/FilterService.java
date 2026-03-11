@@ -23,6 +23,7 @@ import com.hpe.adm.nga.sdk.query.QueryMethod;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 
 @Slf4j
 @Service
@@ -34,6 +35,9 @@ public class FilterService {
     private final OctaneCacheService octaneCacheService;
     private final ValueEdgeProperties valueEdgeProperties;
     private final ObjectMapper objectMapper;
+
+    @Value("${veemailer.query.limit:25}")
+    private int queryLimit;
 
     /**
      * Persist a new filter template associated with a workspace.
@@ -124,13 +128,18 @@ public class FilterService {
                     .get()
                     .query(query)
                     .addFields(fields.toArray(new String[0]))
-                    .limit(25) // Limit to 25 results for email notifications
+                    .limit(queryLimit) // configurable via veemailer.query.limit
                     .execute();
 
             return result.stream().toList();
         } catch (JsonProcessingException e) {
             throw new RuntimeException("Failed to deserialize filter data", e);
         }
+    }
+
+    /** Returns the configured maximum number of results returned per filter execution. */
+    public int getQueryLimit() {
+        return queryLimit;
     }
 
     /**

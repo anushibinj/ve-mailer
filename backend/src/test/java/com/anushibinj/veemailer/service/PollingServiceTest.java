@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.*;
 
@@ -85,12 +86,13 @@ class PollingServiceTest {
                 .thenReturn(Arrays.asList(sub1, sub2, sub3, sub4));
         when(filterService.getFilterFields(any())).thenReturn(List.of("name"));
         when(filterService.executeFilter(any(), any())).thenReturn(Collections.emptyList());
+        when(filterService.getQueryLimit()).thenReturn(25);
 
         pollingService.processByFrequency(Frequency.HOURLY);
 
         // Group 1: sub1, sub2  |  Group 2: sub3  |  Group 3: sub4
         verify(notificationService, times(3))
-                .processAndSendNotifications(anyList(), anyList(), anyList());
+                .processAndSendNotifications(anyList(), anyList(), anyList(), anyInt());
     }
 
     @Test
@@ -101,7 +103,7 @@ class PollingServiceTest {
         pollingService.processByFrequency(Frequency.DAILY);
 
         verify(notificationService, never())
-                .processAndSendNotifications(anyList(), anyList(), anyList());
+                .processAndSendNotifications(anyList(), anyList(), anyList(), anyInt());
     }
 
     @Test
@@ -130,12 +132,13 @@ class PollingServiceTest {
 
         when(filterService.getFilterFields(filter1.getId())).thenReturn(fields);
         when(filterService.executeFilter(filter1.getId(), workspace1.getId())).thenReturn(results);
+        when(filterService.getQueryLimit()).thenReturn(25);
 
         pollingService.runNow(subscriber);
 
         verify(filterService).getFilterFields(filter1.getId());
         verify(filterService).executeFilter(filter1.getId(), workspace1.getId());
-        verify(notificationService).processAndSendNotifications(List.of(subscriber), results, fields);
+        verify(notificationService).processAndSendNotifications(List.of(subscriber), results, fields, 25);
     }
 
     @Test
@@ -148,7 +151,7 @@ class PollingServiceTest {
 
         // Should not propagate — error is logged internally
         assertDoesNotThrow(() -> pollingService.runNow(subscriber));
-        verify(notificationService, never()).processAndSendNotifications(anyList(), anyList(), anyList());
+        verify(notificationService, never()).processAndSendNotifications(anyList(), anyList(), anyList(), anyInt());
     }
 
     // Bring in assertDoesNotThrow

@@ -52,7 +52,7 @@ class NotificationServiceTest {
         sub2.setRecipientEmail("user2@example.com");
 
         notificationService.processAndSendNotifications(
-                List.of(sub1, sub2), Collections.emptyList(), List.of("name"));
+                List.of(sub1, sub2), Collections.emptyList(), List.of("name"), 25);
 
         verify(mailSender, times(2)).send(any(MimeMessage.class));
     }
@@ -60,7 +60,7 @@ class NotificationServiceTest {
     @Test
     void testProcessAndSendNotifications_EmptyList_NoEmailSent() {
         notificationService.processAndSendNotifications(
-                Collections.emptyList(), Collections.emptyList(), List.of("name"));
+                Collections.emptyList(), Collections.emptyList(), List.of("name"), 25);
 
         verify(mailSender, never()).send(any(MimeMessage.class));
     }
@@ -74,7 +74,7 @@ class NotificationServiceTest {
         sub.setRecipientEmail("check@example.com");
 
         notificationService.processAndSendNotifications(
-                List.of(sub), Collections.emptyList(), List.of("name"));
+                List.of(sub), Collections.emptyList(), List.of("name"), 25);
 
         ArgumentCaptor<MimeMessage> captor = ArgumentCaptor.forClass(MimeMessage.class);
         verify(mailSender).send(captor.capture());
@@ -85,22 +85,24 @@ class NotificationServiceTest {
 
     @Test
     void testBuildHtmlTable_EmptyResults_ShowsNoItemsMessage() {
-        String html = notificationService.buildHtmlTable(Collections.emptyList(), List.of("name", "phase"));
+        String html = notificationService.buildHtmlTable(Collections.emptyList(), List.of("name", "phase"), 25);
         assertTrue(html.contains("No items matched"), "Should show empty-state message");
         assertFalse(html.contains("<table"), "Should not render a table for empty results");
     }
 
     @Test
+    void testBuildHtmlTable_FooterShowsLimit() {
+        String html = notificationService.buildHtmlTable(Collections.emptyList(), List.of("name"), 10);
+        assertTrue(html.contains("limited to 10 items"), "Footer should show configured limit");
+    }
+
+    @Test
     void testBuildHtmlTable_HeadersMatchFields() {
-        // field names are humanised: "story_points" -> "Story Points"
-        String html = notificationService.buildHtmlTable(Collections.emptyList(), List.of("story_points", "phase"));
-        // Even in the empty case the method returns without a table, but headers
-        // are only in the table — so test with a non-empty result set.
         EntityModel entity = new EntityModel(Set.of(
                 new StringFieldModel("story_points", "5"),
                 new StringFieldModel("phase", "In Progress")
         ));
-        String htmlWithRows = notificationService.buildHtmlTable(List.of(entity), List.of("story_points", "phase"));
+        String htmlWithRows = notificationService.buildHtmlTable(List.of(entity), List.of("story_points", "phase"), 25);
         assertTrue(htmlWithRows.contains("Story Points"), "Header should humanise story_points");
         assertTrue(htmlWithRows.contains("Phase"),        "Header should humanise phase");
     }
@@ -112,7 +114,7 @@ class NotificationServiceTest {
                 new StringFieldModel("phase", "Open")
         ));
 
-        String html = notificationService.buildHtmlTable(List.of(entity), List.of("name", "phase"));
+        String html = notificationService.buildHtmlTable(List.of(entity), List.of("name", "phase"), 25);
 
         assertTrue(html.contains("Fix login bug"), "Cell should contain entity name");
         assertTrue(html.contains("Open"),          "Cell should contain entity phase");
@@ -124,7 +126,7 @@ class NotificationServiceTest {
                 new StringFieldModel("name", "<script>alert('xss')</script>")
         ));
 
-        String html = notificationService.buildHtmlTable(List.of(entity), List.of("name"));
+        String html = notificationService.buildHtmlTable(List.of(entity), List.of("name"), 25);
 
         assertFalse(html.contains("<script>"), "Raw <script> tag must not appear in output");
         assertTrue(html.contains("&lt;script&gt;"), "Tag must be HTML-escaped");
@@ -137,7 +139,7 @@ class NotificationServiceTest {
                 new StringFieldModel("name", "Some item")
         ));
 
-        String html = notificationService.buildHtmlTable(List.of(entity), List.of("name", "phase"));
+        String html = notificationService.buildHtmlTable(List.of(entity), List.of("name", "phase"), 25);
 
         assertTrue(html.contains("Some item"));
         // Two <td> elements expected; second one should be empty
