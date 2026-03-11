@@ -4,7 +4,6 @@ import com.anushibinj.veemailer.model.EmailSubscriber;
 import com.anushibinj.veemailer.model.Frequency;
 import com.anushibinj.veemailer.model.Status;
 import com.anushibinj.veemailer.repository.EmailSubscriberRepository;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hpe.adm.nga.sdk.model.EntityModel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,7 +23,6 @@ public class PollingService {
     private final EmailSubscriberRepository emailSubscriberRepository;
     private final NotificationService notificationService;
     private final FilterService filterService;
-    private final ObjectMapper objectMapper;
 
     // Top of every hour: 1:00, 2:00, 3:00 ...
     @Scheduled(cron = "0 0 * * * *")
@@ -58,36 +56,34 @@ public class PollingService {
         for (Map.Entry<UUID, Map<UUID, List<EmailSubscriber>>> workspaceEntry : groupedSubscribers.entrySet()) {
             for (Map.Entry<UUID, List<EmailSubscriber>> filterEntry : workspaceEntry.getValue().entrySet()) {
                 List<EmailSubscriber> targetSubscribers = filterEntry.getValue();
-
                 if (targetSubscribers.isEmpty()) continue;
 
                 EmailSubscriber representative = targetSubscribers.get(0);
-                String externalData = fetchExternalData(representative);
-
-                notificationService.processAndSendNotifications(targetSubscribers, externalData);
+                sendNotifications(representative, targetSubscribers);
             }
         }
     }
 
     /**
-     * Immediately fetches data for the given subscriber's filter and sends a notification email.
+     * Immediately executes the filter for the given subscriber and sends a notification email.
      * Used by the on-demand "Run" action triggered from the UI.
      */
     public void runNow(EmailSubscriber subscriber) {
-        String externalData = fetchExternalData(subscriber);
-        notificationService.processAndSendNotifications(List.of(subscriber), externalData);
+        sendNotifications(subscriber, List.of(subscriber));
     }
 
-    public String fetchExternalData(EmailSubscriber subscriber) {
+    private void sendNotifications(EmailSubscriber representative, List<EmailSubscriber> recipients) {
         try {
-            UUID filterId = subscriber.getFilter().getId();
-            UUID workspaceId = subscriber.getWorkspace().getId();
+            UUID filterId    = representative.getFilter().getId();
+            UUID workspaceId = representative.getWorkspace().getId();
 
+            List<String>      fields  = filterService.getFilterFields(filterId);
             List<EntityModel> results = filterService.executeFilter(filterId, workspaceId);
-            return objectMapper.writeValueAsString(results);
+
+            notificationService.processAndSendNotifications(recipients, results, fields);
         } catch (Exception e) {
-            log.error("Failed to fetch external data", e);
-            return "{}";
+            log.error("Failed to fetch or send notifications for filter {} / workspace {}",
+                    representative.getFilter().getId(), representative.getWorkspace().getId(), e);
         }
     }
 }

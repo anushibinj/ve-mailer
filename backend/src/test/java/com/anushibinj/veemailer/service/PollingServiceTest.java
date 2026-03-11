@@ -6,7 +6,6 @@ import com.anushibinj.veemailer.model.Frequency;
 import com.anushibinj.veemailer.model.Status;
 import com.anushibinj.veemailer.model.Workspace;
 import com.anushibinj.veemailer.repository.EmailSubscriberRepository;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hpe.adm.nga.sdk.model.EntityModel;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -20,10 +19,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -37,9 +34,6 @@ class PollingServiceTest {
 
     @Mock
     private FilterService filterService;
-
-    @Mock
-    private ObjectMapper objectMapper;
 
     @InjectMocks
     private PollingService pollingService;
@@ -70,7 +64,7 @@ class PollingServiceTest {
     }
 
     @Test
-    void testProcessByFrequency_GroupsCorrectly() throws Exception {
+    void testProcessByFrequency_GroupsCorrectly() {
         EmailSubscriber sub1 = new EmailSubscriber();
         sub1.setWorkspace(workspace1);
         sub1.setFilter(filter1);
@@ -87,19 +81,16 @@ class PollingServiceTest {
         sub4.setWorkspace(workspace2);
         sub4.setFilter(filter1); // Different workspace
 
-        List<EmailSubscriber> subscribers = Arrays.asList(sub1, sub2, sub3, sub4);
-
         when(emailSubscriberRepository.findByFrequencyAndStatus(Frequency.HOURLY, Status.ACTIVE))
-                .thenReturn(subscribers);
+                .thenReturn(Arrays.asList(sub1, sub2, sub3, sub4));
+        when(filterService.getFilterFields(any())).thenReturn(List.of("name"));
         when(filterService.executeFilter(any(), any())).thenReturn(Collections.emptyList());
-        when(objectMapper.writeValueAsString(any())).thenReturn("[]");
 
         pollingService.processByFrequency(Frequency.HOURLY);
 
-        // Group 1: sub1, sub2
-        // Group 2: sub3
-        // Group 3: sub4
-        verify(notificationService, times(3)).processAndSendNotifications(anyList(), anyString());
+        // Group 1: sub1, sub2  |  Group 2: sub3  |  Group 3: sub4
+        verify(notificationService, times(3))
+                .processAndSendNotifications(anyList(), anyList(), anyList());
     }
 
     @Test
@@ -109,12 +100,12 @@ class PollingServiceTest {
 
         pollingService.processByFrequency(Frequency.DAILY);
 
-        verify(notificationService, never()).processAndSendNotifications(anyList(), anyString());
+        verify(notificationService, never())
+                .processAndSendNotifications(anyList(), anyList(), anyList());
     }
 
     @Test
     void testScheduledMethods() {
-        // Just verify they run the inner process
         PollingService spy = spy(pollingService);
         doNothing().when(spy).processByFrequency(any());
 
@@ -129,32 +120,43 @@ class PollingServiceTest {
     }
 
     @Test
-    void testFetchExternalData_CallsFilterServiceAndSerializes() throws Exception {
+    void testRunNow_CallsFilterServiceAndNotification() {
         EmailSubscriber subscriber = new EmailSubscriber();
         subscriber.setWorkspace(workspace1);
         subscriber.setFilter(filter1);
 
-        List<EntityModel> mockResults = Collections.emptyList();
-        when(filterService.executeFilter(filter1.getId(), workspace1.getId())).thenReturn(mockResults);
-        when(objectMapper.writeValueAsString(mockResults)).thenReturn("[]");
+        List<String>      fields  = List.of("name", "phase");
+        List<EntityModel> results = Collections.emptyList();
 
-        String result = pollingService.fetchExternalData(subscriber);
+        when(filterService.getFilterFields(filter1.getId())).thenReturn(fields);
+        when(filterService.executeFilter(filter1.getId(), workspace1.getId())).thenReturn(results);
 
-        assertEquals("[]", result);
+        pollingService.runNow(subscriber);
+
+        verify(filterService).getFilterFields(filter1.getId());
         verify(filterService).executeFilter(filter1.getId(), workspace1.getId());
-        verify(objectMapper).writeValueAsString(mockResults);
+        verify(notificationService).processAndSendNotifications(List.of(subscriber), results, fields);
     }
 
     @Test
-    void testFetchExternalData_ExceptionReturnsEmptyJson() throws Exception {
+    void testRunNow_FilterServiceException_LogsAndDoesNotThrow() {
         EmailSubscriber subscriber = new EmailSubscriber();
         subscriber.setWorkspace(workspace1);
         subscriber.setFilter(filter1);
 
-        when(filterService.executeFilter(any(), any())).thenThrow(new RuntimeException("Octane error"));
+        when(filterService.getFilterFields(any())).thenThrow(new RuntimeException("Octane error"));
 
-        String result = pollingService.fetchExternalData(subscriber);
+        // Should not propagate — error is logged internally
+        assertDoesNotThrow(() -> pollingService.runNow(subscriber));
+        verify(notificationService, never()).processAndSendNotifications(anyList(), anyList(), anyList());
+    }
 
-        assertEquals("{}", result);
+    // Bring in assertDoesNotThrow
+    private static void assertDoesNotThrow(org.junit.jupiter.api.function.Executable executable) {
+        try {
+            executable.execute();
+        } catch (Throwable t) {
+            throw new AssertionError("Expected no exception but got: " + t, t);
+        }
     }
 }

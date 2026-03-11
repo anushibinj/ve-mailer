@@ -1,5 +1,10 @@
 package com.anushibinj.veemailer.service;
 
+import java.util.List;
+import java.util.UUID;
+
+import org.springframework.stereotype.Service;
+
 import com.anushibinj.veemailer.dto.FilterDto;
 import com.anushibinj.veemailer.model.Filter;
 import com.anushibinj.veemailer.model.FilterCriteriaClause;
@@ -15,12 +20,9 @@ import com.hpe.adm.nga.sdk.entities.OctaneCollection;
 import com.hpe.adm.nga.sdk.model.EntityModel;
 import com.hpe.adm.nga.sdk.query.Query;
 import com.hpe.adm.nga.sdk.query.QueryMethod;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-
-import java.util.List;
-import java.util.UUID;
 
 @Slf4j
 @Service
@@ -81,6 +83,20 @@ public class FilterService {
     }
 
     /**
+     * Returns the ordered list of field names stored in the given filter template.
+     * Used by notification senders to know which columns to render.
+     */
+    public List<String> getFilterFields(UUID filterId) {
+        Filter filter = filterRepository.findById(filterId)
+                .orElseThrow(() -> new IllegalArgumentException("Filter not found: " + filterId));
+        try {
+            return objectMapper.readValue(filter.getFields(), new TypeReference<>() {});
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("Failed to deserialize filter fields", e);
+        }
+    }
+
+    /**
      * Load a saved filter, build an Octane query dynamically, execute it
      * against the given workspace and return the results.
      */
@@ -108,6 +124,7 @@ public class FilterService {
                     .get()
                     .query(query)
                     .addFields(fields.toArray(new String[0]))
+                    .limit(25) // Limit to 25 results for email notifications
                     .execute();
 
             return result.stream().toList();
