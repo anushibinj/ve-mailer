@@ -7,9 +7,10 @@ import {
   type Filter,
   type SubscriptionRequestPayload
 } from '../services/apiService';
-import { Loader2, ArrowLeft, SlidersHorizontal } from 'lucide-react';
+import { Loader2, ArrowLeft, SlidersHorizontal, Pencil } from 'lucide-react';
 import toast from 'react-hot-toast';
 import OtpModal from './OtpModal';
+import EditSubscriptionModal from './EditSubscriptionModal';
 
 interface WorkspaceDashboardProps {
   workspaceId: string;
@@ -22,16 +23,18 @@ const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({ workspaceId, on
   const [filters, setFilters] = useState<Filter[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  // Form State
+  // Subscribe form state
   const [email, setEmail] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('');
   const [frequency, setFrequency] = useState('HOURLY');
-  const [actionType, setActionType] = useState('SUBSCRIBE');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // OTP Modal State
+  // Subscribe OTP modal state
   const [isOtpModalOpen, setIsOtpModalOpen] = useState(false);
   const [pendingEmail, setPendingEmail] = useState('');
+
+  // Edit subscription modal state
+  const [editingSubscription, setEditingSubscription] = useState<Subscription | null>(null);
 
   const loadData = async () => {
     setIsLoading(true);
@@ -42,7 +45,7 @@ const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({ workspaceId, on
       ]);
       setSubscriptions(subsData);
       setFilters(filtersData);
-    } catch (err) {
+    } catch {
       toast.error('Failed to load dashboard data.');
     } finally {
       setIsLoading(false);
@@ -56,23 +59,16 @@ const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({ workspaceId, on
 
   const handleOtpSuccess = () => {
     setIsOtpModalOpen(false);
-    // Reset form
     setEmail('');
     setSelectedFilter('');
     setFrequency('HOURLY');
-    setActionType('SUBSCRIBE');
-
-    // Refresh table data
     loadData();
   };
 
-  const isValidEmail = (email: string) => {
-    return /\S+@\S+\.\S+/.test(email);
-  };
-
+  const isValidEmail = (e: string) => /\S+@\S+\.\S+/.test(e);
   const isFormValid = isValidEmail(email) && selectedFilter !== '';
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubscribeSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isFormValid) return;
 
@@ -80,22 +76,17 @@ const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({ workspaceId, on
     try {
       const payload: SubscriptionRequestPayload = {
         email,
-        actionType,
+        actionType: 'SUBSCRIBE',
         workspaceId,
         filterId: selectedFilter,
-        frequency
+        frequency,
       };
-
       await requestSubscription(payload);
       setPendingEmail(email);
       setIsOtpModalOpen(true);
       toast.success('OTP sent to your email!');
     } catch (err: any) {
-      if (err.response?.data?.message) {
-        toast.error(`Error: ${err.response.data.message}`);
-      } else {
-        toast.error('Failed to process request. Please check your connection and try again.');
-      }
+      toast.error(err.response?.data?.message ?? 'Failed to process request. Please check your connection and try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -112,6 +103,8 @@ const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({ workspaceId, on
 
   return (
     <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+
+      {/* Header */}
       <div className="mb-8 flex items-center justify-between">
         <div className="flex items-center">
           <button
@@ -132,6 +125,7 @@ const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({ workspaceId, on
         </button>
       </div>
 
+      {/* Subscribe OTP modal */}
       <OtpModal
         isOpen={isOtpModalOpen}
         email={pendingEmail}
@@ -139,9 +133,23 @@ const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({ workspaceId, on
         onSuccess={handleOtpSuccess}
       />
 
+      {/* Edit subscription modal */}
+      {editingSubscription && (
+        <EditSubscriptionModal
+          isOpen={editingSubscription !== null}
+          subscription={editingSubscription}
+          workspaceId={workspaceId}
+          onClose={() => setEditingSubscription(null)}
+          onSuccess={() => {
+            setEditingSubscription(null);
+            loadData();
+          }}
+        />
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
 
-        {/* Left Column: Current Subscriptions */}
+        {/* Left: Current Subscriptions */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden flex flex-col h-full">
           <div className="px-6 py-5 border-b border-gray-200 bg-gray-50">
             <h2 className="text-lg font-medium text-gray-900">Current Subscriptions</h2>
@@ -164,6 +172,7 @@ const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({ workspaceId, on
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Frequency
                     </th>
+                    <th className="px-6 py-3" />
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
@@ -176,7 +185,16 @@ const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({ workspaceId, on
                         {sub.filterTitle}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {sub.frequency}
+                        {sub.frequency.charAt(0) + sub.frequency.slice(1).toLowerCase()}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right">
+                        <button
+                          onClick={() => setEditingSubscription(sub)}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 rounded-md text-xs font-medium text-gray-700 bg-white hover:bg-gray-50 hover:border-blue-300 transition-colors"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                          Edit
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -186,13 +204,13 @@ const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({ workspaceId, on
           </div>
         </div>
 
-        {/* Right Column: Manage Subscription */}
+        {/* Right: Subscribe form */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden h-fit">
           <div className="px-6 py-5 border-b border-gray-200 bg-gray-50">
-            <h2 className="text-lg font-medium text-gray-900">Manage Your Subscription</h2>
+            <h2 className="text-lg font-medium text-gray-900">Subscribe</h2>
           </div>
           <div className="p-6">
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubscribeSubmit} className="space-y-6">
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -243,27 +261,6 @@ const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({ workspaceId, on
                 </select>
               </div>
 
-              <div>
-                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Action
-                </label>
-                <div className="flex space-x-4">
-                  {['SUBSCRIBE', 'UPDATE', 'UNSUBSCRIBE'].map((action) => (
-                    <label key={action} className="flex items-center">
-                      <input
-                        type="radio"
-                        name="actionType"
-                        value={action}
-                        checked={actionType === action}
-                        onChange={(e) => setActionType(e.target.value)}
-                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
-                      />
-                      <span className="ml-2 text-sm text-gray-700">{action.charAt(0) + action.slice(1).toLowerCase()}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
               <div className="pt-4">
                 <button
                   type="submit"
@@ -273,10 +270,11 @@ const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({ workspaceId, on
                   {isSubmitting ? (
                     <Loader2 className="h-5 w-5 animate-spin" />
                   ) : (
-                    'Request Action'
+                    'Subscribe'
                   )}
                 </button>
               </div>
+
             </form>
           </div>
         </div>
