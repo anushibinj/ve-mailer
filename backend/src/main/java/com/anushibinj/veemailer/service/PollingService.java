@@ -4,15 +4,12 @@ import com.anushibinj.veemailer.model.EmailSubscriber;
 import com.anushibinj.veemailer.model.Frequency;
 import com.anushibinj.veemailer.model.Status;
 import com.anushibinj.veemailer.repository.EmailSubscriberRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.hpe.adm.nga.sdk.model.EntityModel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.ResponseEntity;
 
 import java.util.List;
 import java.util.Map;
@@ -26,7 +23,8 @@ public class PollingService {
 
     private final EmailSubscriberRepository emailSubscriberRepository;
     private final NotificationService notificationService;
-    private final RestTemplate restTemplate;
+    private final FilterService filterService;
+    private final ObjectMapper objectMapper;
 
     // e.g., run every hour
     @Scheduled(fixedRate = 3600000)
@@ -82,25 +80,11 @@ public class PollingService {
 
     public String fetchExternalData(EmailSubscriber subscriber) {
         try {
-            String clientId = subscriber.getWorkspace().getClientId();
-            String clientKey = subscriber.getWorkspace().getClientKey();
-            String filterTitle = subscriber.getFilter().getTitle();
+            UUID filterId = subscriber.getFilter().getId();
+            UUID workspaceId = subscriber.getWorkspace().getId();
 
-            // Mock external API call using RestTemplate
-            // In reality, this would use FilterService.executeFilter() to run the
-            // saved filter template against the workspace's Octane instance.
-            String url = "https://example-ticketing-api.com/tickets?filter=" + filterTitle;
-
-            HttpHeaders headers = new HttpHeaders();
-            headers.set("X-Client-Id", clientId);
-            headers.set("X-Client-Key", clientKey);
-            HttpEntity<String> entity = new HttpEntity<>(headers);
-
-            // Commenting actual call out so tests don't fail without mocking
-            // ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, entity, String.class);
-            // return response.getBody();
-
-            return "{ \"tickets\": [{\"id\": 1, \"title\": \"Mock Ticket\"}] }";
+            List<EntityModel> results = filterService.executeFilter(filterId, workspaceId);
+            return objectMapper.writeValueAsString(results);
         } catch (Exception e) {
             log.error("Failed to fetch external data", e);
             return "{}";
