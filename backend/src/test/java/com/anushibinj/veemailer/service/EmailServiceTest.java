@@ -38,7 +38,7 @@ class EmailServiceTest {
         assertNotNull(sent.getTo());
         assertEquals(1, sent.getTo().length);
         assertEquals(recipient, sent.getTo()[0]);
-        assertEquals("Your Notification Broker OTP", sent.getSubject());
+        assertEquals("[ve-emailer] Your ve-emailer OTP", sent.getSubject());
         assertNotNull(sent.getText());
         assertTrue(sent.getText().contains(otp), "Email body should contain the OTP code");
         assertTrue(sent.getText().contains("expire"), "Email body should mention expiration");

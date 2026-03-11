@@ -74,7 +74,7 @@ class NotificationServiceTest {
         ArgumentCaptor<SimpleMailMessage> captor = ArgumentCaptor.forClass(SimpleMailMessage.class);
         verify(mailSender, times(1)).send(captor.capture());
 
-        assertEquals("Your Notification Digest", captor.getValue().getSubject());
+        assertEquals("[ve-emailer] Your Notification Digest", captor.getValue().getSubject());
     }
 
     @Test
@@ -89,7 +89,7 @@ class NotificationServiceTest {
         verify(mailSender, times(1)).send(captor.capture());
 
         String body = captor.getValue().getText();
-        assertTrue(body.startsWith("Here is your formatted digest data:\n\n"),
+        assertTrue(body.startsWith("Here is your digest :\n\n"),
                 "Body should start with the expected prefix");
         assertTrue(body.contains(data), "Body should contain the raw data");
     }

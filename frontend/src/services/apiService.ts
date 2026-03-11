@@ -99,3 +99,7 @@ export const verifyOtp = async (email: string, otp: string): Promise<void> => {
   const response = await api.post('/api/v1/subscriptions/verify', { email, otp });
   return response.data;
 };
+
+export const runSubscription = async (workspaceId: string, subscriptionId: string): Promise<void> => {
+  await api.post(`/api/v1/workspaces/${workspaceId}/subscriptions/${subscriptionId}/run`);
+};

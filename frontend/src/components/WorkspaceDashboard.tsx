@@ -3,11 +3,12 @@ import {
   fetchSubscriptionsByWorkspace,
   fetchFilters,
   requestSubscription,
+  runSubscription,
   type Subscription,
   type Filter,
   type SubscriptionRequestPayload
 } from '../services/apiService';
-import { Loader2, ArrowLeft, SlidersHorizontal, Pencil } from 'lucide-react';
+import { Loader2, ArrowLeft, SlidersHorizontal, Pencil, Play } from 'lucide-react';
 import toast from 'react-hot-toast';
 import OtpModal from './OtpModal';
 import EditSubscriptionModal from './EditSubscriptionModal';
@@ -35,6 +36,25 @@ const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({ workspaceId, on
 
   // Edit subscription modal state
   const [editingSubscription, setEditingSubscription] = useState<Subscription | null>(null);
+
+  // Per-row run loading state (tracks subscription IDs currently being run)
+  const [runningIds, setRunningIds] = useState<Set<string>>(new Set());
+
+  const handleRunSubscription = async (sub: Subscription) => {
+    setRunningIds(prev => new Set(prev).add(sub.id));
+    try {
+      await runSubscription(workspaceId, sub.id);
+      toast.success(`Email sent to ${sub.recipientEmail}!`);
+    } catch (err: any) {
+      toast.error(err.response?.data?.message ?? 'Failed to send email. Please try again.');
+    } finally {
+      setRunningIds(prev => {
+        const next = new Set(prev);
+        next.delete(sub.id);
+        return next;
+      });
+    }
+  };
 
   const loadData = async () => {
     setIsLoading(true);
@@ -188,13 +208,27 @@ const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({ workspaceId, on
                         {sub.frequency.charAt(0) + sub.frequency.slice(1).toLowerCase()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right">
-                        <button
-                          onClick={() => setEditingSubscription(sub)}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 rounded-md text-xs font-medium text-gray-700 bg-white hover:bg-gray-50 hover:border-blue-300 transition-colors"
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                          Edit
-                        </button>
+                        <div className="inline-flex items-center gap-2">
+                          <button
+                            onClick={() => handleRunSubscription(sub)}
+                            disabled={runningIds.has(sub.id)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 rounded-md text-xs font-medium text-gray-700 bg-white hover:bg-green-50 hover:border-green-400 hover:text-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            title="Send email now"
+                          >
+                            {runningIds.has(sub.id)
+                              ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              : <Play className="h-3.5 w-3.5" />
+                            }
+                            Run
+                          </button>
+                          <button
+                            onClick={() => setEditingSubscription(sub)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 rounded-md text-xs font-medium text-gray-700 bg-white hover:bg-gray-50 hover:border-blue-300 transition-colors"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                            Edit
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
