@@ -5,3 +5,4 @@
 - [ ] Per subscription "Run" should be limited only to Admins
 - [ ] "Manager Filter Templates" should be limited only to admins
 - [ ] If the ve client expires due to timeout, it should auto retry login
+- [ ] ORDER BY for queries
