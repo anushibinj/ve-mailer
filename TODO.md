@@ -4,3 +4,4 @@
 - [ ] Everything on the GUI should be a unique URI. As of now, everything is on the same endpoint.
 - [ ] Per subscription "Run" should be limited only to Admins
 - [ ] "Manager Filter Templates" should be limited only to admins
+- [ ] If the ve client expires due to timeout, it should auto retry login
