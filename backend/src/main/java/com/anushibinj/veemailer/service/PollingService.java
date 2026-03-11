@@ -26,19 +26,19 @@ public class PollingService {
     private final FilterService filterService;
     private final ObjectMapper objectMapper;
 
-    // e.g., run every hour
-    @Scheduled(fixedRate = 3600000)
+    // Top of every hour: 1:00, 2:00, 3:00 ...
+    @Scheduled(cron = "0 0 * * * *")
     public void pollHourly() {
         processByFrequency(Frequency.HOURLY);
     }
 
-    // e.g., run daily
+    // Midnight every day
     @Scheduled(cron = "0 0 0 * * ?")
     public void pollDaily() {
         processByFrequency(Frequency.DAILY);
     }
 
-    // e.g., run weekly
+    // Midnight every Monday
     @Scheduled(cron = "0 0 0 * * MON")
     public void pollWeekly() {
         processByFrequency(Frequency.WEEKLY);
