@@ -1,5 +1,6 @@
 package com.anushibinj.veemailer.service;
 
+import com.anushibinj.veemailer.service.extractor.FieldExtractorRegistry;
 import com.hpe.adm.nga.sdk.model.BooleanFieldModel;
 import com.hpe.adm.nga.sdk.model.DateFieldModel;
 import com.hpe.adm.nga.sdk.model.EntityModel;
@@ -28,12 +29,13 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class NotificationService {
-	
-	// Use the admin email configured in application.properties as the sender address
-	@Value("${spring.mail.username}")
-	String from;
+
+    // Use the admin email configured in application.properties as the sender address
+    @Value("${spring.mail.username}")
+    String from;
 
     private final JavaMailSender mailSender;
+    private final FieldExtractorRegistry fieldExtractorRegistry;
 
     @Async
     public void processAndSendNotifications(List<EmailSubscriber> subscribers,
@@ -91,7 +93,7 @@ public class NotificationService {
                 String rowBg = (i % 2 == 0) ? "#ffffff" : "#f9f9f9";
                 sb.append("<tr style=\"background-color:").append(rowBg).append(";\">");
                 for (String field : fields) {
-                    String cellValue = extractFieldValue(entity.getValue(field));
+                    String cellValue = extractFieldValue(field, entity.getValue(field));
                     sb.append("<td style=\"padding:8px;\">")
                       .append(escapeHtml(cellValue))
                       .append("</td>");
@@ -110,11 +112,19 @@ public class NotificationService {
 
     /**
      * Extracts a display-friendly string from any FieldModel type.
+     *
+     * <p>For reference fields, delegates to the {@link FieldExtractorRegistry}
+     * so that field-specific sub-field preferences (e.g. {@code owner.full_name}
+     * vs {@code phase.name}) are applied automatically.
+     *
+     * @param fieldName the Octane field name (used to look up the right extractor)
+     * @param fm        the raw field model (may be {@code null})
      */
-    private String extractFieldValue(FieldModel<?> fm) {
+    private String extractFieldValue(String fieldName, FieldModel<?> fm) {
         if (fm == null || !fm.hasValue() || fm.getValue() == null) {
             return "";
         }
+        // Scalar types — no registry lookup needed
         if (fm instanceof StringFieldModel sfm) {
             return sfm.getValue() != null ? sfm.getValue() : "";
         }
@@ -130,26 +140,28 @@ public class NotificationService {
         if (fm instanceof DateFieldModel dfm) {
             return dfm.getValue() != null ? dfm.getValue().toString() : "";
         }
+        // Multi-reference: resolve each item using the registry, then join
         if (fm instanceof MultiReferenceFieldModel mrfm) {
             return mrfm.getValue().stream()
-                    .map(ref -> resolveRefName(ref))
+                    .map(ref -> resolveRefName(fieldName, ref))
                     .collect(Collectors.joining(", "));
         }
-        if (fm instanceof ReferenceFieldModel rfm) {
-            return resolveRefName(rfm.getValue());
+        // Single reference: delegate to field-specific extractor
+        if (fm instanceof ReferenceFieldModel) {
+            return fieldExtractorRegistry.forField(fieldName).extract(fm);
         }
         return fm.getValue().toString();
     }
 
-    /** Resolves the display name of a referenced EntityModel (e.g. phase, owner). */
-    private String resolveRefName(EntityModel ref) {
+    /**
+     * Resolves the display name of one entity inside a multi-reference field.
+     * Uses the same registry lookup as single references.
+     */
+    private String resolveRefName(String fieldName, EntityModel ref) {
         if (ref == null) return "";
-        FieldModel<?> nameField = ref.getValue("name");
-        if (nameField instanceof StringFieldModel s && s.getValue() != null) {
-            return s.getValue();
-        }
-        String id = ref.getId();
-        return id != null ? id : "";
+        // Wrap in a synthetic ReferenceFieldModel so the extractor can work uniformly
+        ReferenceFieldModel synthetic = new ReferenceFieldModel(fieldName, ref);
+        return fieldExtractorRegistry.forField(fieldName).extract(synthetic);
     }
 
     /** Converts an Octane field name like "story_points" → "Story Points". */
