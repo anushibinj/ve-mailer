@@ -38,6 +38,14 @@ export interface FilterUpdatePayload {
   criteria: FilterCriteriaClause[];
 }
 
+export interface FilterImportPayload {
+  /** Raw JSON text exported from ValueEdge */
+  rawJson: string;
+  title: string;
+  description: string;
+  entityType: string;
+}
+
 export interface Subscription {
   id: string;
   recipientEmail: string;
@@ -80,6 +88,11 @@ export const updateFilter = async (workspaceId: string, filterId: string, payloa
 
 export const executeFilter = async (workspaceId: string, filterId: string): Promise<any[]> => {
   const response = await api.post(`/api/v1/workspaces/${workspaceId}/filters/${filterId}/execute`);
+  return response.data;
+};
+
+export const importFilter = async (workspaceId: string, payload: FilterImportPayload): Promise<Filter> => {
+  const response = await api.post(`/api/v1/workspaces/${workspaceId}/filters/import`, payload);
   return response.data;
 };
 

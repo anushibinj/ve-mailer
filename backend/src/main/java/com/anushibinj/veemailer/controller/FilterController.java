@@ -1,9 +1,11 @@
 package com.anushibinj.veemailer.controller;
 
 import com.anushibinj.veemailer.dto.FilterDto;
+import com.anushibinj.veemailer.dto.VeFilterImportDto;
 import com.anushibinj.veemailer.model.Filter;
 import com.anushibinj.veemailer.repository.FilterRepository;
 import com.anushibinj.veemailer.service.FilterService;
+import com.anushibinj.veemailer.service.VeFilterImportParser;
 import com.hpe.adm.nga.sdk.model.EntityModel;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -15,7 +17,10 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.http.HttpStatus;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
 
@@ -26,6 +31,7 @@ public class FilterController {
 
     private final FilterRepository filterRepository;
     private final FilterService filterService;
+    private final VeFilterImportParser veFilterImportParser;
 
     @GetMapping
     public ResponseEntity<List<Filter>> getFilters(@PathVariable UUID workspaceId) {
@@ -58,5 +64,22 @@ public class FilterController {
             @PathVariable UUID filterId) {
         List<EntityModel> results = filterService.executeFilter(filterId, workspaceId);
         return ResponseEntity.ok(results);
+    }
+
+    @PostMapping("/import")
+    public ResponseEntity<Filter> importFilter(
+            @PathVariable UUID workspaceId,
+            @Valid @RequestBody VeFilterImportDto dto) {
+        try {
+            FilterDto filterDto = veFilterImportParser.parse(dto);
+            filterDto.setWorkspaceId(workspaceId);
+            Filter saved = filterService.createFilter(filterDto);
+            return ResponseEntity.ok(saved);
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage(), e);
+        } catch (IOException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Failed to parse the provided JSON: " + e.getMessage(), e);
+        }
     }
 }
