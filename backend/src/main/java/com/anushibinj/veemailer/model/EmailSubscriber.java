@@ -1,8 +1,12 @@
 package com.anushibinj.veemailer.model;
 
+import jakarta.persistence.CollectionTable;
+import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -14,6 +18,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -38,8 +43,19 @@ public class EmailSubscriber {
 
     private String recipientEmail;
 
+    /** Legacy field – retained for backward-compatibility migration only. */
     @Enumerated(EnumType.STRING)
+    @Column(name = "frequency", nullable = true)
     private Frequency frequency;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "schedule_type")
+    private ScheduleType scheduleType;
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "subscriber_scheduled_hours", joinColumns = @JoinColumn(name = "subscriber_id"))
+    @Column(name = "scheduled_hour")
+    private List<Integer> scheduledHours;
 
     @Enumerated(EnumType.STRING)
     private Status status;

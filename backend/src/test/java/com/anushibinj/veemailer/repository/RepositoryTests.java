@@ -4,6 +4,7 @@ import com.anushibinj.veemailer.model.EmailSubscriber;
 import com.anushibinj.veemailer.model.Filter;
 import com.anushibinj.veemailer.model.Frequency;
 import com.anushibinj.veemailer.model.OtpRequest;
+import com.anushibinj.veemailer.model.ScheduleType;
 import com.anushibinj.veemailer.model.Status;
 import com.anushibinj.veemailer.model.Workspace;
 import org.junit.jupiter.api.Test;
@@ -48,7 +49,9 @@ class RepositoryTests {
         sub1.setRecipientEmail("user1@example.com");
         sub1.setWorkspace(w);
         sub1.setFilter(f);
-        sub1.setFrequency(Frequency.DAILY);
+        sub1.setFrequency(Frequency.DAILY); // legacy field retained
+        sub1.setScheduleType(ScheduleType.DAILY);
+        sub1.setScheduledHours(List.of(9, 15));
         sub1.setStatus(Status.ACTIVE);
         emailSubscriberRepository.save(sub1);
 
@@ -56,19 +59,27 @@ class RepositoryTests {
         sub2.setRecipientEmail("user2@example.com");
         sub2.setWorkspace(w);
         sub2.setFilter(f);
-        sub2.setFrequency(Frequency.WEEKLY);
+        sub2.setFrequency(Frequency.WEEKLY); // legacy field retained
+        sub2.setScheduleType(ScheduleType.WEEKLY);
+        sub2.setScheduledHours(List.of(8));
         sub2.setStatus(Status.ACTIVE);
         emailSubscriberRepository.save(sub2);
 
-        // Test custom query
+        // Legacy query still works
         List<EmailSubscriber> dailyActive = emailSubscriberRepository.findByFrequencyAndStatus(Frequency.DAILY, Status.ACTIVE);
         assertEquals(1, dailyActive.size());
         assertEquals("user1@example.com", dailyActive.get(0).getRecipientEmail());
 
+        // New schedule-based query
+        List<EmailSubscriber> atHour9 = emailSubscriberRepository
+                .findActiveByScheduledHourAndScheduleType(9, ScheduleType.DAILY, Status.ACTIVE);
+        assertEquals(1, atHour9.size());
+        assertEquals("user1@example.com", atHour9.get(0).getRecipientEmail());
+
         Optional<EmailSubscriber> found = emailSubscriberRepository
                 .findByRecipientEmailAndWorkspaceIdAndFilterId("user2@example.com", w.getId(), f.getId());
         assertTrue(found.isPresent());
-        assertEquals(Frequency.WEEKLY, found.get().getFrequency());
+        assertEquals(ScheduleType.WEEKLY, found.get().getScheduleType());
 
         List<EmailSubscriber> workspaceActive = emailSubscriberRepository.findByWorkspaceIdAndStatus(w.getId(), Status.ACTIVE);
         assertEquals(2, workspaceActive.size());
@@ -114,7 +125,9 @@ class RepositoryTests {
         sub.setRecipientEmail("findme@example.com");
         sub.setWorkspace(w);
         sub.setFilter(f);
-        sub.setFrequency(Frequency.HOURLY);
+        sub.setFrequency(Frequency.HOURLY); // legacy field retained
+        sub.setScheduleType(ScheduleType.DAILY);
+        sub.setScheduledHours(List.of(0, 6, 12, 18));
         sub.setStatus(Status.ACTIVE);
         emailSubscriberRepository.save(sub);
 
@@ -134,4 +147,40 @@ class RepositoryTests {
         Optional<OtpRequest> result = otpRequestRepository.findByEmail("nonexistent@example.com");
         assertFalse(result.isPresent());
     }
+
+    @Test
+    void testFindByScheduleTypeIsNull_ReturnsLegacySubscribers() {
+        Workspace w = new Workspace();
+        w.setTitle("Legacy Workspace");
+        workspaceRepository.save(w);
+
+        Filter f = new Filter();
+        f.setTitle("Legacy Filter");
+        f.setWorkspace(w);
+        filterRepository.save(f);
+
+        // Subscriber with no scheduleType (legacy)
+        EmailSubscriber legacy = new EmailSubscriber();
+        legacy.setRecipientEmail("legacy@example.com");
+        legacy.setWorkspace(w);
+        legacy.setFilter(f);
+        legacy.setFrequency(Frequency.DAILY);
+        legacy.setStatus(Status.ACTIVE);
+        emailSubscriberRepository.save(legacy);
+
+        // Subscriber already on new model
+        EmailSubscriber migrated = new EmailSubscriber();
+        migrated.setRecipientEmail("migrated@example.com");
+        migrated.setWorkspace(w);
+        migrated.setFilter(f);
+        migrated.setScheduleType(ScheduleType.DAILY);
+        migrated.setScheduledHours(List.of(9));
+        migrated.setStatus(Status.ACTIVE);
+        emailSubscriberRepository.save(migrated);
+
+        List<EmailSubscriber> unmigrated = emailSubscriberRepository.findByScheduleTypeIsNull();
+        assertEquals(1, unmigrated.size());
+        assertEquals("legacy@example.com", unmigrated.get(0).getRecipientEmail());
+    }
 }
+

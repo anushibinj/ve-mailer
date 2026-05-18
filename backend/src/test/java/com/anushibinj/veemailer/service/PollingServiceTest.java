@@ -2,7 +2,7 @@ package com.anushibinj.veemailer.service;
 
 import com.anushibinj.veemailer.model.EmailSubscriber;
 import com.anushibinj.veemailer.model.Filter;
-import com.anushibinj.veemailer.model.Frequency;
+import com.anushibinj.veemailer.model.ScheduleType;
 import com.anushibinj.veemailer.model.Status;
 import com.anushibinj.veemailer.model.Workspace;
 import com.anushibinj.veemailer.repository.EmailSubscriberRepository;
@@ -14,6 +14,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.DayOfWeek;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -22,6 +23,7 @@ import java.util.UUID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -65,7 +67,7 @@ class PollingServiceTest {
     }
 
     @Test
-    void testProcessByFrequency_GroupsCorrectly() {
+    void testProcessAtHour_Daily_GroupsCorrectly() {
         EmailSubscriber sub1 = new EmailSubscriber();
         sub1.setWorkspace(workspace1);
         sub1.setFilter(filter1);
@@ -82,13 +84,13 @@ class PollingServiceTest {
         sub4.setWorkspace(workspace2);
         sub4.setFilter(filter1); // Different workspace
 
-        when(emailSubscriberRepository.findByFrequencyAndStatus(Frequency.HOURLY, Status.ACTIVE))
+        when(emailSubscriberRepository.findActiveByScheduledHourAndScheduleType(9, ScheduleType.DAILY, Status.ACTIVE))
                 .thenReturn(Arrays.asList(sub1, sub2, sub3, sub4));
         when(filterService.getFilterFields(any())).thenReturn(List.of("name"));
         when(filterService.executeFilter(any(), any())).thenReturn(Collections.emptyList());
         when(filterService.getQueryLimit()).thenReturn(25);
 
-        pollingService.processByFrequency(Frequency.HOURLY);
+        pollingService.processAtHour(9, DayOfWeek.WEDNESDAY);
 
         // Group 1: sub1, sub2  |  Group 2: sub3  |  Group 3: sub4
         verify(notificationService, times(3))
@@ -96,29 +98,58 @@ class PollingServiceTest {
     }
 
     @Test
-    void testProcessByFrequency_Empty() {
-        when(emailSubscriberRepository.findByFrequencyAndStatus(Frequency.DAILY, Status.ACTIVE))
+    void testProcessAtHour_Empty_NoNotificationsSent() {
+        when(emailSubscriberRepository.findActiveByScheduledHourAndScheduleType(9, ScheduleType.DAILY, Status.ACTIVE))
                 .thenReturn(Collections.emptyList());
 
-        pollingService.processByFrequency(Frequency.DAILY);
+        pollingService.processAtHour(9, DayOfWeek.WEDNESDAY);
 
         verify(notificationService, never())
                 .processAndSendNotifications(anyList(), anyList(), anyList(), anyInt());
     }
 
     @Test
-    void testScheduledMethods() {
+    void testProcessAtHour_Weekly_FiresOnlyOnMonday() {
+        EmailSubscriber weeklySub = new EmailSubscriber();
+        weeklySub.setWorkspace(workspace1);
+        weeklySub.setFilter(filter1);
+
+        when(emailSubscriberRepository.findActiveByScheduledHourAndScheduleType(9, ScheduleType.DAILY, Status.ACTIVE))
+                .thenReturn(Collections.emptyList());
+        when(emailSubscriberRepository.findActiveByScheduledHourAndScheduleType(9, ScheduleType.WEEKLY, Status.ACTIVE))
+                .thenReturn(List.of(weeklySub));
+        when(filterService.getFilterFields(any())).thenReturn(List.of("name"));
+        when(filterService.executeFilter(any(), any())).thenReturn(Collections.emptyList());
+        when(filterService.getQueryLimit()).thenReturn(25);
+
+        pollingService.processAtHour(9, DayOfWeek.MONDAY);
+
+        verify(notificationService, times(1))
+                .processAndSendNotifications(anyList(), anyList(), anyList(), anyInt());
+    }
+
+    @Test
+    void testProcessAtHour_Weekly_DoesNotFireOnNonMonday() {
+        when(emailSubscriberRepository.findActiveByScheduledHourAndScheduleType(9, ScheduleType.DAILY, Status.ACTIVE))
+                .thenReturn(Collections.emptyList());
+
+        // Wednesday – weekly subscribers should NOT be queried or triggered
+        pollingService.processAtHour(9, DayOfWeek.WEDNESDAY);
+
+        verify(emailSubscriberRepository, never())
+                .findActiveByScheduledHourAndScheduleType(anyInt(), eq(ScheduleType.WEEKLY), any());
+        verify(notificationService, never())
+                .processAndSendNotifications(anyList(), anyList(), anyList(), anyInt());
+    }
+
+    @Test
+    void testPollAtHour_DelegatesToProcessAtHour() {
         PollingService spy = spy(pollingService);
-        doNothing().when(spy).processByFrequency(any());
+        doNothing().when(spy).processAtHour(anyInt(), any());
 
-        spy.pollHourly();
-        verify(spy).processByFrequency(Frequency.HOURLY);
+        spy.pollAtHour();
 
-        spy.pollDaily();
-        verify(spy).processByFrequency(Frequency.DAILY);
-
-        spy.pollWeekly();
-        verify(spy).processByFrequency(Frequency.WEEKLY);
+        verify(spy, times(1)).processAtHour(anyInt(), any());
     }
 
     @Test

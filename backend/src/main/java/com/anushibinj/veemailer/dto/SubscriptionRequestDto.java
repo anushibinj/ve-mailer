@@ -1,7 +1,7 @@
 package com.anushibinj.veemailer.dto;
 
 import com.anushibinj.veemailer.model.ActionType;
-import com.anushibinj.veemailer.model.Frequency;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
@@ -31,5 +31,6 @@ public class SubscriptionRequestDto {
     private UUID filterId;
 
     @NotNull
-    private Frequency frequency;
+    @Valid
+    private ScheduleDto schedule;
 }

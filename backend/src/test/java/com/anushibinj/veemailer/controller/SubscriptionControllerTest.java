@@ -1,9 +1,10 @@
 package com.anushibinj.veemailer.controller;
 
+import com.anushibinj.veemailer.dto.ScheduleDto;
 import com.anushibinj.veemailer.dto.SubscriptionRequestDto;
 import com.anushibinj.veemailer.dto.VerificationRequestDto;
 import com.anushibinj.veemailer.model.ActionType;
-import com.anushibinj.veemailer.model.Frequency;
+import com.anushibinj.veemailer.model.ScheduleType;
 import com.anushibinj.veemailer.service.SubscriptionService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
@@ -14,6 +15,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.util.List;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -35,21 +37,38 @@ class SubscriptionControllerTest {
     @Autowired
     private ObjectMapper objectMapper;
 
-    @Test
-    void testRequestSubscription_Success() throws Exception {
+    private SubscriptionRequestDto buildRequest() {
         SubscriptionRequestDto request = new SubscriptionRequestDto();
         request.setEmail("user@test.com");
         request.setActionType(ActionType.SUBSCRIBE);
         request.setWorkspaceId(UUID.randomUUID());
         request.setFilterId(UUID.randomUUID());
-        request.setFrequency(Frequency.DAILY);
+        request.setSchedule(ScheduleDto.builder()
+                .type(ScheduleType.DAILY)
+                .hours(List.of(9, 15))
+                .build());
+        return request;
+    }
 
+    @Test
+    void testRequestSubscription_Success() throws Exception {
         doNothing().when(subscriptionService).requestSubscription(anyString(), any(), any(), any(), any());
 
         mockMvc.perform(post("/api/v1/subscriptions/request")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request)))
+                .content(objectMapper.writeValueAsString(buildRequest())))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    void testRequestSubscription_DuplicateHours_Returns400() throws Exception {
+        doThrow(new IllegalArgumentException("Duplicate hour in schedule: 9"))
+                .when(subscriptionService).requestSubscription(anyString(), any(), any(), any(), any());
+
+        mockMvc.perform(post("/api/v1/subscriptions/request")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(buildRequest())))
+                .andExpect(status().isBadRequest());
     }
 
     @Test
@@ -78,25 +97,6 @@ class SubscriptionControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isUnauthorized()); // 401 mapped from our controller
-    }
-
-    @Test
-    void testRequestSubscription_GenericException_Returns400() throws Exception {
-        // requestSubscription has no try/catch, so a RuntimeException bubbles up as 500.
-        // This test verifies the service IS called (we test the 400 path via verifySubscription instead).
-        SubscriptionRequestDto request = new SubscriptionRequestDto();
-        request.setEmail("user@test.com");
-        request.setActionType(ActionType.SUBSCRIBE);
-        request.setWorkspaceId(UUID.randomUUID());
-        request.setFilterId(UUID.randomUUID());
-        request.setFrequency(Frequency.DAILY);
-
-        doNothing().when(subscriptionService).requestSubscription(anyString(), any(), any(), any(), any());
-
-        mockMvc.perform(post("/api/v1/subscriptions/request")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isOk());
     }
 
     @Test

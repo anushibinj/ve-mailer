@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { requestSubscription, verifyOtp, type Subscription } from '../services/apiService';
-import { Loader2, X } from 'lucide-react';
+import { requestSubscription, verifyOtp, type Subscription, type Schedule } from '../services/apiService';
+import { Loader2, X, Plus } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface EditSubscriptionModalProps {
@@ -13,8 +13,6 @@ interface EditSubscriptionModalProps {
 
 type Step = 'edit' | 'unsubscribe' | 'otp';
 
-const FREQUENCIES = ['HOURLY', 'DAILY', 'WEEKLY'];
-
 const EditSubscriptionModal: React.FC<EditSubscriptionModalProps> = ({
   subscription,
   workspaceId,
@@ -23,7 +21,9 @@ const EditSubscriptionModal: React.FC<EditSubscriptionModalProps> = ({
   onSuccess,
 }) => {
   const [step, setStep] = useState<Step>('edit');
-  const [frequency, setFrequency] = useState(subscription.frequency);
+  const [scheduleType, setScheduleType] = useState<'DAILY' | 'WEEKLY'>(subscription.schedule.type);
+  const [scheduledHours, setScheduledHours] = useState<number[]>([...subscription.schedule.hours]);
+  const [hourToAdd, setHourToAdd] = useState<number>(subscription.schedule.hours[0] ?? 9);
   const [isRequesting, setIsRequesting] = useState(false);
   const [otp, setOtp] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
@@ -32,9 +32,23 @@ const EditSubscriptionModal: React.FC<EditSubscriptionModalProps> = ({
 
   const action = step === 'unsubscribe' ? 'UNSUBSCRIBE' : 'UPDATE';
 
+  const formatHour = (h: number) => `${String(h).padStart(2, '0')}:00`;
+
+  const handleAddHour = () => {
+    if (!scheduledHours.includes(hourToAdd)) {
+      setScheduledHours(prev => [...prev, hourToAdd].sort((a, b) => a - b));
+    }
+  };
+
+  const handleRemoveHour = (h: number) => {
+    setScheduledHours(prev => prev.filter(x => x !== h));
+  };
+
   const handleClose = () => {
     setStep('edit');
-    setFrequency(subscription.frequency);
+    setScheduleType(subscription.schedule.type);
+    setScheduledHours([...subscription.schedule.hours]);
+    setHourToAdd(subscription.schedule.hours[0] ?? 9);
     setOtp('');
     onClose();
   };
@@ -42,12 +56,15 @@ const EditSubscriptionModal: React.FC<EditSubscriptionModalProps> = ({
   const handleRequestOtp = async () => {
     setIsRequesting(true);
     try {
+      const schedule: Schedule = action === 'UPDATE'
+        ? { type: scheduleType, hours: scheduledHours }
+        : subscription.schedule;
       await requestSubscription({
         email: subscription.recipientEmail,
         actionType: action,
         workspaceId,
         filterId: subscription.filterId,
-        frequency: action === 'UPDATE' ? frequency : subscription.frequency,
+        schedule,
       });
       toast.success('OTP sent to your email!');
       setStep('otp');
@@ -105,24 +122,61 @@ const EditSubscriptionModal: React.FC<EditSubscriptionModalProps> = ({
               {subscription.filterTitle}
             </p>
 
-            {/* ── Step: edit frequency ── */}
+            {/* ── Step: edit schedule ── */}
             {step === 'edit' && (
               <div className="space-y-5">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Notification Frequency
+                    Schedule Type
                   </label>
                   <select
-                    value={frequency}
-                    onChange={e => setFrequency(e.target.value)}
+                    value={scheduleType}
+                    onChange={e => setScheduleType(e.target.value as 'DAILY' | 'WEEKLY')}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white text-sm"
                   >
-                    {FREQUENCIES.map(f => (
-                      <option key={f} value={f}>
-                        {f.charAt(0) + f.slice(1).toLowerCase()}
-                      </option>
-                    ))}
+                    <option value="DAILY">Daily</option>
+                    <option value="WEEKLY">Weekly (every Monday)</option>
                   </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Notification Hours
+                  </label>
+                  <div className="flex gap-2 mb-2">
+                    <select
+                      value={hourToAdd}
+                      onChange={e => setHourToAdd(Number(e.target.value))}
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white text-sm"
+                    >
+                      {Array.from({ length: 24 }, (_, i) => (
+                        <option key={i} value={i}>{String(i).padStart(2, '0')}:00</option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={handleAddHour}
+                      disabled={scheduledHours.includes(hourToAdd)}
+                      className="inline-flex items-center gap-1 px-3 py-2 border border-blue-500 rounded-md text-sm font-medium text-blue-700 hover:bg-blue-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Add
+                    </button>
+                  </div>
+                  {scheduledHours.length === 0 ? (
+                    <p className="text-xs text-gray-400">No hours added. Add at least one.</p>
+                  ) : (
+                    <div className="flex flex-wrap gap-1.5">
+                      {scheduledHours.map(h => (
+                        <span key={h} className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">
+                          {formatHour(h)}
+                          <button type="button" onClick={() => handleRemoveHour(h)} className="hover:text-blue-600">
+                            <X className="h-3 w-3" />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 {/* Footer */}
@@ -137,7 +191,7 @@ const EditSubscriptionModal: React.FC<EditSubscriptionModalProps> = ({
                   <button
                     type="button"
                     onClick={handleRequestOtp}
-                    disabled={isRequesting}
+                    disabled={isRequesting || scheduledHours.length === 0}
                     className="flex items-center gap-2 py-2 px-4 rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-blue-300 disabled:cursor-not-allowed transition-colors"
                   >
                     {isRequesting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Send OTP to Update'}

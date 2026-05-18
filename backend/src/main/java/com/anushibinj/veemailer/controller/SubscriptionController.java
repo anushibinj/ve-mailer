@@ -20,14 +20,18 @@ public class SubscriptionController {
 
     @PostMapping("/request")
     public ResponseEntity<String> requestSubscription(@Valid @RequestBody SubscriptionRequestDto request) {
-        subscriptionService.requestSubscription(
-                request.getEmail(),
-                request.getActionType(),
-                request.getWorkspaceId(),
-                request.getFilterId(),
-                request.getFrequency()
-        );
-        return ResponseEntity.ok("OTP has been sent to your email.");
+        try {
+            subscriptionService.requestSubscription(
+                    request.getEmail(),
+                    request.getActionType(),
+                    request.getWorkspaceId(),
+                    request.getFilterId(),
+                    request.getSchedule()
+            );
+            return ResponseEntity.ok("OTP has been sent to your email.");
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
 
     @PostMapping("/verify")

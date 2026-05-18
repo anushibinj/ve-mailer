@@ -1,6 +1,5 @@
 package com.anushibinj.veemailer.dto;
 
-import com.anushibinj.veemailer.model.Frequency;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -17,5 +16,5 @@ public class SubscriptionResponseDTO {
     private String recipientEmail;
     private UUID filterId;
     private String filterTitle;
-    private Frequency frequency;
+    private ScheduleDto schedule;
 }

@@ -1,6 +1,6 @@
 # VE Mailer — Email Notification Broker
 
-A full-stack application that lets users subscribe to email digest notifications for work items tracked in **Microfocus ALM Octane (ValueEdge)**. Subscribers choose a workspace, a pre-configured filter, and a delivery frequency (hourly, daily, or weekly). Subscriptions are protected by OTP-based email verification.
+A full-stack application that lets users subscribe to email digest notifications for work items tracked in **Microfocus ALM Octane (ValueEdge)**. Subscribers choose a workspace, a pre-configured filter, and a custom notification schedule (daily or weekly, with one or more specific hours per day). Subscriptions are protected by OTP-based email verification.
 
 ---
 
@@ -40,7 +40,7 @@ Key capabilities:
 
 - Browse registered **Workspaces** and their active subscriptions
 - Subscribe, update, or unsubscribe via a simple **OTP-verified** flow
-- Receive **email digests** at hourly, daily, or weekly cadence
+- Receive **email digests** on a custom schedule — daily or weekly (Mondays), at one or more specific hours you choose
 - Create **Filter Templates** — structured query definitions (entity type, fields, criteria) that are stored as reusable templates and dynamically compiled into Octane SDK queries
 - **Execute filters on demand** — preview matching results from ValueEdge directly in the UI before subscribing
 
@@ -75,7 +75,7 @@ The backend is stateless between requests. An in-memory cache (`OctaneCacheServi
 | Persistence | Spring Data JPA, H2 (dev), PostgreSQL (prod)                      |
 | Security  | Spring Security, BCrypt OTP hashing                                 |
 | Email     | Spring Mail (JavaMailSender)                                        |
-| Scheduling | Spring `@Scheduled` — hourly / daily / weekly polling              |
+| Scheduling | Spring `@Scheduled` — cron-based hourly trigger dispatches to subscribers by schedule type and configured hours |
 | Octane SDK | Microfocus ALM Octane SDK 25.4                                     |
 | Build     | Maven (backend), npm (frontend)                                     |
 | Containers | Nginx + Docker multi-stage (frontend)                              |
@@ -99,6 +99,7 @@ ve-mailer/
 │   │   │   └── WorkspaceController.java
 │   │   ├── dto/
 │   │   │   ├── FilterDto.java              # Create-filter request DTO
+│   │   │   ├── ScheduleDto.java            # { type: DAILY|WEEKLY, hours: [int] }
 │   │   │   ├── SubscriptionRequestDto.java
 │   │   │   ├── SubscriptionResponseDTO.java
 │   │   │   ├── VerificationRequestDto.java
@@ -110,7 +111,8 @@ ve-mailer/
 │   │   │   ├── EmailSubscriber.java
 │   │   │   ├── OtpRequest.java
 │   │   │   ├── ActionType.java       # SUBSCRIBE | UPDATE | UNSUBSCRIBE
-│   │   │   ├── Frequency.java        # HOURLY | DAILY | WEEKLY
+│   │   │   ├── Frequency.java        # HOURLY | DAILY | WEEKLY (legacy, kept for migration)
+│   │   │   ├── ScheduleType.java     # DAILY | WEEKLY
 │   │   │   └── Status.java           # PENDING | ACTIVE
 │   │   ├── repository/
 │   │   │   ├── EmailSubscriberRepository.java
@@ -124,7 +126,8 @@ ve-mailer/
 │   │       ├── NotificationService.java # Async digest email sender
 │   │       ├── OctaneCacheService.java  # In-memory Octane client cache
 │   │       ├── OtpService.java       # OTP generation, hashing, validation
-│   │       ├── PollingService.java   # Scheduled digest trigger
+│   │       ├── PollingService.java   # Hourly cron trigger — dispatches by schedule
+│   │       ├── ScheduleMigrationRunner.java # Startup migration: converts legacy Frequency records
 │   │       ├── SubscriptionService.java # Subscription business logic
 │   │       └── ve/
 │   │           ├── ValueEdgeProperties.java  # Typed config properties
@@ -177,16 +180,21 @@ Filter
 EmailSubscriber
   id (UUID PK)
   recipientEmail
-  frequency       -- HOURLY | DAILY | WEEKLY
+  scheduleType    -- DAILY | WEEKLY
+  frequency       -- HOURLY | DAILY | WEEKLY (legacy, nullable — kept for backward compat)
   status          -- PENDING | ACTIVE
   workspace_id    -- FK → Workspace
   filter_id       -- FK → Filter
+
+subscriber_scheduled_hours  (element collection table)
+  subscriber_id   -- FK → EmailSubscriber
+  scheduled_hour  -- 0-23 (hour of day to notify)
 
 OtpRequest
   id
   email
   actionType      -- SUBSCRIBE | UPDATE | UNSUBSCRIBE
-  payload         -- JSON: { workspaceId, filterId, frequency }
+  payload         -- JSON: { workspaceId, filterId, schedule: { type, hours[] } }
   otpHash         -- BCrypt hash of the 6-digit OTP
   expiresAt       -- 10 minutes from creation
 ```
@@ -229,11 +237,17 @@ Supported operators: `EQUAL_TO`, `IN`.
 
 | Method | Path                      | Body fields                                          | Description                         |
 |--------|---------------------------|------------------------------------------------------|-------------------------------------|
-| `POST` | `/subscriptions/request`  | `email`, `actionType`, `workspaceId`, `filterId`, `frequency` | Trigger OTP email for a subscription action |
+| `POST` | `/subscriptions/request`  | `email`, `actionType`, `workspaceId`, `filterId`, `schedule` | Trigger OTP email for a subscription action |
 | `POST` | `/subscriptions/verify`   | `email`, `otp`                                       | Verify OTP and execute the action   |
 
 **`actionType`** values: `SUBSCRIBE`, `UPDATE`, `UNSUBSCRIBE`
-**`frequency`** values: `HOURLY`, `DAILY`, `WEEKLY`
+
+**`schedule`** object:
+```json
+{ "type": "DAILY", "hours": [9, 15] }
+```
+- `type`: `DAILY` (fires every day) or `WEEKLY` (fires every Monday)
+- `hours`: non-empty list of hours (0–23) at which to send the notification
 
 **Response codes:**
 - `200 OK` — success
@@ -461,7 +475,7 @@ User                    Frontend               Backend
  │                          │ ◄─────────────────── │
  │                          │                     │
  │  Choose filter +         │                     │
- │  frequency + email       │  POST /subscriptions/request
+ │  schedule + email        │  POST /subscriptions/request
  │ ─────────────────────►   │ ───────────────────► │
  │                          │                     │  Generate 6-digit OTP
  │                          │                     │  BCrypt hash → DB
@@ -496,20 +510,24 @@ The same dynamic query building is used by `PollingService` when sending schedul
 
 ### Notification Polling
 
-`PollingService` runs on three schedules:
+`PollingService` runs on a single cron schedule that fires at the top of every hour (`0 0 * * * *`). Each run:
 
-| Schedule | Trigger                |
-|----------|------------------------|
-| Hourly   | Every 3 600 000 ms     |
-| Daily    | `cron: 0 0 0 * * ?`   |
-| Weekly   | `cron: 0 0 0 * * MON` |
+| Step | What happens |
+|------|-------------|
+| 1 | Determines current hour and day-of-week |
+| 2 | Queries `DAILY` subscribers whose `scheduledHours` contains the current hour |
+| 3 | Queries `WEEKLY` subscribers whose `scheduledHours` contains the current hour — **only on Mondays** |
+| 4 | Groups matching subscribers by `(workspaceId, filterId)` to avoid duplicate API calls |
+| 5 | Calls `FilterService.executeFilter()` once per group |
+| 6 | Passes results to `NotificationService` to send async digest emails |
 
-On each run it:
+On startup, `ScheduleMigrationRunner` converts any legacy `Frequency`-based subscribers to the new `scheduleType` + `scheduledHours` model:
 
-1. Fetches all `ACTIVE` subscribers matching the frequency
-2. Groups them by `(workspaceId, filterId)` to avoid duplicate external API calls
-3. Delegates to `FilterService.executeFilter()` once per group to query Octane
-4. Passes results to `NotificationService`, which sends an async digest email to each subscriber in the group
+| Legacy `frequency` | Migrated to |
+|--------------------|-------------|
+| `HOURLY` | `DAILY` @ hours 0, 6, 12, 18 |
+| `DAILY` | `DAILY` @ hour 8 |
+| `WEEKLY` | `WEEKLY` @ hour 8 |
 
 ### OTP Lifecycle
 

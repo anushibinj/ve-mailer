@@ -6,9 +6,10 @@ import {
   runSubscription,
   type Subscription,
   type Filter,
+  type Schedule,
   type SubscriptionRequestPayload
 } from '../services/apiService';
-import { Loader2, ArrowLeft, SlidersHorizontal, Pencil, Play } from 'lucide-react';
+import { Loader2, ArrowLeft, SlidersHorizontal, Pencil, Play, Plus, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import OtpModal from './OtpModal';
 import EditSubscriptionModal from './EditSubscriptionModal';
@@ -27,7 +28,9 @@ const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({ workspaceId, on
   // Subscribe form state
   const [email, setEmail] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('');
-  const [frequency, setFrequency] = useState('HOURLY');
+  const [scheduleType, setScheduleType] = useState<'DAILY' | 'WEEKLY'>('DAILY');
+  const [scheduledHours, setScheduledHours] = useState<number[]>([]);
+  const [hourToAdd, setHourToAdd] = useState<number>(9);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Subscribe OTP modal state
@@ -77,16 +80,36 @@ const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({ workspaceId, on
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workspaceId]);
 
+  const handleAddHour = () => {
+    if (!scheduledHours.includes(hourToAdd)) {
+      setScheduledHours(prev => [...prev, hourToAdd].sort((a, b) => a - b));
+    }
+  };
+
+  const handleRemoveHour = (h: number) => {
+    setScheduledHours(prev => prev.filter(x => x !== h));
+  };
+
+  const formatHour = (h: number) => `${String(h).padStart(2, '0')}:00`;
+
+  const formatSchedule = (schedule: Schedule): string => {
+    const typeLabel = schedule.type === 'DAILY' ? 'Daily' : 'Weekly (Mon)';
+    const hoursLabel = schedule.hours.map(formatHour).join(', ');
+    return `${typeLabel} @ ${hoursLabel}`;
+  };
+
   const handleOtpSuccess = () => {
     setIsOtpModalOpen(false);
     setEmail('');
     setSelectedFilter('');
-    setFrequency('HOURLY');
+    setScheduleType('DAILY');
+    setScheduledHours([]);
+    setHourToAdd(9);
     loadData();
   };
 
   const isValidEmail = (e: string) => /\S+@\S+\.\S+/.test(e);
-  const isFormValid = isValidEmail(email) && selectedFilter !== '';
+  const isFormValid = isValidEmail(email) && selectedFilter !== '' && scheduledHours.length > 0;
 
   const handleSubscribeSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -94,12 +117,13 @@ const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({ workspaceId, on
 
     setIsSubmitting(true);
     try {
+      const schedule: Schedule = { type: scheduleType, hours: scheduledHours };
       const payload: SubscriptionRequestPayload = {
         email,
         actionType: 'SUBSCRIBE',
         workspaceId,
         filterId: selectedFilter,
-        frequency,
+        schedule,
       };
       await requestSubscription(payload);
       setPendingEmail(email);
@@ -190,7 +214,7 @@ const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({ workspaceId, on
                       Filter
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Frequency
+                      Schedule
                     </th>
                     <th className="px-6 py-3" />
                   </tr>
@@ -205,7 +229,7 @@ const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({ workspaceId, on
                         {sub.filterTitle}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {sub.frequency.charAt(0) + sub.frequency.slice(1).toLowerCase()}
+                        {formatSchedule(sub.schedule)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right">
                         <div className="inline-flex items-center gap-2">
@@ -281,18 +305,56 @@ const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({ workspaceId, on
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Frequency
+                  Schedule Type
                 </label>
                 <select
-                  required
-                  value={frequency}
-                  onChange={(e) => setFrequency(e.target.value)}
+                  value={scheduleType}
+                  onChange={(e) => setScheduleType(e.target.value as 'DAILY' | 'WEEKLY')}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white"
                 >
-                  <option value="HOURLY">Hourly</option>
                   <option value="DAILY">Daily</option>
-                  <option value="WEEKLY">Weekly</option>
+                  <option value="WEEKLY">Weekly (every Monday)</option>
                 </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Notification Hours
+                </label>
+                <div className="flex gap-2 mb-2">
+                  <select
+                    value={hourToAdd}
+                    onChange={(e) => setHourToAdd(Number(e.target.value))}
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white text-sm"
+                  >
+                    {Array.from({ length: 24 }, (_, i) => (
+                      <option key={i} value={i}>{String(i).padStart(2, '0')}:00</option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={handleAddHour}
+                    disabled={scheduledHours.includes(hourToAdd)}
+                    className="inline-flex items-center gap-1 px-3 py-2 border border-blue-500 rounded-md text-sm font-medium text-blue-700 hover:bg-blue-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Add
+                  </button>
+                </div>
+                {scheduledHours.length === 0 ? (
+                  <p className="text-xs text-gray-400">No hours added. Add at least one.</p>
+                ) : (
+                  <div className="flex flex-wrap gap-1.5">
+                    {scheduledHours.map(h => (
+                      <span key={h} className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">
+                        {formatHour(h)}
+                        <button type="button" onClick={() => handleRemoveHour(h)} className="hover:text-blue-600">
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div className="pt-4">

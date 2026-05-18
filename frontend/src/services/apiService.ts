@@ -38,12 +38,17 @@ export interface FilterUpdatePayload {
   criteria: FilterCriteriaClause[];
 }
 
+export interface Schedule {
+  type: 'DAILY' | 'WEEKLY';
+  hours: number[];
+}
+
 export interface Subscription {
   id: string;
   recipientEmail: string;
   filterId: string;
   filterTitle: string;
-  frequency: string;
+  schedule: Schedule;
 }
 
 export interface SubscriptionRequestPayload {
@@ -51,7 +56,7 @@ export interface SubscriptionRequestPayload {
   actionType: string;
   workspaceId: string;
   filterId: string;
-  frequency: string;
+  schedule: Schedule;
 }
 
 // --- Workspaces ---

@@ -1,7 +1,8 @@
 package com.anushibinj.veemailer.controller;
 
+import com.anushibinj.veemailer.dto.ScheduleDto;
 import com.anushibinj.veemailer.dto.SubscriptionResponseDTO;
-import com.anushibinj.veemailer.model.Frequency;
+import com.anushibinj.veemailer.model.ScheduleType;
 import com.anushibinj.veemailer.model.Workspace;
 import com.anushibinj.veemailer.repository.WorkspaceRepository;
 import com.anushibinj.veemailer.service.SubscriptionService;
@@ -14,6 +15,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.UUID;
 
 import static org.hamcrest.Matchers.hasSize;
@@ -69,7 +71,10 @@ class WorkspaceControllerTest {
                 .recipientEmail("user@test.com")
                 .filterId(filterId)
                 .filterTitle("All Bugs")
-                .frequency(Frequency.DAILY)
+                .schedule(ScheduleDto.builder()
+                        .type(ScheduleType.DAILY)
+                        .hours(List.of(9, 15))
+                        .build())
                 .build();
 
         when(subscriptionService.getActiveSubscriptionsForWorkspace(any(UUID.class)))
@@ -83,6 +88,6 @@ class WorkspaceControllerTest {
                 .andExpect(jsonPath("$[0].recipientEmail").value("user@test.com"))
                 .andExpect(jsonPath("$[0].filterId").value(filterId.toString()))
                 .andExpect(jsonPath("$[0].filterTitle").value("All Bugs"))
-                .andExpect(jsonPath("$[0].frequency").value("DAILY"));
+                .andExpect(jsonPath("$[0].schedule.type").value("DAILY"));
     }
 }
