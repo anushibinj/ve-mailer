@@ -70,6 +70,29 @@
 			<groupId>org.springframework.ai</groupId>
 			<artifactId>spring-ai-openai-spring-boot-starter</artifactId>
 			<version>${spring-ai.version}</version>
+			<exclusions>
+				<!--
+					Exclude Jetty HTTP client to prevent a classpath conflict:
+					Spring AI M6 pulls in jetty-client 12.x while the Octane SDK
+					transitively brings in http2-hpack 9.4.x (Jetty 9). Jetty 12's
+					HTTP/2 initialiser loads HpackEncoder, which in turn tries to find
+					org.eclipse.jetty.util.log.Log (removed in Jetty 10+), causing a
+					NoClassDefFoundError at runtime.  Without the Jetty client on the
+					classpath, Spring auto-selects the JDK HTTP client instead.
+				-->
+				<exclusion>
+					<groupId>org.eclipse.jetty</groupId>
+					<artifactId>jetty-client</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.eclipse.jetty.http2</groupId>
+					<artifactId>http2-client</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.eclipse.jetty.http2</groupId>
+					<artifactId>http2-hpack</artifactId>
+				</exclusion>
+			</exclusions>
 		</dependency>
 
 		<!-- H2 and PostgreSQL -->
