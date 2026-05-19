@@ -35,6 +35,7 @@ A full-stack application that lets users subscribe to email digest notifications
   - [How It Works](#how-it-works)
     - [Subscription Flow](#subscription-flow)
     - [Filter Templates](#filter-templates)
+      - [Filter Examples](#filter-examples)
     - [Notification Polling](#notification-polling)
     - [OTP Lifecycle](#otp-lifecycle)
 
@@ -599,6 +600,22 @@ Filter templates replace the old hardcoded query approach. Instead of storing a 
 1. **Entity type** — the Octane entity to query (e.g. `defect`, `story`)
 2. **Fields** — which fields to return in the result set (e.g. `["id", "name", "phase", "owner"]`)
 3. **Criteria** — an array of clauses that are AND-joined to build the Octane SDK query
+
+#### Filter Examples
+
+Here are some common filter configurations:
+
+**Example 1: Defects Not Closed**
+```
+Entity Type: defect
+Fields: id, name, phase, owner, creation_time
+Criteria:
+  - field: phase
+    operator: NOT_IN
+    values: ["phase.defect.closed"]
+```
+
+More examples to come.
 
 When a filter is **executed** (`POST /filters/{id}/execute?workspaceId=...`), the backend:
 
