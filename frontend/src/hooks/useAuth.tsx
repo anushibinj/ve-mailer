@@ -3,7 +3,6 @@ import type { UserProfile } from '../types/auth';
 import {
   getStoredUser,
   getAccessToken,
-  clearAuthData,
   storeAuthData,
   logout as logoutService,
   getCurrentUser,
@@ -24,8 +23,13 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<UserProfile | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [user, setUser] = useState<UserProfile | null>(() =>
+    getAccessToken() ? getStoredUser() : null
+  );
+  const [isLoading, setIsLoading] = useState<boolean>(() =>
+    // Loading only when we have stored credentials to verify against the server
+    !!(getAccessToken() && getStoredUser())
+  );
 
   useEffect(() => {
     // Check if user is already authenticated from localStorage
@@ -33,8 +37,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const storedUser = getStoredUser();
 
     if (token && storedUser) {
-      setUser(storedUser);
-      // Verify token is still valid by fetching current user
+      // user is already initialised from localStorage; verify freshness
       getCurrentUser()
         .then((freshUser) => {
           setUser(freshUser);
@@ -48,8 +51,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           // Token expired or invalid - will be handled by interceptor
         })
         .finally(() => setIsLoading(false));
-    } else {
-      setIsLoading(false);
     }
   }, []);
 
@@ -91,6 +92,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth(): AuthContextType {
   const context = useContext(AuthContext);
   if (context === undefined) {

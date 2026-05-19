@@ -37,8 +37,9 @@ const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({ workspaceId, on
     try {
       await runSubscription(workspaceId, sub.id);
       toast.success(`Email sent to ${sub.recipientEmail}!`);
-    } catch (err: any) {
-      toast.error(err.response?.data?.message ?? 'Failed to send email. Please try again.');
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { data?: { message?: string } } };
+      toast.error(axiosErr.response?.data?.message ?? 'Failed to send email. Please try again.');
     } finally {
       setRunningIds(prev => {
         const next = new Set(prev);

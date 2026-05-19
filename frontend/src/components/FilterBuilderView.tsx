@@ -50,7 +50,7 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
   // Per-card execute state: filterId -> { isExecuting, results }
   const [executeState, setExecuteState] = useState<Record<string, {
     isExecuting: boolean;
-    results: any[] | null;
+    results: Record<string, unknown>[] | null;
     expanded: boolean;
   }>>({});
 
@@ -206,8 +206,9 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
       await loadFilters();
       resetForm();
       setViewMode('list');
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Failed to save filter template.');
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { data?: { message?: string } } };
+      toast.error(axiosErr.response?.data?.message || 'Failed to save filter template.');
     } finally {
       setIsSaving(false);
     }
@@ -227,13 +228,14 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
         [filterId]: { isExecuting: false, results, expanded: true },
       }));
       toast.success(`Query returned ${results.length} result(s).`);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setExecuteState(prev => ({
         ...prev,
         [filterId]: { isExecuting: false, results: [], expanded: true },
       }));
-      if (err.response?.data?.message) {
-        toast.error(`Execute failed: ${err.response.data.message}`);
+      const axiosErr = err as { response?: { data?: { message?: string } } };
+      if (axiosErr.response?.data?.message) {
+        toast.error(`Execute failed: ${axiosErr.response.data.message}`);
       } else {
         toast.error('Failed to execute filter. Please check your connection and try again.');
       }

@@ -79,11 +79,12 @@ export interface Subscription {
   schedule: Schedule;
 }
 
-export interface SubscriptionRequestPayload {
-  email: string;
-  actionType: string;
-  workspaceId: string;
+export interface SubscriptionCreatePayload {
   filterId: string;
+  schedule: Schedule;
+}
+
+export interface SubscriptionUpdatePayload {
   schedule: Schedule;
 }
 
@@ -142,7 +143,7 @@ export const updateFilter = async (workspaceId: string, filterId: string, payloa
   return response.data;
 };
 
-export const executeFilter = async (workspaceId: string, filterId: string): Promise<any[]> => {
+export const executeFilter = async (workspaceId: string, filterId: string): Promise<Record<string, unknown>[]> => {
   const response = await api.post(`/api/v1/workspaces/${workspaceId}/filters/${filterId}/execute`);
   return response.data;
 };
@@ -154,14 +155,31 @@ export const fetchSubscriptionsByWorkspace = async (workspaceId: string): Promis
   return response.data;
 };
 
-export const requestSubscription = async (payload: SubscriptionRequestPayload): Promise<void> => {
-  const response = await api.post('/api/v1/subscriptions/request', payload);
+export const createSubscription = async (
+  workspaceId: string,
+  payload: SubscriptionCreatePayload
+): Promise<Subscription> => {
+  const response = await api.post(`/api/v1/workspaces/${workspaceId}/subscriptions`, payload);
   return response.data;
 };
 
-export const verifyOtp = async (email: string, otp: string): Promise<void> => {
-  const response = await api.post('/api/v1/subscriptions/verify', { email, otp });
+export const updateSubscription = async (
+  workspaceId: string,
+  subscriptionId: string,
+  payload: SubscriptionUpdatePayload
+): Promise<Subscription> => {
+  const response = await api.put(
+    `/api/v1/workspaces/${workspaceId}/subscriptions/${subscriptionId}`,
+    payload
+  );
   return response.data;
+};
+
+export const deleteSubscription = async (
+  workspaceId: string,
+  subscriptionId: string
+): Promise<void> => {
+  await api.delete(`/api/v1/workspaces/${workspaceId}/subscriptions/${subscriptionId}`);
 };
 
 export const runSubscription = async (workspaceId: string, subscriptionId: string): Promise<void> => {

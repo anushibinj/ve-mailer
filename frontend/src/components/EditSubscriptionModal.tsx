@@ -1,5 +1,10 @@
 import React, { useState } from 'react';
-import { requestSubscription, verifyOtp, type Subscription, type Schedule } from '../services/apiService';
+import {
+  updateSubscription,
+  deleteSubscription,
+  type Subscription,
+  type Schedule,
+} from '../services/apiService';
 import { Loader2, X, Plus } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -11,7 +16,7 @@ interface EditSubscriptionModalProps {
   onSuccess: () => void;
 }
 
-type Step = 'edit' | 'unsubscribe' | 'otp';
+type Step = 'edit' | 'confirmDelete';
 
 const EditSubscriptionModal: React.FC<EditSubscriptionModalProps> = ({
   subscription,
@@ -24,13 +29,10 @@ const EditSubscriptionModal: React.FC<EditSubscriptionModalProps> = ({
   const [scheduleType, setScheduleType] = useState<'DAILY' | 'WEEKLY'>(subscription.schedule.type);
   const [scheduledHours, setScheduledHours] = useState<number[]>([...subscription.schedule.hours]);
   const [hourToAdd, setHourToAdd] = useState<number>(subscription.schedule.hours[0] ?? 9);
-  const [isRequesting, setIsRequesting] = useState(false);
-  const [otp, setOtp] = useState('');
-  const [isVerifying, setIsVerifying] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   if (!isOpen) return null;
-
-  const action = step === 'unsubscribe' ? 'UNSUBSCRIBE' : 'UPDATE';
 
   const formatHour = (h: number) => `${String(h).padStart(2, '0')}:00`;
 
@@ -49,48 +51,45 @@ const EditSubscriptionModal: React.FC<EditSubscriptionModalProps> = ({
     setScheduleType(subscription.schedule.type);
     setScheduledHours([...subscription.schedule.hours]);
     setHourToAdd(subscription.schedule.hours[0] ?? 9);
-    setOtp('');
     onClose();
   };
 
-  const handleRequestOtp = async () => {
-    setIsRequesting(true);
+  const handleSave = async () => {
+    if (scheduledHours.length === 0) {
+      toast.error('Add at least one notification hour.');
+      return;
+    }
+    setIsSaving(true);
     try {
-      const schedule: Schedule = action === 'UPDATE'
-        ? { type: scheduleType, hours: scheduledHours }
-        : subscription.schedule;
-      await requestSubscription({
-        email: subscription.recipientEmail,
-        actionType: action,
-        workspaceId,
-        filterId: subscription.filterId,
-        schedule,
-      });
-      toast.success('OTP sent to your email!');
-      setStep('otp');
-    } catch (err: any) {
-      toast.error(err.response?.data?.message ?? 'Failed to send OTP. Please try again.');
+      const schedule: Schedule = { type: scheduleType, hours: scheduledHours };
+      await updateSubscription(workspaceId, subscription.id, { schedule });
+      toast.success('Subscription updated!');
+      handleClose();
+      onSuccess();
+    } catch (err: unknown) {
+      const message =
+        (err as { response?: { data?: { message?: string } } })?.response?.data?.message
+        ?? 'Failed to update subscription. Please try again.';
+      toast.error(message);
     } finally {
-      setIsRequesting(false);
+      setIsSaving(false);
     }
   };
 
-  const handleVerifyOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (otp.length !== 6) {
-      toast.error('OTP must be exactly 6 characters.');
-      return;
-    }
-    setIsVerifying(true);
+  const handleDelete = async () => {
+    setIsDeleting(true);
     try {
-      await verifyOtp(subscription.recipientEmail, otp);
-      toast.success(action === 'UNSUBSCRIBE' ? 'Unsubscribed successfully!' : 'Subscription updated!');
+      await deleteSubscription(workspaceId, subscription.id);
+      toast.success('Unsubscribed successfully!');
       handleClose();
       onSuccess();
-    } catch (err: any) {
-      toast.error(err.response?.data?.message ?? 'Invalid OTP. Please try again.');
+    } catch (err: unknown) {
+      const message =
+        (err as { response?: { data?: { message?: string } } })?.response?.data?.message
+        ?? 'Failed to unsubscribe. Please try again.';
+      toast.error(message);
     } finally {
-      setIsVerifying(false);
+      setIsDeleting(false);
     }
   };
 
@@ -117,8 +116,6 @@ const EditSubscriptionModal: React.FC<EditSubscriptionModalProps> = ({
 
             <h3 className="text-lg font-medium text-gray-900 mb-1">Edit Subscription</h3>
             <p className="text-sm text-gray-500 mb-5">
-              <span className="font-medium text-gray-700">{subscription.recipientEmail}</span>
-              {' · '}
               {subscription.filterTitle}
             </p>
 
@@ -183,33 +180,30 @@ const EditSubscriptionModal: React.FC<EditSubscriptionModalProps> = ({
                 <div className="flex items-center justify-between pt-1">
                   <button
                     type="button"
-                    onClick={() => setStep('unsubscribe')}
+                    onClick={() => setStep('confirmDelete')}
                     className="text-sm text-red-600 hover:text-red-700 hover:underline focus:outline-none"
                   >
                     Unsubscribe
                   </button>
                   <button
                     type="button"
-                    onClick={handleRequestOtp}
-                    disabled={isRequesting || scheduledHours.length === 0}
+                    onClick={handleSave}
+                    disabled={isSaving || scheduledHours.length === 0}
                     className="flex items-center gap-2 py-2 px-4 rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-blue-300 disabled:cursor-not-allowed transition-colors"
                   >
-                    {isRequesting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Send OTP to Update'}
+                    {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save Changes'}
                   </button>
                 </div>
               </div>
             )}
 
-            {/* ── Step: confirm unsubscribe ── */}
-            {step === 'unsubscribe' && (
+            {/* ── Step: confirm delete ── */}
+            {step === 'confirmDelete' && (
               <div className="space-y-5">
                 <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md px-3 py-3">
-                  This will permanently remove the subscription for{' '}
-                  <span className="font-medium">{subscription.recipientEmail}</span>. You will receive
-                  an OTP to confirm.
+                  This will permanently remove your subscription to{' '}
+                  <span className="font-medium">{subscription.filterTitle}</span>. Are you sure?
                 </p>
-
-                {/* Footer */}
                 <div className="flex items-center justify-end gap-3 pt-1">
                   <button
                     type="button"
@@ -220,54 +214,14 @@ const EditSubscriptionModal: React.FC<EditSubscriptionModalProps> = ({
                   </button>
                   <button
                     type="button"
-                    onClick={handleRequestOtp}
-                    disabled={isRequesting}
+                    onClick={handleDelete}
+                    disabled={isDeleting}
                     className="flex items-center gap-2 py-2 px-4 rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:bg-red-300 disabled:cursor-not-allowed transition-colors"
                   >
-                    {isRequesting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Send OTP to Unsubscribe'}
+                    {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Yes, Unsubscribe'}
                   </button>
                 </div>
               </div>
-            )}
-
-            {/* ── Step: enter OTP ── */}
-            {step === 'otp' && (
-              <form onSubmit={handleVerifyOtp} className="space-y-5">
-                <p className="text-sm text-gray-500">
-                  Enter the 6-digit OTP sent to{' '}
-                  <span className="font-semibold text-gray-900">{subscription.recipientEmail}</span>.
-                </p>
-                <input
-                  type="text"
-                  maxLength={6}
-                  required
-                  value={otp}
-                  onChange={e => setOtp(e.target.value)}
-                  className="w-full text-center text-2xl tracking-widest px-3 py-3 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 uppercase"
-                  placeholder="••••••"
-                  autoFocus
-                />
-                <div className="flex gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setStep(action === 'UNSUBSCRIBE' ? 'unsubscribe' : 'edit')}
-                    className="flex-1 py-2 px-4 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
-                  >
-                    Back
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={otp.length !== 6 || isVerifying}
-                    className={`flex-1 flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:cursor-not-allowed transition-colors ${
-                      action === 'UNSUBSCRIBE'
-                        ? 'bg-red-600 hover:bg-red-700 focus:ring-red-500 disabled:bg-red-300'
-                        : 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-500 disabled:bg-gray-400'
-                    }`}
-                  >
-                    {isVerifying ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Verify'}
-                  </button>
-                </div>
-              </form>
             )}
           </div>
         </div>

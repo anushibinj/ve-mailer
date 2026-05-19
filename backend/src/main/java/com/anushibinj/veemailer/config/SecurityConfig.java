@@ -54,8 +54,6 @@ public class SecurityConfig {
                 .requestMatchers("/api/auth/**").permitAll()
                 // H2 console for development
                 .requestMatchers("/h2-console/**").permitAll()
-                // Subscription OTP endpoints remain public
-                .requestMatchers("/api/v1/subscriptions/request", "/api/v1/subscriptions/verify").permitAll()
                 // All other API endpoints require authentication
                 .anyRequest().authenticated()
             )

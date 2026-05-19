@@ -1,6 +1,8 @@
 package com.anushibinj.veemailer.controller;
 
+import com.anushibinj.veemailer.dto.SubscriptionCreateDto;
 import com.anushibinj.veemailer.dto.SubscriptionResponseDTO;
+import com.anushibinj.veemailer.dto.SubscriptionUpdateDto;
 import com.anushibinj.veemailer.dto.WorkspaceCreateRequestDto;
 import com.anushibinj.veemailer.dto.WorkspaceResponseDto;
 import com.anushibinj.veemailer.dto.WorkspaceUpdateRequestDto;
@@ -11,6 +13,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -67,7 +71,7 @@ public class WorkspaceController {
         return ResponseEntity.noContent().build();
     }
 
-    // --- Subscription endpoints (any authenticated user) ---
+    // --- Subscription read (any authenticated user) ---
 
     @GetMapping("/{workspaceId}/subscriptions")
     public ResponseEntity<List<SubscriptionResponseDTO>> getSubscriptions(
@@ -75,7 +79,42 @@ public class WorkspaceController {
         return ResponseEntity.ok(subscriptionService.getActiveSubscriptionsForWorkspace(workspaceId));
     }
 
+    // --- Subscription CRUD (authenticated user operates on their own subscriptions) ---
+
+    @PostMapping("/{workspaceId}/subscriptions")
+    public ResponseEntity<SubscriptionResponseDTO> createSubscription(
+            @PathVariable UUID workspaceId,
+            @RequestBody @Valid SubscriptionCreateDto request,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(subscriptionService.createSubscription(
+                        userDetails.getUsername(), workspaceId,
+                        request.getFilterId(), request.getSchedule()));
+    }
+
+    @PutMapping("/{workspaceId}/subscriptions/{subscriptionId}")
+    public ResponseEntity<SubscriptionResponseDTO> updateSubscription(
+            @PathVariable UUID workspaceId,
+            @PathVariable UUID subscriptionId,
+            @RequestBody @Valid SubscriptionUpdateDto request,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(subscriptionService.updateSubscription(
+                userDetails.getUsername(), subscriptionId, workspaceId, request.getSchedule()));
+    }
+
+    @DeleteMapping("/{workspaceId}/subscriptions/{subscriptionId}")
+    public ResponseEntity<Void> deleteSubscription(
+            @PathVariable UUID workspaceId,
+            @PathVariable UUID subscriptionId,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        subscriptionService.deleteSubscription(userDetails.getUsername(), subscriptionId, workspaceId);
+        return ResponseEntity.noContent().build();
+    }
+
+    // --- On-demand run (admin only) ---
+
     @PostMapping("/{workspaceId}/subscriptions/{subscriptionId}/run")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<String> runSubscription(
             @PathVariable UUID workspaceId,
             @PathVariable UUID subscriptionId) {

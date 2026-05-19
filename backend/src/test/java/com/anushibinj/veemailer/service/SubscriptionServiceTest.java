@@ -2,18 +2,14 @@ package com.anushibinj.veemailer.service;
 
 import com.anushibinj.veemailer.dto.ScheduleDto;
 import com.anushibinj.veemailer.dto.SubscriptionResponseDTO;
-import com.anushibinj.veemailer.model.ActionType;
 import com.anushibinj.veemailer.model.EmailSubscriber;
 import com.anushibinj.veemailer.model.Filter;
-import com.anushibinj.veemailer.model.OtpRequest;
 import com.anushibinj.veemailer.model.ScheduleType;
 import com.anushibinj.veemailer.model.Status;
 import com.anushibinj.veemailer.model.Workspace;
 import com.anushibinj.veemailer.repository.EmailSubscriberRepository;
 import com.anushibinj.veemailer.repository.FilterRepository;
 import com.anushibinj.veemailer.repository.WorkspaceRepository;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -21,8 +17,8 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.access.AccessDeniedException;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -34,14 +30,12 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class SubscriptionServiceTest {
-
-    @Mock
-    private OtpService otpService;
 
     @Mock
     private EmailSubscriberRepository emailSubscriberRepository;
@@ -53,9 +47,6 @@ class SubscriptionServiceTest {
     private FilterRepository filterRepository;
 
     @Mock
-    private ObjectMapper objectMapper;
-
-    @Mock
     private PollingService pollingService;
 
     @InjectMocks
@@ -64,6 +55,8 @@ class SubscriptionServiceTest {
     private UUID workspaceId;
     private UUID filterId;
     private ScheduleDto dailySchedule;
+    private Workspace workspace;
+    private Filter filter;
 
     @BeforeEach
     void setUp() {
@@ -73,185 +66,243 @@ class SubscriptionServiceTest {
                 .type(ScheduleType.DAILY)
                 .hours(List.of(9, 15))
                 .build();
+        workspace = new Workspace();
+        workspace.setId(workspaceId);
+        filter = new Filter();
+        filter.setId(filterId);
+        filter.setTitle("All Bugs");
+    }
+
+    // ─────────────────────────── createSubscription ───────────────────────────
+
+    @Test
+    void testCreateSubscription_NewSubscriber_Saved() {
+        when(workspaceRepository.findById(workspaceId)).thenReturn(Optional.of(workspace));
+        when(filterRepository.findById(filterId)).thenReturn(Optional.of(filter));
+        when(emailSubscriberRepository.findByRecipientEmailAndWorkspaceIdAndFilterId(
+                "user@test.com", workspaceId, filterId)).thenReturn(Optional.empty());
+
+        EmailSubscriber saved = new EmailSubscriber();
+        saved.setId(UUID.randomUUID());
+        saved.setRecipientEmail("user@test.com");
+        saved.setWorkspace(workspace);
+        saved.setFilter(filter);
+        saved.setScheduleType(ScheduleType.DAILY);
+        saved.setScheduledHours(List.of(9, 15));
+        saved.setStatus(Status.ACTIVE);
+        when(emailSubscriberRepository.save(any())).thenReturn(saved);
+
+        SubscriptionResponseDTO result = subscriptionService.createSubscription(
+                "user@test.com", workspaceId, filterId, dailySchedule);
+
+        assertNotNull(result);
+        assertEquals("user@test.com", result.getRecipientEmail());
+        assertEquals("All Bugs", result.getFilterTitle());
+        assertEquals(ScheduleType.DAILY, result.getSchedule().getType());
     }
 
     @Test
-    void testRequestSubscription_Success() throws JsonProcessingException {
-        when(objectMapper.writeValueAsString(any())).thenReturn("mock-json-payload");
+    void testCreateSubscription_ExistingSubscriber_Upserts() {
+        when(workspaceRepository.findById(workspaceId)).thenReturn(Optional.of(workspace));
+        when(filterRepository.findById(filterId)).thenReturn(Optional.of(filter));
 
-        subscriptionService.requestSubscription("test@test.com", ActionType.SUBSCRIBE, workspaceId, filterId, dailySchedule);
+        EmailSubscriber existing = new EmailSubscriber();
+        existing.setRecipientEmail("user@test.com");
+        existing.setWorkspace(workspace);
+        existing.setFilter(filter);
+        existing.setScheduleType(ScheduleType.WEEKLY);
+        existing.setScheduledHours(List.of(8));
+        existing.setStatus(Status.ACTIVE);
+        when(emailSubscriberRepository.findByRecipientEmailAndWorkspaceIdAndFilterId(
+                "user@test.com", workspaceId, filterId)).thenReturn(Optional.of(existing));
+        when(emailSubscriberRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        verify(otpService, times(1)).createAndSendOtp(eq("test@test.com"), eq(ActionType.SUBSCRIBE), eq("mock-json-payload"));
-    }
-
-    @Test
-    void testRequestSubscription_DuplicateHours_ThrowsIllegalArgument() {
-        ScheduleDto dup = ScheduleDto.builder()
-                .type(ScheduleType.DAILY)
-                .hours(List.of(9, 9, 15))
-                .build();
-
-        assertThrows(IllegalArgumentException.class, () ->
-                subscriptionService.requestSubscription("test@test.com", ActionType.SUBSCRIBE, workspaceId, filterId, dup));
-    }
-
-    @Test
-    void testRequestSubscription_InvalidHour_ThrowsIllegalArgument() {
-        ScheduleDto bad = ScheduleDto.builder()
-                .type(ScheduleType.DAILY)
-                .hours(List.of(24))
-                .build();
-
-        assertThrows(IllegalArgumentException.class, () ->
-                subscriptionService.requestSubscription("test@test.com", ActionType.SUBSCRIBE, workspaceId, filterId, bad));
-    }
-
-    @Test
-    void testRequestSubscription_EmptyHours_ThrowsIllegalArgument() {
-        ScheduleDto empty = ScheduleDto.builder()
-                .type(ScheduleType.DAILY)
-                .hours(Collections.emptyList())
-                .build();
-
-        assertThrows(IllegalArgumentException.class, () ->
-                subscriptionService.requestSubscription("test@test.com", ActionType.SUBSCRIBE, workspaceId, filterId, empty));
-    }
-
-    @Test
-    void testVerifyAndExecute_Subscribe() throws JsonProcessingException {
-        OtpRequest request = new OtpRequest();
-        request.setActionType(ActionType.SUBSCRIBE);
-        request.setPayload("mock-json");
-
-        when(otpService.validateOtp("test@test.com", "123456")).thenReturn(request);
-
-        SubscriptionService.SubscriptionPayload payload = new SubscriptionService.SubscriptionPayload();
-        payload.setWorkspaceId(workspaceId);
-        payload.setFilterId(filterId);
-        payload.setSchedule(dailySchedule);
-
-        when(objectMapper.readValue("mock-json", SubscriptionService.SubscriptionPayload.class)).thenReturn(payload);
-
-        Workspace ws = new Workspace();
-        ws.setId(workspaceId);
-        when(workspaceRepository.findById(workspaceId)).thenReturn(Optional.of(ws));
-
-        Filter f = new Filter();
-        f.setId(filterId);
-        when(filterRepository.findById(filterId)).thenReturn(Optional.of(f));
-
-        when(emailSubscriberRepository.findByRecipientEmailAndWorkspaceIdAndFilterId("test@test.com", workspaceId, filterId))
-                .thenReturn(Optional.empty());
-
-        subscriptionService.verifyAndExecute("test@test.com", "123456");
+        subscriptionService.createSubscription("user@test.com", workspaceId, filterId, dailySchedule);
 
         ArgumentCaptor<EmailSubscriber> captor = ArgumentCaptor.forClass(EmailSubscriber.class);
         verify(emailSubscriberRepository, times(1)).save(captor.capture());
-
-        EmailSubscriber saved = captor.getValue();
-        assertEquals("test@test.com", saved.getRecipientEmail());
-        assertEquals(ScheduleType.DAILY, saved.getScheduleType());
-        assertEquals(List.of(9, 15), saved.getScheduledHours());
-        assertNull(saved.getFrequency()); // legacy field cleared
-        assertEquals(Status.ACTIVE, saved.getStatus());
-
-        verify(otpService, times(1)).cleanupOtp(request);
+        assertEquals(ScheduleType.DAILY, captor.getValue().getScheduleType());
+        assertEquals(List.of(9, 15), captor.getValue().getScheduledHours());
+        assertNull(captor.getValue().getFrequency());
+        assertEquals(Status.ACTIVE, captor.getValue().getStatus());
     }
 
     @Test
-    void testVerifyAndExecute_Update() throws JsonProcessingException {
-        OtpRequest request = new OtpRequest();
-        request.setActionType(ActionType.UPDATE);
-        request.setPayload("mock-json");
+    void testCreateSubscription_WorkspaceNotFound_Throws() {
+        when(workspaceRepository.findById(workspaceId)).thenReturn(Optional.empty());
 
-        when(otpService.validateOtp("test@test.com", "123456")).thenReturn(request);
+        assertThrows(IllegalArgumentException.class, () ->
+                subscriptionService.createSubscription("user@test.com", workspaceId, filterId, dailySchedule));
+    }
 
-        ScheduleDto weeklySchedule = ScheduleDto.builder()
-                .type(ScheduleType.WEEKLY)
-                .hours(List.of(10))
-                .build();
+    @Test
+    void testCreateSubscription_FilterNotFound_Throws() {
+        when(workspaceRepository.findById(workspaceId)).thenReturn(Optional.of(workspace));
+        when(filterRepository.findById(filterId)).thenReturn(Optional.empty());
 
-        SubscriptionService.SubscriptionPayload payload = new SubscriptionService.SubscriptionPayload();
-        payload.setWorkspaceId(workspaceId);
-        payload.setFilterId(filterId);
-        payload.setSchedule(weeklySchedule);
+        assertThrows(IllegalArgumentException.class, () ->
+                subscriptionService.createSubscription("user@test.com", workspaceId, filterId, dailySchedule));
+    }
 
-        when(objectMapper.readValue("mock-json", SubscriptionService.SubscriptionPayload.class)).thenReturn(payload);
+    @Test
+    void testCreateSubscription_DuplicateHours_Throws() {
+        ScheduleDto dup = ScheduleDto.builder()
+                .type(ScheduleType.DAILY).hours(List.of(9, 9)).build();
 
+        assertThrows(IllegalArgumentException.class, () ->
+                subscriptionService.createSubscription("user@test.com", workspaceId, filterId, dup));
+    }
+
+    @Test
+    void testCreateSubscription_InvalidHour_Throws() {
+        ScheduleDto bad = ScheduleDto.builder()
+                .type(ScheduleType.DAILY).hours(List.of(24)).build();
+
+        assertThrows(IllegalArgumentException.class, () ->
+                subscriptionService.createSubscription("user@test.com", workspaceId, filterId, bad));
+    }
+
+    @Test
+    void testCreateSubscription_EmptyHours_Throws() {
+        ScheduleDto empty = ScheduleDto.builder()
+                .type(ScheduleType.DAILY).hours(Collections.emptyList()).build();
+
+        assertThrows(IllegalArgumentException.class, () ->
+                subscriptionService.createSubscription("user@test.com", workspaceId, filterId, empty));
+    }
+
+    // ─────────────────────────── updateSubscription ───────────────────────────
+
+    @Test
+    void testUpdateSubscription_Success() {
+        UUID subscriptionId = UUID.randomUUID();
         EmailSubscriber existing = new EmailSubscriber();
+        existing.setId(subscriptionId);
+        existing.setRecipientEmail("user@test.com");
+        existing.setWorkspace(workspace);
+        existing.setFilter(filter);
         existing.setScheduleType(ScheduleType.DAILY);
         existing.setScheduledHours(List.of(9));
+        when(emailSubscriberRepository.findById(subscriptionId)).thenReturn(Optional.of(existing));
+        when(emailSubscriberRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        when(emailSubscriberRepository.findByRecipientEmailAndWorkspaceIdAndFilterId("test@test.com", workspaceId, filterId))
-                .thenReturn(Optional.of(existing));
-
-        subscriptionService.verifyAndExecute("test@test.com", "123456");
+        ScheduleDto newSchedule = ScheduleDto.builder()
+                .type(ScheduleType.WEEKLY).hours(List.of(10)).build();
+        subscriptionService.updateSubscription("user@test.com", subscriptionId, workspaceId, newSchedule);
 
         ArgumentCaptor<EmailSubscriber> captor = ArgumentCaptor.forClass(EmailSubscriber.class);
-        verify(emailSubscriberRepository, times(1)).save(captor.capture());
-
+        verify(emailSubscriberRepository).save(captor.capture());
         assertEquals(ScheduleType.WEEKLY, captor.getValue().getScheduleType());
         assertEquals(List.of(10), captor.getValue().getScheduledHours());
-        verify(otpService, times(1)).cleanupOtp(request);
     }
 
     @Test
-    void testVerifyAndExecute_Unsubscribe() throws JsonProcessingException {
-        OtpRequest request = new OtpRequest();
-        request.setActionType(ActionType.UNSUBSCRIBE);
-        request.setPayload("mock-json");
+    void testUpdateSubscription_NotFound_Throws() {
+        UUID subscriptionId = UUID.randomUUID();
+        when(emailSubscriberRepository.findById(subscriptionId)).thenReturn(Optional.empty());
 
-        when(otpService.validateOtp("test@test.com", "123456")).thenReturn(request);
+        assertThrows(IllegalArgumentException.class, () ->
+                subscriptionService.updateSubscription("user@test.com", subscriptionId, workspaceId, dailySchedule));
+    }
 
-        SubscriptionService.SubscriptionPayload payload = new SubscriptionService.SubscriptionPayload();
-        payload.setWorkspaceId(workspaceId);
-        payload.setFilterId(filterId);
+    @Test
+    void testUpdateSubscription_WrongOwner_ThrowsAccessDenied() {
+        UUID subscriptionId = UUID.randomUUID();
+        EmailSubscriber existing = new EmailSubscriber();
+        existing.setRecipientEmail("other@test.com");
+        existing.setWorkspace(workspace);
+        existing.setFilter(filter);
+        when(emailSubscriberRepository.findById(subscriptionId)).thenReturn(Optional.of(existing));
 
-        when(objectMapper.readValue("mock-json", SubscriptionService.SubscriptionPayload.class)).thenReturn(payload);
+        assertThrows(AccessDeniedException.class, () ->
+                subscriptionService.updateSubscription("user@test.com", subscriptionId, workspaceId, dailySchedule));
+    }
+
+    @Test
+    void testUpdateSubscription_WrongWorkspace_Throws() {
+        UUID subscriptionId = UUID.randomUUID();
+        UUID otherWorkspaceId = UUID.randomUUID();
+        Workspace otherWorkspace = new Workspace();
+        otherWorkspace.setId(otherWorkspaceId);
 
         EmailSubscriber existing = new EmailSubscriber();
+        existing.setRecipientEmail("user@test.com");
+        existing.setWorkspace(otherWorkspace);
+        existing.setFilter(filter);
+        when(emailSubscriberRepository.findById(subscriptionId)).thenReturn(Optional.of(existing));
 
-        when(emailSubscriberRepository.findByRecipientEmailAndWorkspaceIdAndFilterId("test@test.com", workspaceId, filterId))
-                .thenReturn(Optional.of(existing));
+        assertThrows(IllegalArgumentException.class, () ->
+                subscriptionService.updateSubscription("user@test.com", subscriptionId, workspaceId, dailySchedule));
+    }
 
-        subscriptionService.verifyAndExecute("test@test.com", "123456");
+    // ─────────────────────────── deleteSubscription ───────────────────────────
 
-        verify(emailSubscriberRepository, times(1)).delete(existing);
-        verify(otpService, times(1)).cleanupOtp(request);
+    @Test
+    void testDeleteSubscription_Success() {
+        UUID subscriptionId = UUID.randomUUID();
+        EmailSubscriber existing = new EmailSubscriber();
+        existing.setRecipientEmail("user@test.com");
+        existing.setWorkspace(workspace);
+        existing.setFilter(filter);
+        when(emailSubscriberRepository.findById(subscriptionId)).thenReturn(Optional.of(existing));
+
+        subscriptionService.deleteSubscription("user@test.com", subscriptionId, workspaceId);
+
+        verify(emailSubscriberRepository).delete(existing);
     }
 
     @Test
-    void testGetActiveSubscriptionsForWorkspace() {
-        Filter f = new Filter();
-        f.setTitle("Urgent Bugs");
+    void testDeleteSubscription_NotFound_Throws() {
+        UUID subscriptionId = UUID.randomUUID();
+        when(emailSubscriberRepository.findById(subscriptionId)).thenReturn(Optional.empty());
 
+        assertThrows(IllegalArgumentException.class, () ->
+                subscriptionService.deleteSubscription("user@test.com", subscriptionId, workspaceId));
+    }
+
+    @Test
+    void testDeleteSubscription_WrongOwner_ThrowsAccessDenied() {
+        UUID subscriptionId = UUID.randomUUID();
+        EmailSubscriber existing = new EmailSubscriber();
+        existing.setRecipientEmail("other@test.com");
+        existing.setWorkspace(workspace);
+        existing.setFilter(filter);
+        when(emailSubscriberRepository.findById(subscriptionId)).thenReturn(Optional.of(existing));
+
+        assertThrows(AccessDeniedException.class, () ->
+                subscriptionService.deleteSubscription("user@test.com", subscriptionId, workspaceId));
+    }
+
+    // ─────────────────────── getActiveSubscriptionsForWorkspace ───────────────
+
+    @Test
+    void testGetActiveSubscriptionsForWorkspace_ReturnsMappedDtos() {
         EmailSubscriber sub = new EmailSubscriber();
         sub.setRecipientEmail("dev@test.com");
-        sub.setFilter(f);
+        sub.setFilter(filter);
         sub.setScheduleType(ScheduleType.DAILY);
         sub.setScheduledHours(List.of(9, 15));
 
         when(emailSubscriberRepository.findByWorkspaceIdAndStatus(workspaceId, Status.ACTIVE))
-                .thenReturn(Arrays.asList(sub));
+                .thenReturn(List.of(sub));
 
         List<SubscriptionResponseDTO> results = subscriptionService.getActiveSubscriptionsForWorkspace(workspaceId);
 
         assertEquals(1, results.size());
         assertEquals("dev@test.com", results.get(0).getRecipientEmail());
-        assertEquals("Urgent Bugs", results.get(0).getFilterTitle());
+        assertEquals("All Bugs", results.get(0).getFilterTitle());
         assertEquals(ScheduleType.DAILY, results.get(0).getSchedule().getType());
         assertEquals(List.of(9, 15), results.get(0).getSchedule().getHours());
     }
 
     @Test
     void testGetActiveSubscriptionsForWorkspace_LegacySubscriber_FallsBackToDefault() {
-        // Subscriber has no scheduleType (legacy, not yet migrated)
-        Filter f = new Filter();
-        f.setTitle("Legacy Filter");
+        Filter legacyFilter = new Filter();
+        legacyFilter.setTitle("Legacy Filter");
 
         EmailSubscriber sub = new EmailSubscriber();
         sub.setRecipientEmail("legacy@test.com");
-        sub.setFilter(f);
+        sub.setFilter(legacyFilter);
         sub.setScheduleType(null);
         sub.setScheduledHours(null);
 
@@ -263,156 +314,6 @@ class SubscriptionServiceTest {
         assertEquals(1, results.size());
         assertEquals(ScheduleType.DAILY, results.get(0).getSchedule().getType());
         assertEquals(List.of(0), results.get(0).getSchedule().getHours());
-    }
-
-    @Test
-    void testRequestSubscription_JsonProcessingException_ThrowsRuntimeException() throws JsonProcessingException {
-        when(objectMapper.writeValueAsString(any())).thenThrow(new com.fasterxml.jackson.core.JsonProcessingException("serialization error") {});
-
-        assertThrows(RuntimeException.class, () ->
-                subscriptionService.requestSubscription("test@test.com", ActionType.SUBSCRIBE, workspaceId, filterId, dailySchedule));
-    }
-
-    @Test
-    void testVerifyAndExecute_Subscribe_WorkspaceNotFound() throws JsonProcessingException {
-        OtpRequest request = new OtpRequest();
-        request.setActionType(ActionType.SUBSCRIBE);
-        request.setPayload("mock-json");
-
-        when(otpService.validateOtp("test@test.com", "123456")).thenReturn(request);
-
-        SubscriptionService.SubscriptionPayload payload = new SubscriptionService.SubscriptionPayload();
-        payload.setWorkspaceId(workspaceId);
-        payload.setFilterId(filterId);
-        payload.setSchedule(dailySchedule);
-
-        when(objectMapper.readValue("mock-json", SubscriptionService.SubscriptionPayload.class)).thenReturn(payload);
-        when(workspaceRepository.findById(workspaceId)).thenReturn(Optional.empty());
-
-        assertThrows(IllegalArgumentException.class, () ->
-                subscriptionService.verifyAndExecute("test@test.com", "123456"));
-    }
-
-    @Test
-    void testVerifyAndExecute_Subscribe_FilterNotFound() throws JsonProcessingException {
-        OtpRequest request = new OtpRequest();
-        request.setActionType(ActionType.SUBSCRIBE);
-        request.setPayload("mock-json");
-
-        when(otpService.validateOtp("test@test.com", "123456")).thenReturn(request);
-
-        SubscriptionService.SubscriptionPayload payload = new SubscriptionService.SubscriptionPayload();
-        payload.setWorkspaceId(workspaceId);
-        payload.setFilterId(filterId);
-        payload.setSchedule(dailySchedule);
-
-        when(objectMapper.readValue("mock-json", SubscriptionService.SubscriptionPayload.class)).thenReturn(payload);
-
-        Workspace ws = new Workspace();
-        ws.setId(workspaceId);
-        when(workspaceRepository.findById(workspaceId)).thenReturn(Optional.of(ws));
-        when(filterRepository.findById(filterId)).thenReturn(Optional.empty());
-
-        assertThrows(IllegalArgumentException.class, () ->
-                subscriptionService.verifyAndExecute("test@test.com", "123456"));
-    }
-
-    @Test
-    void testVerifyAndExecute_Subscribe_ExistingSubscriberUpsert() throws JsonProcessingException {
-        // When subscriber already exists, should update (upsert) rather than create new
-        OtpRequest request = new OtpRequest();
-        request.setActionType(ActionType.SUBSCRIBE);
-        request.setPayload("mock-json");
-
-        when(otpService.validateOtp("test@test.com", "123456")).thenReturn(request);
-
-        SubscriptionService.SubscriptionPayload payload = new SubscriptionService.SubscriptionPayload();
-        payload.setWorkspaceId(workspaceId);
-        payload.setFilterId(filterId);
-        payload.setSchedule(dailySchedule);
-
-        when(objectMapper.readValue("mock-json", SubscriptionService.SubscriptionPayload.class)).thenReturn(payload);
-
-        Workspace ws = new Workspace();
-        ws.setId(workspaceId);
-        when(workspaceRepository.findById(workspaceId)).thenReturn(Optional.of(ws));
-
-        Filter f = new Filter();
-        f.setId(filterId);
-        when(filterRepository.findById(filterId)).thenReturn(Optional.of(f));
-
-        // Existing subscriber already present
-        EmailSubscriber existing = new EmailSubscriber();
-        existing.setRecipientEmail("test@test.com");
-        existing.setScheduleType(ScheduleType.WEEKLY);
-        existing.setScheduledHours(List.of(8));
-        when(emailSubscriberRepository.findByRecipientEmailAndWorkspaceIdAndFilterId("test@test.com", workspaceId, filterId))
-                .thenReturn(Optional.of(existing));
-
-        subscriptionService.verifyAndExecute("test@test.com", "123456");
-
-        ArgumentCaptor<EmailSubscriber> captor = ArgumentCaptor.forClass(EmailSubscriber.class);
-        verify(emailSubscriberRepository, times(1)).save(captor.capture());
-
-        // Should be the same existing object, updated to new schedule
-        assertEquals(ScheduleType.DAILY, captor.getValue().getScheduleType());
-        assertEquals(List.of(9, 15), captor.getValue().getScheduledHours());
-        assertEquals(Status.ACTIVE, captor.getValue().getStatus());
-    }
-
-    @Test
-    void testVerifyAndExecute_Update_SubscriptionNotFound() throws JsonProcessingException {
-        OtpRequest request = new OtpRequest();
-        request.setActionType(ActionType.UPDATE);
-        request.setPayload("mock-json");
-
-        when(otpService.validateOtp("test@test.com", "123456")).thenReturn(request);
-
-        SubscriptionService.SubscriptionPayload payload = new SubscriptionService.SubscriptionPayload();
-        payload.setWorkspaceId(workspaceId);
-        payload.setFilterId(filterId);
-        payload.setSchedule(dailySchedule);
-
-        when(objectMapper.readValue("mock-json", SubscriptionService.SubscriptionPayload.class)).thenReturn(payload);
-        when(emailSubscriberRepository.findByRecipientEmailAndWorkspaceIdAndFilterId("test@test.com", workspaceId, filterId))
-                .thenReturn(Optional.empty());
-
-        assertThrows(IllegalArgumentException.class, () ->
-                subscriptionService.verifyAndExecute("test@test.com", "123456"));
-    }
-
-    @Test
-    void testVerifyAndExecute_Unsubscribe_SubscriptionNotFound() throws JsonProcessingException {
-        OtpRequest request = new OtpRequest();
-        request.setActionType(ActionType.UNSUBSCRIBE);
-        request.setPayload("mock-json");
-
-        when(otpService.validateOtp("test@test.com", "123456")).thenReturn(request);
-
-        SubscriptionService.SubscriptionPayload payload = new SubscriptionService.SubscriptionPayload();
-        payload.setWorkspaceId(workspaceId);
-        payload.setFilterId(filterId);
-
-        when(objectMapper.readValue("mock-json", SubscriptionService.SubscriptionPayload.class)).thenReturn(payload);
-        when(emailSubscriberRepository.findByRecipientEmailAndWorkspaceIdAndFilterId("test@test.com", workspaceId, filterId))
-                .thenReturn(Optional.empty());
-
-        assertThrows(IllegalArgumentException.class, () ->
-                subscriptionService.verifyAndExecute("test@test.com", "123456"));
-    }
-
-    @Test
-    void testVerifyAndExecute_JsonProcessingException_ThrowsRuntimeException() throws JsonProcessingException {
-        OtpRequest request = new OtpRequest();
-        request.setActionType(ActionType.SUBSCRIBE);
-        request.setPayload("bad-json");
-
-        when(otpService.validateOtp("test@test.com", "123456")).thenReturn(request);
-        when(objectMapper.readValue("bad-json", SubscriptionService.SubscriptionPayload.class))
-                .thenThrow(new com.fasterxml.jackson.core.JsonProcessingException("parse error") {});
-
-        assertThrows(RuntimeException.class, () ->
-                subscriptionService.verifyAndExecute("test@test.com", "123456"));
     }
 
     @Test

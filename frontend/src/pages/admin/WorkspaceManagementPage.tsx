@@ -23,9 +23,10 @@ const WorkspaceManagementPage: React.FC = () => {
     try {
       const data = await adminFetchWorkspaces();
       setWorkspaces(data);
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { data?: { message?: string } } };
       toast.error(
-        err.response?.data?.message ?? 'Failed to load workspaces. Please try again.'
+        axiosErr.response?.data?.message ?? 'Failed to load workspaces. Please try again.'
       );
     } finally {
       setIsLoading(false);
@@ -67,8 +68,9 @@ const WorkspaceManagementPage: React.FC = () => {
       await adminDeleteWorkspace(deleteTarget.id);
       setWorkspaces(prev => prev.filter(w => w.id !== deleteTarget.id));
       toast.success(`"${deleteTarget.title}" deleted`);
-    } catch (err: any) {
-      toast.error(err.response?.data?.message ?? 'Failed to delete workspace');
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { data?: { message?: string } } };
+      toast.error(axiosErr.response?.data?.message ?? 'Failed to delete workspace');
     } finally {
       setIsDeleting(false);
       setDeleteTarget(null);

@@ -120,10 +120,11 @@ const WorkspaceFormModal: React.FC<WorkspaceFormModalProps> = ({
         toast.success('Workspace created successfully');
       }
       onSuccess(saved);
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { data?: { message?: string; errors?: { message?: string }[] } } };
       const msg =
-        err.response?.data?.message ??
-        err.response?.data?.errors?.[0]?.message ??
+        axiosErr.response?.data?.message ??
+        axiosErr.response?.data?.errors?.[0]?.message ??
         (isEditing ? 'Failed to update workspace' : 'Failed to create workspace');
       toast.error(msg);
     } finally {

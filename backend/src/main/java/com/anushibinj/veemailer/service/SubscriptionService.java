@@ -2,20 +2,16 @@ package com.anushibinj.veemailer.service;
 
 import com.anushibinj.veemailer.dto.ScheduleDto;
 import com.anushibinj.veemailer.dto.SubscriptionResponseDTO;
-import com.anushibinj.veemailer.model.ActionType;
 import com.anushibinj.veemailer.model.EmailSubscriber;
 import com.anushibinj.veemailer.model.Filter;
-import com.anushibinj.veemailer.model.OtpRequest;
 import com.anushibinj.veemailer.model.ScheduleType;
 import com.anushibinj.veemailer.model.Status;
 import com.anushibinj.veemailer.model.Workspace;
 import com.anushibinj.veemailer.repository.EmailSubscriberRepository;
 import com.anushibinj.veemailer.repository.FilterRepository;
 import com.anushibinj.veemailer.repository.WorkspaceRepository;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.Data;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -31,63 +27,21 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class SubscriptionService {
 
-    private final OtpService otpService;
     private final EmailSubscriberRepository emailSubscriberRepository;
     private final WorkspaceRepository workspaceRepository;
     private final FilterRepository filterRepository;
-    private final ObjectMapper objectMapper;
     private final PollingService pollingService;
 
-    @Data
-    public static class SubscriptionPayload {
-        private UUID workspaceId;
-        private UUID filterId;
-        private ScheduleDto schedule;
-    }
-
-    public void requestSubscription(String email, ActionType actionType, UUID workspaceId, UUID filterId, ScheduleDto schedule) {
+    /**
+     * Creates (or upserts) a subscription for the authenticated user.
+     * The email is derived exclusively from the JWT security context — never from the request payload.
+     */
+    public SubscriptionResponseDTO createSubscription(String email, UUID workspaceId, UUID filterId, ScheduleDto schedule) {
         validateSchedule(schedule);
-        try {
-            SubscriptionPayload payload = new SubscriptionPayload();
-            payload.setWorkspaceId(workspaceId);
-            payload.setFilterId(filterId);
-            payload.setSchedule(schedule);
 
-            String payloadJson = objectMapper.writeValueAsString(payload);
-            otpService.createAndSendOtp(email, actionType, payloadJson);
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException("Failed to serialize payload", e);
-        }
-    }
-
-    public void verifyAndExecute(String email, String otp) {
-        OtpRequest request = otpService.validateOtp(email, otp);
-
-        try {
-            SubscriptionPayload payload = objectMapper.readValue(request.getPayload(), SubscriptionPayload.class);
-
-            switch (request.getActionType()) {
-                case SUBSCRIBE:
-                    createSubscription(email, payload);
-                    break;
-                case UPDATE:
-                    updateSubscription(email, payload);
-                    break;
-                case UNSUBSCRIBE:
-                    deleteSubscription(email, payload);
-                    break;
-            }
-
-            otpService.cleanupOtp(request);
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException("Failed to deserialize payload", e);
-        }
-    }
-
-    private void createSubscription(String email, SubscriptionPayload payload) {
-        Workspace workspace = workspaceRepository.findById(payload.getWorkspaceId())
+        Workspace workspace = workspaceRepository.findById(workspaceId)
                 .orElseThrow(() -> new IllegalArgumentException("Workspace not found"));
-        Filter filter = filterRepository.findById(payload.getFilterId())
+        Filter filter = filterRepository.findById(filterId)
                 .orElseThrow(() -> new IllegalArgumentException("Filter not found"));
 
         Optional<EmailSubscriber> existingOpt = emailSubscriberRepository
@@ -97,60 +51,46 @@ public class SubscriptionService {
         subscriber.setRecipientEmail(email);
         subscriber.setWorkspace(workspace);
         subscriber.setFilter(filter);
-        applySchedule(subscriber, payload.getSchedule());
+        applySchedule(subscriber, schedule);
         subscriber.setStatus(Status.ACTIVE);
 
-        emailSubscriberRepository.save(subscriber);
+        return toResponseDto(emailSubscriberRepository.save(subscriber));
     }
 
-    private void updateSubscription(String email, SubscriptionPayload payload) {
-        EmailSubscriber subscriber = emailSubscriberRepository
-                .findByRecipientEmailAndWorkspaceIdAndFilterId(email, payload.getWorkspaceId(), payload.getFilterId())
+    /**
+     * Updates the schedule for an existing subscription owned by the authenticated user.
+     * Enforces ownership: throws AccessDeniedException if the subscription belongs to another user.
+     */
+    public SubscriptionResponseDTO updateSubscription(String email, UUID subscriptionId, UUID workspaceId, ScheduleDto schedule) {
+        validateSchedule(schedule);
+
+        EmailSubscriber subscriber = emailSubscriberRepository.findById(subscriptionId)
                 .orElseThrow(() -> new IllegalArgumentException("Subscription not found"));
 
-        applySchedule(subscriber, payload.getSchedule());
-        emailSubscriberRepository.save(subscriber);
+        enforceOwnership(email, subscriber);
+        enforceWorkspace(workspaceId, subscriber);
+
+        applySchedule(subscriber, schedule);
+        return toResponseDto(emailSubscriberRepository.save(subscriber));
     }
 
-    private void deleteSubscription(String email, SubscriptionPayload payload) {
-        EmailSubscriber subscriber = emailSubscriberRepository
-                .findByRecipientEmailAndWorkspaceIdAndFilterId(email, payload.getWorkspaceId(), payload.getFilterId())
+    /**
+     * Deletes a subscription owned by the authenticated user.
+     * Enforces ownership: throws AccessDeniedException if the subscription belongs to another user.
+     */
+    public void deleteSubscription(String email, UUID subscriptionId, UUID workspaceId) {
+        EmailSubscriber subscriber = emailSubscriberRepository.findById(subscriptionId)
                 .orElseThrow(() -> new IllegalArgumentException("Subscription not found"));
+
+        enforceOwnership(email, subscriber);
+        enforceWorkspace(workspaceId, subscriber);
 
         emailSubscriberRepository.delete(subscriber);
     }
 
-    private void applySchedule(EmailSubscriber subscriber, ScheduleDto schedule) {
-        subscriber.setScheduleType(schedule.getType());
-        // Deduplicate while preserving insertion order
-        List<Integer> deduped = new ArrayList<>(new LinkedHashSet<>(schedule.getHours()));
-        subscriber.setScheduledHours(deduped);
-        subscriber.setFrequency(null); // clear legacy field
-    }
-
     public List<SubscriptionResponseDTO> getActiveSubscriptionsForWorkspace(UUID workspaceId) {
         List<EmailSubscriber> subscribers = emailSubscriberRepository.findByWorkspaceIdAndStatus(workspaceId, Status.ACTIVE);
-        return subscribers.stream().map(sub -> SubscriptionResponseDTO.builder()
-                .id(sub.getId())
-                .recipientEmail(sub.getRecipientEmail())
-                .filterId(sub.getFilter().getId())
-                .filterTitle(sub.getFilter().getTitle())
-                .schedule(buildScheduleDto(sub))
-                .build()).collect(Collectors.toList());
-    }
-
-    private ScheduleDto buildScheduleDto(EmailSubscriber sub) {
-        if (sub.getScheduleType() != null) {
-            return ScheduleDto.builder()
-                    .type(sub.getScheduleType())
-                    .hours(sub.getScheduledHours() != null ? sub.getScheduledHours() : List.of())
-                    .build();
-        }
-        // Legacy fallback: subscriber has not been migrated yet – derive a safe default
-        return ScheduleDto.builder()
-                .type(ScheduleType.DAILY)
-                .hours(List.of(0))
-                .build();
+        return subscribers.stream().map(this::toResponseDto).collect(Collectors.toList());
     }
 
     /**
@@ -168,6 +108,52 @@ public class SubscriptionService {
         pollingService.runNow(subscriber);
     }
 
+    // --- Private helpers ---
+
+    private void enforceOwnership(String email, EmailSubscriber subscriber) {
+        if (!subscriber.getRecipientEmail().equalsIgnoreCase(email)) {
+            throw new AccessDeniedException("Access denied: you do not own this subscription");
+        }
+    }
+
+    private void enforceWorkspace(UUID workspaceId, EmailSubscriber subscriber) {
+        if (!subscriber.getWorkspace().getId().equals(workspaceId)) {
+            throw new IllegalArgumentException("Subscription does not belong to the specified workspace");
+        }
+    }
+
+    private void applySchedule(EmailSubscriber subscriber, ScheduleDto schedule) {
+        subscriber.setScheduleType(schedule.getType());
+        // Deduplicate while preserving insertion order
+        List<Integer> deduped = new ArrayList<>(new LinkedHashSet<>(schedule.getHours()));
+        subscriber.setScheduledHours(deduped);
+        subscriber.setFrequency(null); // clear legacy field
+    }
+
+    private ScheduleDto buildScheduleDto(EmailSubscriber sub) {
+        if (sub.getScheduleType() != null) {
+            return ScheduleDto.builder()
+                    .type(sub.getScheduleType())
+                    .hours(sub.getScheduledHours() != null ? sub.getScheduledHours() : List.of())
+                    .build();
+        }
+        // Legacy fallback: subscriber has not been migrated yet – derive a safe default
+        return ScheduleDto.builder()
+                .type(ScheduleType.DAILY)
+                .hours(List.of(0))
+                .build();
+    }
+
+    private SubscriptionResponseDTO toResponseDto(EmailSubscriber sub) {
+        return SubscriptionResponseDTO.builder()
+                .id(sub.getId())
+                .recipientEmail(sub.getRecipientEmail())
+                .filterId(sub.getFilter().getId())
+                .filterTitle(sub.getFilter().getTitle())
+                .schedule(buildScheduleDto(sub))
+                .build();
+    }
+
     private void validateSchedule(ScheduleDto schedule) {
         if (schedule == null || schedule.getHours() == null || schedule.getHours().isEmpty()) {
             throw new IllegalArgumentException("Schedule hours must not be empty");
@@ -183,3 +169,4 @@ public class SubscriptionService {
         }
     }
 }
+

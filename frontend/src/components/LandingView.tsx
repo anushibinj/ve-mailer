@@ -16,9 +16,10 @@ const LandingView: React.FC<LandingViewProps> = ({ onSelectWorkspace }) => {
       try {
         const data = await fetchWorkspaces();
         setWorkspaces(data);
-      } catch (err: any) {
-        if (err.response?.data?.message) {
-          setError(`Failed to load workspaces: ${err.response.data.message}`);
+      } catch (err: unknown) {
+        const axiosErr = err as { response?: { data?: { message?: string } } };
+        if (axiosErr.response?.data?.message) {
+          setError(`Failed to load workspaces: ${axiosErr.response.data.message}`);
         } else {
           setError('Network error. Failed to load workspaces. Please ensure the backend server is running and try again.');
         }
