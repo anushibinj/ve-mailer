@@ -39,6 +39,7 @@ flowchart TD
             OTP[OTP Service]
             PS[Polling Service]
             NS[Notification Service]
+            AIS[AI Summary Service]
         end
 
         subgraph DataLayer["Data Layer (JPA)"]
@@ -56,6 +57,7 @@ flowchart TD
         DB[(H2 / PostgreSQL)]
         SMTP[SMTP Server]
         VE[ValueEdge / Octane API]
+        OPENAI[OpenAI API]
     end
 
     %% Frontend flows
@@ -105,6 +107,8 @@ flowchart TD
     FS --> VE
     PS --> FS
     PS --> NS
+    NS --> AIS
+    AIS --> OPENAI
     NS --> SMTP
 
     %% Data layer

@@ -22,6 +22,7 @@ import java.util.Properties;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -30,6 +31,9 @@ class NotificationServiceTest {
     @Mock
     private JavaMailSender mailSender;
 
+    @Mock
+    private AiSummaryService aiSummaryService;
+
     // Use a real registry so extractor behaviour is tested end-to-end.
     private final FieldExtractorRegistry registry = new FieldExtractorRegistry();
 
@@ -37,7 +41,7 @@ class NotificationServiceTest {
 
     @BeforeEach
     void setUp() {
-        notificationService = new NotificationService(mailSender, registry);
+        notificationService = new NotificationService(mailSender, registry, aiSummaryService);
         ReflectionTestUtils.setField(notificationService, "from", "noreply@test.com");
     }
 
@@ -87,18 +91,60 @@ class NotificationServiceTest {
         assertEquals("[ve-emailer] Your Notification Digest", captor.getValue().getSubject());
     }
 
+    @Test
+    void testProcessAndSendNotifications_AiSummaryEnabled_GeneratesSummaries() {
+        when(mailSender.createMimeMessage()).thenReturn(newMimeMessage());
+        when(aiSummaryService.fetchComments(any())).thenReturn("Some comment");
+        when(aiSummaryService.generateSummary(any(), any(), any())).thenReturn("AI generated summary");
+
+        EntityModel entity = new EntityModel(Set.of(
+                new StringFieldModel("id", "1001"),
+                new StringFieldModel("name", "Fix bug"),
+                new StringFieldModel("description", "A bug needs fixing")
+        ));
+
+        EmailSubscriber sub = new EmailSubscriber();
+        sub.setRecipientEmail("user@example.com");
+
+        // Include the AI Summary pseudo-field in the fields list
+        List<String> fields = List.of(AiSummaryService.AI_SUMMARY_FIELD, "id", "name", "description");
+
+        notificationService.processAndSendNotifications(
+                List.of(sub), List.of(entity), fields, 25);
+
+        verify(aiSummaryService).generateSummary("Fix bug", "A bug needs fixing", "Some comment");
+        verify(mailSender).send(any(MimeMessage.class));
+    }
+
+    @Test
+    void testProcessAndSendNotifications_AiSummaryDisabled_NoAiCalls() {
+        when(mailSender.createMimeMessage()).thenReturn(newMimeMessage());
+
+        EntityModel entity = new EntityModel(Set.of(
+                new StringFieldModel("name", "Fix bug")
+        ));
+
+        EmailSubscriber sub = new EmailSubscriber();
+        sub.setRecipientEmail("user@example.com");
+
+        notificationService.processAndSendNotifications(
+                List.of(sub), List.of(entity), List.of("name"), 25);
+
+        verifyNoInteractions(aiSummaryService);
+    }
+
     // ── buildHtmlTable ────────────────────────────────────────────────────────
 
     @Test
     void testBuildHtmlTable_EmptyResults_ShowsNoItemsMessage() {
-        String html = notificationService.buildHtmlTable(Collections.emptyList(), List.of("name", "phase"), 25);
+        String html = notificationService.buildHtmlTable(Collections.emptyList(), List.of("name", "phase"), 25, false, null);
         assertTrue(html.contains("No items matched"), "Should show empty-state message");
         assertFalse(html.contains("<table"), "Should not render a table for empty results");
     }
 
     @Test
     void testBuildHtmlTable_FooterShowsLimit() {
-        String html = notificationService.buildHtmlTable(Collections.emptyList(), List.of("name"), 10);
+        String html = notificationService.buildHtmlTable(Collections.emptyList(), List.of("name"), 10, false, null);
         assertTrue(html.contains("limited to 10 items"), "Footer should show configured limit");
     }
 
@@ -108,7 +154,7 @@ class NotificationServiceTest {
                 new StringFieldModel("story_points", "5"),
                 new StringFieldModel("phase", "In Progress")
         ));
-        String html = notificationService.buildHtmlTable(List.of(entity), List.of("story_points", "phase"), 25);
+        String html = notificationService.buildHtmlTable(List.of(entity), List.of("story_points", "phase"), 25, false, null);
         assertTrue(html.contains("Story Points"), "Header should humanise story_points");
         assertTrue(html.contains("Phase"),        "Header should humanise phase");
     }
@@ -119,7 +165,7 @@ class NotificationServiceTest {
                 new StringFieldModel("name", "Fix login bug"),
                 new StringFieldModel("phase", "Open")
         ));
-        String html = notificationService.buildHtmlTable(List.of(entity), List.of("name", "phase"), 25);
+        String html = notificationService.buildHtmlTable(List.of(entity), List.of("name", "phase"), 25, false, null);
         assertTrue(html.contains("Fix login bug"), "Cell should contain entity name");
         assertTrue(html.contains("Open"),          "Cell should contain entity phase");
     }
@@ -129,7 +175,7 @@ class NotificationServiceTest {
         EntityModel entity = new EntityModel(Set.of(
                 new StringFieldModel("name", "<script>alert('xss')</script>")
         ));
-        String html = notificationService.buildHtmlTable(List.of(entity), List.of("name"), 25);
+        String html = notificationService.buildHtmlTable(List.of(entity), List.of("name"), 25, false, null);
         assertFalse(html.contains("<script>"), "Raw <script> tag must not appear in output");
         assertTrue(html.contains("&lt;script&gt;"), "Tag must be HTML-escaped");
     }
@@ -139,7 +185,7 @@ class NotificationServiceTest {
         EntityModel entity = new EntityModel(Set.of(
                 new StringFieldModel("name", "Some item")
         ));
-        String html = notificationService.buildHtmlTable(List.of(entity), List.of("name", "phase"), 25);
+        String html = notificationService.buildHtmlTable(List.of(entity), List.of("name", "phase"), 25, false, null);
         assertTrue(html.contains("Some item"));
         assertTrue(html.contains("<td style=\"padding:8px;\"></td>"),
                 "Missing field should render as empty cell");
@@ -158,7 +204,7 @@ class NotificationServiceTest {
                 new ReferenceFieldModel("phase", phaseRef)
         ));
 
-        String html = notificationService.buildHtmlTable(List.of(entity), List.of("name", "phase"), 25);
+        String html = notificationService.buildHtmlTable(List.of(entity), List.of("name", "phase"), 25, false, null);
 
         assertTrue(html.contains("My Feature"), "name field should be rendered");
         assertTrue(html.contains("New"), "phase.name should be rendered as the cell value");
@@ -176,7 +222,7 @@ class NotificationServiceTest {
                 new ReferenceFieldModel("owner", ownerRef)
         ));
 
-        String html = notificationService.buildHtmlTable(List.of(entity), List.of("name", "owner"), 25);
+        String html = notificationService.buildHtmlTable(List.of(entity), List.of("name", "owner"), 25, false, null);
 
         assertTrue(html.contains("Maggie Flavell"), "owner.full_name should be the cell value");
         assertFalse(html.contains("mflavell"), "owner.name should not be preferred over full_name");
@@ -192,7 +238,7 @@ class NotificationServiceTest {
                 new ReferenceFieldModel("product_udf", productRef)
         ));
 
-        String html = notificationService.buildHtmlTable(List.of(entity), List.of("product_udf"), 25);
+        String html = notificationService.buildHtmlTable(List.of(entity), List.of("product_udf"), 25, false, null);
 
         assertTrue(html.contains("RKYV CSP"), "product_udf.name should be the cell value");
     }
@@ -207,8 +253,46 @@ class NotificationServiceTest {
                 new ReferenceFieldModel("some_custom_ref", refEntity)
         ));
 
-        String html = notificationService.buildHtmlTable(List.of(entity), List.of("some_custom_ref"), 25);
+        String html = notificationService.buildHtmlTable(List.of(entity), List.of("some_custom_ref"), 25, false, null);
 
         assertTrue(html.contains("Some Value"), "Unknown reference field should fall back to .name");
+    }
+
+    // ── AI Summary in HTML table ──────────────────────────────────────────────
+
+    @Test
+    void testBuildHtmlTable_AiSummaryEnabled_AddsFirstColumn() {
+        EntityModel entity = new EntityModel(Set.of(
+                new StringFieldModel("name", "My Feature"),
+                new StringFieldModel("id", "1001")
+        ));
+        String[] summaries = {"This feature implements login improvements."};
+
+        String html = notificationService.buildHtmlTable(List.of(entity), List.of("name", "id"), 25, true, summaries);
+
+        assertTrue(html.contains("AI Summary"), "Header should include AI Summary column");
+        assertTrue(html.contains("This feature implements login improvements."), "AI summary text should appear");
+    }
+
+    @Test
+    void testBuildHtmlTable_AiSummaryDisabled_NoSummaryColumn() {
+        EntityModel entity = new EntityModel(Set.of(
+                new StringFieldModel("name", "My Feature")
+        ));
+
+        String html = notificationService.buildHtmlTable(List.of(entity), List.of("name"), 25, false, null);
+
+        assertFalse(html.contains("AI Summary"), "Header should not include AI Summary when disabled");
+    }
+
+    @Test
+    void testBuildHtmlTable_AiSummaryEnabled_NullSummaries_ShowsFallback() {
+        EntityModel entity = new EntityModel(Set.of(
+                new StringFieldModel("name", "My Feature")
+        ));
+
+        String html = notificationService.buildHtmlTable(List.of(entity), List.of("name"), 25, true, null);
+
+        assertTrue(html.contains("AI summary unavailable."), "Should show fallback when summaries array is null");
     }
 }

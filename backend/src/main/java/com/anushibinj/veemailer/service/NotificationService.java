@@ -36,13 +36,37 @@ public class NotificationService {
 
     private final JavaMailSender mailSender;
     private final FieldExtractorRegistry fieldExtractorRegistry;
+    private final AiSummaryService aiSummaryService;
 
     @Async
     public void processAndSendNotifications(List<EmailSubscriber> subscribers,
                                             List<EntityModel> results,
                                             List<String> fields,
                                             int limit) {
-        String htmlBody = buildHtmlTable(results, fields, limit);
+        // Check if AI Summary is enabled and generate summaries
+        boolean aiSummaryEnabled = fields.contains(AiSummaryService.AI_SUMMARY_FIELD);
+        List<String> displayFields = fields;
+        String[] aiSummaries = null;
+
+        if (aiSummaryEnabled) {
+            // Remove AI Summary pseudo-field from the Octane field list for display ordering
+            displayFields = fields.stream()
+                    .filter(f -> !AiSummaryService.AI_SUMMARY_FIELD.equals(f))
+                    .collect(Collectors.toList());
+
+            // Generate AI summaries for each ticket
+            aiSummaries = new String[results.size()];
+            for (int i = 0; i < results.size(); i++) {
+                EntityModel entity = results.get(i);
+                String name = extractFieldValue("name", entity.getValue("name"));
+                String description = extractFieldValue("description", entity.getValue("description"));
+                String ticketId = extractFieldValue("id", entity.getValue("id"));
+                String comments = aiSummaryService.fetchComments(ticketId);
+                aiSummaries[i] = aiSummaryService.generateSummary(name, description, comments);
+            }
+        }
+
+        String htmlBody = buildHtmlTable(results, displayFields, limit, aiSummaryEnabled, aiSummaries);
         for (EmailSubscriber subscriber : subscribers) {
             sendEmail(subscriber.getRecipientEmail(), htmlBody);
         }
@@ -65,8 +89,10 @@ public class NotificationService {
     /**
      * Builds a styled HTML table whose columns are the filter's field names and
      * whose rows are the Octane entities returned by the filter execution.
+     * When AI Summary is enabled, it appears as the first column.
      */
-    String buildHtmlTable(List<EntityModel> results, List<String> fields, int limit) {
+    String buildHtmlTable(List<EntityModel> results, List<String> fields, int limit,
+                          boolean aiSummaryEnabled, String[] aiSummaries) {
         StringBuilder sb = new StringBuilder();
         sb.append("<html><body style=\"font-family:Arial,sans-serif;font-size:14px;\">")
           .append("<p>Here is your notification digest:</p>");
@@ -79,6 +105,9 @@ public class NotificationService {
 
             // Header row
             sb.append("<thead><tr style=\"background-color:#f2f2f2;\">");
+            if (aiSummaryEnabled) {
+                sb.append("<th style=\"text-align:left;padding:8px;\">AI Summary</th>");
+            }
             for (String field : fields) {
                 sb.append("<th style=\"text-align:left;padding:8px;\">")
                   .append(escapeHtml(humanise(field)))
@@ -92,6 +121,13 @@ public class NotificationService {
                 EntityModel entity = results.get(i);
                 String rowBg = (i % 2 == 0) ? "#ffffff" : "#f9f9f9";
                 sb.append("<tr style=\"background-color:").append(rowBg).append(";\">");
+                if (aiSummaryEnabled) {
+                    String summary = (aiSummaries != null && i < aiSummaries.length)
+                            ? aiSummaries[i] : "AI summary unavailable.";
+                    sb.append("<td style=\"padding:8px;\">")
+                      .append(escapeHtml(summary))
+                      .append("</td>");
+                }
                 for (String field : fields) {
                     String cellValue = extractFieldValue(field, entity.getValue(field));
                     sb.append("<td style=\"padding:8px;\">")

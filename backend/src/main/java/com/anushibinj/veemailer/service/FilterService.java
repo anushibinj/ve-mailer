@@ -2,6 +2,7 @@ package com.anushibinj.veemailer.service;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 
@@ -114,6 +115,11 @@ public class FilterService {
             List<String> fields = objectMapper.readValue(filter.getFields(), new TypeReference<>() {});
             List<FilterCriteriaClause> clauses = objectMapper.readValue(filter.getCriteria(), new TypeReference<>() {});
 
+            // Strip AI Summary pseudo-field — it must never be sent to the ticketing server
+            List<String> octaneFields = fields.stream()
+                    .filter(f -> !AiSummaryService.AI_SUMMARY_FIELD.equals(f))
+                    .collect(Collectors.toList());
+
             Octane octaneClient = octaneCacheService.getOctaneClient(
                     valueEdgeProperties.getServerUrl(),
                     workspace.getClientId(),
@@ -127,7 +133,7 @@ public class FilterService {
                     .entityList("work_items")
                     .get()
                     .query(query)
-                    .addFields(fields.toArray(new String[0]))
+                    .addFields(octaneFields.toArray(new String[0]))
                     .limit(queryLimit) // configurable via veemailer.query.limit
                     .execute();
 

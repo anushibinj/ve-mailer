@@ -84,6 +84,7 @@ The backend is stateless between requests. An in-memory cache (`OctaneCacheServi
 | Persistence | Spring Data JPA, H2 (dev), PostgreSQL (prod)                      |
 | Security  | Spring Security, JWT (HMAC-SHA256), BCrypt password hashing, role-based access |
 | Email     | Spring Mail (JavaMailSender)                                        |
+| AI        | Spring AI (OpenAI) — optional AI-generated ticket summaries in email digests |
 | Scheduling | Spring `@Scheduled` — cron-based hourly trigger dispatches to subscribers by schedule type and configured hours |
 | Octane SDK | Microfocus ALM Octane SDK 25.4                                     |
 | Build     | Maven (backend), npm (frontend)                                     |
@@ -488,6 +489,25 @@ valueedge.workspace-id=5015
 ```
 
 These values are bound to `ValueEdgeProperties` and injected into `FilterService`. **Do not commit real credentials to source control.**
+
+---
+
+### AI Summary Configuration (Optional)
+
+The AI Summary feature uses Spring AI with OpenAI to generate concise ticket summaries in email digests. Configure the following in `application.properties`:
+
+```properties
+# Spring AI (OpenAI) configuration
+spring.ai.openai.api-key=${OPENAI_API_KEY:YOUR_API_KEY}
+spring.ai.openai.base-url=https://api.openai.com
+spring.ai.openai.chat.options.model=gpt-4.1-mini
+```
+
+Set the `OPENAI_API_KEY` environment variable to your actual API key. **Never commit API keys to source control.**
+
+Prompts are stored in `backend/src/main/resources/prompts/` and can be customized without code changes:
+- `ai-summary-system-prompt.md` — defines summarization behavior and tone
+- `ai-summary-user-prompt.md` — template with placeholders for ticket data
 
 ---
 

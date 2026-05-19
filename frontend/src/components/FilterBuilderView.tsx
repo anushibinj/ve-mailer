@@ -22,8 +22,13 @@ type ViewMode = 'list' | 'create' | 'edit';
 
 const ENTITY_TYPES = ['defect', 'story', 'feature', 'quality_story', 'epic'];
 
+const AI_SUMMARY_FIELD = '✨ AI Summary';
+
+// Fields that are required when AI Summary is enabled
+const AI_SUMMARY_DEPENDENCIES = ['name', 'description', 'comments'];
+
 const COMMON_FIELDS = [
-  'id', 'global_id_udf', 'name', 'phase', 'owner',
+  'id', 'global_id_udf', 'name', 'description', 'comments', 'phase', 'owner',
   'product_udf', 'customer_udf', 'defect_type', 'severity',
   'priority', 'release', 'team', 'sprint', 'creation_time',
   'last_modified', 'detected_by', 'story_points', 'subtype'
@@ -126,11 +131,35 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
   };
 
   const toggleField = (field: string) => {
-    setSelectedFields(prev =>
-      prev.includes(field)
+    setSelectedFields(prev => {
+      const isAiSummaryEnabled = prev.includes(AI_SUMMARY_FIELD);
+
+      // If enabling AI Summary, auto-enable its dependencies
+      if (field === AI_SUMMARY_FIELD && !prev.includes(AI_SUMMARY_FIELD)) {
+        const withDeps = [...prev];
+        for (const dep of AI_SUMMARY_DEPENDENCIES) {
+          if (!withDeps.includes(dep)) {
+            withDeps.push(dep);
+          }
+        }
+        return [AI_SUMMARY_FIELD, ...withDeps];
+      }
+
+      // If disabling AI Summary, just remove it
+      if (field === AI_SUMMARY_FIELD && prev.includes(AI_SUMMARY_FIELD)) {
+        return prev.filter(f => f !== AI_SUMMARY_FIELD);
+      }
+
+      // Prevent removing AI Summary dependency fields while AI Summary is enabled
+      if (isAiSummaryEnabled && AI_SUMMARY_DEPENDENCIES.includes(field) && prev.includes(field)) {
+        toast.error('Name, Description and Comments are required for AI Summary.');
+        return prev;
+      }
+
+      return prev.includes(field)
         ? prev.filter(f => f !== field)
-        : [...prev, field]
-    );
+        : [...prev, field];
+    });
   };
 
   const updateCriterion = (index: number, updates: Partial<FilterCriteriaClause>) => {
@@ -349,6 +378,18 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
                   Fields to Fetch
                 </label>
                 <div className="flex flex-wrap gap-2">
+                  {/* AI Summary pseudo-field — always first */}
+                  <button
+                    type="button"
+                    onClick={() => toggleField(AI_SUMMARY_FIELD)}
+                    className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
+                      selectedFields.includes(AI_SUMMARY_FIELD)
+                        ? 'bg-purple-100 text-purple-800 border-purple-300'
+                        : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'
+                    }`}
+                  >
+                    {AI_SUMMARY_FIELD}
+                  </button>
                   {COMMON_FIELDS.map(field => (
                     <button
                       key={field}
@@ -358,12 +399,24 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
                         selectedFields.includes(field)
                           ? 'bg-blue-100 text-blue-800 border-blue-300'
                           : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'
+                      } ${
+                        selectedFields.includes(AI_SUMMARY_FIELD) && AI_SUMMARY_DEPENDENCIES.includes(field)
+                          ? 'opacity-75 cursor-not-allowed'
+                          : ''
                       }`}
                     >
+                      {selectedFields.includes(AI_SUMMARY_FIELD) && AI_SUMMARY_DEPENDENCIES.includes(field) && (
+                        <span className="mr-1 text-[10px]">🔒</span>
+                      )}
                       {field}
                     </button>
                   ))}
                 </div>
+                {/* {selectedFields.includes(AI_SUMMARY_FIELD) && (
+                  <p className="mt-2 text-xs text-purple-600">
+                    Name, Description and Comments are required for AI Summary and cannot be removed.
+                  </p>
+                )} */}
               </div>
 
               {/* Criteria Builder */}
