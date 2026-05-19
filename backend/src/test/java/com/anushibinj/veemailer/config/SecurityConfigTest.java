@@ -22,7 +22,7 @@ class SecurityConfigTest {
     private PasswordEncoder passwordEncoder;
 
     @Autowired
-    private Auth403EntryPoint auth403EntryPoint;
+    private Auth401EntryPoint auth401EntryPoint;
 
     @Autowired
     private Auth403AccessDeniedHandler auth403AccessDeniedHandler;
@@ -48,8 +48,8 @@ class SecurityConfigTest {
     }
 
     @Test
-    void testAuth403EntryPoint_IsBeanWired() {
-        assertNotNull(auth403EntryPoint, "Auth403EntryPoint bean should be present in the context");
+    void testAuth401EntryPoint_IsBeanWired() {
+        assertNotNull(auth401EntryPoint, "Auth401EntryPoint bean should be present in the context");
     }
 
     @Test
@@ -58,21 +58,21 @@ class SecurityConfigTest {
     }
 
     @Test
-    void unauthenticated_ProtectedEndpoint_Returns403Json() throws Exception {
+    void unauthenticated_ProtectedEndpoint_Returns401Json() throws Exception {
         mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/workspaces"))
-                .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.status").value(403))
-                .andExpect(jsonPath("$.error").value("FORBIDDEN"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.status").value(401))
+                .andExpect(jsonPath("$.error").value("UNAUTHORIZED"))
                 .andExpect(jsonPath("$.message").value("Authentication required"));
     }
 
     @Test
-    void invalidJwt_ProtectedEndpoint_Returns403Json() throws Exception {
+    void invalidJwt_ProtectedEndpoint_Returns401Json() throws Exception {
         mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/workspaces")
                         .header("Authorization", "Bearer invalid.jwt.token"))
-                .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.status").value(403))
-                .andExpect(jsonPath("$.error").value("FORBIDDEN"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.status").value(401))
+                .andExpect(jsonPath("$.error").value("UNAUTHORIZED"))
                 .andExpect(jsonPath("$.message").value("Authentication required"));
     }
 
@@ -83,8 +83,8 @@ class SecurityConfigTest {
                         .contentType("application/json")
                         .content("{\"email\":\"noone@company.com\",\"password\":\"x\"}"))
                 .andExpect(result -> assertTrue(
-                        result.getResponse().getStatus() != 403,
-                        "Public auth endpoint must not return 403"));
+                        result.getResponse().getStatus() != 401,
+                        "Public auth endpoint must not return 401"));
     }
 }
 

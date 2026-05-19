@@ -17,10 +17,10 @@ api.interceptors.request.use(
 );
 
 // ── Auth-failure handling ──────────────────────────────────────────────────
-// The backend normalises ALL authentication failures (expired token, missing
-// token, revoked session) to HTTP 403.  We intercept that signal here,
-// clear the local session, and notify the React auth context so it can
-// redirect the user to the login page exactly once.
+// 401 = authentication failure (expired/missing/invalid JWT) → logout
+// 403 = authorization failure (authenticated but missing permission) → toast
+// Auth endpoints (login, signup, etc.) return 4xx for form-level errors
+// and must NOT trigger session-expiry or access-denied handling.
 let isHandlingAuthFailure = false;
 
 api.interceptors.response.use(
@@ -36,10 +36,12 @@ api.interceptors.response.use(
     const status = error.response?.status;
 
     // Auth endpoints (login, signup, etc.) return 4xx for form-level errors
-    // (wrong password, etc.).  Those must NOT trigger a session-expiry redirect.
+    // (wrong password, etc.).  Those must NOT trigger session-expiry or
+    // access-denied handling.
     const isAuthEndpoint = Boolean(error.config?.url?.includes('/api/auth/'));
 
-    if (status === 403 && !isAuthEndpoint && !isHandlingAuthFailure) {
+    // 401 = JWT missing, expired, or invalid → clear session and redirect to login
+    if (status === 401 && !isAuthEndpoint && !isHandlingAuthFailure) {
       isHandlingAuthFailure = true;
 
       // Clear all stored session data immediately
@@ -61,6 +63,12 @@ api.interceptors.response.use(
     // to prevent cascading error popups.
     if (isHandlingAuthFailure && !isAuthEndpoint) {
       return new Promise(() => {});
+    }
+
+    // 403 = authenticated but insufficient permission → show access-denied
+    // toast.  Do NOT clear session or redirect to login.
+    if (status === 403 && !isAuthEndpoint) {
+      window.dispatchEvent(new CustomEvent('auth:access-denied'));
     }
 
     return Promise.reject(error);

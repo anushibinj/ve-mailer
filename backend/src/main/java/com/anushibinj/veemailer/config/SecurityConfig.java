@@ -25,7 +25,7 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final AppUserDetailsService appUserDetailsService;
-    private final Auth403EntryPoint auth403EntryPoint;
+    private final Auth401EntryPoint auth401EntryPoint;
     private final Auth403AccessDeniedHandler auth403AccessDeniedHandler;
 
     @Bean
@@ -64,7 +64,7 @@ public class SecurityConfig {
             )
             // Normalise ALL auth failures to HTTP 403 with JSON body
             .exceptionHandling(ex -> ex
-                .authenticationEntryPoint(auth403EntryPoint)
+                .authenticationEntryPoint(auth401EntryPoint)
                 .accessDeniedHandler(auth403AccessDeniedHandler)
             )
             .authenticationProvider(authenticationProvider())

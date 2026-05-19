@@ -38,7 +38,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         final String jwt = authHeader.substring(7);
 
         // Invalid or expired token: pass through without setting authentication.
-        // Auth403EntryPoint will return 403 JSON for protected routes.
+        // Auth401EntryPoint will return 401 JSON for protected routes.
         if (!jwtService.isTokenValid(jwt)) {
             filterChain.doFilter(request, response);
             return;
@@ -57,7 +57,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 SecurityContextHolder.getContext().setAuthentication(authToken);
             } catch (UsernameNotFoundException e) {
                 // Account deleted after token was issued: leave SecurityContext empty so
-                // Auth403EntryPoint returns 403 for protected routes.
+                // Auth401EntryPoint returns 401 for protected routes.
             }
         }
 

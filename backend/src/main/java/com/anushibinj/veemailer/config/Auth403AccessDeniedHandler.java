@@ -14,9 +14,10 @@ import org.springframework.stereotype.Component;
 import java.io.IOException;
 
 /**
- * Returns HTTP 403 with a JSON body for filter-level access denial
- * (e.g., an authenticated user hitting a URL that requires a role they
- * do not have, as resolved by Spring Security's filter chain).
+ * Returns HTTP 403 with a JSON body when an authenticated user attempts an
+ * action they are not permitted to perform (e.g., MEMBER trying to create a
+ * workspace).  Does NOT indicate an authentication failure — the user's
+ * identity is valid; they simply lack the required role or permission.
  *
  * Controller-level AccessDeniedException (from @PreAuthorize or manual
  * enforceOwnership checks) is handled by GlobalExceptionHandler instead.
@@ -37,7 +38,7 @@ public class Auth403AccessDeniedHandler implements AccessDeniedHandler {
         ApiErrorResponse error = ApiErrorResponse.builder()
                 .status(HttpStatus.FORBIDDEN.value())
                 .error("FORBIDDEN")
-                .message("Access denied")
+                .message("You do not have access to do that")
                 .build();
 
         response.getWriter().write(objectMapper.writeValueAsString(error));

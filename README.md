@@ -6,29 +6,37 @@ A full-stack application that lets users subscribe to email digest notifications
 
 ## Table of Contents
 
-- [Overview](#overview)
-- [Architecture](#architecture)
-- [Tech Stack](#tech-stack)
-- [Project Structure](#project-structure)
-- [Data Model](#data-model)
-- [API Reference](#api-reference)
-- [Running Locally](#running-locally)
-  - [Prerequisites](#prerequisites)
-  - [Backend](#backend)
-  - [Frontend](#frontend)
-- [Configuration](#configuration)
-  - [Backend — application.properties](#backend--applicationproperties)
-  - [Backend — application-dev.properties](#backend--application-devproperties)
-  - [Frontend — Environment Variables](#frontend--environment-variables)
-- [Running Tests](#running-tests)
-- [Building for Production](#building-for-production)
-  - [Backend JAR](#backend-jar)
-  - [Frontend Docker Image](#frontend-docker-image)
-- [How It Works](#how-it-works)
-  - [Subscription Flow](#subscription-flow)
-  - [Filter Templates](#filter-templates)
-  - [Notification Polling](#notification-polling)
-  - [OTP Lifecycle](#otp-lifecycle)
+- [VE Mailer — Email Notification Broker](#ve-mailer--email-notification-broker)
+  - [Table of Contents](#table-of-contents)
+  - [Overview](#overview)
+  - [Architecture](#architecture)
+  - [Tech Stack](#tech-stack)
+  - [Project Structure](#project-structure)
+  - [Data Model](#data-model)
+  - [API Reference](#api-reference)
+    - [Authentication (`/api/auth`)](#authentication-apiauth)
+    - [Workspaces](#workspaces)
+    - [Filters](#filters)
+    - [Subscriptions](#subscriptions)
+  - [Running Locally](#running-locally)
+    - [Prerequisites](#prerequisites)
+    - [Backend](#backend)
+    - [Frontend](#frontend)
+  - [Configuration](#configuration)
+    - [Backend — `application.properties`](#backend--applicationproperties)
+    - [Backend — `application-dev.properties`](#backend--application-devproperties)
+    - [Frontend — Environment Variables](#frontend--environment-variables)
+  - [Running Tests](#running-tests)
+    - [Backend](#backend-1)
+    - [Frontend](#frontend-1)
+  - [Building for Production](#building-for-production)
+    - [Backend JAR](#backend-jar)
+    - [Frontend Docker Image](#frontend-docker-image)
+  - [How It Works](#how-it-works)
+    - [Subscription Flow](#subscription-flow)
+    - [Filter Templates](#filter-templates)
+    - [Notification Polling](#notification-polling)
+    - [OTP Lifecycle](#otp-lifecycle)
 
 ---
 
@@ -92,10 +100,10 @@ ve-mailer/
 │   │   ├── config/
 │   │   │   ├── AppConfig.java        # Async + Scheduling enablement, RestTemplate bean
 │   │   │   ├── Auth403AccessDeniedHandler.java # Returns HTTP 403 JSON for filter-level access denial
-│   │   │   ├── Auth403EntryPoint.java # Returns HTTP 403 JSON for unauthenticated requests
+│   │   │   ├── Auth401EntryPoint.java # Returns HTTP 401 JSON for unauthenticated requests
 │   │   │   ├── GlobalExceptionHandler.java # Centralized REST exception handling
 │   │   │   ├── JwtAuthenticationFilter.java # JWT token validation filter
-│   │   │   ├── SecurityConfig.java   # Spring Security: JWT stateless, role-based access, 403 auth failure handlers
+│   │   │   ├── SecurityConfig.java   # Spring Security: JWT stateless, role-based access, 401/403 auth failure handlers
 │   │   │   └── WebConfig.java        # CORS configuration
 │   │   ├── controller/
 │   │   │   ├── AuthController.java         # Authentication endpoints (signup, login, etc.)

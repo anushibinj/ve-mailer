@@ -14,15 +14,14 @@ import org.springframework.stereotype.Component;
 import java.io.IOException;
 
 /**
- * Returns HTTP 403 (not 401) for ALL unauthenticated requests:
+ * Returns HTTP 401 for all unauthenticated requests:
  * missing JWT, expired JWT, invalid JWT, revoked session, etc.
  *
- * This normalises the authentication failure signal so the frontend
- * can reliably detect session expiry on a single status code.
+ * The frontend intercepts 401 to clear the session and redirect to login.
  */
 @Component
 @RequiredArgsConstructor
-public class Auth403EntryPoint implements AuthenticationEntryPoint {
+public class Auth401EntryPoint implements AuthenticationEntryPoint {
 
     private final ObjectMapper objectMapper;
 
@@ -30,12 +29,12 @@ public class Auth403EntryPoint implements AuthenticationEntryPoint {
     public void commence(HttpServletRequest request,
                          HttpServletResponse response,
                          AuthenticationException authException) throws IOException {
-        response.setStatus(HttpStatus.FORBIDDEN.value());
+        response.setStatus(HttpStatus.UNAUTHORIZED.value());
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
 
         ApiErrorResponse error = ApiErrorResponse.builder()
-                .status(HttpStatus.FORBIDDEN.value())
-                .error("FORBIDDEN")
+                .status(HttpStatus.UNAUTHORIZED.value())
+                .error("UNAUTHORIZED")
                 .message("Authentication required")
                 .build();
 

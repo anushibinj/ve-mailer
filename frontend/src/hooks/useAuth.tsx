@@ -53,14 +53,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         })
         .catch(() => {
           // Token expired or invalid — the api.ts interceptor will dispatch
-          // auth:session-expired, which is handled by the effect below.
+          // auth:session-expired (HTTP 401), which is handled by the effect below.
         })
         .finally(() => setIsLoading(false));
     }
   }, []);
 
   // Listen for session-expiry events dispatched by the api.ts response
-  // interceptor when any protected endpoint returns HTTP 403.
+  // interceptor when any protected endpoint returns HTTP 401 (unauthenticated).
   useEffect(() => {
     const handleSessionExpired = () => {
       clearAuthData();
@@ -74,6 +74,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       window.removeEventListener('auth:session-expired', handleSessionExpired as EventListener);
     };
   }, [navigate]);
+
+  // Listen for access-denied events dispatched by the api.ts response
+  // interceptor when a protected endpoint returns HTTP 403 (authenticated but
+  // insufficient permission).  Session is kept intact — only a toast is shown.
+  useEffect(() => {
+    const handleAccessDenied = () => {
+      toast.error('You do not have access to do that.');
+    };
+
+    window.addEventListener('auth:access-denied', handleAccessDenied as EventListener);
+    return () => {
+      window.removeEventListener('auth:access-denied', handleAccessDenied as EventListener);
+    };
+  }, []);
 
   const login = useCallback((authResponse: AuthResponse) => {
     storeAuthData(authResponse);

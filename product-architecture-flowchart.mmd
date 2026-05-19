@@ -17,7 +17,7 @@ flowchart TD
         subgraph Security["Security Layer"]
             JF[JWT Auth Filter]
             SC[Security Config]
-            AE[Auth403EntryPoint — 403 for unauthenticated]
+            AE[Auth401EntryPoint — 401 for unauthenticated]
             ADH[Auth403AccessDeniedHandler — 403 for access denied]
         end
 
