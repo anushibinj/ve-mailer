@@ -10,6 +10,7 @@ import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -37,22 +38,22 @@ public class ScheduleMigrationRunner implements ApplicationRunner {
             if (sub.getFrequency() == null) {
                 // No frequency either – set a safe default (daily at 08:00)
                 sub.setScheduleType(ScheduleType.DAILY);
-                sub.setScheduledHours(List.of(8));
+                sub.setScheduledHours(new ArrayList<>(List.of(8)));
                 continue;
             }
             switch (sub.getFrequency()) {
                 case HOURLY -> {
                     // Map hourly to four evenly-spaced daily notifications
                     sub.setScheduleType(ScheduleType.DAILY);
-                    sub.setScheduledHours(List.of(0, 6, 12, 18));
+                    sub.setScheduledHours(new ArrayList<>(List.of(0, 6, 12, 18)));
                 }
                 case DAILY -> {
                     sub.setScheduleType(ScheduleType.DAILY);
-                    sub.setScheduledHours(List.of(8));
+                    sub.setScheduledHours(new ArrayList<>(List.of(8)));
                 }
                 case WEEKLY -> {
                     sub.setScheduleType(ScheduleType.WEEKLY);
-                    sub.setScheduledHours(List.of(8));
+                    sub.setScheduledHours(new ArrayList<>(List.of(8)));
                 }
             }
         }
