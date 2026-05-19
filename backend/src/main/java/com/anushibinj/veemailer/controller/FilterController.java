@@ -8,6 +8,7 @@ import com.hpe.adm.nga.sdk.model.EntityModel;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -32,7 +33,10 @@ public class FilterController {
         return ResponseEntity.ok(filterRepository.findByWorkspace_Id(workspaceId));
     }
 
+    // --- Filter template mutations (admin only) ---
+
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Filter> createFilter(
             @PathVariable UUID workspaceId,
             @Valid @RequestBody FilterDto dto) {
@@ -43,6 +47,7 @@ public class FilterController {
     }
 
     @PutMapping("/{filterId}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Filter> updateFilter(
             @PathVariable UUID workspaceId,
             @PathVariable UUID filterId,

@@ -291,52 +291,50 @@ All endpoints are prefixed with `/api/v1` for business APIs and `/api/auth` for 
 
 ### Workspaces
 
-| Method | Path                                   | Description                              |
-|--------|----------------------------------------|------------------------------------------|
-| `GET`  | `/workspaces`                          | List all registered workspaces           |
-| `GET`  | `/workspaces/{workspaceId}/subscriptions` | List active subscriptions for a workspace |
+All workspace endpoints require authentication. Mutation endpoints (POST/PUT/DELETE) require the `ADMIN` role.
+
+| Method   | Path                      | Role required | Description                    |
+|----------|---------------------------|:-------------:|--------------------------------|
+| `GET`    | `/workspaces`             | Any           | List all registered workspaces |
+| `GET`    | `/workspaces/{id}`        | Any           | Get workspace details          |
+| `POST`   | `/workspaces`             | ADMIN         | Create a workspace             |
+| `PUT`    | `/workspaces/{id}`        | ADMIN         | Update a workspace             |
+| `DELETE` | `/workspaces/{id}`        | ADMIN         | Delete a workspace             |
 
 ### Filters
 
-| Method | Path                                      | Body / Params                                          | Description                                    |
-|--------|-------------------------------------------|--------------------------------------------------------|------------------------------------------------|
-| `GET`  | `/filters`                                | —                                                      | List all saved filter templates                |
-| `POST` | `/filters`                                | `{ title, description, entityType, fields[], criteria[] }` | Create a new filter template                   |
-| `POST` | `/filters/{filterId}/execute?workspaceId=` | Query param: `workspaceId`                             | Execute a filter against a workspace's Octane instance and return matching entities |
+Filter template read endpoints are open to all authenticated users. Create/update require the `ADMIN` role.
+
+| Method | Path                                           | Role required | Description                                     |
+|--------|------------------------------------------------|:-------------:|-------------------------------------------------|
+| `GET`  | `/workspaces/{id}/filters`                     | Any           | List filter templates for a workspace           |
+| `POST` | `/workspaces/{id}/filters`                     | ADMIN         | Create a filter template                        |
+| `PUT`  | `/workspaces/{id}/filters/{filterId}`          | ADMIN         | Update a filter template                        |
+| `POST` | `/workspaces/{id}/filters/{filterId}/execute`  | Any           | Execute a filter against Octane and return entities |
 
 **FilterCriteriaClause** (element of the `criteria` array):
 
 ```json
 {
   "field": "defect_type",
-  "operator": "EQUAL_TO",
-  "negate": false,
+  "operator": "IN",
   "values": ["Escaped"]
 }
 ```
 
-Supported operators: `EQUAL_TO`, `IN`.
+Supported operators: `IN`, `NOT_IN`.
 
 ### Subscriptions
 
-| Method | Path                      | Body fields                                          | Description                         |
-|--------|---------------------------|------------------------------------------------------|-------------------------------------|
-| `POST` | `/subscriptions/request`  | `email`, `actionType`, `workspaceId`, `filterId`, `schedule` | Trigger OTP email for a subscription action |
-| `POST` | `/subscriptions/verify`   | `email`, `otp`                                       | Verify OTP and execute the action   |
+All subscription endpoints require authentication. Users may only update/delete their own subscriptions (ownership enforced server-side). The on-demand `run` endpoint requires the `ADMIN` role.
 
-**`actionType`** values: `SUBSCRIBE`, `UPDATE`, `UNSUBSCRIBE`
-
-**`schedule`** object:
-```json
-{ "type": "DAILY", "hours": [9, 15] }
-```
-- `type`: `DAILY` (fires every day) or `WEEKLY` (fires every Monday)
-- `hours`: non-empty list of hours (0–23) at which to send the notification
-
-**Response codes:**
-- `200 OK` — success
-- `401 Unauthorized` — invalid or expired OTP
-- `400 Bad Request` — validation failure or unexpected error
+| Method   | Path                                                      | Role required | Description                             |
+|----------|-----------------------------------------------------------|:-------------:|-----------------------------------------|
+| `GET`    | `/workspaces/{id}/subscriptions`                          | Any           | List active subscriptions for workspace |
+| `POST`   | `/workspaces/{id}/subscriptions`                          | Any           | Subscribe to a filter template          |
+| `PUT`    | `/workspaces/{id}/subscriptions/{subId}`                  | Any (own)     | Update subscription schedule            |
+| `DELETE` | `/workspaces/{id}/subscriptions/{subId}`                  | Any (own)     | Unsubscribe                             |
+| `POST`   | `/workspaces/{id}/subscriptions/{subId}/run`              | ADMIN         | Immediately send a notification email  |
 
 ---
 

@@ -35,19 +35,19 @@ public class WorkspaceController {
     private final WorkspaceService workspaceService;
     private final SubscriptionService subscriptionService;
 
-    // --- Admin-only workspace CRUD ---
+    // --- Workspace reads (any authenticated user) ---
 
     @GetMapping
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<WorkspaceResponseDto>> getWorkspaces() {
         return ResponseEntity.ok(workspaceService.findAll());
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<WorkspaceResponseDto> getWorkspace(@PathVariable UUID id) {
         return ResponseEntity.ok(workspaceService.findById(id));
     }
+
+    // --- Workspace mutations (admin only) ---
 
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")

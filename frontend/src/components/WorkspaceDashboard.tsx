@@ -7,6 +7,7 @@ import {
   type Filter,
   type Schedule,
 } from '../services/apiService';
+import { useAuth } from '../hooks/useAuth';
 import { Loader2, ArrowLeft, SlidersHorizontal, Pencil, Play, Plus } from 'lucide-react';
 import toast from 'react-hot-toast';
 import EditSubscriptionModal from './EditSubscriptionModal';
@@ -19,6 +20,7 @@ interface WorkspaceDashboardProps {
 }
 
 const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({ workspaceId, onBack, onOpenFilterBuilder }) => {
+  const { isAdmin } = useAuth();
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [filters, setFilters] = useState<Filter[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -110,7 +112,7 @@ const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({ workspaceId, on
             className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 hover:border-blue-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all"
           >
             <SlidersHorizontal className="h-4 w-4" />
-            Manage Filter Templates
+            {isAdmin ? 'Manage Filter Templates' : 'Browse Filter Templates'}
           </button>
           <button
             onClick={() => setIsCreateModalOpen(true)}
@@ -195,18 +197,20 @@ const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({ workspaceId, on
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right">
                       <div className="inline-flex items-center gap-2">
-                        <button
-                          onClick={() => handleRunSubscription(sub)}
-                          disabled={runningIds.has(sub.id)}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 rounded-md text-xs font-medium text-gray-700 bg-white hover:bg-green-50 hover:border-green-400 hover:text-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                          title="Send email now"
-                        >
-                          {runningIds.has(sub.id)
-                            ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                            : <Play className="h-3.5 w-3.5" />
-                          }
-                          Run
-                        </button>
+                        {isAdmin && (
+                          <button
+                            onClick={() => handleRunSubscription(sub)}
+                            disabled={runningIds.has(sub.id)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 rounded-md text-xs font-medium text-gray-700 bg-white hover:bg-green-50 hover:border-green-400 hover:text-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            title="Send email now"
+                          >
+                            {runningIds.has(sub.id)
+                              ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              : <Play className="h-3.5 w-3.5" />
+                            }
+                            Run
+                          </button>
+                        )}
                         <button
                           onClick={() => setEditingSubscription(sub)}
                           className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 rounded-md text-xs font-medium text-gray-700 bg-white hover:bg-gray-50 hover:border-blue-300 transition-colors"

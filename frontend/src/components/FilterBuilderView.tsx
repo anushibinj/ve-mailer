@@ -9,6 +9,7 @@ import {
   type FilterCreatePayload,
   type FilterUpdatePayload
 } from '../services/apiService';
+import { useAuth } from '../hooks/useAuth';
 import { Loader2, ArrowLeft, Plus, Trash2, Play, Pencil, ChevronDown, ChevronUp } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -42,6 +43,7 @@ const emptyCriterion = (): FilterCriteriaClause => ({
 const defaultFields = ['id', 'name', 'phase', 'owner'];
 
 const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBack }) => {
+  const { isAdmin } = useAuth();
   const [filters, setFilters] = useState<Filter[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [viewMode, setViewMode] = useState<ViewMode>('list');
@@ -271,9 +273,9 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
     );
   }
 
-  // ---- Render: create / edit form ----
+  // ---- Render: create / edit form (admin only) ----
 
-  if (viewMode === 'create' || viewMode === 'edit') {
+  if ((viewMode === 'create' || viewMode === 'edit') && isAdmin) {
     return (
       <div className="max-w-3xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
         {/* Header */}
@@ -500,26 +502,30 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
           </button>
           <h1 className="text-3xl font-bold text-gray-900">Filter Templates</h1>
         </div>
-        <button
-          onClick={handleCreateNew}
-          className="inline-flex items-center gap-2 px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
-        >
-          <Plus className="h-4 w-4" />
-          Create New Filter
-        </button>
+        {isAdmin && (
+          <button
+            onClick={handleCreateNew}
+            className="inline-flex items-center gap-2 px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+            Create New Filter
+          </button>
+        )}
       </div>
 
       {/* Filter list */}
       {filters.length === 0 ? (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
           <p className="text-gray-500 mb-4">No filter templates exist for this workspace.</p>
-          <button
-            onClick={handleCreateNew}
-            className="inline-flex items-center gap-2 px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
-          >
-            <Plus className="h-4 w-4" />
-            Create your first filter
-          </button>
+          {isAdmin && (
+            <button
+              onClick={handleCreateNew}
+              className="inline-flex items-center gap-2 px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+            >
+              <Plus className="h-4 w-4" />
+              Create your first filter
+            </button>
+          )}
         </div>
       ) : (
         <div className="space-y-4">
@@ -562,13 +568,15 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
 
                     {/* Action buttons */}
                     <div className="flex items-center gap-2 shrink-0">
-                      <button
-                        onClick={() => handleEdit(f)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 rounded-md text-xs font-medium text-gray-700 bg-white hover:bg-gray-50 hover:border-blue-300 transition-colors"
-                      >
-                        <Pencil className="h-3.5 w-3.5" />
-                        Edit
-                      </button>
+                      {isAdmin && (
+                        <button
+                          onClick={() => handleEdit(f)}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 rounded-md text-xs font-medium text-gray-700 bg-white hover:bg-gray-50 hover:border-blue-300 transition-colors"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                          Edit
+                        </button>
+                      )}
                       <button
                         onClick={() => handleExecute(f.id)}
                         disabled={exState?.isExecuting}
