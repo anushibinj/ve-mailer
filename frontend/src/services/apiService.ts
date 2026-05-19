@@ -7,6 +7,34 @@ export interface Workspace {
   workspaceId: string;
 }
 
+// Admin workspace type — includes clientId, masked clientKey, and a config flag
+export interface WorkspaceAdmin {
+  id: string;
+  title: string;
+  sharedSpaceId: string;
+  workspaceId: string;
+  clientId: string;
+  clientKey: string; // always "(unchanged)" from the API
+  clientKeyConfigured: boolean;
+}
+
+export interface WorkspaceCreatePayload {
+  title: string;
+  sharedSpaceId: string;
+  workspaceId: string;
+  clientId: string;
+  clientKey: string;
+}
+
+export interface WorkspaceUpdatePayload {
+  title: string;
+  sharedSpaceId: string;
+  workspaceId: string;
+  clientId: string;
+  // Leave as "(unchanged)" to preserve existing key; provide a new value to replace
+  clientKey?: string;
+}
+
 export interface FilterCriteriaClause {
   field: string;
   operator: string;
@@ -64,6 +92,37 @@ export interface SubscriptionRequestPayload {
 export const fetchWorkspaces = async (): Promise<Workspace[]> => {
   const response = await api.get('/api/v1/workspaces');
   return response.data;
+};
+
+// --- Admin workspace CRUD ---
+
+export const adminFetchWorkspaces = async (): Promise<WorkspaceAdmin[]> => {
+  const response = await api.get('/api/v1/workspaces');
+  return response.data;
+};
+
+export const adminFetchWorkspace = async (id: string): Promise<WorkspaceAdmin> => {
+  const response = await api.get(`/api/v1/workspaces/${id}`);
+  return response.data;
+};
+
+export const adminCreateWorkspace = async (
+  payload: WorkspaceCreatePayload
+): Promise<WorkspaceAdmin> => {
+  const response = await api.post('/api/v1/workspaces', payload);
+  return response.data;
+};
+
+export const adminUpdateWorkspace = async (
+  id: string,
+  payload: WorkspaceUpdatePayload
+): Promise<WorkspaceAdmin> => {
+  const response = await api.put(`/api/v1/workspaces/${id}`, payload);
+  return response.data;
+};
+
+export const adminDeleteWorkspace = async (id: string): Promise<void> => {
+  await api.delete(`/api/v1/workspaces/${id}`);
 };
 
 // --- Filters (workspace-scoped) ---

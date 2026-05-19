@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import React, { useState } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, Link, useNavigate } from 'react-router-dom';
 import LandingView from './components/LandingView';
 import WorkspaceDashboard from './components/WorkspaceDashboard';
 import FilterBuilderView from './components/FilterBuilderView';
@@ -9,13 +9,58 @@ import SignupPage from './pages/SignupPage';
 import VerifySignupPage from './pages/VerifySignupPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
+import WorkspaceManagementPage from './pages/admin/WorkspaceManagementPage';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import { Toaster } from 'react-hot-toast';
+
+function AdminLayout({ children }: { children: React.ReactNode }) {
+  const { logout, user, isAdmin } = useAuth();
+  const navigate = useNavigate();
+
+  return (
+    <>
+      <header className="bg-white shadow-sm border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex justify-between items-center">
+          <div className="flex items-center gap-4">
+            <Link
+              to="/"
+              className="text-lg font-semibold text-gray-900 hover:text-blue-600 transition-colors"
+            >
+              VE Mailer
+            </Link>
+            {isAdmin && (
+              <button
+                onClick={() => navigate('/admin/workspaces')}
+                className="text-sm text-blue-600 font-medium"
+              >
+                Manage Workspaces
+              </button>
+            )}
+          </div>
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-gray-600">{user?.name}</span>
+            <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-medium">
+              Admin
+            </span>
+            <button
+              onClick={() => logout()}
+              className="text-sm text-gray-500 hover:text-gray-700 font-medium"
+            >
+              Sign Out
+            </button>
+          </div>
+        </div>
+      </header>
+      {children}
+    </>
+  );
+}
 
 function AppContent() {
   const [currentView, setCurrentView] = useState<'landing' | 'workspace' | 'filters'>('landing');
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string | null>(null);
-  const { logout, user } = useAuth();
+  const { logout, user, isAdmin } = useAuth();
+  const navigate = useNavigate();
 
   const handleSelectWorkspace = (workspaceId: string) => {
     setSelectedWorkspaceId(workspaceId);
@@ -44,10 +89,26 @@ function AppContent() {
       {/* Navigation bar */}
       <header className="bg-white shadow-sm border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex justify-between items-center">
-          <h1 className="text-lg font-semibold text-gray-900">VE Mailer</h1>
+          <div className="flex items-center gap-4">
+            <Link
+              to="/"
+              onClick={() => { setCurrentView('landing'); setSelectedWorkspaceId(null); }}
+              className="text-lg font-semibold text-gray-900 hover:text-blue-600 transition-colors"
+            >
+              VE Mailer
+            </Link>
+            {isAdmin && (
+              <button
+                onClick={() => navigate('/admin/workspaces')}
+                className="text-sm text-gray-500 hover:text-blue-600 font-medium transition-colors"
+              >
+                Manage Workspaces
+              </button>
+            )}
+          </div>
           <div className="flex items-center gap-4">
             <span className="text-sm text-gray-600">{user?.name}</span>
-            {user?.roles?.includes('ADMIN') && (
+            {isAdmin && (
               <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-medium">
                 Admin
               </span>
@@ -101,6 +162,20 @@ function App() {
             element={
               <ProtectedRoute>
                 <AppContent />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Admin-only routes */}
+          <Route
+            path="/admin/workspaces"
+            element={
+              <ProtectedRoute requiredRole="ADMIN">
+                <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+                  <AdminLayout>
+                    <WorkspaceManagementPage />
+                  </AdminLayout>
+                </div>
               </ProtectedRoute>
             }
           />

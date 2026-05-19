@@ -2,12 +2,14 @@ package com.anushibinj.veemailer.controller;
 
 import com.anushibinj.veemailer.dto.ScheduleDto;
 import com.anushibinj.veemailer.dto.SubscriptionResponseDTO;
+import com.anushibinj.veemailer.dto.WorkspaceCreateRequestDto;
+import com.anushibinj.veemailer.dto.WorkspaceResponseDto;
 import com.anushibinj.veemailer.model.ScheduleType;
-import com.anushibinj.veemailer.model.Workspace;
-import com.anushibinj.veemailer.repository.WorkspaceRepository;
 import com.anushibinj.veemailer.service.AppUserDetailsService;
 import com.anushibinj.veemailer.service.JwtService;
 import com.anushibinj.veemailer.service.SubscriptionService;
+import com.anushibinj.veemailer.service.WorkspaceService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -22,8 +24,12 @@ import java.util.UUID;
 
 import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -34,8 +40,11 @@ class WorkspaceControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
+    @Autowired
+    private ObjectMapper objectMapper;
+
     @MockBean
-    private WorkspaceRepository workspaceRepository;
+    private WorkspaceService workspaceService;
 
     @MockBean
     private SubscriptionService subscriptionService;
@@ -47,31 +56,94 @@ class WorkspaceControllerTest {
     private AppUserDetailsService appUserDetailsService;
 
     @Test
-    void testGetWorkspaces_ExcludesSensitiveInfo() throws Exception {
-        Workspace ws = new Workspace();
-        ws.setId(UUID.randomUUID());
-        ws.setTitle("Test Workspace");
-        ws.setSharedSpaceId("space-1");
-        ws.setWorkspaceId("work-1");
-        ws.setClientId("secret-client-id");
-        ws.setClientKey("secret-client-key");
+    void testGetWorkspaces_MasksClientKey() throws Exception {
+        UUID id = UUID.randomUUID();
+        WorkspaceResponseDto dto = WorkspaceResponseDto.builder()
+                .id(id)
+                .title("Test Workspace")
+                .sharedSpaceId("space-1")
+                .workspaceId("work-1")
+                .clientId("my-client-id")
+                .clientKey("(unchanged)")
+                .clientKeyConfigured(true)
+                .build();
 
-        when(workspaceRepository.findAll()).thenReturn(Arrays.asList(ws));
+        when(workspaceService.findAll()).thenReturn(Arrays.asList(dto));
 
-        mockMvc.perform(get("/api/v1/workspaces")
-                .contentType(MediaType.APPLICATION_JSON))
+        mockMvc.perform(get("/api/v1/workspaces").contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)))
                 .andExpect(jsonPath("$[0].title").value("Test Workspace"))
                 .andExpect(jsonPath("$[0].sharedSpaceId").value("space-1"))
-                .andExpect(jsonPath("$[0].clientId").doesNotExist())
-                .andExpect(jsonPath("$[0].clientKey").doesNotExist());
+                .andExpect(jsonPath("$[0].clientId").value("my-client-id"))
+                .andExpect(jsonPath("$[0].clientKey").value("(unchanged)"))
+                .andExpect(jsonPath("$[0].clientKeyConfigured").value(true));
+    }
+
+    @Test
+    void testCreateWorkspace_ReturnsCreated() throws Exception {
+        UUID id = UUID.randomUUID();
+        WorkspaceCreateRequestDto request =
+                new WorkspaceCreateRequestDto("New WS", "sp-1", "ws-1", "cid-1", "secret-key");
+        WorkspaceResponseDto dto = WorkspaceResponseDto.builder()
+                .id(id)
+                .title("New WS")
+                .sharedSpaceId("sp-1")
+                .workspaceId("ws-1")
+                .clientId("cid-1")
+                .clientKey("(unchanged)")
+                .clientKeyConfigured(true)
+                .build();
+
+        when(workspaceService.create(any())).thenReturn(dto);
+
+        mockMvc.perform(post("/api/v1/workspaces")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.title").value("New WS"))
+                .andExpect(jsonPath("$.clientKey").value("(unchanged)"))
+                .andExpect(jsonPath("$.clientKeyConfigured").value(true));
+    }
+
+    @Test
+    void testUpdateWorkspace_ReturnsOk() throws Exception {
+        UUID id = UUID.randomUUID();
+        WorkspaceResponseDto dto = WorkspaceResponseDto.builder()
+                .id(id)
+                .title("Updated WS")
+                .sharedSpaceId("sp-1")
+                .workspaceId("ws-1")
+                .clientId("cid-1")
+                .clientKey("(unchanged)")
+                .clientKeyConfigured(true)
+                .build();
+
+        when(workspaceService.update(any(), any())).thenReturn(dto);
+
+        String body = "{\"title\":\"Updated WS\",\"sharedSpaceId\":\"sp-1\","
+                + "\"workspaceId\":\"ws-1\",\"clientId\":\"cid-1\",\"clientKey\":\"(unchanged)\"}";
+
+        mockMvc.perform(put("/api/v1/workspaces/" + id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.title").value("Updated WS"))
+                .andExpect(jsonPath("$.clientKey").value("(unchanged)"));
+    }
+
+    @Test
+    void testDeleteWorkspace_ReturnsNoContent() throws Exception {
+        UUID id = UUID.randomUUID();
+        doNothing().when(workspaceService).delete(any());
+
+        mockMvc.perform(delete("/api/v1/workspaces/" + id))
+                .andExpect(status().isNoContent());
     }
 
     @Test
     void testGetSubscriptions_ReturnsCorrectDtos() throws Exception {
         UUID workspaceId = UUID.randomUUID();
-
         UUID subId = UUID.randomUUID();
         UUID filterId = UUID.randomUUID();
         SubscriptionResponseDTO dto = SubscriptionResponseDTO.builder()
@@ -89,7 +161,7 @@ class WorkspaceControllerTest {
                 .thenReturn(Arrays.asList(dto));
 
         mockMvc.perform(get("/api/v1/workspaces/" + workspaceId + "/subscriptions")
-                .contentType(MediaType.APPLICATION_JSON))
+                        .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)))
                 .andExpect(jsonPath("$[0].id").value(subId.toString()))
@@ -99,3 +171,4 @@ class WorkspaceControllerTest {
                 .andExpect(jsonPath("$[0].schedule.type").value("DAILY"));
     }
 }
+
