@@ -3,7 +3,9 @@ package com.anushibinj.veemailer.controller;
 import com.anushibinj.veemailer.model.Filter;
 import com.anushibinj.veemailer.model.Workspace;
 import com.anushibinj.veemailer.repository.FilterRepository;
+import com.anushibinj.veemailer.service.AppUserDetailsService;
 import com.anushibinj.veemailer.service.FilterService;
+import com.anushibinj.veemailer.service.JwtService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -36,6 +38,12 @@ class FilterControllerTest {
 
     @MockBean
     private FilterService filterService;
+
+    @MockBean
+    private JwtService jwtService;
+
+    @MockBean
+    private AppUserDetailsService appUserDetailsService;
 
     private static final UUID WORKSPACE_ID = UUID.randomUUID();
 

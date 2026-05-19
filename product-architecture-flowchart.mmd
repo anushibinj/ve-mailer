@@ -1,0 +1,112 @@
+flowchart TD
+    subgraph Frontend["Frontend (React + Vite)"]
+        LP[Login Page]
+        SP[Signup Page]
+        VP[Verify OTP Page]
+        FP[Forgot Password Page]
+        RP[Reset Password Page]
+        AC[Auth Context]
+        PR[Protected Routes]
+        LV[Landing View]
+        WD[Workspace Dashboard]
+        FB[Filter Builder]
+        AI[Axios Interceptors]
+    end
+
+    subgraph Backend["Backend (Spring Boot)"]
+        subgraph Security["Security Layer"]
+            JF[JWT Auth Filter]
+            SC[Security Config]
+            AE[Auth Entry Point]
+        end
+
+        subgraph AuthModule["Authentication Module"]
+            ACtrl[Auth Controller]
+            AS[Auth Service]
+            JWT[JWT Service]
+            RTS[Refresh Token Service]
+            UDS[UserDetails Service]
+            ABS[Admin Bootstrap]
+        end
+
+        subgraph BusinessModule["Business Module"]
+            WCtrl[Workspace Controller]
+            FCtrl[Filter Controller]
+            SCtrl[Subscription Controller]
+            FS[Filter Service]
+            SS[Subscription Service]
+            OTP[OTP Service]
+            PS[Polling Service]
+            NS[Notification Service]
+        end
+
+        subgraph DataLayer["Data Layer (JPA)"]
+            UR[AppUser Repository]
+            RR[Role Repository]
+            RTR[RefreshToken Repository]
+            OTPR[OtpRequest Repository]
+            FR[Filter Repository]
+            WR[Workspace Repository]
+            ESR[EmailSubscriber Repository]
+        end
+    end
+
+    subgraph External["External Services"]
+        DB[(H2 / PostgreSQL)]
+        SMTP[SMTP Server]
+        VE[ValueEdge / Octane API]
+    end
+
+    %% Frontend flows
+    LP --> AI
+    SP --> AI
+    VP --> AI
+    FP --> AI
+    RP --> AI
+    AI --> ACtrl
+    AC --> PR
+    PR --> LV
+    PR --> WD
+    PR --> FB
+    LV --> AI
+    WD --> AI
+    FB --> AI
+    AI --> WCtrl
+    AI --> FCtrl
+    AI --> SCtrl
+
+    %% Security flow
+    JF --> JWT
+    JF --> UDS
+    SC --> JF
+
+    %% Auth flows
+    ACtrl --> AS
+    AS --> JWT
+    AS --> RTS
+    AS --> OTP
+    AS --> UR
+    ABS --> UR
+    ABS --> RR
+    UDS --> UR
+
+    %% Business flows
+    FCtrl --> FS
+    SCtrl --> SS
+    SS --> OTP
+    OTP --> OTPR
+    OTP --> SMTP
+    FS --> VE
+    PS --> FS
+    PS --> NS
+    NS --> SMTP
+
+    %% Data layer
+    UR --> DB
+    RR --> DB
+    RTR --> DB
+    OTPR --> DB
+    FR --> DB
+    WR --> DB
+    ESR --> DB
+    RTS --> RTR

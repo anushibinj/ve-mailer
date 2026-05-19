@@ -1,34 +1,34 @@
 package com.anushibinj.veemailer.config;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+@SpringBootTest
 class SecurityConfigTest {
 
-    private final SecurityConfig securityConfig = new SecurityConfig();
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
     @Test
     void testPasswordEncoder_ReturnsBCryptEncoder() {
-        PasswordEncoder encoder = securityConfig.passwordEncoder();
-
-        assertNotNull(encoder);
-        assertTrue(encoder instanceof BCryptPasswordEncoder,
+        assertNotNull(passwordEncoder);
+        assertTrue(passwordEncoder instanceof BCryptPasswordEncoder,
                 "PasswordEncoder should be a BCryptPasswordEncoder");
     }
 
     @Test
     void testPasswordEncoder_EncodesAndMatchesCorrectly() {
-        PasswordEncoder encoder = securityConfig.passwordEncoder();
-
         String rawPassword = "TestPassword123";
-        String encoded = encoder.encode(rawPassword);
+        String encoded = passwordEncoder.encode(rawPassword);
 
         assertNotNull(encoded);
-        assertTrue(encoder.matches(rawPassword, encoded),
+        assertTrue(passwordEncoder.matches(rawPassword, encoded),
                 "Encoded password should match original raw password");
     }
 }

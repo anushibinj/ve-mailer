@@ -70,10 +70,10 @@ The backend is stateless between requests. An in-memory cache (`OctaneCacheServi
 
 | Layer     | Technology                                                          |
 |-----------|---------------------------------------------------------------------|
-| Frontend  | React 19, TypeScript, Vite 7, Tailwind CSS 4, Axios, react-hot-toast |
+| Frontend  | React 19, TypeScript, Vite 7, Tailwind CSS 4, Axios, react-hot-toast, react-router-dom |
 | Backend   | Java 17, Spring Boot 3.2.5                                          |
 | Persistence | Spring Data JPA, H2 (dev), PostgreSQL (prod)                      |
-| Security  | Spring Security, BCrypt OTP hashing                                 |
+| Security  | Spring Security, JWT (HMAC-SHA256), BCrypt password hashing, role-based access |
 | Email     | Spring Mail (JavaMailSender)                                        |
 | Scheduling | Spring `@Scheduled` — cron-based hourly trigger dispatches to subscribers by schedule type and configured hours |
 | Octane SDK | Microfocus ALM Octane SDK 25.4                                     |
@@ -91,42 +91,66 @@ ve-mailer/
 │   │   ├── NotificationBrokerApplication.java
 │   │   ├── config/
 │   │   │   ├── AppConfig.java        # Async + Scheduling enablement, RestTemplate bean
-│   │   │   ├── SecurityConfig.java   # BCrypt bean, CSRF disabled, all requests permitted
+│   │   │   ├── GlobalExceptionHandler.java # Centralized REST exception handling
+│   │   │   ├── JwtAuthenticationFilter.java # JWT token validation filter
+│   │   │   ├── SecurityConfig.java   # Spring Security: JWT stateless, role-based access
 │   │   │   └── WebConfig.java        # CORS configuration
 │   │   ├── controller/
+│   │   │   ├── AuthController.java         # Authentication endpoints (signup, login, etc.)
 │   │   │   ├── FilterController.java       # CRUD + execute filters
 │   │   │   ├── SubscriptionController.java
 │   │   │   └── WorkspaceController.java
 │   │   ├── dto/
+│   │   │   ├── ApiErrorResponse.java       # Structured error response
+│   │   │   ├── ApiResponseWrapper.java     # Generic success/error wrapper
+│   │   │   ├── AuthResponseDto.java        # JWT tokens + user profile
+│   │   │   ├── ForgotPasswordRequestDto.java
 │   │   │   ├── FilterDto.java              # Create-filter request DTO
+│   │   │   ├── LoginRequestDto.java
+│   │   │   ├── RefreshTokenRequestDto.java
+│   │   │   ├── ResetPasswordDto.java
 │   │   │   ├── ScheduleDto.java            # { type: DAILY|WEEKLY, hours: [int] }
+│   │   │   ├── SignupRequestDto.java
 │   │   │   ├── SubscriptionRequestDto.java
 │   │   │   ├── SubscriptionResponseDTO.java
 │   │   │   ├── VerificationRequestDto.java
+│   │   │   ├── VerifyResetOtpDto.java
+│   │   │   ├── VerifySignupOtpDto.java
 │   │   │   └── WorkspaceDto.java
 │   │   ├── model/
+│   │   │   ├── AppUser.java          # User entity (name, email, passwordHash, roles)
+│   │   │   ├── Role.java             # Role entity (ADMIN, MEMBER)
+│   │   │   ├── RefreshToken.java     # Refresh token entity (revocable, per-user)
 │   │   │   ├── Workspace.java
 │   │   │   ├── Filter.java                 # title, description, entityType, fields (JSON), criteria (JSON)
 │   │   │   ├── FilterCriteriaClause.java   # POJO: field, operator, negate, values[]
 │   │   │   ├── EmailSubscriber.java
 │   │   │   ├── OtpRequest.java
-│   │   │   ├── ActionType.java       # SUBSCRIBE | UPDATE | UNSUBSCRIBE
+│   │   │   ├── ActionType.java       # SUBSCRIBE | UPDATE | UNSUBSCRIBE | SIGNUP_VERIFICATION | PASSWORD_RESET
 │   │   │   ├── Frequency.java        # HOURLY | DAILY | WEEKLY (legacy, kept for migration)
 │   │   │   ├── ScheduleType.java     # DAILY | WEEKLY
 │   │   │   └── Status.java           # PENDING | ACTIVE
 │   │   ├── repository/
+│   │   │   ├── AppUserRepository.java
 │   │   │   ├── EmailSubscriberRepository.java
 │   │   │   ├── FilterRepository.java
 │   │   │   ├── OtpRequestRepository.java
+│   │   │   ├── RefreshTokenRepository.java
+│   │   │   ├── RoleRepository.java
 │   │   │   └── WorkspaceRepository.java
 │   │   └── service/
+│   │       ├── AdminBootstrapService.java # Seeds ADMIN user + roles on first boot
+│   │       ├── AppUserDetailsService.java # Spring Security UserDetailsService
+│   │       ├── AuthService.java      # Signup, login, forgot/reset password, token refresh
 │   │       ├── CleanupService.java   # Purges expired OTPs every 5 min
 │   │       ├── EmailService.java     # Async OTP email sender
 │   │       ├── FilterService.java    # Create filters + execute against Octane
+│   │       ├── JwtService.java       # JWT token generation and validation
 │   │       ├── NotificationService.java # Async digest email sender
 │   │       ├── OctaneCacheService.java  # In-memory Octane client cache
 │   │       ├── OtpService.java       # OTP generation, hashing, validation
 │   │       ├── PollingService.java   # Hourly cron trigger — dispatches by schedule
+│   │       ├── RefreshTokenService.java # Refresh token lifecycle + single-session enforcement
 │   │       ├── ScheduleMigrationRunner.java # Startup migration: converts legacy Frequency records
 │   │       ├── SubscriptionService.java # Subscription business logic
 │   │       └── ve/
@@ -138,15 +162,26 @@ ve-mailer/
 │
 └── frontend/                         # React + Vite application
     ├── src/
-    │   ├── App.tsx                   # Root; view routing (landing / workspace / filters)
-    │   ├── api.ts                    # Axios instance (reads VITE_BACKEND_ROOT_URL)
+    │   ├── App.tsx                   # Root; React Router + AuthProvider
+    │   ├── api.ts                    # Axios instance with JWT interceptors + token refresh
     │   ├── components/
     │   │   ├── LandingView.tsx       # Workspace picker + Filter Templates link
     │   │   ├── FilterBuilderView.tsx # Create / browse filter templates
-    │   │   ├── OtpModal.tsx          # OTP entry modal
+    │   │   ├── ProtectedRoute.tsx    # Auth guard with role-based access
     │   │   └── WorkspaceDashboard.tsx # Subscription management + filter execution
-    │   └── services/
-    │       └── apiService.ts         # All backend API calls
+    │   ├── hooks/
+    │   │   └── useAuth.tsx           # AuthContext + AuthProvider + useAuth hook
+    │   ├── pages/
+    │   │   ├── LoginPage.tsx         # Email + password login
+    │   │   ├── SignupPage.tsx        # Registration with domain validation
+    │   │   ├── VerifySignupPage.tsx  # OTP verification for new accounts
+    │   │   ├── ForgotPasswordPage.tsx # Request password reset OTP
+    │   │   └── ResetPasswordPage.tsx # OTP verification + new password
+    │   ├── services/
+    │   │   ├── apiService.ts         # All backend API calls (workspaces, filters, subscriptions)
+    │   │   └── authService.ts        # Auth API calls + token management
+    │   └── types/
+    │       └── auth.ts               # TypeScript interfaces for auth DTOs
     └── Dockerfile                    # Multi-stage: Node build → Nginx serve
 ```
 
@@ -193,17 +228,64 @@ subscriber_scheduled_hours  (element collection table)
 OtpRequest
   id
   email
-  actionType      -- SUBSCRIBE | UPDATE | UNSUBSCRIBE
-  payload         -- JSON: { workspaceId, filterId, schedule: { type, hours[] } }
+  actionType      -- SUBSCRIBE | UPDATE | UNSUBSCRIBE | SIGNUP_VERIFICATION | PASSWORD_RESET
+  payload         -- JSON: { workspaceId, filterId, schedule: { type, hours[] } } or user signup data
   otpHash         -- BCrypt hash of the 6-digit OTP
   expiresAt       -- 10 minutes from creation
+
+AppUser
+  id (UUID PK)
+  name
+  email (UNIQUE)
+  passwordHash    -- BCrypt hash
+  enabled         -- boolean
+  createdAt
+  updatedAt
+
+Role
+  id (UUID PK)
+  roleName (UNIQUE) -- ADMIN | MEMBER
+
+user_roles (join table)
+  user_id         -- FK → AppUser
+  role_id         -- FK → Role
+
+RefreshToken
+  id (UUID PK)
+  user_id         -- FK → AppUser
+  token (UNIQUE)  -- UUID string
+  expiresAt       -- 7 days from creation
+  revoked         -- boolean
 ```
 
 ---
 
 ## API Reference
 
-All endpoints are prefixed with `/api/v1`.
+All endpoints are prefixed with `/api/v1` for business APIs and `/api/auth` for authentication.
+
+### Authentication (`/api/auth`)
+
+| Method | Path                   | Body fields                                          | Auth Required | Description                             |
+|--------|------------------------|------------------------------------------------------|:-------------:|-----------------------------------------|
+| `POST` | `/auth/signup`         | `name`, `email`, `password`, `confirmPassword`       | No            | Register new account (sends OTP)        |
+| `POST` | `/auth/verify-signup`  | `email`, `otp`                                       | No            | Verify OTP → create user → auto-login   |
+| `POST` | `/auth/login`          | `email`, `password`                                  | No            | Login with credentials                  |
+| `POST` | `/auth/refresh`        | `refreshToken`                                       | No            | Refresh access token                    |
+| `POST` | `/auth/logout`         | `refreshToken`                                       | No            | Revoke refresh token                    |
+| `POST` | `/auth/forgot-password`| `email`                                              | No            | Send password reset OTP                 |
+| `POST` | `/auth/verify-reset-otp`| `email`, `otp`                                      | No            | Verify password reset OTP               |
+| `POST` | `/auth/reset-password` | `email`, `otp`, `newPassword`, `confirmPassword`     | No            | Reset password (invalidates sessions)   |
+| `GET`  | `/auth/me`             | —                                                    | Yes           | Get current user profile                |
+
+**Signup restrictions:**
+- Only allowed email domains can register (configurable via `app.auth.allowed-domains`)
+- Password requirements: min 8 chars, uppercase, lowercase, digit, special character
+
+**Token system:**
+- Access token: JWT (15 min expiry, configurable)
+- Refresh token: UUID (7 day expiry, configurable)
+- Single-session enforcement: configurable via `app.auth.allow-multiple-sessions`
 
 ### Workspaces
 
@@ -355,8 +437,19 @@ spring.mail.username=test
 spring.mail.password=test
 
 spring.application.name=veemailer
-```
 
+# Authentication
+app.auth.allowed-domains=company.com,int-company.com
+app.auth.allow-multiple-sessions=false
+app.auth.jwt.secret=<your-256-bit-secret>
+app.auth.jwt.access-token-expiration-ms=900000
+app.auth.jwt.refresh-token-expiration-ms=604800000
+
+# Admin Bootstrap (created on first startup)
+app.bootstrap.admin.email=admin@company.com
+app.bootstrap.admin.password=ChangeMeImmediately
+app.bootstrap.admin.name=System Administrator
+```
 To switch to PostgreSQL, add the following to `application-prod.properties` and run with `SPRING_PROFILES_ACTIVE=prod`:
 
 ```properties

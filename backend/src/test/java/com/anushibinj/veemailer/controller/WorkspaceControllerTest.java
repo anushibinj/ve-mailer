@@ -5,6 +5,8 @@ import com.anushibinj.veemailer.dto.SubscriptionResponseDTO;
 import com.anushibinj.veemailer.model.ScheduleType;
 import com.anushibinj.veemailer.model.Workspace;
 import com.anushibinj.veemailer.repository.WorkspaceRepository;
+import com.anushibinj.veemailer.service.AppUserDetailsService;
+import com.anushibinj.veemailer.service.JwtService;
 import com.anushibinj.veemailer.service.SubscriptionService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,6 +39,12 @@ class WorkspaceControllerTest {
 
     @MockBean
     private SubscriptionService subscriptionService;
+
+    @MockBean
+    private JwtService jwtService;
+
+    @MockBean
+    private AppUserDetailsService appUserDetailsService;
 
     @Test
     void testGetWorkspaces_ExcludesSensitiveInfo() throws Exception {

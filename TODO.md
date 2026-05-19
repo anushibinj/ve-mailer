@@ -1,7 +1,7 @@
 - [ ] Allow concatenators like AND and OR operators in the Filter Builder
 - [ ] Migrate the DB to use Flyway
 - [ ] The collapse button in "Execute" section should not be visible if there are no results for that filter
-- [ ] Everything on the GUI should be a unique URI. As of now, everything is on the same endpoint.
+- [x] Everything on the GUI should be a unique URI. As of now, everything is on the same endpoint.
 - [ ] Per subscription "Run" should be limited only to Admins
 - [ ] "Manager Filter Templates" should be limited only to admins
 - [ ] If the ve client expires due to timeout, it should auto retry login

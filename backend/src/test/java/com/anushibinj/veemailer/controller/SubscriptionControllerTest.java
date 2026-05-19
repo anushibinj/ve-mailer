@@ -5,6 +5,8 @@ import com.anushibinj.veemailer.dto.SubscriptionRequestDto;
 import com.anushibinj.veemailer.dto.VerificationRequestDto;
 import com.anushibinj.veemailer.model.ActionType;
 import com.anushibinj.veemailer.model.ScheduleType;
+import com.anushibinj.veemailer.service.AppUserDetailsService;
+import com.anushibinj.veemailer.service.JwtService;
 import com.anushibinj.veemailer.service.SubscriptionService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
@@ -33,6 +35,12 @@ class SubscriptionControllerTest {
 
     @MockBean
     private SubscriptionService subscriptionService;
+
+    @MockBean
+    private JwtService jwtService;
+
+    @MockBean
+    private AppUserDetailsService appUserDetailsService;
 
     @Autowired
     private ObjectMapper objectMapper;
