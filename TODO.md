@@ -4,7 +4,7 @@
 - [x] Everything on the GUI should be a unique URI. As of now, everything is on the same endpoint.
 - [x] Per subscription "Run" should be limited only to Admins
 - [ ] "Manager Filter Templates" should be limited only to admins
-- [ ] If the ve client expires due to timeout, it should auto retry login
+- [x] If the ve client expires due to timeout, it should auto retry login
 - [ ] ORDER BY for queries
 - [ ] A mail ID cannot have duplicate subscriptions to the same filter. With the new schedule model, the composite key should be (recipientEmail, filterId) — a user should not be able to subscribe to the same filter more than once.
 - [ ] Add an option called "Show AI Summary for each ticket". Enabling this should bring in a new column in the resulting e-mail HTML with summary of each ticket.

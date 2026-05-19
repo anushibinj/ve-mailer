@@ -17,7 +17,8 @@ flowchart TD
         subgraph Security["Security Layer"]
             JF[JWT Auth Filter]
             SC[Security Config]
-            AE[Auth Entry Point]
+            AE[Auth403EntryPoint — 403 for unauthenticated]
+            ADH[Auth403AccessDeniedHandler — 403 for access denied]
         end
 
         subgraph AuthModule["Authentication Module"]
@@ -79,6 +80,11 @@ flowchart TD
     JF --> JWT
     JF --> UDS
     SC --> JF
+    SC --> AE
+    SC --> ADH
+    AE -->|HTTP 403 JSON| AI
+    ADH -->|HTTP 403 JSON| AI
+    AI -->|auth:session-expired event| AC
 
     %% Auth flows
     ACtrl --> AS

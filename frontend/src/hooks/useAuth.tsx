@@ -1,9 +1,12 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
+import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import type { UserProfile } from '../types/auth';
 import {
   getStoredUser,
   getAccessToken,
   storeAuthData,
+  clearAuthData,
   logout as logoutService,
   getCurrentUser,
 } from '../services/authService';
@@ -23,6 +26,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const navigate = useNavigate();
   const [user, setUser] = useState<UserProfile | null>(() =>
     getAccessToken() ? getStoredUser() : null
   );
@@ -48,11 +52,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
         })
         .catch(() => {
-          // Token expired or invalid - will be handled by interceptor
+          // Token expired or invalid — the api.ts interceptor will dispatch
+          // auth:session-expired, which is handled by the effect below.
         })
         .finally(() => setIsLoading(false));
     }
   }, []);
+
+  // Listen for session-expiry events dispatched by the api.ts response
+  // interceptor when any protected endpoint returns HTTP 403.
+  useEffect(() => {
+    const handleSessionExpired = () => {
+      clearAuthData();
+      setUser(null);
+      toast.error('Your session has expired. Please sign in again.');
+      navigate('/login');
+    };
+
+    window.addEventListener('auth:session-expired', handleSessionExpired as EventListener);
+    return () => {
+      window.removeEventListener('auth:session-expired', handleSessionExpired as EventListener);
+    };
+  }, [navigate]);
 
   const login = useCallback((authResponse: AuthResponse) => {
     storeAuthData(authResponse);

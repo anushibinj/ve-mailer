@@ -91,9 +91,11 @@ ve-mailer/
 │   │   ├── NotificationBrokerApplication.java
 │   │   ├── config/
 │   │   │   ├── AppConfig.java        # Async + Scheduling enablement, RestTemplate bean
+│   │   │   ├── Auth403AccessDeniedHandler.java # Returns HTTP 403 JSON for filter-level access denial
+│   │   │   ├── Auth403EntryPoint.java # Returns HTTP 403 JSON for unauthenticated requests
 │   │   │   ├── GlobalExceptionHandler.java # Centralized REST exception handling
 │   │   │   ├── JwtAuthenticationFilter.java # JWT token validation filter
-│   │   │   ├── SecurityConfig.java   # Spring Security: JWT stateless, role-based access
+│   │   │   ├── SecurityConfig.java   # Spring Security: JWT stateless, role-based access, 403 auth failure handlers
 │   │   │   └── WebConfig.java        # CORS configuration
 │   │   ├── controller/
 │   │   │   ├── AuthController.java         # Authentication endpoints (signup, login, etc.)
@@ -163,7 +165,7 @@ ve-mailer/
 └── frontend/                         # React + Vite application
     ├── src/
     │   ├── App.tsx                   # Root; React Router + AuthProvider
-    │   ├── api.ts                    # Axios instance with JWT interceptors + token refresh
+    │   ├── api.ts                    # Axios instance with JWT request interceptor + 403 session-expiry handler
     │   ├── components/
     │   │   ├── LandingView.tsx       # Workspace picker + Filter Templates link
     │   │   ├── FilterBuilderView.tsx # Create / browse filter templates

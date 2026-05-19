@@ -7,6 +7,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -24,6 +25,8 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final AppUserDetailsService appUserDetailsService;
+    private final Auth403EntryPoint auth403EntryPoint;
+    private final Auth403AccessDeniedHandler auth403AccessDeniedHandler;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -48,6 +51,8 @@ public class SecurityConfig {
         http
             .headers(headers -> headers.frameOptions(frameOptions -> frameOptions.sameOrigin()))
             .csrf(AbstractHttpConfigurer::disable)
+            // Delegate CORS preflight handling to the MVC CorsRegistry in WebConfig
+            .cors(Customizer.withDefaults())
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 // Public auth endpoints
@@ -56,6 +61,11 @@ public class SecurityConfig {
                 .requestMatchers("/h2-console/**").permitAll()
                 // All other API endpoints require authentication
                 .anyRequest().authenticated()
+            )
+            // Normalise ALL auth failures to HTTP 403 with JSON body
+            .exceptionHandling(ex -> ex
+                .authenticationEntryPoint(auth403EntryPoint)
+                .accessDeniedHandler(auth403AccessDeniedHandler)
             )
             .authenticationProvider(authenticationProvider())
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

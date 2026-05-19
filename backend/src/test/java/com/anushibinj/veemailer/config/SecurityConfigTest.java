@@ -2,18 +2,33 @@ package com.anushibinj.veemailer.config;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
+@AutoConfigureMockMvc
 class SecurityConfigTest {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private Auth403EntryPoint auth403EntryPoint;
+
+    @Autowired
+    private Auth403AccessDeniedHandler auth403AccessDeniedHandler;
+
+    @Autowired
+    private MockMvc mockMvc;
 
     @Test
     void testPasswordEncoder_ReturnsBCryptEncoder() {
@@ -31,4 +46,45 @@ class SecurityConfigTest {
         assertTrue(passwordEncoder.matches(rawPassword, encoded),
                 "Encoded password should match original raw password");
     }
+
+    @Test
+    void testAuth403EntryPoint_IsBeanWired() {
+        assertNotNull(auth403EntryPoint, "Auth403EntryPoint bean should be present in the context");
+    }
+
+    @Test
+    void testAuth403AccessDeniedHandler_IsBeanWired() {
+        assertNotNull(auth403AccessDeniedHandler, "Auth403AccessDeniedHandler bean should be present in the context");
+    }
+
+    @Test
+    void unauthenticated_ProtectedEndpoint_Returns403Json() throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/workspaces"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.status").value(403))
+                .andExpect(jsonPath("$.error").value("FORBIDDEN"))
+                .andExpect(jsonPath("$.message").value("Authentication required"));
+    }
+
+    @Test
+    void invalidJwt_ProtectedEndpoint_Returns403Json() throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/workspaces")
+                        .header("Authorization", "Bearer invalid.jwt.token"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.status").value(403))
+                .andExpect(jsonPath("$.error").value("FORBIDDEN"))
+                .andExpect(jsonPath("$.message").value("Authentication required"));
+    }
+
+    @Test
+    void publicEndpoint_IsAccessibleWithoutToken() throws Exception {
+        // Public auth endpoints must remain accessible without credentials
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/auth/login")
+                        .contentType("application/json")
+                        .content("{\"email\":\"noone@company.com\",\"password\":\"x\"}"))
+                .andExpect(result -> assertTrue(
+                        result.getResponse().getStatus() != 403,
+                        "Public auth endpoint must not return 403"));
+    }
 }
+
