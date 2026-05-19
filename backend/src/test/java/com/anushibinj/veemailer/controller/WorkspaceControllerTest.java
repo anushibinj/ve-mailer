@@ -24,6 +24,7 @@ import java.util.UUID;
 
 import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -32,6 +33,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import org.springframework.security.test.context.support.WithMockUser;
 
 @WebMvcTest(WorkspaceController.class)
 @AutoConfigureMockMvc(addFilters = false)
@@ -142,13 +145,14 @@ class WorkspaceControllerTest {
     }
 
     @Test
-    void testGetSubscriptions_ReturnsCorrectDtos() throws Exception {
+    @WithMockUser(username = "admin@test.com", roles = "ADMIN")
+    void testGetSubscriptions_Admin_ReturnsAllSubscriptions() throws Exception {
         UUID workspaceId = UUID.randomUUID();
         UUID subId = UUID.randomUUID();
         UUID filterId = UUID.randomUUID();
         SubscriptionResponseDTO dto = SubscriptionResponseDTO.builder()
                 .id(subId)
-                .recipientEmail("user@test.com")
+                .recipientEmail("other@test.com")
                 .filterId(filterId)
                 .filterTitle("All Bugs")
                 .schedule(ScheduleDto.builder()
@@ -164,11 +168,37 @@ class WorkspaceControllerTest {
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)))
-                .andExpect(jsonPath("$[0].id").value(subId.toString()))
-                .andExpect(jsonPath("$[0].recipientEmail").value("user@test.com"))
-                .andExpect(jsonPath("$[0].filterId").value(filterId.toString()))
+                .andExpect(jsonPath("$[0].recipientEmail").value("other@test.com"))
                 .andExpect(jsonPath("$[0].filterTitle").value("All Bugs"))
                 .andExpect(jsonPath("$[0].schedule.type").value("DAILY"));
+    }
+
+    @Test
+    @WithMockUser(username = "member@test.com", roles = "MEMBER")
+    void testGetSubscriptions_Member_ReturnsOnlyOwnSubscriptions() throws Exception {
+        UUID workspaceId = UUID.randomUUID();
+        UUID subId = UUID.randomUUID();
+        UUID filterId = UUID.randomUUID();
+        SubscriptionResponseDTO dto = SubscriptionResponseDTO.builder()
+                .id(subId)
+                .recipientEmail("member@test.com")
+                .filterId(filterId)
+                .filterTitle("My Filter")
+                .schedule(ScheduleDto.builder()
+                        .type(ScheduleType.DAILY)
+                        .hours(List.of(9))
+                        .build())
+                .build();
+
+        when(subscriptionService.getActiveSubscriptionsForUser(anyString(), any(UUID.class)))
+                .thenReturn(Arrays.asList(dto));
+
+        mockMvc.perform(get("/api/v1/workspaces/" + workspaceId + "/subscriptions")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].recipientEmail").value("member@test.com"))
+                .andExpect(jsonPath("$[0].filterTitle").value("My Filter"));
     }
 }
 

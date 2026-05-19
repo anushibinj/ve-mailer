@@ -153,7 +153,9 @@ const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({ workspaceId, on
       {/* Current Subscriptions */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         <div className="px-6 py-5 border-b border-gray-200 bg-gray-50">
-          <h2 className="text-lg font-medium text-gray-900">Current Subscriptions</h2>
+          <h2 className="text-lg font-medium text-gray-900">
+            {isAdmin ? 'All Subscriptions' : 'My Subscriptions'}
+          </h2>
         </div>
         <div className="overflow-x-auto">
           {subscriptions.length === 0 ? (
@@ -171,9 +173,11 @@ const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({ workspaceId, on
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Recipient Email
-                  </th>
+                  {isAdmin && (
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Recipient Email
+                    </th>
+                  )}
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Filter
                   </th>
@@ -186,9 +190,11 @@ const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({ workspaceId, on
               <tbody className="bg-white divide-y divide-gray-200">
                 {subscriptions.map(sub => (
                   <tr key={sub.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {sub.recipientEmail}
-                    </td>
+                    {isAdmin && (
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {sub.recipientEmail}
+                      </td>
+                    )}
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {sub.filterTitle}
                     </td>

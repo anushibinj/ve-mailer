@@ -94,6 +94,16 @@ public class SubscriptionService {
     }
 
     /**
+     * Returns active subscriptions belonging to the authenticated user within a workspace.
+     * Used for MEMBER-role requests to enforce per-user data isolation.
+     */
+    public List<SubscriptionResponseDTO> getActiveSubscriptionsForUser(String email, UUID workspaceId) {
+        List<EmailSubscriber> subscribers = emailSubscriberRepository
+                .findByRecipientEmailAndWorkspaceIdAndStatus(email, workspaceId, Status.ACTIVE);
+        return subscribers.stream().map(this::toResponseDto).collect(Collectors.toList());
+    }
+
+    /**
      * Immediately sends a notification email for a single subscription on demand.
      * Validates that the subscription belongs to the given workspace before running.
      */

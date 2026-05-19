@@ -13,7 +13,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -71,12 +73,18 @@ public class WorkspaceController {
         return ResponseEntity.noContent().build();
     }
 
-    // --- Subscription read (any authenticated user) ---
+    // --- Subscription read (role-aware: ADMIN sees all, MEMBER sees own only) ---
 
     @GetMapping("/{workspaceId}/subscriptions")
     public ResponseEntity<List<SubscriptionResponseDTO>> getSubscriptions(
             @PathVariable UUID workspaceId) {
-        return ResponseEntity.ok(subscriptionService.getActiveSubscriptionsForWorkspace(workspaceId));
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        boolean isAdmin = authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        List<SubscriptionResponseDTO> result = isAdmin
+                ? subscriptionService.getActiveSubscriptionsForWorkspace(workspaceId)
+                : subscriptionService.getActiveSubscriptionsForUser(authentication.getName(), workspaceId);
+        return ResponseEntity.ok(result);
     }
 
     // --- Subscription CRUD (authenticated user operates on their own subscriptions) ---

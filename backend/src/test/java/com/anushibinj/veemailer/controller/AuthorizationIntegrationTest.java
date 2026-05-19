@@ -152,7 +152,8 @@ class AuthorizationIntegrationTest {
     @Test
     @WithMockUser(username = "member@test.com", roles = "MEMBER")
     void member_canListSubscriptions() throws Exception {
-        when(subscriptionService.getActiveSubscriptionsForWorkspace(any(UUID.class))).thenReturn(List.of());
+        // MEMBER: service must be called with the user's own email (not all subscriptions)
+        when(subscriptionService.getActiveSubscriptionsForUser("member@test.com", WORKSPACE_ID)).thenReturn(List.of());
 
         mockMvc.perform(get("/api/v1/workspaces/{id}/subscriptions", WORKSPACE_ID))
                 .andExpect(status().isOk());
@@ -228,6 +229,16 @@ class AuthorizationIntegrationTest {
         when(workspaceService.findAll()).thenReturn(List.of());
 
         mockMvc.perform(get("/api/v1/workspaces"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(username = "admin@test.com", roles = "ADMIN")
+    void admin_canListAllSubscriptions() throws Exception {
+        // ADMIN: service must be called for the whole workspace, not just one user
+        when(subscriptionService.getActiveSubscriptionsForWorkspace(WORKSPACE_ID)).thenReturn(List.of());
+
+        mockMvc.perform(get("/api/v1/workspaces/{id}/subscriptions", WORKSPACE_ID))
                 .andExpect(status().isOk());
     }
 

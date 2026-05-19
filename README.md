@@ -328,13 +328,15 @@ Supported operators: `IN`, `NOT_IN`.
 
 All subscription endpoints require authentication. Users may only update/delete their own subscriptions (ownership enforced server-side). The on-demand `run` endpoint requires the `ADMIN` role.
 
-| Method   | Path                                                      | Role required | Description                             |
-|----------|-----------------------------------------------------------|:-------------:|-----------------------------------------|
-| `GET`    | `/workspaces/{id}/subscriptions`                          | Any           | List active subscriptions for workspace |
-| `POST`   | `/workspaces/{id}/subscriptions`                          | Any           | Subscribe to a filter template          |
-| `PUT`    | `/workspaces/{id}/subscriptions/{subId}`                  | Any (own)     | Update subscription schedule            |
-| `DELETE` | `/workspaces/{id}/subscriptions/{subId}`                  | Any (own)     | Unsubscribe                             |
-| `POST`   | `/workspaces/{id}/subscriptions/{subId}/run`              | ADMIN         | Immediately send a notification email  |
+**Subscription visibility:** `ADMIN` users see all subscriptions for the workspace; `MEMBER` users see only their own subscriptions. The frontend hides the "Recipient Email" column and labels the section "My Subscriptions" for `MEMBER` users.
+
+| Method   | Path                                                      | Role required | Description                                              |
+|----------|-----------------------------------------------------------|:-------------:|----------------------------------------------------------|
+| `GET`    | `/workspaces/{id}/subscriptions`                          | Any           | ADMIN: all subscriptions; MEMBER: own subscriptions only |
+| `POST`   | `/workspaces/{id}/subscriptions`                          | Any           | Subscribe to a filter template                           |
+| `PUT`    | `/workspaces/{id}/subscriptions/{subId}`                  | Any (own)     | Update subscription schedule                             |
+| `DELETE` | `/workspaces/{id}/subscriptions/{subId}`                  | Any (own)     | Unsubscribe                                              |
+| `POST`   | `/workspaces/{id}/subscriptions/{subId}/run`              | ADMIN         | Immediately send a notification email                    |
 
 ---
 

@@ -326,4 +326,37 @@ class SubscriptionServiceTest {
         assertNotNull(results);
         assertTrue(results.isEmpty());
     }
+
+    // ─────────────────────── getActiveSubscriptionsForUser ───────────────────
+
+    @Test
+    void testGetActiveSubscriptionsForUser_ReturnsOnlyUserSubscriptions() {
+        EmailSubscriber sub = new EmailSubscriber();
+        sub.setRecipientEmail("user@test.com");
+        sub.setFilter(filter);
+        sub.setScheduleType(ScheduleType.DAILY);
+        sub.setScheduledHours(List.of(9));
+
+        when(emailSubscriberRepository.findByRecipientEmailAndWorkspaceIdAndStatus("user@test.com", workspaceId, Status.ACTIVE))
+                .thenReturn(List.of(sub));
+
+        List<SubscriptionResponseDTO> results = subscriptionService.getActiveSubscriptionsForUser("user@test.com", workspaceId);
+
+        assertEquals(1, results.size());
+        assertEquals("user@test.com", results.get(0).getRecipientEmail());
+        assertEquals("All Bugs", results.get(0).getFilterTitle());
+        assertEquals(ScheduleType.DAILY, results.get(0).getSchedule().getType());
+        assertEquals(List.of(9), results.get(0).getSchedule().getHours());
+    }
+
+    @Test
+    void testGetActiveSubscriptionsForUser_EmptyWhenNoSubscriptions() {
+        when(emailSubscriberRepository.findByRecipientEmailAndWorkspaceIdAndStatus("user@test.com", workspaceId, Status.ACTIVE))
+                .thenReturn(Collections.emptyList());
+
+        List<SubscriptionResponseDTO> results = subscriptionService.getActiveSubscriptionsForUser("user@test.com", workspaceId);
+
+        assertNotNull(results);
+        assertTrue(results.isEmpty());
+    }
 }
