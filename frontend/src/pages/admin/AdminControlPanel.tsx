@@ -6,9 +6,9 @@ import WorkspaceManagementPage from './WorkspaceManagementPage';
 type AdminTab = 'notification-preferences' | 'ai-preferences' | 'workspaces';
 
 const tabs: { key: AdminTab; label: string }[] = [
+  { key: 'workspaces', label: 'Manage Workspaces' },
   { key: 'notification-preferences', label: 'Configure Notification Preferences' },
   { key: 'ai-preferences', label: 'Configure AI Preferences' },
-  { key: 'workspaces', label: 'Manage Workspaces' },
 ];
 
 export default function AdminControlPanel() {
