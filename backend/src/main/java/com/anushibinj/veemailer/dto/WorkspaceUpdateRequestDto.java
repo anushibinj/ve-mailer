@@ -24,4 +24,7 @@ public class WorkspaceUpdateRequestDto {
 
     // Optional — if null, blank, or "(unchanged)", the existing clientKey is preserved
     private String clientKey;
+
+    @NotBlank(message = "Root URL is required")
+    private String rootUrl;
 }

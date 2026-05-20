@@ -32,4 +32,5 @@ public class Workspace {
 
     private String clientId;
     private String clientKey;
+    private String rootUrl;
 }

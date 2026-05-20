@@ -69,6 +69,7 @@ class WorkspaceControllerTest {
                 .clientId("my-client-id")
                 .clientKey("(unchanged)")
                 .clientKeyConfigured(true)
+                .rootUrl("https://ve.example.com")
                 .build();
 
         when(workspaceService.findAll()).thenReturn(Arrays.asList(dto));
@@ -87,7 +88,7 @@ class WorkspaceControllerTest {
     void testCreateWorkspace_ReturnsCreated() throws Exception {
         UUID id = UUID.randomUUID();
         WorkspaceCreateRequestDto request =
-                new WorkspaceCreateRequestDto("New WS", "sp-1", "ws-1", "cid-1", "secret-key");
+                new WorkspaceCreateRequestDto("New WS", "sp-1", "ws-1", "cid-1", "secret-key", "https://ve.example.com");
         WorkspaceResponseDto dto = WorkspaceResponseDto.builder()
                 .id(id)
                 .title("New WS")
@@ -96,6 +97,7 @@ class WorkspaceControllerTest {
                 .clientId("cid-1")
                 .clientKey("(unchanged)")
                 .clientKeyConfigured(true)
+                .rootUrl("https://ve.example.com")
                 .build();
 
         when(workspaceService.create(any())).thenReturn(dto);
@@ -120,12 +122,14 @@ class WorkspaceControllerTest {
                 .clientId("cid-1")
                 .clientKey("(unchanged)")
                 .clientKeyConfigured(true)
+                .rootUrl("https://ve.example.com")
                 .build();
 
         when(workspaceService.update(any(), any())).thenReturn(dto);
 
         String body = "{\"title\":\"Updated WS\",\"sharedSpaceId\":\"sp-1\","
-                + "\"workspaceId\":\"ws-1\",\"clientId\":\"cid-1\",\"clientKey\":\"(unchanged)\"}";
+                + "\"workspaceId\":\"ws-1\",\"clientId\":\"cid-1\",\"clientKey\":\"(unchanged)\","
+                + "\"rootUrl\":\"https://ve.example.com\"}";
 
         mockMvc.perform(put("/api/v1/workspaces/" + id)
                         .contentType(MediaType.APPLICATION_JSON)

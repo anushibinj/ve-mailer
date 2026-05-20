@@ -166,11 +166,10 @@ ve-mailer/
 │   │       ├── ScheduleMigrationRunner.java # Startup migration: converts legacy Frequency records
 │   │       ├── SubscriptionService.java # Subscription business logic
 │   │       └── ve/
-│   │           ├── ValueEdgeProperties.java  # Typed config properties
 │   │           └── VeUtils.java              # Octane client factory
 │   └── src/main/resources/
 │       ├── application.properties        # Base / shared config
-│       └── application-dev.properties    # Dev profile overrides (ValueEdge creds)
+│       └── application-dev.properties    # Dev profile overrides (mail, auth, OpenAI)
 │
 └── frontend/                         # React + Vite application
     ├── src/
@@ -394,7 +393,7 @@ The H2 console (for inspecting the database) is available at **http://localhost:
 | Username | `sa`                        |
 | Password | `password`                  |
 
-> **Without the `dev` profile** the `valueedge.*` properties will not be loaded and the filter execute endpoint will not be able to connect to Octane. All other endpoints work without it.
+> The `dev` profile enables verbose security logging and configures dev-specific mail/auth settings. ValueEdge connection credentials (server URL, client ID, client key) are stored per-workspace in the database and managed through the Admin UI.
 
 ---
 
@@ -478,17 +477,9 @@ spring.jpa.show-sql=false
 
 ### Backend — `application-dev.properties`
 
-Located at `backend/src/main/resources/application-dev.properties`. Active when the `dev` Spring profile is enabled. Contains credentials for the ValueEdge (Octane) integration.
+Located at `backend/src/main/resources/application-dev.properties`. Active when the `dev` Spring profile is enabled. Contains development-specific overrides for mail, auth, logging, and AI settings.
 
-```properties
-valueedge.server-url=https://your-octane-server.example.com
-valueedge.client-id=your-client-id
-valueedge.client-secret=your-client-secret
-valueedge.shared-space-id=4001
-valueedge.workspace-id=5015
-```
-
-These values are bound to `ValueEdgeProperties` and injected into `FilterService`. **Do not commit real credentials to source control.**
+> ValueEdge/Octane connection details (server URL, client ID, client key, shared space ID, workspace ID) are now stored **per workspace in the database** and managed via the Admin UI. No configuration file changes are needed when adding or changing Octane workspaces.
 
 ---
 
@@ -640,7 +631,7 @@ More examples to come.
 When a filter is **executed** (`POST /filters/{id}/execute?workspaceId=...`), the backend:
 
 1. Loads the filter and workspace from the database
-2. Retrieves the Octane server URL from `ValueEdgeProperties`
+2. Uses the workspace's `rootUrl` (stored in the database) to obtain an authenticated `Octane` client via `OctaneCacheService`
 3. Obtains an authenticated `Octane` client via `OctaneCacheService`
 4. Dynamically builds an Octane SDK `Query` from the criteria clauses
 5. Fetches the specified entity type with the requested fields

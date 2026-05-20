@@ -2,8 +2,6 @@ package com.anushibinj.veemailer.service;
 
 import com.anushibinj.veemailer.dto.TicketCommentDto;
 import com.anushibinj.veemailer.model.Workspace;
-import com.anushibinj.veemailer.repository.WorkspaceRepository;
-import com.anushibinj.veemailer.service.ve.ValueEdgeProperties;
 import com.hpe.adm.nga.sdk.Octane;
 import com.hpe.adm.nga.sdk.entities.EntityList;
 import com.hpe.adm.nga.sdk.entities.OctaneCollection;
@@ -32,12 +30,6 @@ class TicketCommentServiceTest {
     private OctaneCacheService octaneCacheService;
 
     @Mock
-    private ValueEdgeProperties valueEdgeProperties;
-
-    @Mock
-    private WorkspaceRepository workspaceRepository;
-
-    @Mock
     private Octane octaneClient;
 
     @Mock
@@ -49,20 +41,19 @@ class TicketCommentServiceTest {
     private TicketCommentService ticketCommentService;
 
     private Workspace workspace;
-    private UUID workspaceId;
 
     @BeforeEach
     void setUp() {
-        ticketCommentService = new TicketCommentService(octaneCacheService, valueEdgeProperties, workspaceRepository);
+        ticketCommentService = new TicketCommentService(octaneCacheService);
         ReflectionTestUtils.setField(ticketCommentService, "queryLimit", 25);
 
-        workspaceId = UUID.randomUUID();
         workspace = new Workspace();
-        workspace.setId(workspaceId);
+        workspace.setId(UUID.randomUUID());
         workspace.setClientId("client-id");
         workspace.setClientKey("client-key");
         workspace.setSharedSpaceId("1001");
         workspace.setWorkspaceId("2001");
+        workspace.setRootUrl("https://octane.example.com");
     }
 
     @SuppressWarnings("unchecked")
@@ -74,31 +65,17 @@ class TicketCommentServiceTest {
     }
 
     @Test
-    void testFetchComments_WorkspaceNotFound_ReturnsEmptyList() {
-        when(workspaceRepository.findById(workspaceId)).thenReturn(Optional.empty());
-
-        List<TicketCommentDto> result = ticketCommentService.fetchComments("100", workspaceId);
-
-        assertTrue(result.isEmpty());
-        verifyNoInteractions(octaneCacheService);
-    }
-
-    @Test
     void testFetchComments_OctaneException_ReturnsEmptyList() {
-        when(workspaceRepository.findById(workspaceId)).thenReturn(Optional.of(workspace));
-        when(valueEdgeProperties.getServerUrl()).thenReturn("https://octane.example.com");
         when(octaneCacheService.getOctaneClient(anyString(), anyString(), anyString(), anyInt(), anyInt()))
                 .thenThrow(new RuntimeException("Connection refused"));
 
-        List<TicketCommentDto> result = ticketCommentService.fetchComments("100", workspaceId);
+        List<TicketCommentDto> result = ticketCommentService.fetchComments("100", workspace);
 
         assertTrue(result.isEmpty());
     }
 
     @Test
     void testFetchComments_Success_MapsEntitiesToDtos() {
-        when(workspaceRepository.findById(workspaceId)).thenReturn(Optional.of(workspace));
-        when(valueEdgeProperties.getServerUrl()).thenReturn("https://octane.example.com");
         when(octaneCacheService.getOctaneClient(anyString(), anyString(), anyString(), anyInt(), anyInt()))
                 .thenReturn(octaneClient);
 
@@ -124,7 +101,7 @@ class TicketCommentServiceTest {
         when(getEntities.limit(anyInt())).thenReturn(getEntities);
         when(getEntities.execute()).thenReturn(collection);
 
-        List<TicketCommentDto> result = ticketCommentService.fetchComments("100", workspaceId);
+        List<TicketCommentDto> result = ticketCommentService.fetchComments("100", workspace);
 
         assertEquals(1, result.size());
         TicketCommentDto dto = result.get(0);
@@ -140,8 +117,6 @@ class TicketCommentServiceTest {
     @Test
     void testFetchComments_UsesCorrectQueryLimit() {
         ReflectionTestUtils.setField(ticketCommentService, "queryLimit", 50);
-        when(workspaceRepository.findById(workspaceId)).thenReturn(Optional.of(workspace));
-        when(valueEdgeProperties.getServerUrl()).thenReturn("https://octane.example.com");
         when(octaneCacheService.getOctaneClient(anyString(), anyString(), anyString(), anyInt(), anyInt()))
                 .thenReturn(octaneClient);
 
@@ -155,15 +130,13 @@ class TicketCommentServiceTest {
         when(getEntities.limit(50)).thenReturn(getEntities);
         when(getEntities.execute()).thenReturn(emptyCollection);
 
-        ticketCommentService.fetchComments("100", workspaceId);
+        ticketCommentService.fetchComments("100", workspace);
 
         verify(getEntities).limit(50);
     }
 
     @Test
     void testFetchComments_OrdersByOrderNumberDescending() {
-        when(workspaceRepository.findById(workspaceId)).thenReturn(Optional.of(workspace));
-        when(valueEdgeProperties.getServerUrl()).thenReturn("https://octane.example.com");
         when(octaneCacheService.getOctaneClient(anyString(), anyString(), anyString(), anyInt(), anyInt()))
                 .thenReturn(octaneClient);
 
@@ -177,7 +150,7 @@ class TicketCommentServiceTest {
         when(getEntities.limit(anyInt())).thenReturn(getEntities);
         when(getEntities.execute()).thenReturn(emptyCollection);
 
-        ticketCommentService.fetchComments("100", workspaceId);
+        ticketCommentService.fetchComments("100", workspace);
 
         verify(getEntities).addOrderBy("order_number", false);
     }

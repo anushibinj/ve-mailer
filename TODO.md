@@ -9,3 +9,5 @@
 - [ ] A mail ID cannot have duplicate subscriptions to the same filter. With the new schedule model, the composite key should be (recipientEmail, filterId) — a user should not be able to subscribe to the same filter more than once.
 - [x] Add an option called "Show AI Summary for each ticket". Enabling this should bring in a new column in the resulting e-mail HTML with summary of each ticket.
 - [ ] OTP regeneration timeout. Should be validated both on backend and frontend to prevent people hammering the e-mail service. Make the resend interval start with 30 seconds and increment 30 seconds every retry.
+- [ ] If multiple people are subscribed to the same filter at the same time, then don't execute the filter multiple times. Execute it once and send the same copy to all the users registered for that time.
+- [ ] The e-mail subject should be "[ve-mailer] filter_title"

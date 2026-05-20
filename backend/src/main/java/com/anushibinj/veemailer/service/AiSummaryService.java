@@ -1,6 +1,7 @@
 package com.anushibinj.veemailer.service;
 
 import com.anushibinj.veemailer.dto.TicketCommentDto;
+import com.anushibinj.veemailer.model.Workspace;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.beans.factory.annotation.Value;
@@ -10,7 +11,6 @@ import org.springframework.stereotype.Service;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
-import java.util.UUID;
 
 @Slf4j
 @Service
@@ -70,13 +70,13 @@ public class AiSummaryService {
      * Fetches comments for a ticket from the ticketing server and formats them
      * into a text block suitable for AI prompt input.
      *
-     * @param ticketId    the numeric ID of the ticket
-     * @param workspaceId the internal UUID of the workspace containing this ticket
+     * @param ticketId  the numeric ID of the ticket
+     * @param workspace the workspace containing this ticket
      * @return formatted comments text, or empty string if unavailable
      */
-    public String fetchComments(String ticketId, UUID workspaceId) {
+    public String fetchComments(String ticketId, Workspace workspace) {
         try {
-            List<TicketCommentDto> comments = ticketCommentService.fetchComments(ticketId, workspaceId);
+            List<TicketCommentDto> comments = ticketCommentService.fetchComments(ticketId, workspace);
             return ticketCommentService.formatCommentsForAi(comments);
         } catch (Exception e) {
             log.error("Failed to fetch comments for ticket {}: {}", ticketId, e.getMessage());

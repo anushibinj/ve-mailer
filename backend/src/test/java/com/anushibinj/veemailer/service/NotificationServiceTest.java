@@ -3,7 +3,6 @@ package com.anushibinj.veemailer.service;
 import com.anushibinj.veemailer.model.EmailSubscriber;
 import com.anushibinj.veemailer.model.Workspace;
 import com.anushibinj.veemailer.service.extractor.FieldExtractorRegistry;
-import com.anushibinj.veemailer.service.ve.ValueEdgeProperties;
 import com.hpe.adm.nga.sdk.model.EntityModel;
 import com.hpe.adm.nga.sdk.model.ReferenceFieldModel;
 import com.hpe.adm.nga.sdk.model.StringFieldModel;
@@ -37,9 +36,6 @@ class NotificationServiceTest {
     @Mock
     private AiSummaryService aiSummaryService;
 
-    @Mock
-    private ValueEdgeProperties valueEdgeProperties;
-
     // Use a real registry so extractor behaviour is tested end-to-end.
     private final FieldExtractorRegistry registry = new FieldExtractorRegistry();
 
@@ -53,7 +49,8 @@ class NotificationServiceTest {
         testWorkspace.setId(UUID.randomUUID());
         testWorkspace.setSharedSpaceId("4001");
         testWorkspace.setWorkspaceId("5015");
-        notificationService = new NotificationService(mailSender, registry, aiSummaryService, valueEdgeProperties);
+        testWorkspace.setRootUrl("https://ve.example.com");
+        notificationService = new NotificationService(mailSender, registry, aiSummaryService);
         ReflectionTestUtils.setField(notificationService, "from", "noreply@test.com");
     }
 

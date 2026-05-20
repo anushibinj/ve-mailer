@@ -24,4 +24,7 @@ public class WorkspaceCreateRequestDto {
 
     @NotBlank(message = "Client Key is required")
     private String clientKey;
+
+    @NotBlank(message = "Root URL is required")
+    private String rootUrl;
 }
