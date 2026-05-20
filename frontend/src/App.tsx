@@ -86,7 +86,7 @@ function AppContent() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+    <div className="min-h-full bg-gray-50 text-gray-900 font-sans">
       {/* Navigation bar */}
       <header className="bg-white shadow-sm border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex justify-between items-center">
@@ -149,43 +149,49 @@ function App() {
     <BrowserRouter>
       <AuthProvider>
         <Toaster position="top-right" />
-        <Routes>
-          {/* Public routes */}
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/signup" element={<SignupPage />} />
-          <Route path="/verify-signup" element={<VerifySignupPage />} />
-          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-          <Route path="/reset-password" element={<ResetPasswordPage />} />
+        {/* App-shell layout: outer container fixes the viewport height and prevents outer page
+            scroll; the inner div is the only scrollable region; AppFooter pins to the bottom. */}
+        <div className="flex h-screen flex-col overflow-hidden">
+          <div className="flex-1 overflow-y-auto">
+            <Routes>
+              {/* Public routes */}
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/signup" element={<SignupPage />} />
+              <Route path="/verify-signup" element={<VerifySignupPage />} />
+              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+              <Route path="/reset-password" element={<ResetPasswordPage />} />
 
-          {/* Protected routes */}
-          <Route
-            path="/"
-            element={
-              <ProtectedRoute>
-                <AppContent />
-              </ProtectedRoute>
-            }
-          />
+              {/* Protected routes */}
+              <Route
+                path="/"
+                element={
+                  <ProtectedRoute>
+                    <AppContent />
+                  </ProtectedRoute>
+                }
+              />
 
-          {/* Admin-only routes */}
-          <Route
-            path="/admin"
-            element={
-              <ProtectedRoute requiredRole="ADMIN">
-                <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
-                  <AdminLayout>
-                    <AdminControlPanel />
-                  </AdminLayout>
-                </div>
-              </ProtectedRoute>
-            }
-          />
+              {/* Admin-only routes */}
+              <Route
+                path="/admin"
+                element={
+                  <ProtectedRoute requiredRole="ADMIN">
+                    <div className="min-h-full bg-gray-50 text-gray-900 font-sans">
+                      <AdminLayout>
+                        <AdminControlPanel />
+                      </AdminLayout>
+                    </div>
+                  </ProtectedRoute>
+                }
+              />
 
-          {/* Catch-all redirect */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-        {/* Persistent app footer — rendered only when VITE_FOOTER_HTML is set */}
-        <AppFooter />
+              {/* Catch-all redirect */}
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </div>
+          {/* Persistent app footer — rendered only when VITE_FOOTER_HTML is set */}
+          <AppFooter />
+        </div>
       </AuthProvider>
     </BrowserRouter>
   );

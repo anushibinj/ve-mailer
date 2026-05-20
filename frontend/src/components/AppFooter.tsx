@@ -108,7 +108,7 @@ export default function AppFooter() {
 
   return (
     <footer
-      className="w-full border-t border-gray-200 bg-white py-2 text-xs text-gray-500"
+      className="w-full shrink-0 border-t border-gray-200 bg-white py-2 text-xs text-gray-500 z-10"
       dangerouslySetInnerHTML={{ __html: sanitized }}
     />
   );

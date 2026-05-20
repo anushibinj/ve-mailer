@@ -85,6 +85,25 @@ describe('AppFooter', () => {
     expect(screen.getByRole('contentinfo')).toBeInTheDocument();
   });
 
+  it('carries stacking and layout classes needed for the app-shell sticky footer', () => {
+    // z-10 keeps the footer above scrollable content; shrink-0 prevents the
+    // flex container from compressing the footer; w-full ensures it spans the viewport.
+    vi.stubEnv('VITE_FOOTER_HTML', '<div>Footer</div>');
+    render(<AppFooter />);
+    const footer = screen.getByRole('contentinfo');
+    expect(footer.className).toContain('z-10');
+    expect(footer.className).toContain('shrink-0');
+    expect(footer.className).toContain('w-full');
+  });
+
+  it('no footer element is present in the DOM when VITE_FOOTER_HTML is unset (no bottom spacing)', () => {
+    // When no footer is configured, the layout should have no footer-related DOM node,
+    // ensuring the flex-1 content area fills the full app-shell height without gap.
+    vi.stubEnv('VITE_FOOTER_HTML', '');
+    const { container } = render(<AppFooter />);
+    expect(container.querySelector('footer')).toBeNull();
+  });
+
   it('renders a link as a clickable anchor with the correct href', () => {
     vi.stubEnv('VITE_FOOTER_HTML', '<a href="https://example.com">Company Portal</a>');
     render(<AppFooter />);
