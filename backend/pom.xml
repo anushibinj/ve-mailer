@@ -169,6 +169,7 @@
 							<exclude>com/anushibinj/veemailer/service/AiSummaryService.class</exclude>
 							<exclude>com/anushibinj/veemailer/service/FilterService.class</exclude>
 							<exclude>com/anushibinj/veemailer/service/OctaneCacheService.class</exclude>
+							<exclude>com/anushibinj/veemailer/service/TicketCommentService.class</exclude>
 						</excludes>
 						<rules>
 							<rule>

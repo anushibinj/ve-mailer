@@ -20,6 +20,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
 import java.util.Set;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -36,6 +37,8 @@ class NotificationServiceTest {
 
     // Use a real registry so extractor behaviour is tested end-to-end.
     private final FieldExtractorRegistry registry = new FieldExtractorRegistry();
+
+    private static final UUID TEST_WORKSPACE_ID = UUID.randomUUID();
 
     private NotificationService notificationService;
 
@@ -62,7 +65,7 @@ class NotificationServiceTest {
         sub2.setRecipientEmail("user2@example.com");
 
         notificationService.processAndSendNotifications(
-                List.of(sub1, sub2), Collections.emptyList(), List.of("name"), 25);
+                List.of(sub1, sub2), Collections.emptyList(), List.of("name"), 25, TEST_WORKSPACE_ID);
 
         verify(mailSender, times(2)).send(any(MimeMessage.class));
     }
@@ -70,7 +73,7 @@ class NotificationServiceTest {
     @Test
     void testProcessAndSendNotifications_EmptyList_NoEmailSent() {
         notificationService.processAndSendNotifications(
-                Collections.emptyList(), Collections.emptyList(), List.of("name"), 25);
+                Collections.emptyList(), Collections.emptyList(), List.of("name"), 25, TEST_WORKSPACE_ID);
 
         verify(mailSender, never()).send(any(MimeMessage.class));
     }
@@ -84,7 +87,7 @@ class NotificationServiceTest {
         sub.setRecipientEmail("check@example.com");
 
         notificationService.processAndSendNotifications(
-                List.of(sub), Collections.emptyList(), List.of("name"), 25);
+                List.of(sub), Collections.emptyList(), List.of("name"), 25, TEST_WORKSPACE_ID);
 
         ArgumentCaptor<MimeMessage> captor = ArgumentCaptor.forClass(MimeMessage.class);
         verify(mailSender).send(captor.capture());
@@ -94,7 +97,7 @@ class NotificationServiceTest {
     @Test
     void testProcessAndSendNotifications_AiSummaryEnabled_GeneratesSummaries() {
         when(mailSender.createMimeMessage()).thenReturn(newMimeMessage());
-        when(aiSummaryService.fetchComments(any())).thenReturn("Some comment");
+        when(aiSummaryService.fetchComments(any(), any())).thenReturn("Some comment");
         when(aiSummaryService.generateSummary(any(), any(), any())).thenReturn("AI generated summary");
 
         EntityModel entity = new EntityModel(Set.of(
@@ -110,7 +113,7 @@ class NotificationServiceTest {
         List<String> fields = List.of(AiSummaryService.AI_SUMMARY_FIELD, "id", "name", "description");
 
         notificationService.processAndSendNotifications(
-                List.of(sub), List.of(entity), fields, 25);
+                List.of(sub), List.of(entity), fields, 25, TEST_WORKSPACE_ID);
 
         verify(aiSummaryService).generateSummary("Fix bug", "A bug needs fixing", "Some comment");
         verify(mailSender).send(any(MimeMessage.class));
@@ -128,7 +131,7 @@ class NotificationServiceTest {
         sub.setRecipientEmail("user@example.com");
 
         notificationService.processAndSendNotifications(
-                List.of(sub), List.of(entity), List.of("name"), 25);
+                List.of(sub), List.of(entity), List.of("name"), 25, TEST_WORKSPACE_ID);
 
         verifyNoInteractions(aiSummaryService);
     }
@@ -301,7 +304,7 @@ class NotificationServiceTest {
         // Verifies decoupled architecture: backend fetches name/description internally for AI
         // generation even when the user did not select them as display fields.
         when(mailSender.createMimeMessage()).thenReturn(newMimeMessage());
-        when(aiSummaryService.fetchComments(any())).thenReturn("");
+        when(aiSummaryService.fetchComments(any(), any())).thenReturn("");
         when(aiSummaryService.generateSummary(any(), any(), any())).thenReturn("AI generated summary");
 
         // Entity contains name and description because effectiveFetchFields in FilterService
@@ -320,7 +323,7 @@ class NotificationServiceTest {
         List<String> fields = List.of(AiSummaryService.AI_SUMMARY_FIELD, "id", "phase");
 
         notificationService.processAndSendNotifications(
-                List.of(sub), List.of(entity), fields, 25);
+                List.of(sub), List.of(entity), fields, 25, TEST_WORKSPACE_ID);
 
         // AI summary must still be generated using the entity data fetched internally
         verify(aiSummaryService).generateSummary("Fix bug", "A bug needs fixing", "");

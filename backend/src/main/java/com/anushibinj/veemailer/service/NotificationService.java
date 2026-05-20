@@ -23,6 +23,7 @@ import org.springframework.stereotype.Service;
 import com.anushibinj.veemailer.model.EmailSubscriber;
 
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -42,7 +43,8 @@ public class NotificationService {
     public void processAndSendNotifications(List<EmailSubscriber> subscribers,
                                             List<EntityModel> results,
                                             List<String> fields,
-                                            int limit) {
+                                            int limit,
+                                            UUID workspaceId) {
         // Check if AI Summary is enabled and generate summaries
         boolean aiSummaryEnabled = fields.contains(AiSummaryService.AI_SUMMARY_FIELD);
         List<String> displayFields = fields;
@@ -61,7 +63,7 @@ public class NotificationService {
                 String name = extractFieldValue("name", entity.getValue("name"));
                 String description = extractFieldValue("description", entity.getValue("description"));
                 String ticketId = extractFieldValue("id", entity.getValue("id"));
-                String comments = aiSummaryService.fetchComments(ticketId);
+                String comments = aiSummaryService.fetchComments(ticketId, workspaceId);
                 aiSummaries[i] = aiSummaryService.generateSummary(name, description, comments);
             }
         }

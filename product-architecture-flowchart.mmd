@@ -40,6 +40,7 @@ flowchart TD
             PS[Polling Service]
             NS[Notification Service]
             AIS[AI Summary Service]
+            TCS[Ticket Comment Service]
         end
 
         subgraph DataLayer["Data Layer (JPA)"]
@@ -108,6 +109,8 @@ flowchart TD
     PS --> FS
     PS --> NS
     NS --> AIS
+    AIS --> TCS
+    TCS --> VE
     AIS --> OPENAI
     NS --> SMTP
 

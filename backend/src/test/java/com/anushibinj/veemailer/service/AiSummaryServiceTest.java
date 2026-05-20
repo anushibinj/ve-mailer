@@ -1,5 +1,6 @@
 package com.anushibinj.veemailer.service;
 
+import com.anushibinj.veemailer.dto.TicketCommentDto;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -12,8 +13,12 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.util.Collections;
+import java.util.List;
+import java.util.UUID;
+
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -31,6 +36,9 @@ class AiSummaryServiceTest {
     @Mock
     private CallResponseSpec callResponseSpec;
 
+    @Mock
+    private TicketCommentService ticketCommentService;
+
     private AiSummaryService aiSummaryService;
 
     @BeforeEach
@@ -38,6 +46,7 @@ class AiSummaryServiceTest {
         when(chatClientBuilder.build()).thenReturn(chatClient);
         aiSummaryService = new AiSummaryService(
                 chatClientBuilder,
+                ticketCommentService,
                 new ClassPathResource("prompts/ai-summary-system-prompt.md"),
                 new ClassPathResource("prompts/ai-summary-user-prompt.md"));
     }
@@ -106,16 +115,41 @@ class AiSummaryServiceTest {
     }
 
     @Test
-    void testFetchComments_ReturnsEmptyString() {
-        // Placeholder implementation should return empty string
-        String comments = aiSummaryService.fetchComments("12345");
-        assertEquals("", comments);
+    void testFetchComments_DelegatesToTicketCommentService() {
+        UUID workspaceId = UUID.randomUUID();
+        List<TicketCommentDto> comments = List.of(
+                TicketCommentDto.builder().authorName("John").text("Looks good").build(),
+                TicketCommentDto.builder().authorName("Jane").text("Needs fix").build()
+        );
+        when(ticketCommentService.fetchComments("12345", workspaceId)).thenReturn(comments);
+        when(ticketCommentService.formatCommentsForAi(comments)).thenReturn("Comment by John:\nLooks good\n\nComment by Jane:\nNeeds fix");
+
+        String result = aiSummaryService.fetchComments("12345", workspaceId);
+
+        assertEquals("Comment by John:\nLooks good\n\nComment by Jane:\nNeeds fix", result);
+        verify(ticketCommentService).fetchComments("12345", workspaceId);
+        verify(ticketCommentService).formatCommentsForAi(comments);
     }
 
     @Test
-    void testFetchComments_NullId() {
-        String comments = aiSummaryService.fetchComments(null);
-        assertEquals("", comments);
+    void testFetchComments_ReturnsEmptyOnException() {
+        UUID workspaceId = UUID.randomUUID();
+        when(ticketCommentService.fetchComments(any(), any())).thenThrow(new RuntimeException("Network error"));
+
+        String result = aiSummaryService.fetchComments("12345", workspaceId);
+
+        assertEquals("", result);
+    }
+
+    @Test
+    void testFetchComments_EmptyCommentsList() {
+        UUID workspaceId = UUID.randomUUID();
+        when(ticketCommentService.fetchComments("999", workspaceId)).thenReturn(Collections.emptyList());
+        when(ticketCommentService.formatCommentsForAi(Collections.emptyList())).thenReturn("");
+
+        String result = aiSummaryService.fetchComments("999", workspaceId);
+
+        assertEquals("", result);
     }
 
     @Test
@@ -129,6 +163,7 @@ class AiSummaryServiceTest {
         Resource missingResource = new ClassPathResource("prompts/nonexistent.md");
         AiSummaryService service = new AiSummaryService(
                 chatClientBuilder,
+                ticketCommentService,
                 missingResource,
                 new ClassPathResource("prompts/ai-summary-user-prompt.md"));
 

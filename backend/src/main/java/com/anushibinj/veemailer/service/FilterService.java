@@ -118,16 +118,17 @@ public class FilterService {
             // Determine the effective set of fields to fetch from the ticketing service.
             // This differs from the user-selected fields in two ways:
             //   1. The AI Summary pseudo-field is stripped (it is never a real Octane field).
-            //   2. When AI Summary is enabled, name/description/comments are added as
-            //      internal dependencies even if the user did not choose to display them.
+            //   2. When AI Summary is enabled, name and description are added as internal
+            //      dependencies even if the user did not choose to display them.
+            //      (Comments are fetched via a separate TicketCommentService API call.)
             boolean aiSummaryRequested = fields.contains(AiSummaryService.AI_SUMMARY_FIELD);
             List<String> effectiveFetchFields = fields.stream()
                     .filter(f -> !AiSummaryService.AI_SUMMARY_FIELD.equals(f))
                     .collect(Collectors.toList());
             if (aiSummaryRequested) {
-                // name, description, and comments are fetched silently for AI generation
+                // name and description are fetched silently for AI generation
                 // regardless of what the user chose to show in the final email output.
-                for (String dep : List.of("name", "description", "comments")) {
+                for (String dep : List.of("name", "description")) {
                     if (!effectiveFetchFields.contains(dep)) {
                         effectiveFetchFields.add(dep);
                     }

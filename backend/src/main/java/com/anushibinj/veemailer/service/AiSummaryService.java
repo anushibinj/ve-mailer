@@ -1,5 +1,6 @@
 package com.anushibinj.veemailer.service;
 
+import com.anushibinj.veemailer.dto.TicketCommentDto;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.beans.factory.annotation.Value;
@@ -8,6 +9,8 @@ import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.UUID;
 
 @Slf4j
 @Service
@@ -17,14 +20,17 @@ public class AiSummaryService {
     public static final String AI_SUMMARY_FIELD = "\u2728 AI Summary";
 
     private final ChatClient chatClient;
+    private final TicketCommentService ticketCommentService;
     private final String systemPrompt;
     private final String userPromptTemplate;
 
     public AiSummaryService(
             ChatClient.Builder chatClientBuilder,
+            TicketCommentService ticketCommentService,
             @Value("classpath:prompts/ai-summary-system-prompt.md") Resource systemPromptResource,
             @Value("classpath:prompts/ai-summary-user-prompt.md") Resource userPromptResource) {
         this.chatClient = chatClientBuilder.build();
+        this.ticketCommentService = ticketCommentService;
         this.systemPrompt = loadResource(systemPromptResource);
         this.userPromptTemplate = loadResource(userPromptResource);
     }
@@ -58,15 +64,21 @@ public class AiSummaryService {
     }
 
     /**
-     * Placeholder for fetching comments from the ticketing server.
-     * Each ticket requires a separate API call to retrieve its comments.
+     * Fetches comments for a ticket from the ticketing server and formats them
+     * into a text block suitable for AI prompt input.
      *
-     * @param ticketId the ID of the ticket to fetch comments for
-     * @return concatenated comments text
+     * @param ticketId    the numeric ID of the ticket
+     * @param workspaceId the internal UUID of the workspace containing this ticket
+     * @return formatted comments text, or empty string if unavailable
      */
-    public String fetchComments(String ticketId) {
-        // TODO implement comment retrieval
-        return "";
+    public String fetchComments(String ticketId, UUID workspaceId) {
+        try {
+            List<TicketCommentDto> comments = ticketCommentService.fetchComments(ticketId, workspaceId);
+            return ticketCommentService.formatCommentsForAi(comments);
+        } catch (Exception e) {
+            log.error("Failed to fetch comments for ticket {}: {}", ticketId, e.getMessage());
+            return "";
+        }
     }
 
     private String nullSafe(String value) {
