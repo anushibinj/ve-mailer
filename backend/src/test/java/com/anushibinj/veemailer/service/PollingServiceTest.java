@@ -96,7 +96,7 @@ class PollingServiceTest {
 
         // Group 1: sub1, sub2  |  Group 2: sub3  |  Group 3: sub4
         verify(notificationService, times(3))
-                .processAndSendNotifications(anyList(), anyList(), anyList(), anyInt(), any());
+                .processAndSendNotifications(anyList(), anyList(), anyList(), anyInt(), any(), any());
     }
 
     @Test
@@ -107,7 +107,7 @@ class PollingServiceTest {
         pollingService.processAtHour(9, DayOfWeek.WEDNESDAY);
 
         verify(notificationService, never())
-                .processAndSendNotifications(anyList(), anyList(), anyList(), anyInt(), any());
+                .processAndSendNotifications(anyList(), anyList(), anyList(), anyInt(), any(), any());
     }
 
     @Test
@@ -127,7 +127,7 @@ class PollingServiceTest {
         pollingService.processAtHour(9, DayOfWeek.MONDAY);
 
         verify(notificationService, times(1))
-                .processAndSendNotifications(anyList(), anyList(), anyList(), anyInt(), any());
+                .processAndSendNotifications(anyList(), anyList(), anyList(), anyInt(), any(), any());
     }
 
     @Test
@@ -141,7 +141,7 @@ class PollingServiceTest {
         verify(emailSubscriberRepository, never())
                 .findActiveByScheduledHourAndScheduleType(anyInt(), eq(ScheduleType.WEEKLY), any());
         verify(notificationService, never())
-                .processAndSendNotifications(anyList(), anyList(), anyList(), anyInt(), any());
+                .processAndSendNotifications(anyList(), anyList(), anyList(), anyInt(), any(), any());
     }
 
     @Test
@@ -171,7 +171,7 @@ class PollingServiceTest {
 
         verify(filterService).getFilterFields(filter1.getId());
         verify(filterService).executeFilter(filter1.getId(), workspace1.getId());
-        verify(notificationService).processAndSendNotifications(List.of(subscriber), results, fields, 25, workspace1);
+        verify(notificationService).processAndSendNotifications(List.of(subscriber), results, fields, 25, workspace1, filter1.getTitle());
     }
 
     @Test
@@ -184,7 +184,7 @@ class PollingServiceTest {
 
         // Should not propagate — error is logged internally
         assertDoesNotThrow(() -> pollingService.runNow(subscriber));
-        verify(notificationService, never()).processAndSendNotifications(anyList(), anyList(), anyList(), anyInt(), any());
+        verify(notificationService, never()).processAndSendNotifications(anyList(), anyList(), anyList(), anyInt(), any(), any());
     }
 
     // Bring in assertDoesNotThrow

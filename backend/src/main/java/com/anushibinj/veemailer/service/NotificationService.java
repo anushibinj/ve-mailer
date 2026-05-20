@@ -45,12 +45,22 @@ public class NotificationService {
     private final FieldExtractorRegistry fieldExtractorRegistry;
     private final AiSummaryService aiSummaryService;
 
+    /**
+     * Builds a standardised email subject: "[ve-mailer] {filterTitle}".
+     * Falls back to "[ve-mailer] Notification" when the title is null or blank.
+     */
+    static String buildMailSubject(String filterTitle) {
+        String trimmed = filterTitle == null ? "" : filterTitle.strip();
+        return "[ve-mailer] " + (trimmed.isEmpty() ? "Notification" : trimmed);
+    }
+
     @Async
     public void processAndSendNotifications(List<EmailSubscriber> subscribers,
                                             List<EntityModel> results,
                                             List<String> fields,
                                             int limit,
-                                            Workspace workspace) {
+                                            Workspace workspace,
+                                            String filterTitle) {
         // Check if AI Summary is enabled and generate summaries
         boolean aiSummaryEnabled = fields.contains(AiSummaryService.AI_SUMMARY_FIELD);
         List<String> displayFields = fields;
@@ -80,12 +90,13 @@ public class NotificationService {
                 workspace.getSharedSpaceId(),
                 workspace.getWorkspaceId());
         String htmlBody = buildHtmlTable(results, displayFields, limit, aiSummaryEnabled, aiSummaries, linkContext);
+        String subject = buildMailSubject(filterTitle);
         for (EmailSubscriber subscriber : subscribers) {
-            sendEmail(subscriber.getRecipientEmail(), htmlBody);
+            sendEmail(subscriber.getRecipientEmail(), htmlBody, subject);
         }
     }
 
-    private void sendEmail(String to, String htmlBody) {
+    private void sendEmail(String to, String htmlBody, String subject) {
         try {
             JavaMailSender mailSender = dynamicMailSenderService.getMailSender();
             String from = dynamicMailSenderService.getFromAddress();
@@ -93,7 +104,7 @@ public class NotificationService {
             MimeMessageHelper helper = new MimeMessageHelper(message, false, "UTF-8");
             helper.setFrom(from);
             helper.setTo(to);
-            helper.setSubject("[ve-emailer] Your Notification Digest");
+            helper.setSubject(subject);
             helper.setText(htmlBody, true); // true = HTML
             mailSender.send(message);
         } catch (MessagingException e) {

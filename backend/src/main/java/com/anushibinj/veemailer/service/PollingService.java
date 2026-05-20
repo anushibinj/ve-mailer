@@ -86,11 +86,12 @@ public class PollingService {
             UUID filterId    = representative.getFilter().getId();
             UUID workspaceId = representative.getWorkspace().getId();
 
-            List<String>      fields  = filterService.getFilterFields(filterId);
-            List<EntityModel> results = filterService.executeFilter(filterId, workspaceId);
-            int               limit   = filterService.getQueryLimit();
+            List<String>      fields     = filterService.getFilterFields(filterId);
+            List<EntityModel> results    = filterService.executeFilter(filterId, workspaceId);
+            int               limit      = filterService.getQueryLimit();
+            String            filterTitle = representative.getFilter().getTitle();
 
-            notificationService.processAndSendNotifications(recipients, results, fields, limit, representative.getWorkspace());
+            notificationService.processAndSendNotifications(recipients, results, fields, limit, representative.getWorkspace(), filterTitle);
         } catch (Exception e) {
             log.error("Failed to fetch or send notifications for filter {} / workspace {}",
                     representative.getFilter().getId(), representative.getWorkspace().getId(), e);

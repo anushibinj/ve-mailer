@@ -74,7 +74,7 @@ class NotificationServiceTest {
         sub2.setRecipientEmail("user2@example.com");
 
         notificationService.processAndSendNotifications(
-                List.of(sub1, sub2), Collections.emptyList(), List.of("name"), 25, testWorkspace);
+                List.of(sub1, sub2), Collections.emptyList(), List.of("name"), 25, testWorkspace, "Open Defects");
 
         verify(mailSender, times(2)).send(any(MimeMessage.class));
     }
@@ -82,13 +82,13 @@ class NotificationServiceTest {
     @Test
     void testProcessAndSendNotifications_EmptyList_NoEmailSent() {
         notificationService.processAndSendNotifications(
-                Collections.emptyList(), Collections.emptyList(), List.of("name"), 25, testWorkspace);
+                Collections.emptyList(), Collections.emptyList(), List.of("name"), 25, testWorkspace, "Open Defects");
 
         verify(mailSender, never()).send(any(MimeMessage.class));
     }
 
     @Test
-    void testProcessAndSendNotifications_SubjectLineCorrect() throws Exception {
+    void testProcessAndSendNotifications_SubjectUsesFilterTitle() throws Exception {
         MimeMessage msg = newMimeMessage();
         when(mailSender.createMimeMessage()).thenReturn(msg);
 
@@ -96,11 +96,52 @@ class NotificationServiceTest {
         sub.setRecipientEmail("check@example.com");
 
         notificationService.processAndSendNotifications(
-                List.of(sub), Collections.emptyList(), List.of("name"), 25, testWorkspace);
+                List.of(sub), Collections.emptyList(), List.of("name"), 25, testWorkspace, "Open Defects");
 
         ArgumentCaptor<MimeMessage> captor = ArgumentCaptor.forClass(MimeMessage.class);
         verify(mailSender).send(captor.capture());
-        assertEquals("[ve-emailer] Your Notification Digest", captor.getValue().getSubject());
+        assertEquals("[ve-mailer] Open Defects", captor.getValue().getSubject());
+    }
+
+    // ── buildMailSubject ──────────────────────────────────────────────────────
+
+    @Test
+    void buildMailSubject_NormalTitle() {
+        assertEquals("[ve-mailer] Open Defects", NotificationService.buildMailSubject("Open Defects"));
+    }
+
+    @Test
+    void buildMailSubject_SpecialCharactersPreserved() {
+        assertEquals("[ve-mailer] Critical: Security Bugs (P1)",
+                NotificationService.buildMailSubject("Critical: Security Bugs (P1)"));
+    }
+
+    @Test
+    void buildMailSubject_WhitespaceIsTrimmed() {
+        assertEquals("[ve-mailer] Stories Waiting for QA",
+                NotificationService.buildMailSubject("  Stories Waiting for QA  "));
+    }
+
+    @Test
+    void buildMailSubject_NullTitleUsesFallback() {
+        assertEquals("[ve-mailer] Notification", NotificationService.buildMailSubject(null));
+    }
+
+    @Test
+    void buildMailSubject_BlankTitleUsesFallback() {
+        assertEquals("[ve-mailer] Notification", NotificationService.buildMailSubject("   "));
+    }
+
+    @Test
+    void buildMailSubject_EmptyStringUsesFallback() {
+        assertEquals("[ve-mailer] Notification", NotificationService.buildMailSubject(""));
+    }
+
+    @Test
+    void buildMailSubject_NoDuplicatePrefixing() {
+        // If someone passes a title that already contains the prefix, it should not be doubled
+        assertEquals("[ve-mailer] [ve-mailer] Something",
+                NotificationService.buildMailSubject("[ve-mailer] Something"));
     }
 
     @Test
@@ -122,7 +163,7 @@ class NotificationServiceTest {
         List<String> fields = List.of(AiSummaryService.AI_SUMMARY_FIELD, "id", "name", "description");
 
         notificationService.processAndSendNotifications(
-                List.of(sub), List.of(entity), fields, 25, testWorkspace);
+                List.of(sub), List.of(entity), fields, 25, testWorkspace, "AI Filter");
 
         verify(aiSummaryService).generateSummary("Fix bug", "A bug needs fixing", "Some comment");
         verify(mailSender).send(any(MimeMessage.class));
@@ -140,7 +181,7 @@ class NotificationServiceTest {
         sub.setRecipientEmail("user@example.com");
 
         notificationService.processAndSendNotifications(
-                List.of(sub), List.of(entity), List.of("name"), 25, testWorkspace);
+                List.of(sub), List.of(entity), List.of("name"), 25, testWorkspace, "Some Filter");
 
         verifyNoInteractions(aiSummaryService);
     }
@@ -332,7 +373,7 @@ class NotificationServiceTest {
         List<String> fields = List.of(AiSummaryService.AI_SUMMARY_FIELD, "id", "phase");
 
         notificationService.processAndSendNotifications(
-                List.of(sub), List.of(entity), fields, 25, testWorkspace);
+                List.of(sub), List.of(entity), fields, 25, testWorkspace, "AI Filter");
 
         // AI summary must still be generated using the entity data fetched internally
         verify(aiSummaryService).generateSummary("Fix bug", "A bug needs fixing", "");
