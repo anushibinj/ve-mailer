@@ -21,7 +21,7 @@ public class AiSummaryService {
 
     private final ChatClient chatClient;
     private final TicketCommentService ticketCommentService;
-    private final String systemPrompt;
+    private final String systemPromptTemplate;
     private final String userPromptTemplate;
 
     public AiSummaryService(
@@ -31,7 +31,7 @@ public class AiSummaryService {
             @Value("classpath:prompts/ai-summary-user-prompt.md") Resource userPromptResource) {
         this.chatClient = chatClientBuilder.build();
         this.ticketCommentService = ticketCommentService;
-        this.systemPrompt = loadResource(systemPromptResource);
+        this.systemPromptTemplate = loadResource(systemPromptResource);
         this.userPromptTemplate = loadResource(userPromptResource);
     }
 
@@ -49,6 +49,9 @@ public class AiSummaryService {
                     .replace("{name}", nullSafe(name))
                     .replace("{description}", nullSafe(description))
                     .replace("{comments}", nullSafe(comments));
+            System.out.println("User prompt:\n" + userPrompt); // Debug logging of the final prompt
+            String systemPrompt = systemPromptTemplate
+                    .replace("{todaydatetime}", nullSafe(java.time.ZonedDateTime.now().toString()));
 
             String result = chatClient.prompt()
                     .system(systemPrompt)
