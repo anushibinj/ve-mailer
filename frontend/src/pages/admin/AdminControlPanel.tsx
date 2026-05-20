@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import NotificationPreferencesPage from './NotificationPreferencesPage';
+import AiPreferencesPage from './AiPreferencesPage';
 import WorkspaceManagementPage from './WorkspaceManagementPage';
 
-type AdminTab = 'notification-preferences' | 'workspaces';
+type AdminTab = 'notification-preferences' | 'ai-preferences' | 'workspaces';
 
 const tabs: { key: AdminTab; label: string }[] = [
   { key: 'notification-preferences', label: 'Configure Notification Preferences' },
+  { key: 'ai-preferences', label: 'Configure AI Preferences' },
   { key: 'workspaces', label: 'Manage Workspaces' },
 ];
 
@@ -40,6 +42,7 @@ export default function AdminControlPanel() {
         {/* Content area */}
         <div className="flex-1 min-w-0">
           {activeTab === 'notification-preferences' && <NotificationPreferencesPage />}
+          {activeTab === 'ai-preferences' && <AiPreferencesPage />}
           {activeTab === 'workspaces' && <WorkspaceManagementPage />}
         </div>
       </div>

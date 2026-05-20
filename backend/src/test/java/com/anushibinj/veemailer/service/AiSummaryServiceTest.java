@@ -11,8 +11,6 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.ChatClient.CallResponseSpec;
 import org.springframework.ai.chat.client.ChatClient.ChatClientRequestSpec;
 import org.springframework.core.io.ClassPathResource;
-import org.springframework.core.io.Resource;
-import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.Collections;
 import java.util.List;
@@ -26,7 +24,7 @@ import static org.mockito.Mockito.*;
 class AiSummaryServiceTest {
 
     @Mock
-    private ChatClient.Builder chatClientBuilder;
+    private DynamicAiClientService dynamicAiClientService;
 
     @Mock
     private ChatClient chatClient;
@@ -44,9 +42,10 @@ class AiSummaryServiceTest {
 
     @BeforeEach
     void setUp() {
-        when(chatClientBuilder.build()).thenReturn(chatClient);
+        // lenient: not all tests exercise the AI path (e.g. fetchComments tests)
+        lenient().when(dynamicAiClientService.getChatClient()).thenReturn(chatClient);
         aiSummaryService = new AiSummaryService(
-                chatClientBuilder,
+                dynamicAiClientService,
                 ticketCommentService,
                 new ClassPathResource("prompts/ai-summary-system-prompt.md"),
                 new ClassPathResource("prompts/ai-summary-user-prompt.md"));
@@ -166,11 +165,10 @@ class AiSummaryServiceTest {
     @Test
     void testConstructor_MissingResource_LoadsEmptyPrompt() {
         // When a resource doesn't exist, loadResource should handle gracefully
-        Resource missingResource = new ClassPathResource("prompts/nonexistent.md");
         AiSummaryService service = new AiSummaryService(
-                chatClientBuilder,
+                dynamicAiClientService,
                 ticketCommentService,
-                missingResource,
+                new ClassPathResource("prompts/nonexistent.md"),
                 new ClassPathResource("prompts/ai-summary-user-prompt.md"));
 
         // Should still be able to generate (with empty system prompt)

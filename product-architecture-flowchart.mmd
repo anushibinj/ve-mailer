@@ -12,6 +12,7 @@ flowchart TD
         FB[Filter Builder]
         ACP[Admin Control Panel]
         NPP[Notification Preferences Page]
+        AIPP[AI Preferences Page]
         WMP[Workspace Management Page]
         AI[Axios Interceptors]
     end
@@ -38,10 +39,13 @@ flowchart TD
             FCtrl[Filter Controller]
             SCtrl[Subscription Controller]
             NPCtrl[Notification Preferences Controller]
+            AIPCtrl[AI Preferences Controller]
             FS[Filter Service]
             SS[Subscription Service]
             NPS[Notification Preferences Service]
+            APS[AI Preferences Service]
             DMS[Dynamic Mail Sender Service]
+            DAIS[Dynamic AI Client Service]
             OTP[OTP Service]
             PS[Polling Service]
             NS[Notification Service]
@@ -58,6 +62,7 @@ flowchart TD
             WR[Workspace Repository]
             ESR[EmailSubscriber Repository]
             NPR[NotificationPreferences Repository]
+            APR[AiPreferences Repository]
         end
     end
 
@@ -81,8 +86,10 @@ flowchart TD
     PR --> FB
     PR --> ACP
     ACP --> NPP
+    ACP --> AIPP
     ACP --> WMP
     NPP --> AI
+    AIPP --> AI
     WMP --> AI
     LV --> AI
     WD --> AI
@@ -91,6 +98,7 @@ flowchart TD
     AI --> FCtrl
     AI --> SCtrl
     AI --> NPCtrl
+    AI --> AIPCtrl
 
     %% Security flow
     JF --> JWT
@@ -116,7 +124,9 @@ flowchart TD
     FCtrl --> FS
     SCtrl --> SS
     NPCtrl --> NPS
+    AIPCtrl --> APS
     NPS --> NPR
+    APS --> APR
     DMS --> NPS
     SS --> OTP
     OTP --> OTPR
@@ -126,9 +136,12 @@ flowchart TD
     PS --> FS
     PS --> NS
     NS --> AIS
+    AIS --> DAIS
+    DAIS --> APR
     AIS --> TCS
     TCS --> VE
-    AIS --> OPENAI
+    AIS --> DAIS
+    DAIS --> OPENAI
     NS --> DMS
     DMS --> SMTP
 
@@ -141,4 +154,5 @@ flowchart TD
     WR --> DB
     ESR --> DB
     NPR --> DB
+    APR --> DB
     RTS --> RTR

@@ -84,7 +84,7 @@ The backend is stateless between requests. An in-memory cache (`OctaneCacheServi
 | Persistence | Spring Data JPA, H2 (dev), PostgreSQL (prod)                      |
 | Security  | Spring Security, JWT (HMAC-SHA256), BCrypt password hashing, role-based access |
 | Email     | Dynamic SMTP via DB-stored NotificationPreferences (DynamicMailSenderService) |
-| AI        | Spring AI (OpenAI) — optional AI-generated ticket summaries in email digests |
+| AI        | Spring AI (OpenAI) — optional AI-generated ticket summaries; credentials stored in DB via AiPreferences (DynamicAiClientService) |
 | Scheduling | Spring `@Scheduled` — cron-based hourly trigger dispatches to subscribers by schedule type and configured hours |
 | Octane SDK | Microfocus ALM Octane SDK 25.4                                     |
 | Build     | Maven (backend), npm (frontend)                                     |
@@ -108,12 +108,15 @@ ve-mailer/
 │   │   │   ├── SecurityConfig.java   # Spring Security: JWT stateless, role-based access, 401/403 auth failure handlers
 │   │   │   └── WebConfig.java        # CORS configuration
 │   │   ├── controller/
+│   │   │   ├── AiPreferencesController.java        # Admin AI config (GET/PUT) — ADMIN only
 │   │   │   ├── AuthController.java         # Authentication endpoints (signup, login, etc.)
 │   │   │   ├── FilterController.java       # CRUD + execute filters
 │   │   │   ├── NotificationPreferencesController.java # Admin SMTP config (GET/PUT)
 │   │   │   ├── SubscriptionController.java
 │   │   │   └── WorkspaceController.java
 │   │   ├── dto/
+│   │   │   ├── AiPreferencesResponseDto.java        # Masked AI config response (api key always masked)
+│   │   │   ├── AiPreferencesUpdateDto.java          # AI config update request with URL validation
 │   │   │   ├── ApiErrorResponse.java       # Structured error response
 │   │   │   ├── ApiResponseWrapper.java     # Generic success/error wrapper
 │   │   │   ├── AuthResponseDto.java        # JWT tokens + user profile
@@ -133,6 +136,7 @@ ve-mailer/
 │   │   │   ├── VerifySignupOtpDto.java
 │   │   │   └── WorkspaceDto.java
 │   │   ├── model/
+│   │   │   ├── AiPreferences.java            # AI provider config entity (apiKey, baseUrl, completionsPath, model)
 │   │   │   ├── AppUser.java          # User entity (name, email, passwordHash, roles)
 │   │   │   ├── Role.java             # Role entity (ADMIN, MEMBER)
 │   │   │   ├── RefreshToken.java     # Refresh token entity (revocable, per-user)
@@ -147,6 +151,7 @@ ve-mailer/
 │   │   │   ├── ScheduleType.java     # DAILY | WEEKLY
 │   │   │   └── Status.java           # PENDING | ACTIVE
 │   │   ├── repository/
+│   │   │   ├── AiPreferencesRepository.java
 │   │   │   ├── AppUserRepository.java
 │   │   │   ├── EmailSubscriberRepository.java
 │   │   │   ├── FilterRepository.java
@@ -157,9 +162,12 @@ ve-mailer/
 │   │   │   └── WorkspaceRepository.java
 │   │   └── service/
 │   │       ├── AdminBootstrapService.java # Seeds ADMIN user + roles on first boot
+│   │       ├── AiPreferencesService.java  # Admin AI settings CRUD + API key masking
+│   │       ├── AiSummaryService.java      # Generates AI ticket summaries via DynamicAiClientService
 │   │       ├── AppUserDetailsService.java # Spring Security UserDetailsService
 │   │       ├── AuthService.java      # Signup, login, forgot/reset password, token refresh
 │   │       ├── CleanupService.java   # Purges expired OTPs every 5 min
+│   │       ├── DynamicAiClientService.java  # Builds Spring AI ChatClient from DB config at runtime
 │   │       ├── DynamicMailSenderService.java # Builds JavaMailSender from DB config
 │   │       ├── EmailService.java     # Async OTP email sender
 │   │       ├── FilterService.java    # Create filters + execute against Octane
@@ -489,6 +497,8 @@ app.bootstrap.admin.name=System Administrator
 ```
 
 > **SMTP configuration** is no longer in properties files. Configure email settings via the **Admin Control Panel → Configure Notification Preferences** in the UI. Settings are stored in the `notification_preferences` database table.
+
+> **AI configuration** is no longer in properties files. Configure AI provider settings via the **Admin Control Panel → Configure AI Preferences** in the UI. Settings are stored in the `ai_preferences` database table. The API key is never returned to the frontend.
 To switch to PostgreSQL, add the following to `application-prod.properties` and run with `SPRING_PROFILES_ACTIVE=prod`:
 
 ```properties
@@ -513,16 +523,18 @@ Located at `backend/src/main/resources/application-dev.properties`. Active when 
 
 ### AI Summary Configuration (Optional)
 
-The AI Summary feature uses Spring AI with OpenAI to generate concise ticket summaries in email digests. Configure the following in `application.properties`:
+The AI Summary feature uses Spring AI with OpenAI to generate concise ticket summaries in email digests.
 
-```properties
-# Spring AI (OpenAI) configuration
-spring.ai.openai.api-key=${OPENAI_API_KEY:YOUR_API_KEY}
-spring.ai.openai.base-url=https://api.openai.com
-spring.ai.openai.chat.options.model=gpt-4.1-mini
-```
+> **AI configuration is now database-backed.** No `spring.ai.openai.*` properties are required. Configure AI settings via the **Admin Control Panel → Configure AI Preferences** in the UI. Settings are stored in the `ai_preferences` database table.
 
-Set the `OPENAI_API_KEY` environment variable to your actual API key. **Never commit API keys to source control.**
+Fields configurable through the Admin Control Panel:
+
+| Field                  | Description                                          | Example                                   |
+|------------------------|------------------------------------------------------|-------------------------------------------|
+| API Key                | Provider API key — masked after save                 | `sk-...` or GitHub Copilot token          |
+| Base URL               | AI provider base URL                                 | `https://api.openai.com`                  |
+| Chat Completions Path  | Path for chat completion requests                    | `/v1/chat/completions` or `/chat/completions` |
+| Model                  | Model identifier                                     | `gpt-4.1-mini`                            |
 
 Prompts are stored in `backend/src/main/resources/prompts/` and can be customized without code changes:
 - `ai-summary-system-prompt.md` — defines summarization behavior and tone

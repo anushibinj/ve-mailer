@@ -221,3 +221,33 @@ export const adminUpdateNotificationPreferences = async (
   const response = await api.put('/api/admin/notification-preferences', payload);
   return response.data;
 };
+
+// --- Admin AI Preferences ---
+
+export interface AiPreferencesResponse {
+  apiKey: string; // always "(unchanged)" from the API
+  baseUrl: string;
+  chatCompletionsPath: string;
+  model: string;
+  configured: boolean;
+}
+
+export interface AiPreferencesUpdatePayload {
+  // Leave as "(unchanged)" to preserve existing key; provide new value to replace
+  apiKey?: string;
+  baseUrl: string;
+  chatCompletionsPath: string;
+  model: string;
+}
+
+export const adminGetAiPreferences = async (): Promise<AiPreferencesResponse> => {
+  const response = await api.get('/api/admin/ai-preferences');
+  return response.data;
+};
+
+export const adminUpdateAiPreferences = async (
+  payload: AiPreferencesUpdatePayload
+): Promise<AiPreferencesResponse> => {
+  const response = await api.put('/api/admin/ai-preferences', payload);
+  return response.data;
+};

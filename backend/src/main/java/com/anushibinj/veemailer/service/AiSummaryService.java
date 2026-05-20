@@ -19,17 +19,17 @@ public class AiSummaryService {
     /** Pseudo-field name used in filter templates to enable AI summary generation. */
     public static final String AI_SUMMARY_FIELD = "\u2728 AI Summary";
 
-    private final ChatClient chatClient;
+    private final DynamicAiClientService dynamicAiClientService;
     private final TicketCommentService ticketCommentService;
     private final String systemPromptTemplate;
     private final String userPromptTemplate;
 
     public AiSummaryService(
-            ChatClient.Builder chatClientBuilder,
+            DynamicAiClientService dynamicAiClientService,
             TicketCommentService ticketCommentService,
             @Value("classpath:prompts/ai-summary-system-prompt.md") Resource systemPromptResource,
             @Value("classpath:prompts/ai-summary-user-prompt.md") Resource userPromptResource) {
-        this.chatClient = chatClientBuilder.build();
+        this.dynamicAiClientService = dynamicAiClientService;
         this.ticketCommentService = ticketCommentService;
         this.systemPromptTemplate = loadResource(systemPromptResource);
         this.userPromptTemplate = loadResource(userPromptResource);
@@ -45,6 +45,8 @@ public class AiSummaryService {
      */
     public String generateSummary(String name, String description, String comments) {
         try {
+            ChatClient chatClient = dynamicAiClientService.getChatClient();
+
             String userPrompt = userPromptTemplate
                     .replace("{name}", nullSafe(name))
                     .replace("{description}", nullSafe(description))

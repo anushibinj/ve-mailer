@@ -1,5 +1,6 @@
 package com.anushibinj.veemailer.controller;
 
+import com.anushibinj.veemailer.dto.AiPreferencesResponseDto;
 import com.anushibinj.veemailer.dto.ScheduleDto;
 import com.anushibinj.veemailer.dto.SubscriptionResponseDTO;
 import com.anushibinj.veemailer.dto.WorkspaceResponseDto;
@@ -7,6 +8,7 @@ import com.anushibinj.veemailer.model.Filter;
 import com.anushibinj.veemailer.model.ScheduleType;
 import com.anushibinj.veemailer.model.Workspace;
 import com.anushibinj.veemailer.repository.FilterRepository;
+import com.anushibinj.veemailer.service.AiPreferencesService;
 import com.anushibinj.veemailer.service.FilterService;
 import com.anushibinj.veemailer.service.SubscriptionService;
 import com.anushibinj.veemailer.service.WorkspaceService;
@@ -55,6 +57,9 @@ class AuthorizationIntegrationTest {
 
     @MockBean
     private FilterService filterService;
+
+    @MockBean
+    private AiPreferencesService aiPreferencesService;
 
     private static final UUID WORKSPACE_ID = UUID.randomUUID();
     private static final UUID FILTER_ID = UUID.randomUUID();
@@ -320,6 +325,34 @@ class AuthorizationIntegrationTest {
         doNothing().when(subscriptionService).runSubscription(any(UUID.class), any(UUID.class));
 
         mockMvc.perform(post("/api/v1/workspaces/{wid}/subscriptions/{sid}/run", WORKSPACE_ID, SUB_ID))
+                .andExpect(status().isOk());
+    }
+
+    // ── AI Preferences (ADMIN only) ───────────────────────────────────────────
+
+    @Test
+    @WithMockUser(username = "member@test.com", roles = "MEMBER")
+    void member_cannotGetAiPreferences() throws Exception {
+        mockMvc.perform(get("/api/admin/ai-preferences"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(username = "member@test.com", roles = "MEMBER")
+    void member_cannotUpdateAiPreferences() throws Exception {
+        mockMvc.perform(put("/api/admin/ai-preferences")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"baseUrl\":\"https://api.openai.com\",\"chatCompletionsPath\":\"/chat/completions\",\"model\":\"gpt-4\",\"apiKey\":\"sk-key\"}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(username = "admin@test.com", roles = "ADMIN")
+    void admin_canGetAiPreferences() throws Exception {
+        when(aiPreferencesService.get()).thenReturn(AiPreferencesResponseDto.builder()
+                .configured(false).build());
+
+        mockMvc.perform(get("/api/admin/ai-preferences"))
                 .andExpect(status().isOk());
     }
 }
