@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
+import jakarta.persistence.ForeignKey;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -35,7 +36,8 @@ public class Filter {
     /** The workspace this filter template belongs to. Not serialised — the workspaceId FK is sufficient for the frontend. */
     @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "workspace_id", nullable = false)
+    @JoinColumn(name = "workspace_id", nullable = false,
+            foreignKey = @ForeignKey(name = "fk_filters_workspace_id"))
     private Workspace workspace;
 
     /** Octane subtype, e.g. "defect", "story", "feature" */

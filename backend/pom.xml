@@ -95,6 +95,12 @@
 			</exclusions>
 		</dependency>
 
+		<!-- Flyway DB migration (9.x bundles all DB drivers including PostgreSQL) -->
+		<dependency>
+			<groupId>org.flywaydb</groupId>
+			<artifactId>flyway-core</artifactId>
+		</dependency>
+
 		<!-- H2 and PostgreSQL -->
 		<dependency>
 			<groupId>com.h2database</groupId>
