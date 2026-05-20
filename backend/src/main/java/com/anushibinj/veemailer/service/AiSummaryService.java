@@ -49,7 +49,7 @@ public class AiSummaryService {
                     .replace("{name}", nullSafe(name))
                     .replace("{description}", nullSafe(description))
                     .replace("{comments}", nullSafe(comments));
-            System.out.println("User prompt:\n" + userPrompt); // Debug logging of the final prompt
+
             String systemPrompt = systemPromptTemplate
                     .replace("{todaydatetime}", nullSafe(java.time.ZonedDateTime.now().toString()));
 
