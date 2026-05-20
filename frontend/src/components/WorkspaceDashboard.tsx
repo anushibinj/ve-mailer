@@ -7,6 +7,7 @@ import {
   type Filter,
   type Schedule,
 } from '../services/apiService';
+import { formatHourLabel } from '../services/scheduleUtils';
 import { useAuth } from '../hooks/useAuth';
 import { Loader2, ArrowLeft, SlidersHorizontal, Pencil, Play, Plus } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -72,11 +73,9 @@ const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({ workspaceId, on
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workspaceId]);
 
-  const formatHour = (h: number) => `${String(h).padStart(2, '0')}:00`;
-
   const formatSchedule = (schedule: Schedule): string => {
     const typeLabel = schedule.type === 'DAILY' ? 'Daily' : 'Weekly (Mon)';
-    const hoursLabel = schedule.hours.map(formatHour).join(', ');
+    const hoursLabel = schedule.hours.map(formatHourLabel).join(', ');
     return `${typeLabel} @ ${hoursLabel}`;
   };
 

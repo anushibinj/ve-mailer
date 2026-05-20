@@ -5,6 +5,7 @@ import {
   type Subscription,
   type Schedule,
 } from '../services/apiService';
+import { formatHourLabel } from '../services/scheduleUtils';
 import { Loader2, X, Plus } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -33,8 +34,6 @@ const EditSubscriptionModal: React.FC<EditSubscriptionModalProps> = ({
   const [isDeleting, setIsDeleting] = useState(false);
 
   if (!isOpen) return null;
-
-  const formatHour = (h: number) => `${String(h).padStart(2, '0')}:00`;
 
   const handleAddHour = () => {
     if (!scheduledHours.includes(hourToAdd)) {
@@ -147,7 +146,7 @@ const EditSubscriptionModal: React.FC<EditSubscriptionModalProps> = ({
                       className="flex-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white text-sm"
                     >
                       {Array.from({ length: 24 }, (_, i) => (
-                        <option key={i} value={i}>{String(i).padStart(2, '0')}:00</option>
+                        <option key={i} value={i}>{formatHourLabel(i)}</option>
                       ))}
                     </select>
                     <button
@@ -166,7 +165,7 @@ const EditSubscriptionModal: React.FC<EditSubscriptionModalProps> = ({
                     <div className="flex flex-wrap gap-1.5">
                       {scheduledHours.map(h => (
                         <span key={h} className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">
-                          {formatHour(h)}
+                          {formatHourLabel(h)}
                           <button type="button" onClick={() => handleRemoveHour(h)} className="hover:text-blue-600">
                             <X className="h-3 w-3" />
                           </button>
