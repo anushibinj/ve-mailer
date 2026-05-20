@@ -52,6 +52,8 @@ class PollingServiceTest {
         workspace1.setId(UUID.randomUUID());
         workspace1.setClientId("client-id-1");
         workspace1.setClientKey("client-key-1");
+        workspace1.setSharedSpaceId("1001");
+        workspace1.setWorkspaceId("2001");
 
         workspace2 = new Workspace();
         workspace2.setId(UUID.randomUUID());
@@ -169,7 +171,7 @@ class PollingServiceTest {
 
         verify(filterService).getFilterFields(filter1.getId());
         verify(filterService).executeFilter(filter1.getId(), workspace1.getId());
-        verify(notificationService).processAndSendNotifications(List.of(subscriber), results, fields, 25, workspace1.getId());
+        verify(notificationService).processAndSendNotifications(List.of(subscriber), results, fields, 25, workspace1);
     }
 
     @Test

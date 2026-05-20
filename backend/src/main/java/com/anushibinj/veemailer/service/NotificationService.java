@@ -1,6 +1,9 @@
 package com.anushibinj.veemailer.service;
 
+import com.anushibinj.veemailer.model.EmailSubscriber;
+import com.anushibinj.veemailer.model.Workspace;
 import com.anushibinj.veemailer.service.extractor.FieldExtractorRegistry;
+import com.anushibinj.veemailer.service.ve.ValueEdgeProperties;
 import org.jsoup.Jsoup;
 import org.jsoup.safety.Safelist;
 import com.hpe.adm.nga.sdk.model.BooleanFieldModel;
@@ -22,16 +25,23 @@ import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
-import com.anushibinj.veemailer.model.EmailSubscriber;
-
 import java.util.List;
-import java.util.UUID;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class NotificationService {
+
+    /** Fields that are rendered as clickable hyperlinks to the ValueEdge ticket page. */
+    static final Set<String> HYPERLINK_FIELDS = Set.of("id", "global_id_udf");
+
+    /**
+     * Carries the ValueEdge connection details needed to generate ticket hyperlinks.
+     * Pass {@code null} to disable hyperlink generation.
+     */
+    record TicketLinkContext(String serverUrl, String sharedSpaceId, String workspaceId) {}
 
     // Use the admin email configured in application.properties as the sender address
     @Value("${spring.mail.username}")
@@ -40,13 +50,14 @@ public class NotificationService {
     private final JavaMailSender mailSender;
     private final FieldExtractorRegistry fieldExtractorRegistry;
     private final AiSummaryService aiSummaryService;
+    private final ValueEdgeProperties valueEdgeProperties;
 
     @Async
     public void processAndSendNotifications(List<EmailSubscriber> subscribers,
                                             List<EntityModel> results,
                                             List<String> fields,
                                             int limit,
-                                            UUID workspaceId) {
+                                            Workspace workspace) {
         // Check if AI Summary is enabled and generate summaries
         boolean aiSummaryEnabled = fields.contains(AiSummaryService.AI_SUMMARY_FIELD);
         List<String> displayFields = fields;
@@ -65,12 +76,17 @@ public class NotificationService {
                 String name = extractFieldValue("name", entity.getValue("name"));
                 String description = extractFieldValue("description", entity.getValue("description"));
                 String ticketId = extractFieldValue("id", entity.getValue("id"));
-                String comments = aiSummaryService.fetchComments(ticketId, workspaceId);
+                String comments = aiSummaryService.fetchComments(ticketId, workspace.getId());
                 aiSummaries[i] = aiSummaryService.generateSummary(name, description, comments);
             }
         }
 
-        String htmlBody = buildHtmlTable(results, displayFields, limit, aiSummaryEnabled, aiSummaries);
+        // Build the link context so ticket id/global_id_udf cells render as hyperlinks.
+        TicketLinkContext linkContext = new TicketLinkContext(
+                valueEdgeProperties.getServerUrl(),
+                workspace.getSharedSpaceId(),
+                workspace.getWorkspaceId());
+        String htmlBody = buildHtmlTable(results, displayFields, limit, aiSummaryEnabled, aiSummaries, linkContext);
         for (EmailSubscriber subscriber : subscribers) {
             sendEmail(subscriber.getRecipientEmail(), htmlBody);
         }
@@ -91,12 +107,23 @@ public class NotificationService {
     }
 
     /**
-     * Builds a styled HTML table whose columns are the filter's field names and
-     * whose rows are the Octane entities returned by the filter execution.
-     * When AI Summary is enabled, it appears as the first column.
+     * Convenience overload — delegates to the full implementation with no hyperlink context.
      */
     String buildHtmlTable(List<EntityModel> results, List<String> fields, int limit,
                           boolean aiSummaryEnabled, String[] aiSummaries) {
+        return buildHtmlTable(results, fields, limit, aiSummaryEnabled, aiSummaries, null);
+    }
+
+    /**
+     * Builds a styled HTML table whose columns are the filter's field names and
+     * whose rows are the Octane entities returned by the filter execution.
+     * When AI Summary is enabled, it appears as the first column.
+     * When {@code linkContext} is provided, hyperlink-eligible fields ({@code id},
+     * {@code global_id_udf}) are rendered as clickable deep-links to the ValueEdge ticket page.
+     */
+    String buildHtmlTable(List<EntityModel> results, List<String> fields, int limit,
+                          boolean aiSummaryEnabled, String[] aiSummaries,
+                          TicketLinkContext linkContext) {
         StringBuilder sb = new StringBuilder();
         sb.append("<html><body style=\"font-family:Arial,sans-serif;font-size:14px;\">")
           .append("<p>Here is your notification digest:</p>");
@@ -136,9 +163,17 @@ public class NotificationService {
                 }
                 for (String field : fields) {
                     String cellValue = extractFieldValue(field, entity.getValue(field));
-                    sb.append("<td style=\"padding:8px;\">")
-                      .append(escapeHtml(cellValue))
-                      .append("</td>");
+                    sb.append("<td style=\"padding:8px;\">" );
+                    if (linkContext != null && HYPERLINK_FIELDS.contains(field)) {
+                        // Hyperlink-eligible field: render as anchor to the VE ticket page.
+                        // For global_id_udf the display text is the field's own value, but
+                        // the URL always uses the internal numeric id for navigation.
+                        String ticketId = extractFieldValue("id", entity.getValue("id"));
+                        sb.append(buildTicketLink(linkContext, ticketId, cellValue));
+                    } else {
+                        sb.append(escapeHtml(cellValue));
+                    }
+                    sb.append("</td>");
                 }
                 sb.append("</tr>");
             }
@@ -234,5 +269,27 @@ public class NotificationService {
     String sanitizeAiHtml(String html) {
         if (html == null || html.isEmpty()) return "";
         return Jsoup.clean(html, Safelist.basic());
+    }
+
+    /**
+     * Builds an HTML anchor pointing to a ValueEdge ticket page.
+     *
+     * @param ctx      VE connection context (server URL, shared-space ID, workspace ID)
+     * @param ticketId the internal numeric Octane ticket ID used in the navigation URL
+     * @param label    the display text for the anchor (HTML-escaped before insertion)
+     * @return an {@code <a href="...">label</a>} string, or the escaped label if ticketId is blank
+     */
+    private String buildTicketLink(TicketLinkContext ctx, String ticketId, String label) {
+        if (ticketId == null || ticketId.isBlank()) {
+            return escapeHtml(label);
+        }
+        // The fragment (#/entity-navigation...) is client-side routing; the & inside it
+        // must be escaped to &amp; when placed inside an HTML href attribute.
+        String href = ctx.serverUrl()
+                + "/ui/?p=" + ctx.sharedSpaceId()
+                + "/" + ctx.workspaceId()
+                + "#/entity-navigation?entityType=work_item&id="
+                + ticketId;
+        return "<a href=\"" + escapeHtml(href) + "\" style=\"color:#1a73e8;\">" + escapeHtml(label) + "</a>";
     }
 }

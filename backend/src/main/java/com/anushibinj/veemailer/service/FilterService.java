@@ -115,25 +115,9 @@ public class FilterService {
             List<String> fields = objectMapper.readValue(filter.getFields(), new TypeReference<>() {});
             List<FilterCriteriaClause> clauses = objectMapper.readValue(filter.getCriteria(), new TypeReference<>() {});
 
-            // Determine the effective set of fields to fetch from the ticketing service.
-            // This differs from the user-selected fields in two ways:
-            //   1. The AI Summary pseudo-field is stripped (it is never a real Octane field).
-            //   2. When AI Summary is enabled, name and description are added as internal
-            //      dependencies even if the user did not choose to display them.
-            //      (Comments are fetched via a separate TicketCommentService API call.)
-            boolean aiSummaryRequested = fields.contains(AiSummaryService.AI_SUMMARY_FIELD);
-            List<String> effectiveFetchFields = fields.stream()
-                    .filter(f -> !AiSummaryService.AI_SUMMARY_FIELD.equals(f))
-                    .collect(Collectors.toList());
-            if (aiSummaryRequested) {
-                // name and description are fetched silently for AI generation
-                // regardless of what the user chose to show in the final email output.
-                for (String dep : List.of("name", "description")) {
-                    if (!effectiveFetchFields.contains(dep)) {
-                        effectiveFetchFields.add(dep);
-                    }
-                }
-            }
+            // Compute the effective fields to fetch — strips pseudo-fields, adds silent
+            // dependencies (AI Summary → name+description, always → id).
+            List<String> effectiveFetchFields = computeEffectiveFetchFields(fields);
 
             Octane octaneClient = octaneCacheService.getOctaneClient(
                     valueEdgeProperties.getServerUrl(),
@@ -161,6 +145,41 @@ public class FilterService {
     /** Returns the configured maximum number of results returned per filter execution. */
     public int getQueryLimit() {
         return queryLimit;
+    }
+
+    /**
+     * Computes the effective set of fields to fetch from Octane for a given set of
+     * user-selected field names.
+     *
+     * <p>Differences from the raw user-selected list:
+     * <ol>
+     *   <li>The AI Summary pseudo-field is stripped — it is never a real Octane field.</li>
+     *   <li>When AI Summary is enabled, {@code name} and {@code description} are added as
+     *       silent internal dependencies for AI generation, even if not chosen for display.</li>
+     *   <li>{@code id} is always added for ticket hyperlink generation, regardless of whether
+     *       the user selected it as a visible column.</li>
+     * </ol>
+     *
+     * <p>Package-private to allow direct unit testing without mocking the Octane client.
+     */
+    List<String> computeEffectiveFetchFields(List<String> fields) {
+        List<String> effectiveFetchFields = fields.stream()
+                .filter(f -> !AiSummaryService.AI_SUMMARY_FIELD.equals(f))
+                .collect(Collectors.toList());
+        if (fields.contains(AiSummaryService.AI_SUMMARY_FIELD)) {
+            // name and description are fetched silently for AI generation
+            // regardless of what the user chose to show in the final email output.
+            for (String dep : List.of("name", "description")) {
+                if (!effectiveFetchFields.contains(dep)) {
+                    effectiveFetchFields.add(dep);
+                }
+            }
+        }
+        // id is always fetched for ticket hyperlink generation (id and global_id_udf fields).
+        if (!effectiveFetchFields.contains("id")) {
+            effectiveFetchFields.add("id");
+        }
+        return effectiveFetchFields;
     }
 
     /**

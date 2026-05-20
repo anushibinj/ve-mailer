@@ -90,7 +90,7 @@ public class PollingService {
             List<EntityModel> results = filterService.executeFilter(filterId, workspaceId);
             int               limit   = filterService.getQueryLimit();
 
-            notificationService.processAndSendNotifications(recipients, results, fields, limit, workspaceId);
+            notificationService.processAndSendNotifications(recipients, results, fields, limit, representative.getWorkspace());
         } catch (Exception e) {
             log.error("Failed to fetch or send notifications for filter {} / workspace {}",
                     representative.getFilter().getId(), representative.getWorkspace().getId(), e);

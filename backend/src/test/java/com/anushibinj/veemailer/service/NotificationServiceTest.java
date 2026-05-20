@@ -1,7 +1,9 @@
 package com.anushibinj.veemailer.service;
 
 import com.anushibinj.veemailer.model.EmailSubscriber;
+import com.anushibinj.veemailer.model.Workspace;
 import com.anushibinj.veemailer.service.extractor.FieldExtractorRegistry;
+import com.anushibinj.veemailer.service.ve.ValueEdgeProperties;
 import com.hpe.adm.nga.sdk.model.EntityModel;
 import com.hpe.adm.nga.sdk.model.ReferenceFieldModel;
 import com.hpe.adm.nga.sdk.model.StringFieldModel;
@@ -35,16 +37,23 @@ class NotificationServiceTest {
     @Mock
     private AiSummaryService aiSummaryService;
 
+    @Mock
+    private ValueEdgeProperties valueEdgeProperties;
+
     // Use a real registry so extractor behaviour is tested end-to-end.
     private final FieldExtractorRegistry registry = new FieldExtractorRegistry();
 
-    private static final UUID TEST_WORKSPACE_ID = UUID.randomUUID();
+    private Workspace testWorkspace;
 
     private NotificationService notificationService;
 
     @BeforeEach
     void setUp() {
-        notificationService = new NotificationService(mailSender, registry, aiSummaryService);
+        testWorkspace = new Workspace();
+        testWorkspace.setId(UUID.randomUUID());
+        testWorkspace.setSharedSpaceId("4001");
+        testWorkspace.setWorkspaceId("5015");
+        notificationService = new NotificationService(mailSender, registry, aiSummaryService, valueEdgeProperties);
         ReflectionTestUtils.setField(notificationService, "from", "noreply@test.com");
     }
 
@@ -65,7 +74,7 @@ class NotificationServiceTest {
         sub2.setRecipientEmail("user2@example.com");
 
         notificationService.processAndSendNotifications(
-                List.of(sub1, sub2), Collections.emptyList(), List.of("name"), 25, TEST_WORKSPACE_ID);
+                List.of(sub1, sub2), Collections.emptyList(), List.of("name"), 25, testWorkspace);
 
         verify(mailSender, times(2)).send(any(MimeMessage.class));
     }
@@ -73,7 +82,7 @@ class NotificationServiceTest {
     @Test
     void testProcessAndSendNotifications_EmptyList_NoEmailSent() {
         notificationService.processAndSendNotifications(
-                Collections.emptyList(), Collections.emptyList(), List.of("name"), 25, TEST_WORKSPACE_ID);
+                Collections.emptyList(), Collections.emptyList(), List.of("name"), 25, testWorkspace);
 
         verify(mailSender, never()).send(any(MimeMessage.class));
     }
@@ -87,7 +96,7 @@ class NotificationServiceTest {
         sub.setRecipientEmail("check@example.com");
 
         notificationService.processAndSendNotifications(
-                List.of(sub), Collections.emptyList(), List.of("name"), 25, TEST_WORKSPACE_ID);
+                List.of(sub), Collections.emptyList(), List.of("name"), 25, testWorkspace);
 
         ArgumentCaptor<MimeMessage> captor = ArgumentCaptor.forClass(MimeMessage.class);
         verify(mailSender).send(captor.capture());
@@ -113,7 +122,7 @@ class NotificationServiceTest {
         List<String> fields = List.of(AiSummaryService.AI_SUMMARY_FIELD, "id", "name", "description");
 
         notificationService.processAndSendNotifications(
-                List.of(sub), List.of(entity), fields, 25, TEST_WORKSPACE_ID);
+                List.of(sub), List.of(entity), fields, 25, testWorkspace);
 
         verify(aiSummaryService).generateSummary("Fix bug", "A bug needs fixing", "Some comment");
         verify(mailSender).send(any(MimeMessage.class));
@@ -131,7 +140,7 @@ class NotificationServiceTest {
         sub.setRecipientEmail("user@example.com");
 
         notificationService.processAndSendNotifications(
-                List.of(sub), List.of(entity), List.of("name"), 25, TEST_WORKSPACE_ID);
+                List.of(sub), List.of(entity), List.of("name"), 25, testWorkspace);
 
         verifyNoInteractions(aiSummaryService);
     }
@@ -323,7 +332,7 @@ class NotificationServiceTest {
         List<String> fields = List.of(AiSummaryService.AI_SUMMARY_FIELD, "id", "phase");
 
         notificationService.processAndSendNotifications(
-                List.of(sub), List.of(entity), fields, 25, TEST_WORKSPACE_ID);
+                List.of(sub), List.of(entity), fields, 25, testWorkspace);
 
         // AI summary must still be generated using the entity data fetched internally
         verify(aiSummaryService).generateSummary("Fix bug", "A bug needs fixing", "");
@@ -424,5 +433,107 @@ class NotificationServiceTest {
 
         assertFalse(html.contains("<script>"), "script tag must be stripped from AI summary");
         assertTrue(html.contains("Ticket is done."), "Safe summary text must remain");
+    }
+
+    // ── ticket hyperlink generation ───────────────────────────────────────────
+
+    @Test
+    void testBuildHtmlTable_IdField_RenderedAsHyperlink() {
+        EntityModel entity = new EntityModel(Set.of(
+                new StringFieldModel("id", "12345"),
+                new StringFieldModel("name", "Login Bug")
+        ));
+        NotificationService.TicketLinkContext ctx =
+                new NotificationService.TicketLinkContext("https://ve.example.com", "4001", "5015");
+
+        String html = notificationService.buildHtmlTable(
+                List.of(entity), List.of("id", "name"), 25, false, null, ctx);
+
+        assertTrue(html.contains("href="), "id field must be rendered as a hyperlink");
+        assertTrue(html.contains("12345"), "id value must appear as link text");
+        assertTrue(html.contains("ve.example.com"), "server URL must appear in the link");
+        assertTrue(html.contains("id=12345"), "ticket id must appear in the URL");
+    }
+
+    @Test
+    void testBuildHtmlTable_IdField_HyperlinkUrlFormat() {
+        // Verify the exact URL structure for id hyperlinks.
+        EntityModel entity = new EntityModel(Set.of(new StringFieldModel("id", "99")));
+        NotificationService.TicketLinkContext ctx =
+                new NotificationService.TicketLinkContext("https://ve.example.com", "4001", "5015");
+
+        String html = notificationService.buildHtmlTable(
+                List.of(entity), List.of("id"), 25, false, null, ctx);
+
+        // URL must follow: serverUrl/ui/?p=sharedSpaceId/workspaceId#/entity-navigation?entityType=work_item&id=ticketId
+        assertTrue(html.contains("/ui/?p=4001/5015"), "URL must contain shared-space and workspace IDs");
+        assertTrue(html.contains("entityType=work_item"), "URL must specify entity type");
+        // & in the HTML href attribute must be encoded as &amp;
+        assertTrue(html.contains("&amp;id=99"), "& before id param must be HTML-escaped as &amp; in href");
+    }
+
+    @Test
+    void testBuildHtmlTable_GlobalIdUdf_RenderedAsHyperlinkUsingInternalId() {
+        // global_id_udf displays the global identifier text but the URL must use the internal id.
+        EntityModel entity = new EntityModel(Set.of(
+                new StringFieldModel("id", "12345"),
+                new StringFieldModel("global_id_udf", "OCTCR77BD384588")
+        ));
+        NotificationService.TicketLinkContext ctx =
+                new NotificationService.TicketLinkContext("https://ve.example.com", "4001", "5015");
+
+        String html = notificationService.buildHtmlTable(
+                List.of(entity), List.of("global_id_udf"), 25, false, null, ctx);
+
+        assertTrue(html.contains("OCTCR77BD384588"), "global_id_udf value must be the link text");
+        assertTrue(html.contains("id=12345"), "URL must use the internal numeric id, not global_id_udf");
+        assertTrue(html.contains("href="), "global_id_udf must be wrapped in an anchor");
+    }
+
+    @Test
+    void testBuildHtmlTable_HyperlinkNotRenderedWithoutLinkContext() {
+        // When linkContext is null (backward-compatible 5-arg call), id renders as plain text.
+        EntityModel entity = new EntityModel(Set.of(new StringFieldModel("id", "12345")));
+
+        // 5-arg overload — no link context
+        String html = notificationService.buildHtmlTable(
+                List.of(entity), List.of("id"), 25, false, null);
+
+        assertFalse(html.contains("href="), "id must NOT be a hyperlink when linkContext is null");
+        assertTrue(html.contains("12345"), "id value must still appear as plain text");
+    }
+
+    @Test
+    void testBuildHtmlTable_HyperlinkLabel_IsHtmlEscaped() {
+        // The label text is HTML-escaped before insertion even for hyperlinked fields.
+        EntityModel entity = new EntityModel(Set.of(
+                new StringFieldModel("id", "1"),
+                new StringFieldModel("global_id_udf", "<b>XSS</b>")
+        ));
+        NotificationService.TicketLinkContext ctx =
+                new NotificationService.TicketLinkContext("https://ve.example.com", "4001", "5015");
+
+        String html = notificationService.buildHtmlTable(
+                List.of(entity), List.of("global_id_udf"), 25, false, null, ctx);
+
+        assertFalse(html.contains("<b>XSS</b>"), "label must be HTML-escaped inside the anchor");
+        assertTrue(html.contains("&lt;b&gt;XSS&lt;/b&gt;"), "label special chars must be escaped");
+    }
+
+    @Test
+    void testBuildHtmlTable_IdMissing_HyperlinkEligibleFieldFallsBackToEscapedText() {
+        // When the entity has no id field (should not happen after FilterService change,
+        // but must be safe), the hyperlink falls back to plain escaped text.
+        EntityModel entity = new EntityModel(Set.of(
+                new StringFieldModel("global_id_udf", "OCTCR-ABC")
+        ));
+        NotificationService.TicketLinkContext ctx =
+                new NotificationService.TicketLinkContext("https://ve.example.com", "4001", "5015");
+
+        String html = notificationService.buildHtmlTable(
+                List.of(entity), List.of("global_id_udf"), 25, false, null, ctx);
+
+        assertFalse(html.contains("href="), "without id, global_id_udf must not be a hyperlink");
+        assertTrue(html.contains("OCTCR-ABC"), "value must still appear as text");
     }
 }
