@@ -352,4 +352,77 @@ class NotificationServiceTest {
         assertFalse(html.contains(">Description<") || html.contains(">description<"),
                 "Description must not be a visible column header");
     }
+
+    // --- sanitizeAiHtml: HTML rendering tests ---
+
+    @Test
+    void testSanitizeAiHtml_AnchorTagPreserved() {
+        // Anchor tags produced by the LLM must survive sanitization so they are
+        // clickable inside the email body.
+        String input = "<a href=\"mailto:user@example.com\">@User Name</a> is waiting.";
+        String result = notificationService.sanitizeAiHtml(input);
+        assertTrue(result.contains("<a"), "Anchor tag must be preserved");
+        assertTrue(result.contains("href=\"mailto:user@example.com\""), "mailto href must be preserved");
+        assertTrue(result.contains("@User Name"), "Link text must be preserved");
+    }
+
+    @Test
+    void testSanitizeAiHtml_ScriptTagStripped() {
+        // Script tags must be removed to prevent XSS in email clients that render HTML.
+        String input = "<script>alert('xss')</script>Waiting for review.";
+        String result = notificationService.sanitizeAiHtml(input);
+        assertFalse(result.contains("<script>"), "script tag must be stripped by sanitizer");
+        assertTrue(result.contains("Waiting for review."), "Safe text must be retained");
+    }
+
+    @Test
+    void testSanitizeAiHtml_AllowedFormattingTagsPreserved() {
+        String input = "<b>Status:</b> <em>Waiting</em><br>2 days elapsed.";
+        String result = notificationService.sanitizeAiHtml(input);
+        assertTrue(result.contains("<b>"), "Bold tag must be preserved");
+        assertTrue(result.contains("<em>"), "Em tag must be preserved");
+        assertTrue(result.contains("<br>") || result.contains("<br />"), "br tag must be preserved");
+    }
+
+    @Test
+    void testSanitizeAiHtml_NullAndEmptyReturnEmpty() {
+        assertEquals("", notificationService.sanitizeAiHtml(null));
+        assertEquals("", notificationService.sanitizeAiHtml(""));
+    }
+
+    @Test
+    void testBuildHtmlTable_AiSummaryHtmlAnchorNotEscaped() {
+        // AI-generated anchor tags must appear as raw HTML in the table cell,
+        // not as escaped entities like &lt;a href...&gt;
+        EntityModel entity = new EntityModel(Set.of(
+                new StringFieldModel("name", "My Feature"),
+                new StringFieldModel("id", "1001")
+        ));
+        String anchorSummary = "<a href=\"mailto:dev@example.com\">@Dev</a> is waiting.";
+        String[] summaries = {anchorSummary};
+
+        String html = notificationService.buildHtmlTable(
+                List.of(entity), List.of("name"), 25, true, summaries);
+
+        assertFalse(html.contains("&lt;a"), "Anchor tag must NOT be HTML-escaped in the AI summary cell");
+        assertTrue(html.contains("<a"), "Anchor tag must render as raw HTML in the AI summary cell");
+        assertTrue(html.contains("@Dev"), "Link text must be present");
+    }
+
+    @Test
+    void testBuildHtmlTable_AiSummaryScriptTagSanitized() {
+        // Even if the LLM returns a dangerous tag (e.g. due to prompt injection),
+        // it must be stripped before the email is sent.
+        EntityModel entity = new EntityModel(Set.of(
+                new StringFieldModel("name", "My Feature")
+        ));
+        String maliciousSummary = "<script>alert('xss')</script>Ticket is done.";
+        String[] summaries = {maliciousSummary};
+
+        String html = notificationService.buildHtmlTable(
+                List.of(entity), List.of("name"), 25, true, summaries);
+
+        assertFalse(html.contains("<script>"), "script tag must be stripped from AI summary");
+        assertTrue(html.contains("Ticket is done."), "Safe summary text must remain");
+    }
 }

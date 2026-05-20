@@ -1,6 +1,8 @@
 package com.anushibinj.veemailer.service;
 
 import com.anushibinj.veemailer.service.extractor.FieldExtractorRegistry;
+import org.jsoup.Jsoup;
+import org.jsoup.safety.Safelist;
 import com.hpe.adm.nga.sdk.model.BooleanFieldModel;
 import com.hpe.adm.nga.sdk.model.DateFieldModel;
 import com.hpe.adm.nga.sdk.model.EntityModel;
@@ -126,8 +128,10 @@ public class NotificationService {
                 if (aiSummaryEnabled) {
                     String summary = (aiSummaries != null && i < aiSummaries.length)
                             ? aiSummaries[i] : "AI summary unavailable.";
+                    // AI summary is rendered as sanitized HTML — not escaped — so anchor tags,
+                    // emphasis, and other email-safe formatting display correctly.
                     sb.append("<td style=\"padding:8px;\">")
-                      .append(escapeHtml(summary))
+                      .append(sanitizeAiHtml(summary))
                       .append("</td>");
                 }
                 for (String field : fields) {
@@ -217,5 +221,18 @@ public class NotificationService {
                    .replace("<", "&lt;")
                    .replace(">", "&gt;")
                    .replace("\"", "&quot;");
+    }
+
+    /**
+     * Sanitizes AI-generated HTML before injecting it into the email body.
+     * Allows a safe subset of email-friendly tags (links, emphasis, lists) and
+     * strips dangerous elements (script, iframe, event attributes, etc.).
+     *
+     * <p>jsoup's {@link Safelist#basic()} permits: a (href with http/https/mailto),
+     * b, blockquote, br, cite, code, em, i, li, ol, p, small, span, strong, ul, etc.
+     */
+    String sanitizeAiHtml(String html) {
+        if (html == null || html.isEmpty()) return "";
+        return Jsoup.clean(html, Safelist.basic());
     }
 }

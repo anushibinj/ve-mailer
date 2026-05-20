@@ -63,7 +63,9 @@ class AiSummaryServiceTest {
 
         assertEquals("This ticket addresses a login defect.", summary);
         verify(requestSpec).system(anyString());
-        verify(requestSpec).user(contains("Fix login bug"));
+        // User prompt now only contains the {comments} placeholder; name/description
+        // are no longer in the user prompt template.
+        verify(requestSpec).user(contains("Confirmed by QA"));
     }
 
     @Test

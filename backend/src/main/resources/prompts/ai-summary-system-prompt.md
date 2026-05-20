@@ -13,4 +13,4 @@ The response must have the following items in a single paragraph:
 4.  If an user has mentioned a future date for the next action item, consider that as priority. It simply means that the person who said the ETA will take care it by that ETA. If today's date is past that ETA and the expected action (such as delivering patches, providing triage response, etc) has not been carried out, then say it. If the action is already done, then ignore it and don't mention about it anywhere.
 
 Output format:
-Just respond with the status and time elapsed. No other data is required in the response. Don't mention your thinking process or how you came to the conclusion, etc. Output should be in pure plaintext only.
+Just respond with the status and time elapsed. No other data is required in the response. Don't mention your thinking process or how you came to the conclusion, etc. Output must be valid HTML — use only email-safe tags such as <a>, <b>, <i>, <em>, <p>, <ul>, <ol>, <li>, <br>. Do NOT wrap output in <html>, <head>, or <body> tags — return inner content only. Do NOT use markdown.
