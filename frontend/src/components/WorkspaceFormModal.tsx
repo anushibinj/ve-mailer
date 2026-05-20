@@ -183,6 +183,28 @@ const WorkspaceFormModal: React.FC<WorkspaceFormModalProps> = ({
             )}
           </div>
 
+          {/* Root URL */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Root URL <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="url"
+              value={values.rootUrl}
+              onChange={handleChange('rootUrl')}
+              placeholder="e.g. https://octane.example.com"
+              className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                errors.rootUrl ? 'border-red-400 bg-red-50' : 'border-gray-300'
+              }`}
+            />
+            {errors.rootUrl && (
+              <p className="mt-1 text-xs text-red-600">{errors.rootUrl}</p>
+            )}
+            <p className="mt-1 text-xs text-gray-500">
+              Base URL of the ValueEdge / Octane server.
+            </p>
+          </div>
+
           {/* Shared Space ID */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -280,28 +302,6 @@ const WorkspaceFormModal: React.FC<WorkspaceFormModalProps> = ({
                 Enter a new value to replace the existing key, or leave as-is to keep it.
               </p>
             )}
-          </div>
-
-          {/* Root URL */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Root URL <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="url"
-              value={values.rootUrl}
-              onChange={handleChange('rootUrl')}
-              placeholder="e.g. https://octane.example.com"
-              className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                errors.rootUrl ? 'border-red-400 bg-red-50' : 'border-gray-300'
-              }`}
-            />
-            {errors.rootUrl && (
-              <p className="mt-1 text-xs text-red-600">{errors.rootUrl}</p>
-            )}
-            <p className="mt-1 text-xs text-gray-500">
-              Base URL of the ValueEdge / Octane server.
-            </p>
           </div>
 
           {/* Actions */}
