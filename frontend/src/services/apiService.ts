@@ -189,3 +189,35 @@ export const deleteSubscription = async (
 export const runSubscription = async (workspaceId: string, subscriptionId: string): Promise<void> => {
   await api.post(`/api/v1/workspaces/${workspaceId}/subscriptions/${subscriptionId}/run`);
 };
+
+// --- Admin Notification Preferences ---
+
+export interface NotificationPreferencesResponse {
+  host: string;
+  port: number;
+  username: string;
+  password: string; // always "(unchanged)" from the API
+  startTlsEnabled: boolean;
+  configured: boolean;
+}
+
+export interface NotificationPreferencesUpdatePayload {
+  host: string;
+  port: number;
+  username: string;
+  // Leave as "(unchanged)" to preserve existing password; provide new value to replace
+  password?: string;
+  startTlsEnabled: boolean;
+}
+
+export const adminGetNotificationPreferences = async (): Promise<NotificationPreferencesResponse> => {
+  const response = await api.get('/api/admin/notification-preferences');
+  return response.data;
+};
+
+export const adminUpdateNotificationPreferences = async (
+  payload: NotificationPreferencesUpdatePayload
+): Promise<NotificationPreferencesResponse> => {
+  const response = await api.put('/api/admin/notification-preferences', payload);
+  return response.data;
+};

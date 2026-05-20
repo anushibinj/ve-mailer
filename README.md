@@ -83,7 +83,7 @@ The backend is stateless between requests. An in-memory cache (`OctaneCacheServi
 | Backend   | Java 17, Spring Boot 3.2.5                                          |
 | Persistence | Spring Data JPA, H2 (dev), PostgreSQL (prod)                      |
 | Security  | Spring Security, JWT (HMAC-SHA256), BCrypt password hashing, role-based access |
-| Email     | Spring Mail (JavaMailSender)                                        |
+| Email     | Dynamic SMTP via DB-stored NotificationPreferences (DynamicMailSenderService) |
 | AI        | Spring AI (OpenAI) — optional AI-generated ticket summaries in email digests |
 | Scheduling | Spring `@Scheduled` — cron-based hourly trigger dispatches to subscribers by schedule type and configured hours |
 | Octane SDK | Microfocus ALM Octane SDK 25.4                                     |
@@ -110,6 +110,7 @@ ve-mailer/
 │   │   ├── controller/
 │   │   │   ├── AuthController.java         # Authentication endpoints (signup, login, etc.)
 │   │   │   ├── FilterController.java       # CRUD + execute filters
+│   │   │   ├── NotificationPreferencesController.java # Admin SMTP config (GET/PUT)
 │   │   │   ├── SubscriptionController.java
 │   │   │   └── WorkspaceController.java
 │   │   ├── dto/
@@ -119,6 +120,8 @@ ve-mailer/
 │   │   │   ├── ForgotPasswordRequestDto.java
 │   │   │   ├── FilterDto.java              # Create-filter request DTO
 │   │   │   ├── LoginRequestDto.java
+│   │   │   ├── NotificationPreferencesResponseDto.java # Masked SMTP config response
+│   │   │   ├── NotificationPreferencesUpdateDto.java   # SMTP config update request
 │   │   │   ├── RefreshTokenRequestDto.java
 │   │   │   ├── ResetPasswordDto.java
 │   │   │   ├── ScheduleDto.java            # { type: DAILY|WEEKLY, hours: [int] }
@@ -133,6 +136,7 @@ ve-mailer/
 │   │   │   ├── AppUser.java          # User entity (name, email, passwordHash, roles)
 │   │   │   ├── Role.java             # Role entity (ADMIN, MEMBER)
 │   │   │   ├── RefreshToken.java     # Refresh token entity (revocable, per-user)
+│   │   │   ├── NotificationPreferences.java # SMTP config entity (host, port, username, password, TLS)
 │   │   │   ├── Workspace.java
 │   │   │   ├── Filter.java                 # title, description, entityType, fields (JSON), criteria (JSON)
 │   │   │   ├── FilterCriteriaClause.java   # POJO: field, operator, negate, values[]
@@ -146,6 +150,7 @@ ve-mailer/
 │   │   │   ├── AppUserRepository.java
 │   │   │   ├── EmailSubscriberRepository.java
 │   │   │   ├── FilterRepository.java
+│   │   │   ├── NotificationPreferencesRepository.java
 │   │   │   ├── OtpRequestRepository.java
 │   │   │   ├── RefreshTokenRepository.java
 │   │   │   ├── RoleRepository.java
@@ -155,9 +160,11 @@ ve-mailer/
 │   │       ├── AppUserDetailsService.java # Spring Security UserDetailsService
 │   │       ├── AuthService.java      # Signup, login, forgot/reset password, token refresh
 │   │       ├── CleanupService.java   # Purges expired OTPs every 5 min
+│   │       ├── DynamicMailSenderService.java # Builds JavaMailSender from DB config
 │   │       ├── EmailService.java     # Async OTP email sender
 │   │       ├── FilterService.java    # Create filters + execute against Octane
 │   │       ├── JwtService.java       # JWT token generation and validation
+│   │       ├── NotificationPreferencesService.java # Admin SMTP settings CRUD
 │   │       ├── NotificationService.java # Async digest email sender
 │   │       ├── OctaneCacheService.java  # In-memory Octane client cache
 │   │       ├── OtpService.java       # OTP generation, hashing, validation
@@ -187,7 +194,11 @@ ve-mailer/
     │   │   ├── SignupPage.tsx        # Registration with domain validation
     │   │   ├── VerifySignupPage.tsx  # OTP verification for new accounts
     │   │   ├── ForgotPasswordPage.tsx # Request password reset OTP
-    │   │   └── ResetPasswordPage.tsx # OTP verification + new password
+    │   │   ├── ResetPasswordPage.tsx # OTP verification + new password
+    │   │   └── admin/
+    │   │       ├── AdminControlPanel.tsx         # Left-sidebar admin dashboard
+    │   │       ├── NotificationPreferencesPage.tsx # SMTP config form
+    │   │       └── WorkspaceManagementPage.tsx   # Workspace CRUD
     │   ├── services/
     │   │   ├── apiService.ts         # All backend API calls (workspaces, filters, subscriptions)
     │   │   └── authService.ts        # Auth API calls + token management
@@ -267,13 +278,21 @@ RefreshToken
   token (UNIQUE)  -- UUID string
   expiresAt       -- 7 days from creation
   revoked         -- boolean
+
+NotificationPreferences
+  id (UUID PK)
+  host            -- SMTP server host
+  port            -- SMTP port
+  username        -- SMTP username (also used as "from" address)
+  password        -- SMTP password (masked in API responses)
+  startTlsEnabled -- boolean
 ```
 
 ---
 
 ## API Reference
 
-All endpoints are prefixed with `/api/v1` for business APIs and `/api/auth` for authentication.
+All endpoints are prefixed with `/api/v1` for business APIs, `/api/auth` for authentication, and `/api/admin` for admin configuration.
 
 ### Authentication (`/api/auth`)
 
@@ -347,6 +366,17 @@ All subscription endpoints require authentication. Users may only update/delete 
 | `DELETE` | `/workspaces/{id}/subscriptions/{subId}`                  | Any (own)     | Unsubscribe                                              |
 | `POST`   | `/workspaces/{id}/subscriptions/{subId}/run`              | ADMIN         | Immediately send a notification email                    |
 
+### Admin — Notification Preferences (`/api/admin`)
+
+All admin configuration endpoints require the `ADMIN` role. SMTP settings are stored in the database and used dynamically by the mail sender.
+
+| Method | Path                                  | Role required | Description                          |
+|--------|---------------------------------------|:-------------:|--------------------------------------|
+| `GET`  | `/admin/notification-preferences`     | ADMIN         | Get SMTP config (password masked)    |
+| `PUT`  | `/admin/notification-preferences`     | ADMIN         | Create/update SMTP config            |
+
+**Password handling:** The `password` field in responses is always `"(unchanged)"`. On update, sending `"(unchanged)"` (or blank/null) preserves the existing password. A new value replaces it.
+
 ---
 
 ## Running Locally
@@ -371,6 +401,8 @@ docker run -d -p 1025:1025 -p 8025:8025 axllent/mailpit
 ```
 
 The web UI will be available at `http://localhost:8025`.
+
+> After starting the backend, log in as admin and configure SMTP settings in the **Admin Control Panel → Configure Notification Preferences** (use `localhost` port `1025` for Mailpit).
 
 ---
 
@@ -438,14 +470,8 @@ spring.jpa.database-platform=org.hibernate.dialect.H2Dialect
 spring.h2.console.enabled=true
 
 # Hibernate
-spring.jpa.hibernate.ddl-auto=update
 spring.jpa.show-sql=true
-
-# Mail (points to local Mailpit on port 1025)
-spring.mail.host=localhost
-spring.mail.port=1025
-spring.mail.username=test
-spring.mail.password=test
+spring.flyway.enabled=true
 
 spring.application.name=veemailer
 
@@ -461,6 +487,8 @@ app.bootstrap.admin.email=admin@company.com
 app.bootstrap.admin.password=ChangeMeImmediately
 app.bootstrap.admin.name=System Administrator
 ```
+
+> **SMTP configuration** is no longer in properties files. Configure email settings via the **Admin Control Panel → Configure Notification Preferences** in the UI. Settings are stored in the `notification_preferences` database table.
 To switch to PostgreSQL, add the following to `application-prod.properties` and run with `SPRING_PROFILES_ACTIVE=prod`:
 
 ```properties

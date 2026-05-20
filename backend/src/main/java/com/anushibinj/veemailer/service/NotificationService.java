@@ -18,7 +18,6 @@ import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
@@ -42,11 +41,7 @@ public class NotificationService {
      */
     record TicketLinkContext(String serverUrl, String sharedSpaceId, String workspaceId) {}
 
-    // Use the admin email configured in application.properties as the sender address
-    @Value("${spring.mail.username}")
-    String from;
-
-    private final JavaMailSender mailSender;
+    private final DynamicMailSenderService dynamicMailSenderService;
     private final FieldExtractorRegistry fieldExtractorRegistry;
     private final AiSummaryService aiSummaryService;
 
@@ -92,6 +87,8 @@ public class NotificationService {
 
     private void sendEmail(String to, String htmlBody) {
         try {
+            JavaMailSender mailSender = dynamicMailSenderService.getMailSender();
+            String from = dynamicMailSenderService.getFromAddress();
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, false, "UTF-8");
             helper.setFrom(from);

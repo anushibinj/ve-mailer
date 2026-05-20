@@ -1,6 +1,5 @@
 package com.anushibinj.veemailer.service;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.scheduling.annotation.Async;
@@ -12,14 +11,12 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class EmailService {
 	
-	// Use the admin email configured in application.properties as the sender address
-	@Value("${spring.mail.username}")
-	String from;
-
-    private final JavaMailSender mailSender;
+    private final DynamicMailSenderService dynamicMailSenderService;
 
     @Async
     public void sendOtpEmail(String to, String otp) {
+        JavaMailSender mailSender = dynamicMailSenderService.getMailSender();
+        String from = dynamicMailSenderService.getFromAddress();
         SimpleMailMessage message = new SimpleMailMessage();
         message.setFrom(from);
         message.setTo(to);

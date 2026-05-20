@@ -9,7 +9,7 @@ import SignupPage from './pages/SignupPage';
 import VerifySignupPage from './pages/VerifySignupPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
-import WorkspaceManagementPage from './pages/admin/WorkspaceManagementPage';
+import AdminControlPanel from './pages/admin/AdminControlPanel';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import { Toaster } from 'react-hot-toast';
 
@@ -30,10 +30,10 @@ function AdminLayout({ children }: { children: React.ReactNode }) {
             </Link>
             {isAdmin && (
               <button
-                onClick={() => navigate('/admin/workspaces')}
+                onClick={() => navigate('/admin')}
                 className="text-sm text-blue-600 font-medium"
               >
-                Manage Workspaces
+                Admin Control Panel
               </button>
             )}
           </div>
@@ -99,10 +99,10 @@ function AppContent() {
             </Link>
             {isAdmin && (
               <button
-                onClick={() => navigate('/admin/workspaces')}
+                onClick={() => navigate('/admin')}
                 className="text-sm text-gray-500 hover:text-blue-600 font-medium transition-colors"
               >
-                Manage Workspaces
+                Admin Control Panel
               </button>
             )}
           </div>
@@ -168,12 +168,12 @@ function App() {
 
           {/* Admin-only routes */}
           <Route
-            path="/admin/workspaces"
+            path="/admin"
             element={
               <ProtectedRoute requiredRole="ADMIN">
                 <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
                   <AdminLayout>
-                    <WorkspaceManagementPage />
+                    <AdminControlPanel />
                   </AdminLayout>
                 </div>
               </ProtectedRoute>

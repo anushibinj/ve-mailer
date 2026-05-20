@@ -15,7 +15,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.Collections;
 import java.util.List;
@@ -34,6 +33,9 @@ class NotificationServiceTest {
     private JavaMailSender mailSender;
 
     @Mock
+    private DynamicMailSenderService dynamicMailSenderService;
+
+    @Mock
     private AiSummaryService aiSummaryService;
 
     // Use a real registry so extractor behaviour is tested end-to-end.
@@ -50,8 +52,9 @@ class NotificationServiceTest {
         testWorkspace.setSharedSpaceId("4001");
         testWorkspace.setWorkspaceId("5015");
         testWorkspace.setRootUrl("https://ve.example.com");
-        notificationService = new NotificationService(mailSender, registry, aiSummaryService);
-        ReflectionTestUtils.setField(notificationService, "from", "noreply@test.com");
+        lenient().when(dynamicMailSenderService.getMailSender()).thenReturn(mailSender);
+        lenient().when(dynamicMailSenderService.getFromAddress()).thenReturn("noreply@test.com");
+        notificationService = new NotificationService(dynamicMailSenderService, registry, aiSummaryService);
     }
 
     /** Creates a real MimeMessage backed by an empty Session so MimeMessageHelper works. */

@@ -14,12 +14,16 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class EmailServiceTest {
 
     @Mock
     private JavaMailSender mailSender;
+
+    @Mock
+    private DynamicMailSenderService dynamicMailSenderService;
 
     @InjectMocks
     private EmailService emailService;
@@ -28,6 +32,9 @@ class EmailServiceTest {
     void testSendOtpEmail_SendsCorrectMessage() {
         String recipient = "user@example.com";
         String otp = "654321";
+
+        when(dynamicMailSenderService.getMailSender()).thenReturn(mailSender);
+        when(dynamicMailSenderService.getFromAddress()).thenReturn("noreply@test.com");
 
         emailService.sendOtpEmail(recipient, otp);
 
@@ -46,6 +53,9 @@ class EmailServiceTest {
 
     @Test
     void testSendOtpEmail_MailSenderCalledExactlyOnce() {
+        when(dynamicMailSenderService.getMailSender()).thenReturn(mailSender);
+        when(dynamicMailSenderService.getFromAddress()).thenReturn("noreply@test.com");
+
         emailService.sendOtpEmail("another@example.com", "111111");
 
         verify(mailSender, times(1)).send(org.mockito.ArgumentMatchers.any(SimpleMailMessage.class));
