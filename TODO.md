@@ -13,3 +13,4 @@
 - [x] The e-mail subject should be "[ve-mailer] filter_title"
 - [x] Add a new property in frontend called VITE_FOOTER_HTML that accepts a HTML element (a div) that can be set as the app's footer
 - [ ] Lazy load every component in the frontend
+- [ ] Add an option to "Test connection" the ticketing service endpoint with a basic auth call or test call. Need to figure out which test call works best. Perhaps fetch some workspace related metadata to check if validation passes.
