@@ -11,3 +11,5 @@
 - [ ] OTP regeneration timeout. Should be validated both on backend and frontend to prevent people hammering the e-mail service. Make the resend interval start with 30 seconds and increment 30 seconds every retry.
 - [ ] If multiple people are subscribed to the same filter at the same time, then don't execute the filter multiple times. Execute it once and send the same copy to all the users registered for that time.
 - [x] The e-mail subject should be "[ve-mailer] filter_title"
+- [ ] Add a new property in frontend called VITE_FOOTER_HTML that accepts a HTML element (a div) that can be set as the app's footer
+- [ ] Lazy load every component in the frontend
