@@ -295,4 +295,58 @@ class NotificationServiceTest {
 
         assertTrue(html.contains("AI summary unavailable."), "Should show fallback when summaries array is null");
     }
+
+    @Test
+    void testProcessAndSendNotifications_AiSummaryEnabled_WithoutUserDisplayingNameDescription() {
+        // Verifies decoupled architecture: backend fetches name/description internally for AI
+        // generation even when the user did not select them as display fields.
+        when(mailSender.createMimeMessage()).thenReturn(newMimeMessage());
+        when(aiSummaryService.fetchComments(any())).thenReturn("");
+        when(aiSummaryService.generateSummary(any(), any(), any())).thenReturn("AI generated summary");
+
+        // Entity contains name and description because effectiveFetchFields in FilterService
+        // added them silently — even though the user only selected id and phase for display.
+        EntityModel entity = new EntityModel(Set.of(
+                new StringFieldModel("id", "2001"),
+                new StringFieldModel("name", "Fix bug"),
+                new StringFieldModel("description", "A bug needs fixing"),
+                new StringFieldModel("phase", "In Testing")
+        ));
+
+        EmailSubscriber sub = new EmailSubscriber();
+        sub.setRecipientEmail("user@example.com");
+
+        // User's display selection intentionally excludes name and description
+        List<String> fields = List.of(AiSummaryService.AI_SUMMARY_FIELD, "id", "phase");
+
+        notificationService.processAndSendNotifications(
+                List.of(sub), List.of(entity), fields, 25);
+
+        // AI summary must still be generated using the entity data fetched internally
+        verify(aiSummaryService).generateSummary("Fix bug", "A bug needs fixing", "");
+        verify(mailSender).send(any(MimeMessage.class));
+    }
+
+    @Test
+    void testBuildHtmlTable_AiSummaryEnabled_OnlyRendersUserSelectedColumns() {
+        // name and description are in the entity (fetched internally) but not in displayFields
+        EntityModel entity = new EntityModel(Set.of(
+                new StringFieldModel("id", "2001"),
+                new StringFieldModel("name", "Bug"),
+                new StringFieldModel("description", "A bug"),
+                new StringFieldModel("phase", "In Testing")
+        ));
+        String[] summaries = {"Quick summary."};
+
+        // displayFields contains only user-chosen columns (no name, no description)
+        String html = notificationService.buildHtmlTable(
+                List.of(entity), List.of("id", "phase"), 25, true, summaries);
+
+        assertTrue(html.contains("AI Summary"), "AI Summary column header must be present");
+        assertTrue(html.contains("Quick summary."), "AI summary text must appear in the row");
+        assertTrue(html.contains("2001"), "id value must appear");
+        assertTrue(html.contains("In Testing"), "phase value must appear");
+        assertFalse(html.contains(">Description<") || html.contains(">description<"),
+                "Description must not be a visible column header");
+    }
 }

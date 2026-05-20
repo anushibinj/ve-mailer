@@ -115,10 +115,24 @@ public class FilterService {
             List<String> fields = objectMapper.readValue(filter.getFields(), new TypeReference<>() {});
             List<FilterCriteriaClause> clauses = objectMapper.readValue(filter.getCriteria(), new TypeReference<>() {});
 
-            // Strip AI Summary pseudo-field — it must never be sent to the ticketing server
-            List<String> octaneFields = fields.stream()
+            // Determine the effective set of fields to fetch from the ticketing service.
+            // This differs from the user-selected fields in two ways:
+            //   1. The AI Summary pseudo-field is stripped (it is never a real Octane field).
+            //   2. When AI Summary is enabled, name/description/comments are added as
+            //      internal dependencies even if the user did not choose to display them.
+            boolean aiSummaryRequested = fields.contains(AiSummaryService.AI_SUMMARY_FIELD);
+            List<String> effectiveFetchFields = fields.stream()
                     .filter(f -> !AiSummaryService.AI_SUMMARY_FIELD.equals(f))
                     .collect(Collectors.toList());
+            if (aiSummaryRequested) {
+                // name, description, and comments are fetched silently for AI generation
+                // regardless of what the user chose to show in the final email output.
+                for (String dep : List.of("name", "description", "comments")) {
+                    if (!effectiveFetchFields.contains(dep)) {
+                        effectiveFetchFields.add(dep);
+                    }
+                }
+            }
 
             Octane octaneClient = octaneCacheService.getOctaneClient(
                     valueEdgeProperties.getServerUrl(),
@@ -133,7 +147,7 @@ public class FilterService {
                     .entityList("work_items")
                     .get()
                     .query(query)
-                    .addFields(octaneFields.toArray(new String[0]))
+                    .addFields(effectiveFetchFields.toArray(new String[0]))
                     .limit(queryLimit) // configurable via veemailer.query.limit
                     .execute();
 
