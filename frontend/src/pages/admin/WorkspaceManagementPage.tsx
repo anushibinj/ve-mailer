@@ -34,6 +34,7 @@ const WorkspaceManagementPage: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadWorkspaces();
   }, [loadWorkspaces]);
 

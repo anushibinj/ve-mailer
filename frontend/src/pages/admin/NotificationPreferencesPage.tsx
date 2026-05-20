@@ -23,10 +23,6 @@ export default function NotificationPreferencesPage() {
   const [password, setPassword] = useState('');
   const [startTlsEnabled, setStartTlsEnabled] = useState(false);
 
-  useEffect(() => {
-    loadPreferences();
-  }, []);
-
   const loadPreferences = async () => {
     try {
       setLoading(true);
@@ -45,6 +41,11 @@ export default function NotificationPreferencesPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadPreferences();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

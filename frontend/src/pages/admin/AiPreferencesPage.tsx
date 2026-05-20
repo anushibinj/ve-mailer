@@ -22,10 +22,6 @@ export default function AiPreferencesPage() {
   const [chatCompletionsPath, setChatCompletionsPath] = useState('');
   const [model, setModel] = useState('');
 
-  useEffect(() => {
-    loadPreferences();
-  }, []);
-
   const loadPreferences = async () => {
     try {
       setLoading(true);
@@ -43,6 +39,11 @@ export default function AiPreferencesPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadPreferences();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

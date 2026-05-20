@@ -55,6 +55,7 @@ const WorkspaceFormModal: React.FC<WorkspaceFormModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       if (workspace) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setValues({
           title: workspace.title,
           sharedSpaceId: workspace.sharedSpaceId,

@@ -544,11 +544,27 @@ Prompts are stored in `backend/src/main/resources/prompts/` and can be customize
 
 ### Frontend — Environment Variables
 
-| Variable               | Description                           | Example                       |
-|------------------------|---------------------------------------|-------------------------------|
-| `VITE_BACKEND_ROOT_URL` | Base URL of the Spring Boot backend  | `http://localhost:8080`       |
+| Variable                | Description                                                              | Example                                                    |
+|-------------------------|--------------------------------------------------------------------------|------------------------------------------------------------||
+| `VITE_BACKEND_ROOT_URL` | Base URL of the Spring Boot backend                                      | `http://localhost:8080`                                    |
+| `VITE_FOOTER_HTML`      | Optional HTML injected as the global app footer (sanitized before render) | `<div style="text-align:center">Powered by VE Mailer</div>` |
 
-Create a `.env.local` file in the `frontend/` directory with the variable above. Vite exposes only variables prefixed with `VITE_` to the browser bundle.
+Create a `.env.local` file in the `frontend/` directory. Vite exposes only variables prefixed with `VITE_` to the browser bundle.
+
+#### `VITE_FOOTER_HTML` — custom footer
+
+Set this variable to any HTML snippet and it will be rendered as a `<footer>` element at the bottom of every page. Leave it empty (or unset) to hide the footer entirely.
+
+```env
+# Plain text footer
+VITE_FOOTER_HTML=<div style="padding:8px;text-align:center;font-size:12px;">Powered by VE Mailer</div>
+
+# Footer with a link
+VITE_FOOTER_HTML=<div><a href="https://company.com">Company Portal</a> — Internal Use Only</div>
+```
+
+Allowed tags: `div`, `span`, `a`, `p`, `small`, `strong`, `em`, `br`, `ul`, `ol`, `li`.  
+Blocked automatically: `<script>`, `<iframe>`, inline event handlers (`onclick`, `onerror`, …), and `javascript:` URLs.
 
 ---
 

@@ -10,6 +10,7 @@ import VerifySignupPage from './pages/VerifySignupPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import AdminControlPanel from './pages/admin/AdminControlPanel';
+import AppFooter from './components/AppFooter';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import { Toaster } from 'react-hot-toast';
 
@@ -183,6 +184,8 @@ function App() {
           {/* Catch-all redirect */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        {/* Persistent app footer — rendered only when VITE_FOOTER_HTML is set */}
+        <AppFooter />
       </AuthProvider>
     </BrowserRouter>
   );

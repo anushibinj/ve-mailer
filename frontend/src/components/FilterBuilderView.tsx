@@ -68,11 +68,6 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
   const [criteria, setCriteria] = useState<FilterCriteriaClause[]>([emptyCriterion()]);
   const [isSaving, setIsSaving] = useState(false);
 
-  useEffect(() => {
-    loadFilters();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [workspaceId]);
-
   const loadFilters = async () => {
     setIsLoading(true);
     try {
@@ -84,6 +79,12 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadFilters();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workspaceId]);
 
   // ---- Form helpers ----
 
