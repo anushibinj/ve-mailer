@@ -7,6 +7,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
+import jakarta.persistence.ForeignKey;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -34,11 +35,13 @@ public class EmailSubscriber {
     private UUID id;
 
     @ManyToOne
-    @JoinColumn(name = "filter_id", nullable = false)
+    @JoinColumn(name = "filter_id", nullable = false,
+            foreignKey = @ForeignKey(name = "fk_email_subscribers_filter_id"))
     private Filter filter;
 
     @ManyToOne
-    @JoinColumn(name = "workspace_id", nullable = false)
+    @JoinColumn(name = "workspace_id", nullable = false,
+            foreignKey = @ForeignKey(name = "fk_email_subscribers_workspace_id"))
     private Workspace workspace;
 
     private String recipientEmail;
@@ -53,7 +56,9 @@ public class EmailSubscriber {
     private ScheduleType scheduleType;
 
     @ElementCollection(fetch = FetchType.EAGER)
-    @CollectionTable(name = "subscriber_scheduled_hours", joinColumns = @JoinColumn(name = "subscriber_id"))
+    @CollectionTable(name = "subscriber_scheduled_hours",
+            joinColumns = @JoinColumn(name = "subscriber_id"),
+            foreignKey = @ForeignKey(name = "fk_subscriber_hours_subscriber_id"))
     @Column(name = "scheduled_hour")
     private List<Integer> scheduledHours;
 

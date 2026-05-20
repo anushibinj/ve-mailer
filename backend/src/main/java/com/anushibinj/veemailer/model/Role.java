@@ -9,7 +9,10 @@ import lombok.NoArgsConstructor;
 import java.util.UUID;
 
 @Entity
-@Table(name = "roles")
+@Table(
+    name = "roles",
+    uniqueConstraints = @UniqueConstraint(name = "uq_roles_role_name", columnNames = "role_name")
+)
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -20,6 +23,6 @@ public class Role {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false)
     private String roleName;
 }

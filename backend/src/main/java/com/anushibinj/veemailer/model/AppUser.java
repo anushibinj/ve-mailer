@@ -12,7 +12,10 @@ import java.util.Set;
 import java.util.UUID;
 
 @Entity
-@Table(name = "app_users")
+@Table(
+    name = "app_users",
+    uniqueConstraints = @UniqueConstraint(name = "uq_app_users_email", columnNames = "email")
+)
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -26,7 +29,7 @@ public class AppUser {
     @Column(nullable = false)
     private String name;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false)
     private String email;
 
     @Column(nullable = false)
@@ -40,8 +43,10 @@ public class AppUser {
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
             name = "user_roles",
-            joinColumns = @JoinColumn(name = "user_id"),
-            inverseJoinColumns = @JoinColumn(name = "role_id")
+            joinColumns = @JoinColumn(name = "user_id",
+                    foreignKey = @ForeignKey(name = "fk_user_roles_user_id")),
+            inverseJoinColumns = @JoinColumn(name = "role_id",
+                    foreignKey = @ForeignKey(name = "fk_user_roles_role_id"))
     )
     private Set<Role> roles = new HashSet<>();
 
