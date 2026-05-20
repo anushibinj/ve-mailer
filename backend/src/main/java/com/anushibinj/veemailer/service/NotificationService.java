@@ -3,7 +3,6 @@ package com.anushibinj.veemailer.service;
 import com.anushibinj.veemailer.model.EmailSubscriber;
 import com.anushibinj.veemailer.model.Workspace;
 import com.anushibinj.veemailer.service.extractor.FieldExtractorRegistry;
-import com.anushibinj.veemailer.service.ve.ValueEdgeProperties;
 import org.jsoup.Jsoup;
 import org.jsoup.safety.Safelist;
 import com.hpe.adm.nga.sdk.model.BooleanFieldModel;
@@ -50,7 +49,6 @@ public class NotificationService {
     private final JavaMailSender mailSender;
     private final FieldExtractorRegistry fieldExtractorRegistry;
     private final AiSummaryService aiSummaryService;
-    private final ValueEdgeProperties valueEdgeProperties;
 
     @Async
     public void processAndSendNotifications(List<EmailSubscriber> subscribers,
@@ -76,14 +74,14 @@ public class NotificationService {
                 String name = extractFieldValue("name", entity.getValue("name"));
                 String description = extractFieldValue("description", entity.getValue("description"));
                 String ticketId = extractFieldValue("id", entity.getValue("id"));
-                String comments = aiSummaryService.fetchComments(ticketId, workspace.getId());
+                String comments = aiSummaryService.fetchComments(ticketId, workspace);
                 aiSummaries[i] = aiSummaryService.generateSummary(name, description, comments);
             }
         }
 
         // Build the link context so ticket id/global_id_udf cells render as hyperlinks.
         TicketLinkContext linkContext = new TicketLinkContext(
-                valueEdgeProperties.getServerUrl(),
+                workspace.getRootUrl(),
                 workspace.getSharedSpaceId(),
                 workspace.getWorkspaceId());
         String htmlBody = buildHtmlTable(results, displayFields, limit, aiSummaryEnabled, aiSummaries, linkContext);

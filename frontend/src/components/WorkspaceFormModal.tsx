@@ -19,6 +19,7 @@ interface FormValues {
   workspaceId: string;
   clientId: string;
   clientKey: string;
+  rootUrl: string;
 }
 
 interface FormErrors {
@@ -27,6 +28,7 @@ interface FormErrors {
   workspaceId?: string;
   clientId?: string;
   clientKey?: string;
+  rootUrl?: string;
 }
 
 const WorkspaceFormModal: React.FC<WorkspaceFormModalProps> = ({
@@ -43,6 +45,7 @@ const WorkspaceFormModal: React.FC<WorkspaceFormModalProps> = ({
     workspaceId: '',
     clientId: '',
     clientKey: '',
+    rootUrl: '',
   });
   const [errors, setErrors] = useState<FormErrors>({});
   const [showKey, setShowKey] = useState(false);
@@ -59,9 +62,10 @@ const WorkspaceFormModal: React.FC<WorkspaceFormModalProps> = ({
           clientId: workspace.clientId,
           // Never pre-fill the key — keep placeholder so user knows to enter a new one
           clientKey: CLIENT_KEY_PLACEHOLDER,
+          rootUrl: workspace.rootUrl,
         });
       } else {
-        setValues({ title: '', sharedSpaceId: '', workspaceId: '', clientId: '', clientKey: '' });
+        setValues({ title: '', sharedSpaceId: '', workspaceId: '', clientId: '', clientKey: '', rootUrl: '' });
       }
       setErrors({});
       setShowKey(false);
@@ -75,6 +79,7 @@ const WorkspaceFormModal: React.FC<WorkspaceFormModalProps> = ({
     if (!values.workspaceId.trim()) errs.workspaceId = 'Workspace ID is required';
     if (!values.clientId.trim()) errs.clientId = 'Client ID is required';
     if (!isEditing && !values.clientKey.trim()) errs.clientKey = 'Client Key is required';
+    if (!values.rootUrl.trim()) errs.rootUrl = 'Root URL is required';
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -105,6 +110,7 @@ const WorkspaceFormModal: React.FC<WorkspaceFormModalProps> = ({
           clientId: values.clientId.trim(),
           // Send placeholder when unchanged so backend knows to preserve existing key
           clientKey: values.clientKey.trim() || CLIENT_KEY_PLACEHOLDER,
+          rootUrl: values.rootUrl.trim(),
         };
         saved = await adminUpdateWorkspace(workspace.id, payload);
         toast.success('Workspace updated successfully');
@@ -115,6 +121,7 @@ const WorkspaceFormModal: React.FC<WorkspaceFormModalProps> = ({
           workspaceId: values.workspaceId.trim(),
           clientId: values.clientId.trim(),
           clientKey: values.clientKey.trim(),
+          rootUrl: values.rootUrl.trim(),
         };
         saved = await adminCreateWorkspace(payload);
         toast.success('Workspace created successfully');
@@ -273,6 +280,28 @@ const WorkspaceFormModal: React.FC<WorkspaceFormModalProps> = ({
                 Enter a new value to replace the existing key, or leave as-is to keep it.
               </p>
             )}
+          </div>
+
+          {/* Root URL */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Root URL <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="url"
+              value={values.rootUrl}
+              onChange={handleChange('rootUrl')}
+              placeholder="e.g. https://octane.example.com"
+              className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                errors.rootUrl ? 'border-red-400 bg-red-50' : 'border-gray-300'
+              }`}
+            />
+            {errors.rootUrl && (
+              <p className="mt-1 text-xs text-red-600">{errors.rootUrl}</p>
+            )}
+            <p className="mt-1 text-xs text-gray-500">
+              Base URL of the ValueEdge / Octane server.
+            </p>
           </div>
 
           {/* Actions */}

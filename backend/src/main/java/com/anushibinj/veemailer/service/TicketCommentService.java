@@ -2,8 +2,6 @@ package com.anushibinj.veemailer.service;
 
 import com.anushibinj.veemailer.dto.TicketCommentDto;
 import com.anushibinj.veemailer.model.Workspace;
-import com.anushibinj.veemailer.repository.WorkspaceRepository;
-import com.anushibinj.veemailer.service.ve.ValueEdgeProperties;
 import com.hpe.adm.nga.sdk.Octane;
 import com.hpe.adm.nga.sdk.entities.OctaneCollection;
 import com.hpe.adm.nga.sdk.model.EntityModel;
@@ -19,7 +17,6 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.UUID;
 
 /**
  * Fetches ticket comments from the Octane ticketing server.
@@ -42,8 +39,6 @@ public class TicketCommentService {
     };
 
     private final OctaneCacheService octaneCacheService;
-    private final ValueEdgeProperties valueEdgeProperties;
-    private final WorkspaceRepository workspaceRepository;
 
     @Value("${veemailer.query.limit:25}")
     private int queryLimit;
@@ -51,22 +46,16 @@ public class TicketCommentService {
     /**
      * Fetches comments for the given ticket from the Octane workspace.
      *
-     * @param ticketId    the numeric ID of the work item
-     * @param workspaceId the internal UUID of the workspace containing this ticket
+     * @param ticketId  the numeric ID of the work item
+     * @param workspace the workspace containing this ticket
      * @return ordered list of comments (newest first), or empty list on failure
      */
-    public List<TicketCommentDto> fetchComments(String ticketId, UUID workspaceId) {
-        log.debug("Fetching comments for ticket {} in workspace {}", ticketId, workspaceId);
-
-        Workspace workspace = workspaceRepository.findById(workspaceId).orElse(null);
-        if (workspace == null) {
-            log.warn("Workspace {} not found — cannot fetch comments for ticket {}", workspaceId, ticketId);
-            return Collections.emptyList();
-        }
+    public List<TicketCommentDto> fetchComments(String ticketId, Workspace workspace) {
+        log.debug("Fetching comments for ticket {} in workspace {}", ticketId, workspace.getId());
 
         try {
             Octane octaneClient = octaneCacheService.getOctaneClient(
-                    valueEdgeProperties.getServerUrl(),
+                    workspace.getRootUrl(),
                     workspace.getClientId(),
                     workspace.getClientKey(),
                     Integer.parseInt(workspace.getSharedSpaceId()),
@@ -94,7 +83,7 @@ public class TicketCommentService {
             return comments;
         } catch (Exception e) {
             log.error("Failed to fetch comments for ticket {} in workspace {}: {}",
-                    ticketId, workspaceId, e.getMessage());
+                    ticketId, workspace.getId(), e.getMessage());
             return Collections.emptyList();
         }
     }

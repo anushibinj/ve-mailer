@@ -12,7 +12,6 @@ import com.anushibinj.veemailer.model.FilterCriteriaClause;
 import com.anushibinj.veemailer.model.Workspace;
 import com.anushibinj.veemailer.repository.FilterRepository;
 import com.anushibinj.veemailer.repository.WorkspaceRepository;
-import com.anushibinj.veemailer.service.ve.ValueEdgeProperties;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -34,7 +33,6 @@ public class FilterService {
     private final FilterRepository filterRepository;
     private final WorkspaceRepository workspaceRepository;
     private final OctaneCacheService octaneCacheService;
-    private final ValueEdgeProperties valueEdgeProperties;
     private final ObjectMapper objectMapper;
 
     @Value("${veemailer.query.limit:25}")
@@ -120,7 +118,7 @@ public class FilterService {
             List<String> effectiveFetchFields = computeEffectiveFetchFields(fields);
 
             Octane octaneClient = octaneCacheService.getOctaneClient(
-                    valueEdgeProperties.getServerUrl(),
+                    workspace.getRootUrl(),
                     workspace.getClientId(),
                     workspace.getClientKey(),
                     Integer.parseInt(workspace.getSharedSpaceId()),

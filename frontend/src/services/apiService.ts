@@ -5,6 +5,7 @@ export interface Workspace {
   title: string;
   sharedSpaceId: string;
   workspaceId: string;
+  rootUrl: string;
 }
 
 // Admin workspace type — includes clientId, masked clientKey, and a config flag
@@ -16,6 +17,7 @@ export interface WorkspaceAdmin {
   clientId: string;
   clientKey: string; // always "(unchanged)" from the API
   clientKeyConfigured: boolean;
+  rootUrl: string;
 }
 
 export interface WorkspaceCreatePayload {
@@ -24,6 +26,7 @@ export interface WorkspaceCreatePayload {
   workspaceId: string;
   clientId: string;
   clientKey: string;
+  rootUrl: string;
 }
 
 export interface WorkspaceUpdatePayload {
@@ -33,6 +36,7 @@ export interface WorkspaceUpdatePayload {
   clientId: string;
   // Leave as "(unchanged)" to preserve existing key; provide a new value to replace
   clientKey?: string;
+  rootUrl: string;
 }
 
 export interface FilterCriteriaClause {

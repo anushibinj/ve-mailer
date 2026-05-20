@@ -42,6 +42,7 @@ public class WorkspaceService {
                 .workspaceId(request.getWorkspaceId())
                 .clientId(request.getClientId())
                 .clientKey(request.getClientKey())
+                .rootUrl(request.getRootUrl())
                 .build();
         return toResponseDto(workspaceRepository.save(workspace));
     }
@@ -54,6 +55,7 @@ public class WorkspaceService {
         workspace.setSharedSpaceId(request.getSharedSpaceId());
         workspace.setWorkspaceId(request.getWorkspaceId());
         workspace.setClientId(request.getClientId());
+        workspace.setRootUrl(request.getRootUrl());
 
         // Only replace clientKey when the caller provides a real new value
         String newKey = request.getClientKey();
@@ -81,6 +83,7 @@ public class WorkspaceService {
                 // Never return the real clientKey
                 .clientKey(CLIENT_KEY_PLACEHOLDER)
                 .clientKeyConfigured(workspace.getClientKey() != null && !workspace.getClientKey().isBlank())
+                .rootUrl(workspace.getRootUrl())
                 .build();
     }
 }

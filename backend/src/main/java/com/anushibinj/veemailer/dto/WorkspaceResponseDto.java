@@ -20,4 +20,5 @@ public class WorkspaceResponseDto {
     // Always "(unchanged)" — never the real value
     private String clientKey;
     private boolean clientKeyConfigured;
+    private String rootUrl;
 }

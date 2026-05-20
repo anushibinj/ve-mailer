@@ -1,6 +1,7 @@
 package com.anushibinj.veemailer.service;
 
 import com.anushibinj.veemailer.dto.TicketCommentDto;
+import com.anushibinj.veemailer.model.Workspace;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -118,38 +119,41 @@ class AiSummaryServiceTest {
 
     @Test
     void testFetchComments_DelegatesToTicketCommentService() {
-        UUID workspaceId = UUID.randomUUID();
+        Workspace workspace = new Workspace();
+        workspace.setId(UUID.randomUUID());
         List<TicketCommentDto> comments = List.of(
                 TicketCommentDto.builder().authorName("John").text("Looks good").build(),
                 TicketCommentDto.builder().authorName("Jane").text("Needs fix").build()
         );
-        when(ticketCommentService.fetchComments("12345", workspaceId)).thenReturn(comments);
+        when(ticketCommentService.fetchComments("12345", workspace)).thenReturn(comments);
         when(ticketCommentService.formatCommentsForAi(comments)).thenReturn("Comment by John:\nLooks good\n\nComment by Jane:\nNeeds fix");
 
-        String result = aiSummaryService.fetchComments("12345", workspaceId);
+        String result = aiSummaryService.fetchComments("12345", workspace);
 
         assertEquals("Comment by John:\nLooks good\n\nComment by Jane:\nNeeds fix", result);
-        verify(ticketCommentService).fetchComments("12345", workspaceId);
+        verify(ticketCommentService).fetchComments("12345", workspace);
         verify(ticketCommentService).formatCommentsForAi(comments);
     }
 
     @Test
     void testFetchComments_ReturnsEmptyOnException() {
-        UUID workspaceId = UUID.randomUUID();
-        when(ticketCommentService.fetchComments(any(), any())).thenThrow(new RuntimeException("Network error"));
+        Workspace workspace = new Workspace();
+        workspace.setId(UUID.randomUUID());
+        when(ticketCommentService.fetchComments(any(), any(Workspace.class))).thenThrow(new RuntimeException("Network error"));
 
-        String result = aiSummaryService.fetchComments("12345", workspaceId);
+        String result = aiSummaryService.fetchComments("12345", workspace);
 
         assertEquals("", result);
     }
 
     @Test
     void testFetchComments_EmptyCommentsList() {
-        UUID workspaceId = UUID.randomUUID();
-        when(ticketCommentService.fetchComments("999", workspaceId)).thenReturn(Collections.emptyList());
+        Workspace workspace = new Workspace();
+        workspace.setId(UUID.randomUUID());
+        when(ticketCommentService.fetchComments("999", workspace)).thenReturn(Collections.emptyList());
         when(ticketCommentService.formatCommentsForAi(Collections.emptyList())).thenReturn("");
 
-        String result = aiSummaryService.fetchComments("999", workspaceId);
+        String result = aiSummaryService.fetchComments("999", workspace);
 
         assertEquals("", result);
     }
