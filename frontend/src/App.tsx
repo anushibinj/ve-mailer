@@ -146,7 +146,7 @@ function AppContent() {
 
 function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={import.meta.env.VITE_BASE_PATH || '/'}>
       <AuthProvider>
         <Toaster position="top-right" />
         {/* App-shell layout: outer container fixes the viewport height and prevents outer page
