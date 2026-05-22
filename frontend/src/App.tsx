@@ -14,13 +14,14 @@ import AppFooter from './components/AppFooter';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import { Toaster } from 'react-hot-toast';
 
-function AdminLayout({ children }: { children: React.ReactNode }) {
+export function AdminLayout({ children }: { children: React.ReactNode }) {
   const { logout, user, isAdmin } = useAuth();
   const navigate = useNavigate();
 
   return (
     <>
-      <header className="bg-white shadow-sm border-b border-gray-200">
+      {/* Sticky app-shell header: stays visible while content scrolls below */}
+      <header className="sticky top-0 z-30 bg-white shadow-sm border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex justify-between items-center">
           <div className="flex items-center gap-4">
             <Link
@@ -57,7 +58,7 @@ function AdminLayout({ children }: { children: React.ReactNode }) {
   );
 }
 
-function AppContent() {
+export function AppContent() {
   const [currentView, setCurrentView] = useState<'landing' | 'workspace' | 'filters'>('landing');
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string | null>(null);
   const { logout, user, isAdmin } = useAuth();
@@ -87,8 +88,8 @@ function AppContent() {
 
   return (
     <div className="min-h-full bg-gray-50 text-gray-900 font-sans">
-      {/* Navigation bar */}
-      <header className="bg-white shadow-sm border-b border-gray-200">
+      {/* Sticky app-shell header: stays visible while content scrolls below */}
+      <header className="sticky top-0 z-30 bg-white shadow-sm border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex justify-between items-center">
           <div className="flex items-center gap-4">
             <Link
