@@ -2,13 +2,15 @@ import { useState } from 'react';
 import NotificationPreferencesPage from './NotificationPreferencesPage';
 import AiPreferencesPage from './AiPreferencesPage';
 import WorkspaceManagementPage from './WorkspaceManagementPage';
+import MailAnalyticsPage from './MailAnalyticsPage';
 
-type AdminTab = 'notification-preferences' | 'ai-preferences' | 'workspaces';
+type AdminTab = 'notification-preferences' | 'ai-preferences' | 'workspaces' | 'mail-analytics';
 
 const tabs: { key: AdminTab; label: string }[] = [
   { key: 'workspaces', label: 'Manage Workspaces' },
   { key: 'notification-preferences', label: 'Configure Notification Preferences' },
   { key: 'ai-preferences', label: 'Configure AI Preferences' },
+  { key: 'mail-analytics', label: 'Mail Analytics' },
 ];
 
 export default function AdminControlPanel() {
@@ -44,6 +46,7 @@ export default function AdminControlPanel() {
           {activeTab === 'notification-preferences' && <NotificationPreferencesPage />}
           {activeTab === 'ai-preferences' && <AiPreferencesPage />}
           {activeTab === 'workspaces' && <WorkspaceManagementPage />}
+          {activeTab === 'mail-analytics' && <MailAnalyticsPage />}
         </div>
       </div>
     </div>

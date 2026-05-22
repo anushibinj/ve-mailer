@@ -251,3 +251,95 @@ export const adminUpdateAiPreferences = async (
   const response = await api.put('/api/admin/ai-preferences', payload);
   return response.data;
 };
+
+// --- Mail Analytics ---
+
+export interface MailAnalyticsSummary {
+  mailsSentToday: number;
+  mailsSentPeriod: number;
+  uniqueRecipients: number;
+  activeWorkspaces: number;
+  topFilter: string | null;
+  periodDays: number;
+}
+
+export interface DailyVolumeEntry {
+  date: string;
+  count: number;
+}
+
+export interface WorkspaceDistributionEntry {
+  workspace: string;
+  count: number;
+}
+
+export interface FilterUsageEntry {
+  filter: string;
+  count: number;
+}
+
+export interface MailAuditLogEntry {
+  id: string;
+  workspaceId: string | null;
+  workspaceTitle: string | null;
+  recipientEmail: string;
+  filterTemplateId: string | null;
+  filterTitle: string | null;
+  subscriptionId: string | null;
+  userId: string | null;
+  mailSubject: string | null;
+  ticketCount: number;
+  deliveryStatus: 'SUCCESS' | 'FAILED';
+  failureReason: string | null;
+  sentAt: string;
+  durationMs: number | null;
+}
+
+export interface PagedResponse<T> {
+  content: T[];
+  totalElements: number;
+  totalPages: number;
+  number: number;
+  size: number;
+}
+
+export const adminGetMailAnalyticsSummary = async (days = 7): Promise<MailAnalyticsSummary> => {
+  const response = await api.get('/api/admin/mail-analytics/summary', { params: { days } });
+  return response.data;
+};
+
+export const adminGetDailyVolume = async (days = 7): Promise<DailyVolumeEntry[]> => {
+  const response = await api.get('/api/admin/mail-analytics/daily-volume', { params: { days } });
+  return response.data;
+};
+
+export const adminGetDailyRecipients = async (days = 7): Promise<DailyVolumeEntry[]> => {
+  const response = await api.get('/api/admin/mail-analytics/daily-recipients', { params: { days } });
+  return response.data;
+};
+
+export const adminGetWorkspaceDistribution = async (days = 30): Promise<WorkspaceDistributionEntry[]> => {
+  const response = await api.get('/api/admin/mail-analytics/workspace-distribution', { params: { days } });
+  return response.data;
+};
+
+export const adminGetFilterUsage = async (days = 30): Promise<FilterUsageEntry[]> => {
+  const response = await api.get('/api/admin/mail-analytics/filter-usage', { params: { days } });
+  return response.data;
+};
+
+export interface MailHistoryParams {
+  workspaceId?: string;
+  recipientEmail?: string;
+  filterTitle?: string;
+  status?: 'SUCCESS' | 'FAILED';
+  from?: string;
+  to?: string;
+  page?: number;
+  size?: number;
+}
+
+export const adminGetMailHistory = async (params: MailHistoryParams = {}): Promise<PagedResponse<MailAuditLogEntry>> => {
+  const response = await api.get('/api/admin/mail-analytics/history', { params });
+  return response.data;
+};

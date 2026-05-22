@@ -38,6 +38,9 @@ class NotificationServiceTest {
     @Mock
     private AiSummaryService aiSummaryService;
 
+    @Mock
+    private MailAuditService mailAuditService;
+
     // Use a real registry so extractor behaviour is tested end-to-end.
     private final FieldExtractorRegistry registry = new FieldExtractorRegistry();
 
@@ -49,12 +52,13 @@ class NotificationServiceTest {
     void setUp() {
         testWorkspace = new Workspace();
         testWorkspace.setId(UUID.randomUUID());
+        testWorkspace.setTitle("Test Workspace");
         testWorkspace.setSharedSpaceId("4001");
         testWorkspace.setWorkspaceId("5015");
         testWorkspace.setRootUrl("https://ve.example.com");
         lenient().when(dynamicMailSenderService.getMailSender()).thenReturn(mailSender);
         lenient().when(dynamicMailSenderService.getFromAddress()).thenReturn("noreply@test.com");
-        notificationService = new NotificationService(dynamicMailSenderService, registry, aiSummaryService);
+        notificationService = new NotificationService(dynamicMailSenderService, registry, aiSummaryService, mailAuditService);
     }
 
     /** Creates a real MimeMessage backed by an empty Session so MimeMessageHelper works. */
@@ -77,6 +81,11 @@ class NotificationServiceTest {
                 List.of(sub1, sub2), Collections.emptyList(), List.of("name"), 25, testWorkspace, "Open Defects");
 
         verify(mailSender, times(2)).send(any(MimeMessage.class));
+        // Verify audit logging recorded success for each subscriber
+        verify(mailAuditService, times(2)).recordSuccess(
+                eq(testWorkspace.getId()), eq(testWorkspace.getTitle()),
+                anyString(), any(), eq("Open Defects"), any(), any(),
+                eq("[ve-mailer] Open Defects"), eq(0), anyLong());
     }
 
     @Test

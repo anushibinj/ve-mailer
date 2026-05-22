@@ -79,7 +79,7 @@ The backend is stateless between requests. An in-memory cache (`OctaneCacheServi
 
 | Layer     | Technology                                                          |
 |-----------|---------------------------------------------------------------------|
-| Frontend  | React 19, TypeScript, Vite 7, Tailwind CSS 4, Axios, react-hot-toast, react-router-dom |
+| Frontend  | React 19, TypeScript, Vite 7, Tailwind CSS 4, Axios, react-hot-toast, react-router-dom, Recharts |
 | Backend   | Java 17, Spring Boot 3.2.5                                          |
 | Persistence | Spring Data JPA, H2 (dev), PostgreSQL (prod)                      |
 | Security  | Spring Security, JWT (HMAC-SHA256), BCrypt password hashing, role-based access |
@@ -111,6 +111,7 @@ ve-mailer/
 │   │   │   ├── AiPreferencesController.java        # Admin AI config (GET/PUT) — ADMIN only
 │   │   │   ├── AuthController.java         # Authentication endpoints (signup, login, etc.)
 │   │   │   ├── FilterController.java       # CRUD + execute filters
+│   │   │   ├── MailAnalyticsController.java        # Admin mail analytics (summary, charts, history) — ADMIN only
 │   │   │   ├── NotificationPreferencesController.java # Admin SMTP config (GET/PUT)
 │   │   │   ├── SubscriptionController.java
 │   │   │   └── WorkspaceController.java
@@ -141,6 +142,8 @@ ve-mailer/
 │   │   │   ├── Role.java             # Role entity (ADMIN, MEMBER)
 │   │   │   ├── RefreshToken.java     # Refresh token entity (revocable, per-user)
 │   │   │   ├── NotificationPreferences.java # SMTP config entity (host, port, username, password, TLS)
+│   │   │   ├── DeliveryStatus.java          # Enum: SUCCESS | FAILED
+│   │   │   ├── MailAuditLog.java            # Mail delivery audit record entity
 │   │   │   ├── Workspace.java
 │   │   │   ├── Filter.java                 # title, description, entityType, fields (JSON), criteria (JSON)
 │   │   │   ├── FilterCriteriaClause.java   # POJO: field, operator, negate, values[]
@@ -155,6 +158,7 @@ ve-mailer/
 │   │   │   ├── AppUserRepository.java
 │   │   │   ├── EmailSubscriberRepository.java
 │   │   │   ├── FilterRepository.java
+│   │   │   ├── MailAuditLogRepository.java          # Analytics aggregation queries + paginated history
 │   │   │   ├── NotificationPreferencesRepository.java
 │   │   │   ├── OtpRequestRepository.java
 │   │   │   ├── RefreshTokenRepository.java
@@ -172,6 +176,8 @@ ve-mailer/
 │   │       ├── EmailService.java     # Async OTP email sender
 │   │       ├── FilterService.java    # Create filters + execute against Octane
 │   │       ├── JwtService.java       # JWT token generation and validation
+│   │       ├── MailAnalyticsService.java     # Analytics aggregation + paginated history
+│   │       ├── MailAuditService.java         # Async audit logging for mail dispatches
 │   │       ├── NotificationPreferencesService.java # Admin SMTP settings CRUD
 │   │       ├── NotificationService.java # Async digest email sender
 │   │       ├── OctaneCacheService.java  # In-memory Octane client cache
@@ -205,6 +211,7 @@ ve-mailer/
     │   │   ├── ResetPasswordPage.tsx # OTP verification + new password
     │   │   └── admin/
     │   │       ├── AdminControlPanel.tsx         # Left-sidebar admin dashboard
+    │   │       ├── MailAnalyticsPage.tsx          # Mail delivery analytics dashboard (charts + history)
     │   │       ├── NotificationPreferencesPage.tsx # SMTP config form
     │   │       └── WorkspaceManagementPage.tsx   # Workspace CRUD
     │   ├── services/
@@ -294,6 +301,22 @@ NotificationPreferences
   username        -- SMTP username (also used as "from" address)
   password        -- SMTP password (masked in API responses)
   startTlsEnabled -- boolean
+
+MailAuditLog
+  id (UUID PK)
+  workspaceId         -- nullable, workspace that triggered the mail
+  workspaceTitle      -- denormalized workspace name
+  recipientEmail      -- recipient address
+  filterTemplateId    -- nullable, filter template used
+  filterTitle         -- denormalized filter name
+  subscriptionId      -- nullable, originating subscription
+  userId              -- nullable, user who owns the subscription
+  mailSubject         -- email subject line
+  ticketCount         -- number of tickets in digest
+  deliveryStatus      -- SUCCESS | FAILED
+  failureReason       -- nullable, error message on failure (max 2000 chars)
+  sentAt              -- timestamp of dispatch (indexed)
+  durationMs          -- time to send in milliseconds
 ```
 
 ---
@@ -384,6 +407,38 @@ All admin configuration endpoints require the `ADMIN` role. SMTP settings are st
 | `PUT`  | `/admin/notification-preferences`     | ADMIN         | Create/update SMTP config            |
 
 **Password handling:** The `password` field in responses is always `"(unchanged)"`. On update, sending `"(unchanged)"` (or blank/null) preserves the existing password. A new value replaces it.
+
+### Admin — Mail Analytics (`/api/admin/mail-analytics`)
+
+All mail analytics endpoints require the `ADMIN` role. They provide aggregated statistics and a searchable history of all mail dispatches.
+
+| Method | Path                                             | Role required | Description                                       |
+|--------|--------------------------------------------------|:-------------:|---------------------------------------------------|
+| `GET`  | `/admin/mail-analytics/summary`                  | ADMIN         | Summary stats (total mails, recipients, workspaces, top filter) |
+| `GET`  | `/admin/mail-analytics/daily-volume`             | ADMIN         | Daily mail count for the given period             |
+| `GET`  | `/admin/mail-analytics/daily-recipients`         | ADMIN         | Daily unique recipient count                      |
+| `GET`  | `/admin/mail-analytics/workspace-distribution`   | ADMIN         | Mail count grouped by workspace                   |
+| `GET`  | `/admin/mail-analytics/filter-usage`             | ADMIN         | Mail count grouped by filter template             |
+| `GET`  | `/admin/mail-analytics/history`                  | ADMIN         | Paginated, filterable mail delivery log           |
+
+**Query parameters (all endpoints):**
+
+| Param            | Default | Description                                                    |
+|------------------|---------|----------------------------------------------------------------|
+| `days`           | `7`     | Lookback period in days (summary, daily-volume, daily-recipients, workspace-distribution, filter-usage) |
+
+**Additional query parameters (`/history` only):**
+
+| Param            | Default | Description                        |
+|------------------|---------|------------------------------------|
+| `workspaceId`    | —       | Filter by workspace UUID           |
+| `recipientEmail` | —       | Filter by recipient (substring)    |
+| `filterTitle`    | —       | Filter by filter template title    |
+| `status`         | —       | `SUCCESS` or `FAILED`              |
+| `from`           | —       | Start date (ISO date)              |
+| `to`             | —       | End date (ISO date)                |
+| `page`           | `0`     | Page number (0-indexed)            |
+| `size`           | `20`    | Page size                          |
 
 ---
 

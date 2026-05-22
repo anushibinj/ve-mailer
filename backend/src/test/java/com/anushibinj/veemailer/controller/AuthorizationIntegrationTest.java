@@ -10,6 +10,7 @@ import com.anushibinj.veemailer.model.Workspace;
 import com.anushibinj.veemailer.repository.FilterRepository;
 import com.anushibinj.veemailer.service.AiPreferencesService;
 import com.anushibinj.veemailer.service.FilterService;
+import com.anushibinj.veemailer.service.MailAnalyticsService;
 import com.anushibinj.veemailer.service.SubscriptionService;
 import com.anushibinj.veemailer.service.WorkspaceService;
 import org.junit.jupiter.api.Test;
@@ -60,6 +61,9 @@ class AuthorizationIntegrationTest {
 
     @MockBean
     private AiPreferencesService aiPreferencesService;
+
+    @MockBean
+    private MailAnalyticsService mailAnalyticsService;
 
     private static final UUID WORKSPACE_ID = UUID.randomUUID();
     private static final UUID FILTER_ID = UUID.randomUUID();
@@ -353,6 +357,34 @@ class AuthorizationIntegrationTest {
                 .configured(false).build());
 
         mockMvc.perform(get("/api/admin/ai-preferences"))
+                .andExpect(status().isOk());
+    }
+
+    // ── Mail Analytics (ADMIN only) ──────────────────────────────────────────
+
+    @Test
+    @WithMockUser(username = "member@test.com", roles = "MEMBER")
+    void member_cannotAccessMailAnalyticsSummary() throws Exception {
+        mockMvc.perform(get("/api/admin/mail-analytics/summary"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(username = "member@test.com", roles = "MEMBER")
+    void member_cannotAccessMailAnalyticsHistory() throws Exception {
+        mockMvc.perform(get("/api/admin/mail-analytics/history"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(username = "admin@test.com", roles = "ADMIN")
+    void admin_canAccessMailAnalyticsSummary() throws Exception {
+        when(mailAnalyticsService.getSummary(7)).thenReturn(java.util.Map.of(
+                "mailsSentToday", 0L, "mailsSentPeriod", 0L,
+                "uniqueRecipients", 0L, "activeWorkspaces", 0L,
+                "topFilter", "", "periodDays", 7));
+
+        mockMvc.perform(get("/api/admin/mail-analytics/summary").param("days", "7"))
                 .andExpect(status().isOk());
     }
 }

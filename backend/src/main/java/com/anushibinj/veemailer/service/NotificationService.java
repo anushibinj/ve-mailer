@@ -44,6 +44,7 @@ public class NotificationService {
     private final DynamicMailSenderService dynamicMailSenderService;
     private final FieldExtractorRegistry fieldExtractorRegistry;
     private final AiSummaryService aiSummaryService;
+    private final MailAuditService mailAuditService;
 
     /**
      * Builds a standardised email subject: "[ve-mailer] {filterTitle}".
@@ -92,24 +93,40 @@ public class NotificationService {
         String htmlBody = buildHtmlTable(results, displayFields, limit, aiSummaryEnabled, aiSummaries, linkContext);
         String subject = buildMailSubject(filterTitle);
         for (EmailSubscriber subscriber : subscribers) {
-            sendEmail(subscriber.getRecipientEmail(), htmlBody, subject);
+            long start = System.currentTimeMillis();
+            try {
+                sendEmail(subscriber.getRecipientEmail(), htmlBody, subject);
+                long duration = System.currentTimeMillis() - start;
+                mailAuditService.recordSuccess(
+                        workspace.getId(), workspace.getTitle(),
+                        subscriber.getRecipientEmail(),
+                        subscriber.getFilter() != null ? subscriber.getFilter().getId() : null,
+                        filterTitle, subscriber.getId(), null,
+                        subject, results.size(), duration);
+            } catch (Exception e) {
+                long duration = System.currentTimeMillis() - start;
+                log.error("Failed to send notification email to {}", subscriber.getRecipientEmail(), e);
+                mailAuditService.recordFailure(
+                        workspace.getId(), workspace.getTitle(),
+                        subscriber.getRecipientEmail(),
+                        subscriber.getFilter() != null ? subscriber.getFilter().getId() : null,
+                        filterTitle, subscriber.getId(), null,
+                        subject, results.size(), duration,
+                        e.getMessage());
+            }
         }
     }
 
-    private void sendEmail(String to, String htmlBody, String subject) {
-        try {
-            JavaMailSender mailSender = dynamicMailSenderService.getMailSender();
-            String from = dynamicMailSenderService.getFromAddress();
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, false, "UTF-8");
-            helper.setFrom(from);
-            helper.setTo(to);
-            helper.setSubject(subject);
-            helper.setText(htmlBody, true); // true = HTML
-            mailSender.send(message);
-        } catch (MessagingException e) {
-            log.error("Failed to send notification email to {}", to, e);
-        }
+    private void sendEmail(String to, String htmlBody, String subject) throws MessagingException {
+        JavaMailSender mailSender = dynamicMailSenderService.getMailSender();
+        String from = dynamicMailSenderService.getFromAddress();
+        MimeMessage message = mailSender.createMimeMessage();
+        MimeMessageHelper helper = new MimeMessageHelper(message, false, "UTF-8");
+        helper.setFrom(from);
+        helper.setTo(to);
+        helper.setSubject(subject);
+        helper.setText(htmlBody, true); // true = HTML
+        mailSender.send(message);
     }
 
     /**

@@ -14,6 +14,7 @@ flowchart TD
         NPP[Notification Preferences Page]
         AIPP[AI Preferences Page]
         WMP[Workspace Management Page]
+        MAP[Mail Analytics Page]
         AI[Axios Interceptors]
     end
 
@@ -40,6 +41,7 @@ flowchart TD
             SCtrl[Subscription Controller]
             NPCtrl[Notification Preferences Controller]
             AIPCtrl[AI Preferences Controller]
+            MACtrl[Mail Analytics Controller]
             FS[Filter Service]
             SS[Subscription Service]
             NPS[Notification Preferences Service]
@@ -51,6 +53,8 @@ flowchart TD
             NS[Notification Service]
             AIS[AI Summary Service]
             TCS[Ticket Comment Service]
+            MAS[Mail Analytics Service]
+            MAUS[Mail Audit Service]
         end
 
         subgraph DataLayer["Data Layer (JPA)"]
@@ -63,6 +67,7 @@ flowchart TD
             ESR[EmailSubscriber Repository]
             NPR[NotificationPreferences Repository]
             APR[AiPreferences Repository]
+            MALR[MailAuditLog Repository]
         end
     end
 
@@ -88,9 +93,11 @@ flowchart TD
     ACP --> NPP
     ACP --> AIPP
     ACP --> WMP
+    ACP --> MAP
     NPP --> AI
     AIPP --> AI
     WMP --> AI
+    MAP --> AI
     LV --> AI
     WD --> AI
     FB --> AI
@@ -99,6 +106,7 @@ flowchart TD
     AI --> SCtrl
     AI --> NPCtrl
     AI --> AIPCtrl
+    AI --> MACtrl
 
     %% Security flow
     JF --> JWT
@@ -144,6 +152,10 @@ flowchart TD
     DAIS --> OPENAI
     NS --> DMS
     DMS --> SMTP
+    NS --> MAUS
+    MAUS --> MALR
+    MACtrl --> MAS
+    MAS --> MALR
 
     %% Data layer
     UR --> DB
@@ -155,4 +167,5 @@ flowchart TD
     ESR --> DB
     NPR --> DB
     APR --> DB
+    MALR --> DB
     RTS --> RTR
