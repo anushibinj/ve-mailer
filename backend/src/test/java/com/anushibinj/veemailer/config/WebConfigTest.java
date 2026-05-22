@@ -1,5 +1,7 @@
 package com.anushibinj.veemailer.config;
 
+import java.lang.reflect.Field;
+
 import org.junit.jupiter.api.Test;
 import org.mockito.Answers;
 import org.springframework.web.servlet.config.annotation.CorsRegistration;
@@ -14,7 +16,12 @@ class WebConfigTest {
     private final WebConfig webConfig = new WebConfig();
 
     @Test
-    void testAddCorsMappings_RegistersAllOriginsAndMethods() {
+    void testAddCorsMappings_RegistersAllOriginsAndMethods() throws Exception {
+        // Inject the property value that would normally come from @Value
+        Field field = WebConfig.class.getDeclaredField("allowedOrigins");
+        field.setAccessible(true);
+        field.set(webConfig, "http://localhost:5173,http://localhost:80,http://localhost");
+
         // CorsRegistry.addMapping() returns a CorsRegistration with fluent builder methods.
         // Use RETURNS_SELF so the fluent chain never returns null.
         CorsRegistration registration = mock(CorsRegistration.class, Answers.RETURNS_SELF);

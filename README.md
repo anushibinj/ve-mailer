@@ -545,6 +545,9 @@ app.auth.jwt.secret=<your-256-bit-secret>
 app.auth.jwt.access-token-expiration-ms=900000
 app.auth.jwt.refresh-token-expiration-ms=604800000
 
+# CORS — comma-separated list of allowed origins
+app.cors.allowed-origins=http://localhost:5173,http://localhost:80,http://localhost
+
 # Admin Bootstrap (created on first startup)
 app.bootstrap.admin.email=admin@company.com
 app.bootstrap.admin.password=ChangeMeImmediately
