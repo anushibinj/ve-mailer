@@ -9,7 +9,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -28,6 +27,7 @@ class FilterServiceTest {
     @Mock private WorkspaceRepository workspaceRepository;
     @Mock private EmailSubscriberRepository emailSubscriberRepository;
     @Mock private OctaneCacheService octaneCacheService;
+    @Mock private GeneralSettingsService generalSettingsService;
 
     private FilterService filterService;
 
@@ -35,7 +35,7 @@ class FilterServiceTest {
     void setUp() {
         filterService = new FilterService(
                 filterRepository, workspaceRepository, emailSubscriberRepository,
-                octaneCacheService, new ObjectMapper());
+                octaneCacheService, new ObjectMapper(), generalSettingsService);
     }
 
     @Test

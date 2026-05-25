@@ -4,13 +4,15 @@ import AiPreferencesPage from './AiPreferencesPage';
 import WorkspaceManagementPage from './WorkspaceManagementPage';
 import MailAnalyticsPage from './MailAnalyticsPage';
 import UsersPage from './UsersPage';
+import GeneralSettingsPage from './GeneralSettingsPage';
 
-type AdminTab = 'notification-preferences' | 'ai-preferences' | 'workspaces' | 'mail-analytics' | 'users';
+type AdminTab = 'notification-preferences' | 'ai-preferences' | 'workspaces' | 'mail-analytics' | 'users' | 'general';
 
 const tabs: { key: AdminTab; label: string }[] = [
   { key: 'workspaces', label: 'Manage Workspaces' },
   { key: 'notification-preferences', label: 'Configure Notification Preferences' },
   { key: 'ai-preferences', label: 'Configure AI Preferences' },
+  { key: 'general', label: 'General' },
   { key: 'mail-analytics', label: 'Mail Analytics' },
   { key: 'users', label: 'Users' },
 ];
@@ -50,6 +52,7 @@ export default function AdminControlPanel() {
           {activeTab === 'workspaces' && <WorkspaceManagementPage />}
           {activeTab === 'mail-analytics' && <MailAnalyticsPage />}
           {activeTab === 'users' && <UsersPage />}
+          {activeTab === 'general' && <GeneralSettingsPage />}
         </div>
       </div>
     </div>

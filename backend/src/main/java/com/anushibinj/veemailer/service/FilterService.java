@@ -18,6 +18,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hpe.adm.nga.sdk.Octane;
+import com.hpe.adm.nga.sdk.entities.get.GetEntities;
 import com.hpe.adm.nga.sdk.entities.OctaneCollection;
 import com.hpe.adm.nga.sdk.model.EntityModel;
 import com.hpe.adm.nga.sdk.query.Query;
@@ -25,7 +26,6 @@ import com.hpe.adm.nga.sdk.query.QueryMethod;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 
 @Slf4j
 @Service
@@ -37,9 +37,7 @@ public class FilterService {
     private final EmailSubscriberRepository emailSubscriberRepository;
     private final OctaneCacheService octaneCacheService;
     private final ObjectMapper objectMapper;
-
-    @Value("${veemailer.query.limit:25}")
-    private int queryLimit;
+    private final GeneralSettingsService generalSettingsService;
 
     /**
      * Persist a new filter template associated with a workspace.
@@ -166,13 +164,17 @@ public class FilterService {
 
             Query query = buildQuery(filter.getEntityType(), clauses);
 
-            OctaneCollection<EntityModel> result = octaneClient
+            int effectiveLimit = generalSettingsService.getQueryLimit();
+            GetEntities getEntities = octaneClient
                     .entityList("work_items")
                     .get()
                     .query(query)
-                    .addFields(effectiveFetchFields.toArray(new String[0]))
-                    .limit(queryLimit) // configurable via veemailer.query.limit
-                    .execute();
+                    .addFields(effectiveFetchFields.toArray(new String[0]));
+            // Apply LIMIT only when a positive integer is configured; -1 means unlimited.
+            if (effectiveLimit > 0) {
+                getEntities = getEntities.limit(effectiveLimit);
+            }
+            OctaneCollection<EntityModel> result = getEntities.execute();
 
             return result.stream().toList();
         } catch (JsonProcessingException e) {
@@ -182,7 +184,7 @@ public class FilterService {
 
     /** Returns the configured maximum number of results returned per filter execution. */
     public int getQueryLimit() {
-        return queryLimit;
+        return generalSettingsService.getQueryLimit();
     }
 
     /**
