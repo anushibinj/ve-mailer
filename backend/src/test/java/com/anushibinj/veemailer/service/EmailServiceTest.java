@@ -1,26 +1,23 @@
 package com.anushibinj.veemailer.service;
 
+import jakarta.mail.Message;
+import jakarta.mail.Session;
+import jakarta.mail.internet.MimeMessage;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import java.util.Properties;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class EmailServiceTest {
-
-    @Mock
-    private JavaMailSender mailSender;
 
     @Mock
     private DynamicMailSenderService dynamicMailSenderService;
@@ -28,36 +25,42 @@ class EmailServiceTest {
     @InjectMocks
     private EmailService emailService;
 
-    @Test
-    void testSendOtpEmail_SendsCorrectMessage() {
-        String recipient = "user@example.com";
-        String otp = "654321";
-
-        when(dynamicMailSenderService.getMailSender()).thenReturn(mailSender);
-        when(dynamicMailSenderService.getFromAddress()).thenReturn("noreply@test.com");
-
-        emailService.sendOtpEmail(recipient, otp);
-
-        ArgumentCaptor<SimpleMailMessage> captor = ArgumentCaptor.forClass(SimpleMailMessage.class);
-        verify(mailSender, times(1)).send(captor.capture());
-
-        SimpleMailMessage sent = captor.getValue();
-        assertNotNull(sent.getTo());
-        assertEquals(1, sent.getTo().length);
-        assertEquals(recipient, sent.getTo()[0]);
-        assertEquals("[ve-emailer] Your ve-emailer OTP", sent.getSubject());
-        assertNotNull(sent.getText());
-        assertTrue(sent.getText().contains(otp), "Email body should contain the OTP code");
-        assertTrue(sent.getText().contains("expire"), "Email body should mention expiration");
+    private Session testSession() {
+        return Session.getInstance(new Properties());
     }
 
     @Test
-    void testSendOtpEmail_MailSenderCalledExactlyOnce() {
-        when(dynamicMailSenderService.getMailSender()).thenReturn(mailSender);
+    void testSendOtpEmail_SendsCorrectMessage() throws Exception {
+        String recipient = "user@example.com";
+        String otp = "654321";
+
+        when(dynamicMailSenderService.getSession()).thenReturn(testSession());
         when(dynamicMailSenderService.getFromAddress()).thenReturn("noreply@test.com");
+        doNothing().when(dynamicMailSenderService).send(any(MimeMessage.class));
+
+        emailService.sendOtpEmail(recipient, otp);
+
+        ArgumentCaptor<MimeMessage> captor = ArgumentCaptor.forClass(MimeMessage.class);
+        verify(dynamicMailSenderService, times(1)).send(captor.capture());
+
+        MimeMessage sent = captor.getValue();
+        assertNotNull(sent.getRecipients(Message.RecipientType.TO));
+        assertEquals(1, sent.getRecipients(Message.RecipientType.TO).length);
+        assertEquals(recipient, sent.getRecipients(Message.RecipientType.TO)[0].toString());
+        assertEquals("[ve-emailer] Your ve-emailer OTP", sent.getSubject());
+        String body = sent.getContent().toString();
+        assertTrue(body.contains(otp), "Email body should contain the OTP code");
+        assertTrue(body.contains("expire"), "Email body should mention expiration");
+    }
+
+    @Test
+    void testSendOtpEmail_MailSenderCalledExactlyOnce() throws Exception {
+        when(dynamicMailSenderService.getSession()).thenReturn(testSession());
+        when(dynamicMailSenderService.getFromAddress()).thenReturn("noreply@test.com");
+        doNothing().when(dynamicMailSenderService).send(any(MimeMessage.class));
 
         emailService.sendOtpEmail("another@example.com", "111111");
 
-        verify(mailSender, times(1)).send(org.mockito.ArgumentMatchers.any(SimpleMailMessage.class));
+        verify(dynamicMailSenderService, times(1)).send(any(MimeMessage.class));
     }
 }
