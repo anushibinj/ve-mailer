@@ -14,3 +14,5 @@
 - [x] Add a new property in frontend called VITE_FOOTER_HTML that accepts a HTML element (a div) that can be set as the app's footer
 - [ ] Lazy load every component in the frontend
 - [ ] Add an option to "Test connection" the ticketing service endpoint with a basic auth call or test call. Need to figure out which test call works best. Perhaps fetch some workspace related metadata to check if validation passes.
+- [ ] Allow unlimited tickets to come in the e-mail report. Currently there is a property to limit it to an integer. There should be an option to set it to -1 or something so that it doesn't add a limit to the query.
+- [ ] The e-mail body should have a link to ve-mailer frontend pointing to the workspace. People should be able to directly go and view their workspace subscriptions from their e-mail.
