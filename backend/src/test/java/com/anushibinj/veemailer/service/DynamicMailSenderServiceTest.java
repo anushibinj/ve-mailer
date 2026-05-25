@@ -1,14 +1,21 @@
 package com.anushibinj.veemailer.service;
 
-import org.junit.jupiter.api.BeforeEach;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.when;
+
+import java.util.UUID;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.test.util.ReflectionTestUtils;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import com.anushibinj.veemailer.model.NotificationPreferences;
+
+import jakarta.mail.Session;
 
 @ExtendWith(MockitoExtension.class)
 class DynamicMailSenderServiceTest {
@@ -19,13 +26,58 @@ class DynamicMailSenderServiceTest {
     @InjectMocks
     private DynamicMailSenderService dynamicMailSenderService;
 
-    @BeforeEach
-    void setUp() {
-        ReflectionTestUtils.setField(dynamicMailSenderService, "adminEmail", "admin@company.com");
+    private NotificationPreferences authPrefs() {
+        return NotificationPreferences.builder()
+                .id(UUID.randomUUID())
+                .host("smtp.example.com")
+                .port(587)
+                .fromAddress("noreply@example.com")
+                .requiresAuth(true)
+                .username("user@example.com")
+                .password("secret")
+                .startTlsEnabled(false)
+                .build();
     }
 
     @Test
-    void getFromAddress_ReturnsAdminEmail() {
-        assertEquals("admin@company.com", dynamicMailSenderService.getFromAddress());
+    void getFromAddress_ReturnsFromAddressStoredInPrefs() {
+        when(notificationPreferencesService.getEntity()).thenReturn(authPrefs());
+        assertEquals("noreply@example.com", dynamicMailSenderService.getFromAddress());
+    }
+
+    @Test
+    void getFromAddress_ThrowsWhenNotConfigured() {
+        when(notificationPreferencesService.getEntity()).thenReturn(null);
+        assertThrows(IllegalStateException.class, () -> dynamicMailSenderService.getFromAddress());
+    }
+
+    @Test
+    void getSession_WithAuth_SetsAuthTrue() {
+        when(notificationPreferencesService.getEntity()).thenReturn(authPrefs());
+        Session session = dynamicMailSenderService.getSession();
+        assertNotNull(session);
+        assertEquals("true", session.getProperty("mail.smtp.auth"));
+    }
+
+    @Test
+    void getSession_WithoutAuth_SetsAuthFalse() {
+        NotificationPreferences relayPrefs = NotificationPreferences.builder()
+                .id(UUID.randomUUID())
+                .host("relay.internal")
+                .port(25)
+                .fromAddress("noreply@example.com")
+                .requiresAuth(false)
+                .build();
+        when(notificationPreferencesService.getEntity()).thenReturn(relayPrefs);
+
+        Session session = dynamicMailSenderService.getSession();
+        assertNotNull(session);
+        assertEquals("false", session.getProperty("mail.smtp.auth"));
+    }
+
+    @Test
+    void getSession_ThrowsWhenNotConfigured() {
+        when(notificationPreferencesService.getEntity()).thenReturn(null);
+        assertThrows(IllegalStateException.class, () -> dynamicMailSenderService.getSession());
     }
 }
