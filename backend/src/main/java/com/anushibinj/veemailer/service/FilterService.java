@@ -64,6 +64,29 @@ public class FilterService {
     }
 
     /**
+     * Returns a deep-copy DTO of the given filter's configurable fields, with no ID,
+     * workspace reference or audit metadata. The title is prefixed with "Clone of ".
+     * The caller is responsible for persisting the result via {@link #createFilter(FilterDto)}.
+     */
+    public FilterDto cloneFilter(UUID filterId) {
+        Filter filter = filterRepository.findById(filterId)
+                .orElseThrow(() -> new IllegalArgumentException("Filter not found: " + filterId));
+        try {
+            List<String> fields = objectMapper.readValue(filter.getFields(), new TypeReference<>() {});
+            List<FilterCriteriaClause> criteria = objectMapper.readValue(filter.getCriteria(), new TypeReference<>() {});
+            return FilterDto.builder()
+                    .title("Clone of " + filter.getTitle())
+                    .description(filter.getDescription())
+                    .entityType(filter.getEntityType())
+                    .fields(fields)
+                    .criteria(criteria)
+                    .build();
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("Failed to deserialize filter data", e);
+        }
+    }
+
+    /**
      * Update an existing filter template.
      */
     public Filter updateFilter(UUID filterId, FilterDto dto) {

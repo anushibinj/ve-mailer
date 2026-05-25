@@ -1,5 +1,6 @@
 package com.anushibinj.veemailer.controller;
 
+import com.anushibinj.veemailer.dto.FilterDto;
 import com.anushibinj.veemailer.model.Filter;
 import com.anushibinj.veemailer.model.Workspace;
 import com.anushibinj.veemailer.repository.FilterRepository;
@@ -154,5 +155,26 @@ class FilterControllerTest {
                 .content(body))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.title").value("Updated Title"));
+    }
+
+    @Test
+    void testCloneFilter_returnsDto() throws Exception {
+        UUID filterId = UUID.randomUUID();
+        FilterDto cloned = FilterDto.builder()
+                .title("Clone of Urgent Tickets")
+                .description("Show urgent")
+                .entityType("defect")
+                .fields(java.util.List.of("id", "name"))
+                .criteria(java.util.List.of())
+                .build();
+
+        when(filterService.cloneFilter(filterId)).thenReturn(cloned);
+
+        mockMvc.perform(get("/api/v1/workspaces/{workspaceId}/filters/{filterId}/clone",
+                        WORKSPACE_ID, filterId)
+                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.title").value("Clone of Urgent Tickets"))
+                .andExpect(jsonPath("$.entityType").value("defect"));
     }
 }

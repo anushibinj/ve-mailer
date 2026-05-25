@@ -57,6 +57,15 @@ public class FilterController {
         return ResponseEntity.ok(updated);
     }
 
+    @GetMapping("/{filterId}/clone")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<FilterDto> cloneFilter(
+            @PathVariable UUID workspaceId,
+            @PathVariable UUID filterId) {
+        FilterDto cloned = filterService.cloneFilter(filterId);
+        return ResponseEntity.ok(cloned);
+    }
+
     @PostMapping("/{filterId}/execute")
     public ResponseEntity<List<EntityModel>> executeFilter(
             @PathVariable UUID workspaceId,
