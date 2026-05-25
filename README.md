@@ -58,17 +58,17 @@ Key capabilities:
 ## Architecture
 
 ```
-┌─────────────────────┐        REST / JSON        ┌──────────────────────────┐
+┌─────────────────────┐        REST / JSON         ┌──────────────────────────┐
 │   React Frontend    │ ◄────────────────────────► │  Spring Boot Backend     │
 │   (Vite + TS)       │                            │  (Java 17, port 8080)    │
 └─────────────────────┘                            └──────────┬───────────────┘
                                                               │
                                         ┌─────────────────────┼──────────────────┐
                                         │                     │                  │
-                                   ┌────▼─────┐     ┌────────▼──────┐  ┌────────▼──────┐
-                                   │ H2 / PG  │     │  SMTP Server  │  │  ValueEdge    │
-                                   │ Database │     │  (Email)      │  │  (Octane API) │
-                                   └──────────┘     └───────────────┘  └───────────────┘
+                                   ┌────▼─────┐      ┌────────▼──────┐  ┌────────▼──────┐
+                                   │ H2 / PG  │      │  SMTP Server  │  │  ValueEdge    │
+                                   │ Database │      │  (Email)      │  │  (Octane API) │
+                                   └──────────┘      └───────────────┘  └───────────────┘
 ```
 
 The backend is stateless between requests. An in-memory cache (`OctaneCacheService`) keeps authenticated Octane sessions alive across polling cycles.
