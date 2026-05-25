@@ -10,8 +10,10 @@ import com.anushibinj.veemailer.dto.FilterDto;
 import com.anushibinj.veemailer.model.Filter;
 import com.anushibinj.veemailer.model.FilterCriteriaClause;
 import com.anushibinj.veemailer.model.Workspace;
+import com.anushibinj.veemailer.repository.EmailSubscriberRepository;
 import com.anushibinj.veemailer.repository.FilterRepository;
 import com.anushibinj.veemailer.repository.WorkspaceRepository;
+import org.springframework.transaction.annotation.Transactional;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -32,6 +34,7 @@ public class FilterService {
 
     private final FilterRepository filterRepository;
     private final WorkspaceRepository workspaceRepository;
+    private final EmailSubscriberRepository emailSubscriberRepository;
     private final OctaneCacheService octaneCacheService;
     private final ObjectMapper objectMapper;
 
@@ -61,6 +64,20 @@ public class FilterService {
         } catch (JsonProcessingException e) {
             throw new RuntimeException("Failed to serialize filter data", e);
         }
+    }
+
+    /**
+     * Deletes a filter template and all associated subscriptions.
+     * The mail audit log references the filter only by its UUID and title (stored as plain
+     * columns, not as a FK), so historical audit records are preserved after deletion.
+     */
+    @Transactional
+    public void deleteFilter(UUID filterId) {
+        if (!filterRepository.existsById(filterId)) {
+            throw new IllegalArgumentException("Filter not found: " + filterId);
+        }
+        emailSubscriberRepository.deleteByFilter_Id(filterId);
+        filterRepository.deleteById(filterId);
     }
 
     /**

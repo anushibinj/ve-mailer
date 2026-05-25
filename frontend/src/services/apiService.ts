@@ -157,6 +157,10 @@ export const cloneFilter = async (workspaceId: string, filterId: string): Promis
   return response.data;
 };
 
+export const deleteFilter = async (workspaceId: string, filterId: string): Promise<void> => {
+  await api.delete(`/api/v1/workspaces/${workspaceId}/filters/${filterId}`);
+};
+
 // --- Subscriptions ---
 
 export const fetchSubscriptionsByWorkspace = async (workspaceId: string): Promise<Subscription[]> => {

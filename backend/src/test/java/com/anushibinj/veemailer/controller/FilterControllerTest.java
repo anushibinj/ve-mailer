@@ -21,6 +21,7 @@ import java.util.UUID;
 import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -176,5 +177,14 @@ class FilterControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.title").value("Clone of Urgent Tickets"))
                 .andExpect(jsonPath("$.entityType").value("defect"));
+    }
+
+    @Test
+    void testDeleteFilter_returnsNoContent() throws Exception {
+        UUID filterId = UUID.randomUUID();
+
+        mockMvc.perform(delete("/api/v1/workspaces/{workspaceId}/filters/{filterId}",
+                        WORKSPACE_ID, filterId))
+                .andExpect(status().isNoContent());
     }
 }

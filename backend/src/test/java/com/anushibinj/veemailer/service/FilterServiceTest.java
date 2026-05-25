@@ -1,5 +1,6 @@
 package com.anushibinj.veemailer.service;
 
+import com.anushibinj.veemailer.repository.EmailSubscriberRepository;
 import com.anushibinj.veemailer.repository.FilterRepository;
 import com.anushibinj.veemailer.repository.WorkspaceRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -25,6 +26,7 @@ class FilterServiceTest {
 
     @Mock private FilterRepository filterRepository;
     @Mock private WorkspaceRepository workspaceRepository;
+    @Mock private EmailSubscriberRepository emailSubscriberRepository;
     @Mock private OctaneCacheService octaneCacheService;
 
     private FilterService filterService;
@@ -32,8 +34,8 @@ class FilterServiceTest {
     @BeforeEach
     void setUp() {
         filterService = new FilterService(
-                filterRepository, workspaceRepository, octaneCacheService,
-                new ObjectMapper());
+                filterRepository, workspaceRepository, emailSubscriberRepository,
+                octaneCacheService, new ObjectMapper());
     }
 
     @Test

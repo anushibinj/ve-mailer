@@ -5,6 +5,7 @@ import {
   updateFilter,
   executeFilter,
   cloneFilter,
+  deleteFilter,
   type Filter,
   type FilterCriteriaClause,
   type FilterCreatePayload,
@@ -13,6 +14,7 @@ import {
 import { useAuth } from '../hooks/useAuth';
 import { Loader2, ArrowLeft, Plus, Trash2, Play, Pencil, Copy, ChevronDown, ChevronUp } from 'lucide-react';
 import toast from 'react-hot-toast';
+import ConfirmDialog from './ConfirmDialog';
 
 interface FilterBuilderViewProps {
   workspaceId: string;
@@ -68,6 +70,10 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
   const [selectedFields, setSelectedFields] = useState<string[]>(defaultFields);
   const [criteria, setCriteria] = useState<FilterCriteriaClause[]>([emptyCriterion()]);
   const [isSaving, setIsSaving] = useState(false);
+
+  // Delete confirmation state
+  const [filterToDelete, setFilterToDelete] = useState<Filter | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const loadFilters = async () => {
     setIsLoading(true);
@@ -139,6 +145,30 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
     } catch {
       toast.error('Failed to load filter for cloning.');
     }
+  };
+
+  const handleDeleteRequest = (f: Filter) => {
+    setFilterToDelete(f);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!filterToDelete) return;
+    setIsDeleting(true);
+    try {
+      await deleteFilter(workspaceId, filterToDelete.id);
+      setFilters(prev => prev.filter(f => f.id !== filterToDelete.id));
+      toast.success(`Filter template "${filterToDelete.title}" deleted.`);
+      setFilterToDelete(null);
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { data?: { message?: string } } };
+      toast.error(axiosErr.response?.data?.message || 'Failed to delete filter template.');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleDeleteCancel = () => {
+    setFilterToDelete(null);
   };
 
   const handleBackToList = () => {
@@ -619,6 +649,19 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
                             <Copy className="h-3.5 w-3.5" />
                             Clone
                           </button>
+                          <button
+                            onClick={() => handleDeleteRequest(f)}
+                            disabled={isDeleting && filterToDelete?.id === f.id}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-red-200 rounded-md text-xs font-medium text-red-600 bg-white hover:bg-red-50 hover:border-red-400 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
+                            title="Delete Filter Template"
+                          >
+                            {isDeleting && filterToDelete?.id === f.id ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-3.5 w-3.5" />
+                            )}
+                            Delete
+                          </button>
                         </>
                       )}
                       <button
@@ -710,6 +753,19 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
           })}
         </div>
       )}
+
+      <ConfirmDialog
+        isOpen={filterToDelete !== null}
+        title="Delete Filter Template"
+        message={filterToDelete
+          ? `Are you sure you want to delete the filter template "${filterToDelete.title}"? This action cannot be undone.`
+          : ''}
+        confirmLabel="Delete"
+        onConfirm={handleDeleteConfirm}
+        onCancel={handleDeleteCancel}
+        isLoading={isDeleting}
+        variant="danger"
+      />
     </div>
   );
 };
