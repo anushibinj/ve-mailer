@@ -40,4 +40,11 @@ public interface EmailSubscriberRepository extends JpaRepository<EmailSubscriber
 
     /** Deletes all subscriptions associated with the given filter. Used when a filter template is deleted. */
     void deleteByFilter_Id(UUID filterId);
+
+    /**
+     * Returns a list of [recipientEmail, count] pairs counting the number of active subscriptions
+     * (distinct filters) per user email. Used for the admin Users page to avoid N+1 queries.
+     */
+    @Query("SELECT e.recipientEmail, COUNT(DISTINCT e.filter.id) FROM EmailSubscriber e WHERE e.status = 'ACTIVE' GROUP BY e.recipientEmail")
+    List<Object[]> countActiveSubscriptionsGroupedByEmail();
 }

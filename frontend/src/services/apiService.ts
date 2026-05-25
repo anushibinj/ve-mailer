@@ -352,3 +352,18 @@ export const adminGetMailHistory = async (params: MailHistoryParams = {}): Promi
   const response = await api.get('/api/admin/mail-analytics/history', { params });
   return response.data;
 };
+
+// --- Admin Users ---
+
+export interface UserSummary {
+  id: string;
+  name: string;
+  email: string;
+  roles: string[];
+  subscribedFilterCount: number;
+}
+
+export const adminGetUsers = async (): Promise<UserSummary[]> => {
+  const response = await api.get('/api/admin/users');
+  return response.data;
+};
