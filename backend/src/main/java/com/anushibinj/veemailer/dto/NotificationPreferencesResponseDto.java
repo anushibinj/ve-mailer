@@ -15,6 +15,8 @@ import lombok.NoArgsConstructor;
 public class NotificationPreferencesResponseDto {
     private String host;
     private int port;
+    private String fromAddress;
+    private boolean requiresAuth;
     private String username;
     // Always "(unchanged)" — never the real password
     private String password;

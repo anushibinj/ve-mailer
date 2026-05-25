@@ -36,34 +36,48 @@ public class NotificationPreferencesService {
      * Creates or updates the single notification preferences record.
      */
     public NotificationPreferencesResponseDto update(NotificationPreferencesUpdateDto dto) {
+        if (dto.isRequiresAuth()) {
+            if (dto.getUsername() == null || dto.getUsername().isBlank()) {
+                throw new IllegalArgumentException("Username is required when authentication is enabled");
+            }
+        }
+
         List<NotificationPreferences> all = repository.findAll();
         NotificationPreferences prefs;
 
         if (all.isEmpty()) {
-            // First-time setup — password is required
-            if (dto.getPassword() == null || dto.getPassword().isBlank()
-                    || PASSWORD_PLACEHOLDER.equals(dto.getPassword())) {
-                throw new IllegalArgumentException("Password is required for initial configuration");
+            if (dto.isRequiresAuth()
+                    && (dto.getPassword() == null || dto.getPassword().isBlank()
+                        || PASSWORD_PLACEHOLDER.equals(dto.getPassword()))) {
+                throw new IllegalArgumentException("Password is required for initial configuration when authentication is enabled");
             }
             prefs = NotificationPreferences.builder()
                     .host(dto.getHost())
                     .port(dto.getPort())
-                    .username(dto.getUsername())
-                    .password(dto.getPassword())
+                    .fromAddress(dto.getFromAddress())
+                    .requiresAuth(dto.isRequiresAuth())
+                    .username(dto.isRequiresAuth() ? dto.getUsername() : null)
+                    .password(dto.isRequiresAuth() ? dto.getPassword() : null)
                     .startTlsEnabled(dto.isStartTlsEnabled())
                     .build();
         } else {
             prefs = all.get(0);
             prefs.setHost(dto.getHost());
             prefs.setPort(dto.getPort());
-            prefs.setUsername(dto.getUsername());
+            prefs.setFromAddress(dto.getFromAddress());
+            prefs.setRequiresAuth(dto.isRequiresAuth());
             prefs.setStartTlsEnabled(dto.isStartTlsEnabled());
 
-            // Only replace password when the caller provides a real new value
-            String newPassword = dto.getPassword();
-            if (newPassword != null && !newPassword.isBlank()
-                    && !PASSWORD_PLACEHOLDER.equals(newPassword)) {
-                prefs.setPassword(newPassword);
+            if (dto.isRequiresAuth()) {
+                prefs.setUsername(dto.getUsername());
+                String newPassword = dto.getPassword();
+                if (newPassword != null && !newPassword.isBlank()
+                        && !PASSWORD_PLACEHOLDER.equals(newPassword)) {
+                    prefs.setPassword(newPassword);
+                }
+            } else {
+                prefs.setUsername(null);
+                prefs.setPassword(null);
             }
         }
 
@@ -83,8 +97,10 @@ public class NotificationPreferencesService {
         return NotificationPreferencesResponseDto.builder()
                 .host(prefs.getHost())
                 .port(prefs.getPort())
+                .fromAddress(prefs.getFromAddress())
+                .requiresAuth(prefs.isRequiresAuth())
                 .username(prefs.getUsername())
-                .password(PASSWORD_PLACEHOLDER)
+                .password(prefs.isRequiresAuth() ? PASSWORD_PLACEHOLDER : null)
                 .startTlsEnabled(prefs.isStartTlsEnabled())
                 .configured(true)
                 .build();

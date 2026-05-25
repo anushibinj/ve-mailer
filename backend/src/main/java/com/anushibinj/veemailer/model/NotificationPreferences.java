@@ -36,12 +36,21 @@ public class NotificationPreferences {
     @Column(nullable = false)
     private int port;
 
-    @Column(nullable = false)
+    @Column
     private String username;
 
-    @Column(nullable = false)
+    @Column
     private String password;
 
     @Column(nullable = false)
     private boolean startTlsEnabled;
+
+    /** Email address placed in the From: header. */
+    @Column
+    private String fromAddress;
+
+    /** When false, connects unauthenticated (port-25 relay). */
+    @Builder.Default
+    @Column(nullable = false)
+    private boolean requiresAuth = true;
 }
