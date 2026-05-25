@@ -12,47 +12,102 @@ import ResetPasswordPage from './pages/ResetPasswordPage';
 import AdminControlPanel from './pages/admin/AdminControlPanel';
 import AppFooter from './components/AppFooter';
 import { AuthProvider, useAuth } from './hooks/useAuth';
+import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 import { Toaster } from 'react-hot-toast';
+import { Mail, LayoutDashboard, LogOut, ShieldCheck, Sun, Moon } from 'lucide-react';
 
-export function AdminLayout({ children }: { children: React.ReactNode }) {
+function ThemeToggle() {
+  const { isDark, toggleTheme } = useTheme();
+  return (
+    <button
+      onClick={toggleTheme}
+      aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+      className="relative p-2 rounded-xl text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700/60 transition-colors cursor-pointer"
+    >
+      <span key={String(isDark)} className="block animate-theme-flip">
+        {isDark
+          ? <Sun className="h-4 w-4 text-amber-400" />
+          : <Moon className="h-4 w-4" />}
+      </span>
+    </button>
+  );
+}
+
+function AppHeader({ onLogoClick }: { onLogoClick?: () => void }) {
   const { logout, user, isAdmin } = useAuth();
   const navigate = useNavigate();
+  const initial = user?.name?.charAt(0).toUpperCase() ?? '?';
 
   return (
-    <>
-      {/* Sticky app-shell header: stays visible while content scrolls below */}
-      <header className="sticky top-0 z-30 bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex justify-between items-center">
-          <div className="flex items-center gap-4">
-            <Link
-              to="/"
-              className="text-lg font-semibold text-gray-900 hover:text-blue-600 transition-colors"
-            >
+    <header className="sticky top-0 z-30 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-200/60 dark:border-slate-700/40 shadow-sm dark:shadow-slate-900/20">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex justify-between items-center gap-4">
+        {/* Left: logo + admin nav */}
+        <div className="flex items-center gap-6">
+          <Link
+            to="/"
+            onClick={onLogoClick}
+            className="flex items-center gap-2.5 group focus-visible:outline-none"
+          >
+            <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-md shadow-indigo-500/30 group-hover:shadow-indigo-500/60 group-hover:scale-110 transition-all duration-200 animate-pulse-glow">
+              <Mail className="h-3.5 w-3.5 text-white" />
+            </div>
+            <span className="font-semibold text-slate-900 dark:text-white text-sm tracking-tight">
               VE Mailer
-            </Link>
-            {isAdmin && (
-              <button
-                onClick={() => navigate('/admin')}
-                className="text-sm text-blue-600 font-medium cursor-pointer"
-              >
-                Admin Control Panel
-              </button>
-            )}
+            </span>
+          </Link>
+
+          {isAdmin && (
+            <button
+              onClick={() => navigate('/admin')}
+              className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 text-sm font-medium transition-colors cursor-pointer"
+            >
+              <LayoutDashboard className="h-3.5 w-3.5" />
+              Admin Panel
+            </button>
+          )}
+        </div>
+
+        {/* Right: theme toggle + user + sign out */}
+        <div className="flex items-center gap-2">
+          <ThemeToggle />
+
+          <div className="w-px h-4 bg-slate-200 dark:bg-slate-700" />
+
+          <div className="flex items-center gap-2.5">
+            <div className="h-7 w-7 rounded-full bg-gradient-to-br from-indigo-500/20 to-violet-500/20 dark:from-indigo-500/30 dark:to-violet-500/30 border border-indigo-500/30 dark:border-indigo-400/30 flex items-center justify-center">
+              <span className="text-indigo-600 dark:text-indigo-300 text-xs font-bold">{initial}</span>
+            </div>
+            <span className="text-slate-700 dark:text-slate-300 text-sm hidden sm:block font-medium">
+              {user?.name}
+            </span>
           </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-600">{user?.name}</span>
-            <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-medium">
+
+          {isAdmin && (
+            <span className="hidden sm:flex items-center gap-1 text-xs bg-violet-50 dark:bg-violet-500/10 text-violet-600 dark:text-violet-300 border border-violet-200 dark:border-violet-500/25 px-2 py-0.5 rounded-full font-medium">
+              <ShieldCheck className="h-3 w-3" />
               Admin
             </span>
-            <button
-              onClick={() => logout()}
-              className="text-sm text-gray-500 hover:text-gray-700 font-medium"
-            >
-              Sign Out
-            </button>
-          </div>
+          )}
+
+          <div className="w-px h-4 bg-slate-200 dark:bg-slate-700" />
+
+          <button
+            onClick={() => logout()}
+            className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 hover:text-rose-500 dark:hover:text-rose-400 text-sm font-medium transition-colors cursor-pointer"
+          >
+            <LogOut className="h-3.5 w-3.5" />
+            <span className="hidden sm:block">Sign Out</span>
+          </button>
         </div>
-      </header>
+      </div>
+    </header>
+  );
+}
+
+export function AdminLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <>
+      <AppHeader />
       {children}
     </>
   );
@@ -61,8 +116,6 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
 export function AppContent() {
   const [currentView, setCurrentView] = useState<'landing' | 'workspace' | 'filters'>('landing');
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string | null>(null);
-  const { logout, user, isAdmin } = useAuth();
-  const navigate = useNavigate();
 
   const handleSelectWorkspace = (workspaceId: string) => {
     setSelectedWorkspaceId(workspaceId);
@@ -74,56 +127,12 @@ export function AppContent() {
     setCurrentView('landing');
   };
 
-  const handleBackToWorkspace = () => {
-    setCurrentView('workspace');
-  };
-
-  const handleOpenFilterBuilder = () => {
-    setCurrentView('filters');
-  };
-
-  const handleLogout = async () => {
-    await logout();
-  };
+  const handleBackToWorkspace = () => setCurrentView('workspace');
+  const handleOpenFilterBuilder = () => setCurrentView('filters');
 
   return (
-    <div className="min-h-full bg-gray-50 text-gray-900 font-sans">
-      {/* Sticky app-shell header: stays visible while content scrolls below */}
-      <header className="sticky top-0 z-30 bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex justify-between items-center">
-          <div className="flex items-center gap-4">
-            <Link
-              to="/"
-              onClick={() => { setCurrentView('landing'); setSelectedWorkspaceId(null); }}
-              className="text-lg font-semibold text-gray-900 hover:text-blue-600 transition-colors"
-            >
-              VE Mailer
-            </Link>
-            {isAdmin && (
-              <button
-                onClick={() => navigate('/admin')}
-                className="text-sm text-gray-500 hover:text-blue-600 font-medium transition-colors cursor-pointer"
-              >
-                Admin Control Panel
-              </button>
-            )}
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-600">{user?.name}</span>
-            {isAdmin && (
-              <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-medium">
-                Admin
-              </span>
-            )}
-            <button
-              onClick={handleLogout}
-              className="text-sm text-gray-500 hover:text-gray-700 font-medium"
-            >
-              Sign Out
-            </button>
-          </div>
-        </div>
-      </header>
+    <div className="min-h-full bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-50 font-sans">
+      <AppHeader onLogoClick={() => { setCurrentView('landing'); setSelectedWorkspaceId(null); }} />
 
       {currentView === 'landing' && (
         <LandingView onSelectWorkspace={handleSelectWorkspace} />
@@ -148,52 +157,55 @@ export function AppContent() {
 function App() {
   return (
     <BrowserRouter basename={import.meta.env.VITE_BASE_PATH || '/'}>
-      <AuthProvider>
-        <Toaster position="top-right" />
-        {/* App-shell layout: outer container fixes the viewport height and prevents outer page
-            scroll; the inner div is the only scrollable region; AppFooter pins to the bottom. */}
-        <div className="flex h-screen flex-col overflow-hidden">
-          <div className="flex-1 overflow-y-auto">
-            <Routes>
-              {/* Public routes */}
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/signup" element={<SignupPage />} />
-              <Route path="/verify-signup" element={<VerifySignupPage />} />
-              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-              <Route path="/reset-password" element={<ResetPasswordPage />} />
+      <ThemeProvider>
+        <AuthProvider>
+          <Toaster
+            position="top-right"
+            toastOptions={{
+              style: {
+                borderRadius: '12px',
+                fontSize: '14px',
+              },
+            }}
+          />
+          <div className="flex h-screen flex-col overflow-hidden">
+            <div className="flex-1 overflow-y-auto">
+              <Routes>
+                <Route path="/login"           element={<LoginPage />} />
+                <Route path="/signup"          element={<SignupPage />} />
+                <Route path="/verify-signup"   element={<VerifySignupPage />} />
+                <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+                <Route path="/reset-password"  element={<ResetPasswordPage />} />
 
-              {/* Protected routes */}
-              <Route
-                path="/"
-                element={
-                  <ProtectedRoute>
-                    <AppContent />
-                  </ProtectedRoute>
-                }
-              />
+                <Route
+                  path="/"
+                  element={
+                    <ProtectedRoute>
+                      <AppContent />
+                    </ProtectedRoute>
+                  }
+                />
 
-              {/* Admin-only routes */}
-              <Route
-                path="/admin"
-                element={
-                  <ProtectedRoute requiredRole="ADMIN">
-                    <div className="min-h-full bg-gray-50 text-gray-900 font-sans">
-                      <AdminLayout>
-                        <AdminControlPanel />
-                      </AdminLayout>
-                    </div>
-                  </ProtectedRoute>
-                }
-              />
+                <Route
+                  path="/admin"
+                  element={
+                    <ProtectedRoute requiredRole="ADMIN">
+                      <div className="min-h-full bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-50 font-sans">
+                        <AdminLayout>
+                          <AdminControlPanel />
+                        </AdminLayout>
+                      </div>
+                    </ProtectedRoute>
+                  }
+                />
 
-              {/* Catch-all redirect */}
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </div>
+            <AppFooter />
           </div>
-          {/* Persistent app footer — rendered only when VITE_FOOTER_HTML is set */}
-          <AppFooter />
-        </div>
-      </AuthProvider>
+        </AuthProvider>
+      </ThemeProvider>
     </BrowserRouter>
   );
 }

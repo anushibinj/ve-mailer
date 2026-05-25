@@ -12,7 +12,7 @@ import {
   type FilterUpdatePayload
 } from '../services/apiService';
 import { useAuth } from '../hooks/useAuth';
-import { Loader2, ArrowLeft, Plus, Trash2, Play, Pencil, Copy, ChevronDown, ChevronUp } from 'lucide-react';
+import { Loader2, ArrowLeft, Plus, Trash2, Play, Pencil, Copy, ChevronDown, ChevronUp, SlidersHorizontal } from 'lucide-react';
 import toast from 'react-hot-toast';
 import ConfirmDialog from './ConfirmDialog';
 
@@ -24,10 +24,7 @@ interface FilterBuilderViewProps {
 type ViewMode = 'list' | 'create' | 'edit';
 
 const ENTITY_TYPES = ['defect', 'story', 'feature', 'quality_story', 'epic'];
-
 const AI_SUMMARY_FIELD = '✨ AI Summary';
-
-// Fields that are required when AI Summary is enabled
 
 const COMMON_FIELDS = [
   'id', 'global_id_udf', 'name', 'description', 'comments', 'phase', 'owner',
@@ -41,13 +38,14 @@ const OPERATORS = [
   { value: 'NOT_IN', label: 'Not In' },
 ];
 
-const emptyCriterion = (): FilterCriteriaClause => ({
-  field: '',
-  operator: 'IN',
-  values: [''],
-});
-
+const emptyCriterion = (): FilterCriteriaClause => ({ field: '', operator: 'IN', values: [''] });
 const defaultFields = ['id', 'name', 'phase', 'owner'];
+
+const inputClass =
+  'w-full px-3.5 py-2.5 border border-slate-200 dark:border-slate-600 rounded-xl text-sm ' +
+  'text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 ' +
+  'bg-white dark:bg-slate-800/60 focus:outline-none focus:border-indigo-500 dark:focus:border-indigo-400 ' +
+  'focus:ring-2 focus:ring-indigo-500/15 dark:focus:ring-indigo-400/15 transition-all';
 
 const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBack }) => {
   const { isAdmin } = useAuth();
@@ -56,22 +54,18 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [editingFilter, setEditingFilter] = useState<Filter | null>(null);
 
-  // Per-card execute state: filterId -> { isExecuting, results }
   const [executeState, setExecuteState] = useState<Record<string, {
     isExecuting: boolean;
     results: Record<string, unknown>[] | null;
     expanded: boolean;
   }>>({});
 
-  // Form state
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [entityType, setEntityType] = useState('defect');
   const [selectedFields, setSelectedFields] = useState<string[]>(defaultFields);
   const [criteria, setCriteria] = useState<FilterCriteriaClause[]>([emptyCriterion()]);
   const [isSaving, setIsSaving] = useState(false);
-
-  // Delete confirmation state
   const [filterToDelete, setFilterToDelete] = useState<Filter | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -93,64 +87,34 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workspaceId]);
 
-  // ---- Form helpers ----
-
   const resetForm = () => {
-    setTitle('');
-    setDescription('');
-    setEntityType('defect');
-    setSelectedFields(defaultFields);
-    setCriteria([emptyCriterion()]);
-    setEditingFilter(null);
+    setTitle(''); setDescription(''); setEntityType('defect');
+    setSelectedFields(defaultFields); setCriteria([emptyCriterion()]); setEditingFilter(null);
   };
 
   const populateFormFromFilter = (f: Filter) => {
-    setTitle(f.title);
-    setDescription(f.description || '');
-    setEntityType(f.entityType);
-    try {
-      setSelectedFields(JSON.parse(f.fields));
-    } catch {
-      setSelectedFields(defaultFields);
-    }
+    setTitle(f.title); setDescription(f.description || ''); setEntityType(f.entityType);
+    try { setSelectedFields(JSON.parse(f.fields)); } catch { setSelectedFields(defaultFields); }
     try {
       const parsed: FilterCriteriaClause[] = JSON.parse(f.criteria);
       setCriteria(parsed.length > 0 ? parsed : [emptyCriterion()]);
-    } catch {
-      setCriteria([emptyCriterion()]);
-    }
+    } catch { setCriteria([emptyCriterion()]); }
   };
 
-  const handleCreateNew = () => {
-    resetForm();
-    setViewMode('create');
-  };
-
-  const handleEdit = (f: Filter) => {
-    setEditingFilter(f);
-    populateFormFromFilter(f);
-    setViewMode('edit');
-  };
-
+  const handleCreateNew = () => { resetForm(); setViewMode('create'); };
+  const handleEdit = (f: Filter) => { setEditingFilter(f); populateFormFromFilter(f); setViewMode('edit'); };
   const handleClone = async (f: Filter) => {
     try {
       const cloned = await cloneFilter(workspaceId, f.id);
       setEditingFilter(null);
-      setTitle(cloned.title);
-      setDescription(cloned.description || '');
-      setEntityType(cloned.entityType);
-      setSelectedFields(cloned.fields);
+      setTitle(cloned.title); setDescription(cloned.description || '');
+      setEntityType(cloned.entityType); setSelectedFields(cloned.fields);
       setCriteria(cloned.criteria.length > 0 ? cloned.criteria : [emptyCriterion()]);
       setViewMode('create');
-    } catch {
-      toast.error('Failed to load filter for cloning.');
-    }
+    } catch { toast.error('Failed to load filter for cloning.'); }
   };
 
-  const handleDeleteRequest = (f: Filter) => {
-    setFilterToDelete(f);
-  };
-
+  const handleDeleteRequest = (f: Filter) => setFilterToDelete(f);
   const handleDeleteConfirm = async () => {
     if (!filterToDelete) return;
     setIsDeleting(true);
@@ -162,61 +126,21 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
     } catch (err: unknown) {
       const axiosErr = err as { response?: { data?: { message?: string } } };
       toast.error(axiosErr.response?.data?.message || 'Failed to delete filter template.');
-    } finally {
-      setIsDeleting(false);
-    }
-  };
-
-  const handleDeleteCancel = () => {
-    setFilterToDelete(null);
-  };
-
-  const handleBackToList = () => {
-    resetForm();
-    setViewMode('list');
+    } finally { setIsDeleting(false); }
   };
 
   const toggleField = (field: string) => {
-    // Users remain fully in control of field selection.
-    // AI dependency fields (name, description, comments) are fetched internally
-    // by the backend when AI Summary is enabled — the frontend imposes no constraints.
-    setSelectedFields(prev =>
-      prev.includes(field) ? prev.filter(f => f !== field) : [...prev, field]
-    );
+    setSelectedFields(prev => prev.includes(field) ? prev.filter(f => f !== field) : [...prev, field]);
   };
 
   const updateCriterion = (index: number, updates: Partial<FilterCriteriaClause>) => {
     setCriteria(prev => prev.map((c, i) => i === index ? { ...c, ...updates } : c));
   };
 
-  const addCriterion = () => {
-    setCriteria(prev => [...prev, emptyCriterion()]);
-  };
-
-  const removeCriterion = (index: number) => {
-    setCriteria(prev => prev.filter((_, i) => i !== index));
-  };
-
-  const updateCriterionValue = (criterionIndex: number, valueIndex: number, newValue: string) => {
+  const updateCriterionValue = (ci: number, vi: number, val: string) => {
     setCriteria(prev => prev.map((c, i) => {
-      if (i !== criterionIndex) return c;
-      const newValues = [...c.values];
-      newValues[valueIndex] = newValue;
-      return { ...c, values: newValues };
-    }));
-  };
-
-  const addValueToCriterion = (criterionIndex: number) => {
-    setCriteria(prev => prev.map((c, i) => {
-      if (i !== criterionIndex) return c;
-      return { ...c, values: [...c.values, ''] };
-    }));
-  };
-
-  const removeValueFromCriterion = (criterionIndex: number, valueIndex: number) => {
-    setCriteria(prev => prev.map((c, i) => {
-      if (i !== criterionIndex) return c;
-      return { ...c, values: c.values.filter((_, vi) => vi !== valueIndex) };
+      if (i !== ci) return c;
+      const newValues = [...c.values]; newValues[vi] = val; return { ...c, values: newValues };
     }));
   };
 
@@ -227,201 +151,141 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isFormValid) return;
-
     setIsSaving(true);
     try {
-      const cleanedCriteria = criteria.map(c => ({
-        ...c,
-        values: c.values.map(v => v.trim()),
-      }));
-
+      const cleanedCriteria = criteria.map(c => ({ ...c, values: c.values.map(v => v.trim()) }));
       if (viewMode === 'edit' && editingFilter) {
-        const payload: FilterUpdatePayload = {
-          title,
-          description,
-          entityType,
-          fields: selectedFields,
-          criteria: cleanedCriteria,
-        };
+        const payload: FilterUpdatePayload = { title, description, entityType, fields: selectedFields, criteria: cleanedCriteria };
         await updateFilter(workspaceId, editingFilter.id, payload);
         toast.success('Filter template updated!');
       } else {
-        const payload: FilterCreatePayload = {
-          title,
-          description,
-          entityType,
-          fields: selectedFields,
-          criteria: cleanedCriteria,
-        };
+        const payload: FilterCreatePayload = { title, description, entityType, fields: selectedFields, criteria: cleanedCriteria };
         await createFilter(workspaceId, payload);
         toast.success('Filter template saved!');
       }
-
-      await loadFilters();
-      resetForm();
-      setViewMode('list');
+      await loadFilters(); resetForm(); setViewMode('list');
     } catch (err: unknown) {
       const axiosErr = err as { response?: { data?: { message?: string } } };
       toast.error(axiosErr.response?.data?.message || 'Failed to save filter template.');
-    } finally {
-      setIsSaving(false);
-    }
+    } finally { setIsSaving(false); }
   };
 
-  // ---- Execute per card ----
-
   const handleExecute = async (filterId: string) => {
-    setExecuteState(prev => ({
-      ...prev,
-      [filterId]: { isExecuting: true, results: null, expanded: true },
-    }));
+    setExecuteState(prev => ({ ...prev, [filterId]: { isExecuting: true, results: null, expanded: true } }));
     try {
       const results = await executeFilter(workspaceId, filterId);
-      setExecuteState(prev => ({
-        ...prev,
-        [filterId]: { isExecuting: false, results, expanded: true },
-      }));
+      setExecuteState(prev => ({ ...prev, [filterId]: { isExecuting: false, results, expanded: true } }));
       toast.success(`Query returned ${results.length} result(s).`);
     } catch (err: unknown) {
-      setExecuteState(prev => ({
-        ...prev,
-        [filterId]: { isExecuting: false, results: [], expanded: true },
-      }));
+      setExecuteState(prev => ({ ...prev, [filterId]: { isExecuting: false, results: [], expanded: true } }));
       const axiosErr = err as { response?: { data?: { message?: string } } };
-      if (axiosErr.response?.data?.message) {
-        toast.error(`Execute failed: ${axiosErr.response.data.message}`);
-      } else {
-        toast.error('Failed to execute filter. Please check your connection and try again.');
-      }
+      toast.error(axiosErr.response?.data?.message ? `Execute failed: ${axiosErr.response.data.message}` : 'Failed to execute filter.');
     }
   };
 
   const toggleResultsPanel = (filterId: string) => {
     setExecuteState(prev => ({
       ...prev,
-      [filterId]: {
-        ...(prev[filterId] ?? { isExecuting: false, results: null }),
-        expanded: !(prev[filterId]?.expanded ?? false),
-      },
+      [filterId]: { ...(prev[filterId] ?? { isExecuting: false, results: null }), expanded: !(prev[filterId]?.expanded ?? false) },
     }));
   };
 
   const parseCriteria = (criteriaJson: string): FilterCriteriaClause[] => {
     try { return JSON.parse(criteriaJson); } catch { return []; }
   };
-
   const parseFields = (fieldsJson: string): string[] => {
     try { return JSON.parse(fieldsJson); } catch { return []; }
   };
 
-  // ---- Render: loading ----
-
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-500 mb-4" />
-        <p className="text-gray-600">Loading filter templates...</p>
+      <div className="flex flex-col items-center justify-center min-h-[60vh]">
+        <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-xl shadow-indigo-500/30 mb-5 animate-pulse-glow">
+          <Loader2 className="h-7 w-7 animate-spin text-white" />
+        </div>
+        <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">Loading filter templates…</p>
       </div>
     );
   }
 
-  // ---- Render: create / edit form (admin only) ----
-
+  /* ---- Create / Edit form ---- */
   if ((viewMode === 'create' || viewMode === 'edit') && isAdmin) {
     return (
       <div className="max-w-3xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="mb-8 flex items-center">
+        <div className="mb-6 flex items-center gap-3 animate-fade-in">
           <button
-            onClick={handleBackToList}
-            className="mr-4 p-2 rounded-full hover:bg-gray-200 transition-colors"
-            aria-label="Back to filter list"
+            onClick={() => { resetForm(); setViewMode('list'); }}
+            className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer"
           >
-            <ArrowLeft className="h-6 w-6 text-gray-600" />
+            <ArrowLeft className="h-5 w-5" />
           </button>
-          <h1 className="text-3xl font-bold text-gray-900">
-            {viewMode === 'edit' ? 'Edit Filter Template' : 'Create Filter Template'}
-          </h1>
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
+              {viewMode === 'edit' ? 'Edit Filter Template' : 'Create Filter Template'}
+            </h1>
+            <p className="text-slate-400 dark:text-slate-500 text-sm mt-0.5">Define query criteria and fields to fetch</p>
+          </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden animate-slide-up">
           <div className="p-6">
             <form onSubmit={handleSave} className="space-y-6">
 
-              {/* Title */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Template Name
-                </label>
+              <div className="space-y-1.5">
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Template Name</label>
                 <input
-                  type="text"
-                  required
-                  value={title}
+                  type="text" required value={title}
                   onChange={e => setTitle(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="e.g. Open Defects — My Product"
+                  className={inputClass} placeholder="e.g. Open Defects — My Product"
                 />
               </div>
 
-              {/* Description */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Description
-                </label>
+              <div className="space-y-1.5">
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Description</label>
                 <textarea
                   value={description}
                   onChange={e => setDescription(e.target.value)}
                   rows={2}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Optional description of what this filter returns..."
+                  className={inputClass}
+                  placeholder="Optional description of what this filter returns…"
                 />
               </div>
 
-              {/* Entity Type */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Entity Type
-                </label>
+              <div className="space-y-1.5">
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Entity Type</label>
                 <select
                   value={entityType}
                   onChange={e => setEntityType(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white"
+                  className={inputClass}
                 >
                   {ENTITY_TYPES.map(t => (
-                    <option key={t} value={t}>
-                      {t.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
-                    </option>
+                    <option key={t} value={t}>{t.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}</option>
                   ))}
                 </select>
               </div>
 
-              {/* Fields to Fetch */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Fields to Fetch
-                </label>
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Fields to Fetch</label>
                 <div className="flex flex-wrap gap-2">
-                  {/* AI Summary pseudo-field — always first */}
                   <button
                     type="button"
                     onClick={() => toggleField(AI_SUMMARY_FIELD)}
-                    className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
+                    className={`px-3 py-1 rounded-full text-xs font-medium border transition-all ${
                       selectedFields.includes(AI_SUMMARY_FIELD)
-                        ? 'bg-purple-100 text-purple-800 border-purple-300'
-                        : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'
+                        ? 'bg-violet-100 dark:bg-violet-500/20 text-violet-700 dark:text-violet-300 border-violet-200 dark:border-violet-500/30 scale-105'
+                        : 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-600 hover:border-violet-300 dark:hover:border-violet-600 hover:text-violet-600 dark:hover:text-violet-400'
                     }`}
                   >
                     {AI_SUMMARY_FIELD}
                   </button>
                   {COMMON_FIELDS.map(field => (
                     <button
-                      key={field}
-                      type="button"
+                      key={field} type="button"
                       onClick={() => toggleField(field)}
-                      className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
+                      className={`px-3 py-1 rounded-full text-xs font-medium border transition-all ${
                         selectedFields.includes(field)
-                          ? 'bg-blue-100 text-blue-800 border-blue-300'
-                          : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'
+                          ? 'bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-500/30 scale-105'
+                          : 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-600 hover:border-indigo-300 dark:hover:border-indigo-600 hover:text-indigo-600 dark:hover:text-indigo-400'
                       }`}
                     >
                       {field}
@@ -430,117 +294,84 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
                 </div>
               </div>
 
-              {/* Criteria Builder */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Filter Criteria
-                </label>
-                <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Filter Criteria</label>
+                <div className="space-y-3">
                   {criteria.map((criterion, ci) => (
-                    <div key={ci} className="border border-gray-200 rounded-md p-4 bg-gray-50">
+                    <div key={ci} className="border border-slate-200 dark:border-slate-700 rounded-xl p-4 bg-slate-50/70 dark:bg-slate-800/40">
                       <div className="flex items-center justify-between mb-3">
-                        <span className="text-xs font-medium text-gray-500 uppercase">
+                        <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide">
                           {ci === 0 ? 'Where' : 'And'}
                         </span>
                         {criteria.length > 1 && (
-                          <button
-                            type="button"
-                            onClick={() => removeCriterion(ci)}
-                            className="text-red-400 hover:text-red-600 transition-colors"
-                          >
+                          <button type="button" onClick={() => setCriteria(prev => prev.filter((_, i) => i !== ci))}
+                            className="text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 transition-colors cursor-pointer">
                             <Trash2 className="h-4 w-4" />
                           </button>
                         )}
                       </div>
-
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
-                        {/* Field Name */}
                         <input
-                          type="text"
-                          value={criterion.field}
+                          type="text" value={criterion.field}
                           onChange={e => updateCriterion(ci, { field: e.target.value })}
-                          className="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
-                          placeholder="Field name"
+                          className={inputClass} placeholder="Field name"
                         />
-
-                        {/* Operator */}
                         <select
                           value={criterion.operator}
                           onChange={e => updateCriterion(ci, { operator: e.target.value })}
-                          className="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white text-sm"
+                          className={inputClass}
                         >
-                          {OPERATORS.map(op => (
-                            <option key={op.value} value={op.value}>{op.label}</option>
-                          ))}
+                          {OPERATORS.map(op => <option key={op.value} value={op.value}>{op.label}</option>)}
                         </select>
                       </div>
-
-                      {/* Values */}
                       <div className="space-y-2">
-                        <span className="text-xs font-medium text-gray-500">Values</span>
+                        <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Values</span>
                         {criterion.values.map((val, vi) => (
                           <div key={vi} className="flex items-center gap-2">
                             <input
-                              type="text"
-                              value={val}
+                              type="text" value={val}
                               onChange={e => updateCriterionValue(ci, vi, e.target.value)}
-                              className="flex-1 px-3 py-1.5 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
-                              placeholder="Value or Octane ID"
+                              className={inputClass} placeholder="Value or Octane ID"
                             />
                             {criterion.values.length > 1 && (
-                              <button
-                                type="button"
-                                onClick={() => removeValueFromCriterion(ci, vi)}
-                                className="text-red-400 hover:text-red-600 transition-colors"
-                              >
+                              <button type="button"
+                                onClick={() => setCriteria(prev => prev.map((c, i) => i !== ci ? c : { ...c, values: c.values.filter((_, x) => x !== vi) }))}
+                                className="text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 transition-colors flex-shrink-0 cursor-pointer">
                                 <Trash2 className="h-3.5 w-3.5" />
                               </button>
                             )}
                           </div>
                         ))}
-                        <button
-                          type="button"
-                          onClick={() => addValueToCriterion(ci)}
-                          className="text-xs text-blue-600 hover:text-blue-800 font-medium"
-                        >
+                        <button type="button"
+                          onClick={() => setCriteria(prev => prev.map((c, i) => i !== ci ? c : { ...c, values: [...c.values, ''] }))}
+                          className="text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 font-medium transition-colors cursor-pointer">
                           + Add value
                         </button>
                       </div>
                     </div>
                   ))}
-
-                  <button
-                    type="button"
-                    onClick={addCriterion}
-                    className="flex items-center text-sm text-blue-600 hover:text-blue-800 font-medium"
-                  >
-                    <Plus className="h-4 w-4 mr-1" />
+                  <button type="button" onClick={() => setCriteria(prev => [...prev, emptyCriterion()])}
+                    className="flex items-center gap-1.5 text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 font-medium transition-colors cursor-pointer">
+                    <Plus className="h-4 w-4" />
                     Add Criterion
                   </button>
                 </div>
               </div>
 
-              {/* Submit */}
-              <div className="pt-4 flex gap-3">
+              <div className="pt-2 flex gap-3">
                 <button
                   type="button"
-                  onClick={handleBackToList}
-                  className="flex-1 py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400 transition-colors"
+                  onClick={() => { resetForm(); setViewMode('list'); }}
+                  className="flex-1 py-2.5 px-4 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/60 transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={!isFormValid || isSaving}
-                  className="flex-1 flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                  className="flex-1 flex justify-center items-center gap-2 py-2.5 px-4 bg-indigo-600 hover:bg-indigo-500 dark:bg-indigo-500 dark:hover:bg-indigo-400 text-white text-sm font-semibold rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900 disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer"
                 >
-                  {isSaving ? (
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                  ) : viewMode === 'edit' ? (
-                    'Update Template'
-                  ) : (
-                    'Save Template'
-                  )}
+                  {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : viewMode === 'edit' ? 'Update Template' : 'Save Template'}
                 </button>
               </div>
             </form>
@@ -550,192 +381,171 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
     );
   }
 
-  // ---- Render: list view ----
-
+  /* ---- List view ---- */
   return (
     <div className="max-w-4xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-      {/* Header */}
-      <div className="mb-8 flex items-center justify-between">
-        <div className="flex items-center">
-          <button
-            onClick={onBack}
-            className="mr-4 p-2 rounded-full hover:bg-gray-200 transition-colors"
-            aria-label="Back to workspace"
-          >
-            <ArrowLeft className="h-6 w-6 text-gray-600" />
+      <div className="mb-8 flex items-center justify-between animate-fade-in">
+        <div className="flex items-center gap-3">
+          <button onClick={onBack}
+            className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer">
+            <ArrowLeft className="h-5 w-5" />
           </button>
-          <h1 className="text-3xl font-bold text-gray-900">Filter Templates</h1>
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Filter Templates</h1>
+            <p className="text-slate-400 dark:text-slate-500 text-sm mt-0.5">Pre-built queries for your subscriptions</p>
+          </div>
         </div>
         {isAdmin && (
           <button
             onClick={handleCreateNew}
-            className="inline-flex items-center gap-2 px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 dark:bg-indigo-500 dark:hover:bg-indigo-400 text-white text-sm font-semibold rounded-xl shadow-sm shadow-indigo-500/20 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:focus:ring-offset-slate-950 transition-all cursor-pointer"
           >
             <Plus className="h-4 w-4" />
-            Create New Filter
+            New Filter
           </button>
         )}
       </div>
 
-      {/* Filter list */}
       {filters.length === 0 ? (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
-          <p className="text-gray-500 mb-4">No filter templates exist for this workspace.</p>
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm p-14 text-center animate-scale-in">
+          <div className="h-14 w-14 rounded-2xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center mx-auto mb-5">
+            <SlidersHorizontal className="h-7 w-7 text-slate-300 dark:text-slate-600" />
+          </div>
+          <p className="text-slate-500 dark:text-slate-400 text-sm mb-1 font-medium">No filter templates yet</p>
           {isAdmin && (
-            <button
-              onClick={handleCreateNew}
-              className="inline-flex items-center gap-2 px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
-            >
-              <Plus className="h-4 w-4" />
-              Create your first filter
-            </button>
+            <>
+              <p className="text-slate-400 dark:text-slate-500 text-xs mb-6">Create your first filter template to get started.</p>
+              <button onClick={handleCreateNew}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 dark:bg-indigo-500 dark:hover:bg-indigo-400 text-white text-sm font-semibold rounded-xl transition-all cursor-pointer">
+                <Plus className="h-4 w-4" />
+                Create first filter
+              </button>
+            </>
           )}
         </div>
       ) : (
-        <div className="space-y-4">
-          {filters.map(f => {
+        <div className="space-y-3">
+          {filters.map((f, idx) => {
             const criteriaList = parseCriteria(f.criteria);
             const fieldsList = parseFields(f.fields);
             const exState = executeState[f.id];
 
             return (
-              <div key={f.id} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-                {/* Card header */}
+              <div
+                key={f.id}
+                style={{ animationDelay: `${idx * 50}ms` }}
+                className="animate-slide-up bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-md dark:hover:shadow-slate-900/50 hover:border-slate-200 dark:hover:border-slate-700 transition-all overflow-hidden"
+              >
                 <div className="p-5">
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <h3 className="font-semibold text-gray-900 text-base">{f.title}</h3>
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                      <div className="flex items-center gap-2 flex-wrap mb-1">
+                        <h3 className="font-semibold text-slate-900 dark:text-white text-sm">{f.title}</h3>
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-500/20">
                           {f.entityType}
                         </span>
                       </div>
                       {f.description && (
-                        <p className="text-sm text-gray-500 mt-1">{f.description}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 mb-2">{f.description}</p>
                       )}
-                      <div className="mt-2 text-xs text-gray-500">
-                        <span className="font-medium">Fields:</span>{' '}
-                        {fieldsList.join(', ')}
+                      <div className="mt-1.5 flex flex-wrap gap-1">
+                        {fieldsList.slice(0, 8).map(field => (
+                          <span key={field} className="inline-block px-2 py-0.5 rounded-md bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-xs border border-slate-100 dark:border-slate-700">
+                            {field}
+                          </span>
+                        ))}
+                        {fieldsList.length > 8 && (
+                          <span className="inline-block px-2 py-0.5 rounded-md bg-slate-50 dark:bg-slate-800 text-slate-400 dark:text-slate-500 text-xs border border-slate-100 dark:border-slate-700">
+                            +{fieldsList.length - 8} more
+                          </span>
+                        )}
                       </div>
                       {criteriaList.length > 0 && (
-                        <div className="mt-1 text-xs text-gray-500">
-                          <span className="font-medium">Criteria:</span>{' '}
+                        <div className="mt-2 text-xs text-slate-400 dark:text-slate-500">
                           {criteriaList.map((c, i) => (
                             <span key={i}>
-                              {c.field} {c.operator} [{c.values.join(', ')}]
-                              {i < criteriaList.length - 1 ? ' AND ' : ''}
+                              <span className="font-medium text-slate-500 dark:text-slate-400">{c.field}</span>{' '}
+                              <span className="text-slate-400 dark:text-slate-500">{c.operator.toLowerCase()}</span>{' '}
+                              [{c.values.join(', ')}]
+                              {i < criteriaList.length - 1 ? <span className="text-indigo-400 dark:text-indigo-500 mx-1 font-medium">AND</span> : ''}
                             </span>
                           ))}
                         </div>
                       )}
                     </div>
 
-                    {/* Action buttons */}
-                    <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
                       {isAdmin && (
                         <>
-                          <button
-                            onClick={() => handleEdit(f)}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 rounded-md text-xs font-medium text-gray-700 bg-white hover:bg-gray-50 hover:border-blue-300 transition-colors"
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                            Edit
+                          <button onClick={() => handleEdit(f)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/60 hover:border-indigo-200 dark:hover:border-indigo-700 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors cursor-pointer">
+                            <Pencil className="h-3.5 w-3.5" />Edit
                           </button>
-                          <button
-                            onClick={() => handleClone(f)}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 rounded-md text-xs font-medium text-gray-700 bg-white hover:bg-gray-50 hover:border-purple-300 transition-colors"
-                            title="Clone filter template"
-                          >
-                            <Copy className="h-3.5 w-3.5" />
-                            Clone
+                          <button onClick={() => handleClone(f)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/60 hover:border-violet-200 dark:hover:border-violet-700 hover:text-violet-600 dark:hover:text-violet-400 transition-colors cursor-pointer">
+                            <Copy className="h-3.5 w-3.5" />Clone
                           </button>
-                          <button
-                            onClick={() => handleDeleteRequest(f)}
+                          <button onClick={() => handleDeleteRequest(f)}
                             disabled={isDeleting && filterToDelete?.id === f.id}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-red-200 rounded-md text-xs font-medium text-red-600 bg-white hover:bg-red-50 hover:border-red-400 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
-                            title="Delete Filter Template"
-                          >
-                            {isDeleting && filterToDelete?.id === f.id ? (
-                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                            ) : (
-                              <Trash2 className="h-3.5 w-3.5" />
-                            )}
-                            Delete
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-rose-600 dark:text-rose-400 bg-white dark:bg-slate-800 border border-rose-100 dark:border-rose-500/20 hover:bg-rose-50 dark:hover:bg-rose-500/10 hover:border-rose-200 dark:hover:border-rose-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer">
+                            {isDeleting && filterToDelete?.id === f.id
+                              ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              : <Trash2 className="h-3.5 w-3.5" />
+                            }Delete
                           </button>
                         </>
                       )}
                       <button
                         onClick={() => handleExecute(f.id)}
                         disabled={exState?.isExecuting}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-transparent rounded-md text-xs font-medium text-white bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
                       >
-                        {exState?.isExecuting ? (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        ) : (
-                          <Play className="h-3.5 w-3.5" />
-                        )}
-                        Execute
+                        {exState?.isExecuting
+                          ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          : <Play className="h-3.5 w-3.5" />
+                        }Execute
                       </button>
                       {exState?.results !== null && (
                         <button
                           onClick={() => toggleResultsPanel(f.id)}
-                          className="inline-flex items-center gap-1 px-2 py-1.5 border border-gray-200 rounded-md text-xs text-gray-500 hover:bg-gray-50 transition-colors"
-                          aria-label="Toggle results"
+                          className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs text-slate-400 dark:text-slate-500 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/60 transition-colors cursor-pointer"
                         >
-                          {exState?.expanded ? (
-                            <ChevronUp className="h-4 w-4" />
-                          ) : (
-                            <ChevronDown className="h-4 w-4" />
-                          )}
+                          {exState?.expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                         </button>
                       )}
                     </div>
                   </div>
                 </div>
 
-                {/* Results panel */}
                 {exState?.results !== null && exState?.expanded && (
-                  <div className="border-t border-gray-200 bg-gray-50">
-                    <div className="px-5 py-3 border-b border-gray-200">
-                      <span className="text-xs font-medium text-gray-600">
-                        Results ({exState.results!.length} item{exState.results!.length !== 1 ? 's' : ''})
+                  <div className="border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30">
+                    <div className="px-5 py-2.5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                      <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                        Results — {exState.results!.length} item{exState.results!.length !== 1 ? 's' : ''}
                       </span>
                     </div>
                     {exState.results!.length === 0 ? (
-                      <div className="p-6 text-center text-sm text-gray-500">
-                        No results matched the filter criteria.
-                      </div>
+                      <div className="p-6 text-center text-sm text-slate-400 dark:text-slate-500">No results matched the filter criteria.</div>
                     ) : (
                       <div className="overflow-x-auto">
-                        <table className="min-w-full divide-y divide-gray-200 text-xs">
-                          <thead className="bg-gray-100">
+                        <table className="min-w-full divide-y divide-slate-100 dark:divide-slate-800 text-xs">
+                          <thead className="bg-slate-100/70 dark:bg-slate-800/60">
                             <tr>
                               {Object.keys(exState.results![0]).map(col => (
-                                <th
-                                  key={col}
-                                  className="px-4 py-2 text-left font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap"
-                                >
+                                <th key={col} className="px-4 py-2 text-left font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider whitespace-nowrap">
                                   {col}
                                 </th>
                               ))}
                             </tr>
                           </thead>
-                          <tbody className="bg-white divide-y divide-gray-200">
+                          <tbody className="divide-y divide-slate-100 dark:divide-slate-800 bg-white dark:bg-slate-900">
                             {exState.results!.map((row, ri) => (
-                              <tr key={ri} className={ri % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                              <tr key={ri} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                                 {Object.keys(exState.results![0]).map(col => {
                                   const value = row[col];
-                                  const display = value === null || value === undefined
-                                    ? ''
-                                    : typeof value === 'object'
-                                      ? JSON.stringify(value)
-                                      : String(value);
+                                  const display = value === null || value === undefined ? '' : typeof value === 'object' ? JSON.stringify(value) : String(value);
                                   return (
-                                    <td
-                                      key={col}
-                                      className="px-4 py-2 text-gray-700 whitespace-nowrap max-w-xs truncate"
-                                      title={display}
-                                    >
+                                    <td key={col} className="px-4 py-2 text-slate-600 dark:text-slate-300 whitespace-nowrap max-w-xs truncate" title={display}>
                                       {display}
                                     </td>
                                   );
@@ -757,12 +567,10 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
       <ConfirmDialog
         isOpen={filterToDelete !== null}
         title="Delete Filter Template"
-        message={filterToDelete
-          ? `Are you sure you want to delete the filter template "${filterToDelete.title}"? This action cannot be undone.`
-          : ''}
+        message={filterToDelete ? `Are you sure you want to delete "${filterToDelete.title}"? This cannot be undone.` : ''}
         confirmLabel="Delete"
         onConfirm={handleDeleteConfirm}
-        onCancel={handleDeleteCancel}
+        onCancel={() => setFilterToDelete(null)}
         isLoading={isDeleting}
         variant="danger"
       />
