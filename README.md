@@ -18,6 +18,8 @@ A full-stack application that lets users subscribe to email digest notifications
     - [Workspaces](#workspaces)
     - [Filters](#filters)
     - [Subscriptions](#subscriptions)
+    - [Admin — Notification Preferences (`/api/admin`)](#admin--notification-preferences-apiadmin)
+    - [Admin — Mail Analytics (`/api/admin/mail-analytics`)](#admin--mail-analytics-apiadminmail-analytics)
   - [Running Locally](#running-locally)
     - [Prerequisites](#prerequisites)
     - [Backend](#backend)
@@ -25,7 +27,9 @@ A full-stack application that lets users subscribe to email digest notifications
   - [Configuration](#configuration)
     - [Backend — `application.properties`](#backend--applicationproperties)
     - [Backend — `application-dev.properties`](#backend--application-devproperties)
+    - [AI Summary Configuration (Optional)](#ai-summary-configuration-optional)
     - [Frontend — Environment Variables](#frontend--environment-variables)
+      - [`VITE_FOOTER_HTML` — custom footer](#vite_footer_html--custom-footer)
   - [Running Tests](#running-tests)
     - [Backend](#backend-1)
     - [Frontend](#frontend-1)
@@ -573,7 +577,7 @@ spring.datasource.driverClassName=org.postgresql.Driver
 spring.datasource.username=postgres
 spring.datasource.password=postgres
 spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect
-spring.h2.console.enabled=false
+spring.h2.console.enabled=true
 spring.jpa.show-sql=false
 ```
 
