@@ -2,6 +2,7 @@ package com.anushibinj.veemailer.service;
 
 import com.anushibinj.veemailer.model.NotificationPreferences;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.JavaMailSenderImpl;
 import org.springframework.stereotype.Service;
@@ -16,6 +17,9 @@ import java.util.Properties;
 public class DynamicMailSenderService {
 
     private final NotificationPreferencesService notificationPreferencesService;
+
+    @Value("${app.bootstrap.admin.email}")
+    private String adminEmail;
 
     /**
      * Builds a fresh JavaMailSender from the current DB preferences.
@@ -45,15 +49,9 @@ public class DynamicMailSenderService {
     }
 
     /**
-     * Returns the "from" address (username from preferences).
-     *
-     * @throws IllegalStateException if not configured
+     * Returns the sender "from" address — always the configured bootstrap admin email.
      */
     public String getFromAddress() {
-        NotificationPreferences prefs = notificationPreferencesService.getEntity();
-        if (prefs == null) {
-            throw new IllegalStateException("Notification preferences are not configured.");
-        }
-        return prefs.getUsername();
+        return adminEmail;
     }
 }
