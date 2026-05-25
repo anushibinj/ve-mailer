@@ -9,16 +9,16 @@ import GeneralSettingsPage from './GeneralSettingsPage';
 type AdminTab = 'notification-preferences' | 'ai-preferences' | 'workspaces' | 'mail-analytics' | 'users' | 'general';
 
 const tabs: { key: AdminTab; label: string }[] = [
-  { key: 'workspaces', label: 'Manage Workspaces' },
-  { key: 'notification-preferences', label: 'Configure Notification Preferences' },
-  { key: 'ai-preferences', label: 'Configure AI Preferences' },
   { key: 'general', label: 'General' },
+  { key: 'workspaces', label: 'Workspaces' },
+  { key: 'notification-preferences', label: 'Notifications' },
+  { key: 'ai-preferences', label: 'AI' },
   { key: 'mail-analytics', label: 'Mail Analytics' },
   { key: 'users', label: 'Users' },
 ];
 
 export default function AdminControlPanel() {
-  const [activeTab, setActiveTab] = useState<AdminTab>('notification-preferences');
+  const [activeTab, setActiveTab] = useState<AdminTab>('general');
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -32,7 +32,7 @@ export default function AdminControlPanel() {
               <li key={tab.key}>
                 <button
                   onClick={() => setActiveTab(tab.key)}
-                  className={`w-full text-left px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                  className={`w-full text-left px-4 py-2 rounded-md text-sm font-medium transition-colors cursor-pointer ${
                     activeTab === tab.key
                       ? 'bg-blue-50 text-blue-700 border-l-4 border-blue-700'
                       : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
