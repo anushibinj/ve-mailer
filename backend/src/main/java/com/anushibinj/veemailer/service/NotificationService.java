@@ -204,9 +204,13 @@ public class NotificationService {
             sb.append("</tbody></table>");
         }
 
-        sb.append("<p style=\"font-size:11px;color:#888;\">")
-          .append("This list is limited to ").append(limit).append(" items.")
-          .append("</p>");
+        // Only show the "limited to N items" footer when a positive limit is in effect.
+        // When limit is -1 (unlimited), the footer is omitted entirely.
+        if (limit > 0) {
+            sb.append("<p style=\"font-size:11px;color:#888;\">")
+              .append("This list is limited to ").append(limit).append(" items.")
+              .append("</p>");
+        }
         sb.append("</body></html>");
         return sb.toString();
     }

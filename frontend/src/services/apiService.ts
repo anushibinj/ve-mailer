@@ -367,3 +367,21 @@ export const adminGetUsers = async (): Promise<UserSummary[]> => {
   const response = await api.get('/api/admin/users');
   return response.data;
 };
+
+// --- Admin General Settings ---
+
+export interface GeneralSettings {
+  queryLimit: number;
+}
+
+export const adminGetGeneralSettings = async (): Promise<GeneralSettings> => {
+  const response = await api.get('/api/admin/general-settings');
+  return response.data;
+};
+
+export const adminUpdateGeneralSettings = async (
+  payload: GeneralSettings
+): Promise<GeneralSettings> => {
+  const response = await api.put('/api/admin/general-settings', payload);
+  return response.data;
+};

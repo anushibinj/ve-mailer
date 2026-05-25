@@ -110,10 +110,12 @@ ve-mailer/
 │   │   ├── controller/
 │   │   │   ├── AiPreferencesController.java        # Admin AI config (GET/PUT) — ADMIN only
 │   │   │   ├── AuthController.java         # Authentication endpoints (signup, login, etc.)
-│   │   │   ├── FilterController.java       # CRUD + execute filters
+│   │   │   ├── FilterController.java       # CRUD + execute + clone + delete filters
+│   │   │   ├── GeneralSettingsController.java      # Admin general settings (GET/PUT) — ADMIN only
 │   │   │   ├── MailAnalyticsController.java        # Admin mail analytics (summary, charts, history) — ADMIN only
 │   │   │   ├── NotificationPreferencesController.java # Admin SMTP config (GET/PUT)
 │   │   │   ├── SubscriptionController.java
+│   │   │   ├── UserManagementController.java       # Admin user listing — ADMIN only
 │   │   │   └── WorkspaceController.java
 │   │   ├── dto/
 │   │   │   ├── AiPreferencesResponseDto.java        # Masked AI config response (api key always masked)
@@ -123,11 +125,13 @@ ve-mailer/
 │   │   │   ├── AuthResponseDto.java        # JWT tokens + user profile
 │   │   │   ├── ForgotPasswordRequestDto.java
 │   │   │   ├── FilterDto.java              # Create-filter request DTO
+│   │   │   ├── GeneralSettingsDto.java     # Query limit setting DTO
 │   │   │   ├── LoginRequestDto.java
 │   │   │   ├── NotificationPreferencesResponseDto.java # Masked SMTP config response
 │   │   │   ├── NotificationPreferencesUpdateDto.java   # SMTP config update request
 │   │   │   ├── RefreshTokenRequestDto.java
 │   │   │   ├── ResetPasswordDto.java
+│   │   │   ├── UserSummaryDto.java         # User listing DTO (id, name, email, roles, subscribedFilterCount)
 │   │   │   ├── ScheduleDto.java            # { type: DAILY|WEEKLY, hours: [int] }
 │   │   │   ├── SignupRequestDto.java
 │   │   │   ├── SubscriptionRequestDto.java
@@ -174,7 +178,8 @@ ve-mailer/
 │   │       ├── DynamicAiClientService.java  # Builds Spring AI ChatClient from DB config at runtime
 │   │       ├── DynamicMailSenderService.java # Builds JavaMailSender from DB config
 │   │       ├── EmailService.java     # Async OTP email sender
-│   │       ├── FilterService.java    # Create filters + execute against Octane
+│   │       ├── FilterService.java    # CRUD + clone + execute (conditional limit) against Octane
+│   │       ├── GeneralSettingsService.java  # DB-first query limit with property fallback
 │   │       ├── JwtService.java       # JWT token generation and validation
 │   │       ├── MailAnalyticsService.java     # Analytics aggregation + paginated history
 │   │       ├── MailAuditService.java         # Async audit logging for mail dispatches
@@ -210,9 +215,12 @@ ve-mailer/
     │   │   ├── ForgotPasswordPage.tsx # Request password reset OTP
     │   │   ├── ResetPasswordPage.tsx # OTP verification + new password
     │   │   └── admin/
-    │   │       ├── AdminControlPanel.tsx         # Left-sidebar admin dashboard
+    │   │       ├── AdminControlPanel.tsx         # Left-sidebar admin dashboard (Workspaces, Preferences, AI, General, Mail Analytics, Users)
+    │   │       ├── AiPreferencesPage.tsx          # AI model config form
+    │   │       ├── GeneralSettingsPage.tsx        # Query result limit config (supports -1 for unlimited)
     │   │       ├── MailAnalyticsPage.tsx          # Mail delivery analytics dashboard (charts + history)
     │   │       ├── NotificationPreferencesPage.tsx # SMTP config form
+    │   │       ├── UsersPage.tsx                  # All registered users with sortable columns + role badges
     │   │       └── WorkspaceManagementPage.tsx   # Workspace CRUD
     │   ├── services/
     │   │   ├── apiService.ts         # All backend API calls (workspaces, filters, subscriptions)
