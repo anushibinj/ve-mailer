@@ -27,6 +27,8 @@ class NotificationPreferencesServiceTest {
     @InjectMocks
     private NotificationPreferencesService service;
 
+    // --- get() ---
+
     @Test
     void get_WhenNoPreferencesExist_ReturnsNotConfigured() {
         when(repository.findAll()).thenReturn(Collections.emptyList());
@@ -37,11 +39,13 @@ class NotificationPreferencesServiceTest {
     }
 
     @Test
-    void get_WhenPreferencesExist_ReturnsMaskedPassword() {
+    void get_WhenPreferencesExist_ReturnsMaskedPasswordAndFields() {
         NotificationPreferences prefs = NotificationPreferences.builder()
                 .id(UUID.randomUUID())
                 .host("smtp.example.com")
                 .port(587)
+                .fromAddress("noreply@example.com")
+                .requiresAuth(true)
                 .username("user@example.com")
                 .password("secret123")
                 .startTlsEnabled(true)
@@ -53,13 +57,36 @@ class NotificationPreferencesServiceTest {
         assertTrue(result.isConfigured());
         assertEquals("smtp.example.com", result.getHost());
         assertEquals(587, result.getPort());
+        assertEquals("noreply@example.com", result.getFromAddress());
+        assertTrue(result.isRequiresAuth());
         assertEquals("user@example.com", result.getUsername());
         assertEquals("(unchanged)", result.getPassword());
         assertTrue(result.isStartTlsEnabled());
     }
 
     @Test
-    void update_FirstTime_CreatesNewPreferences() {
+    void get_WhenNoAuth_ReturnsNullPassword() {
+        NotificationPreferences prefs = NotificationPreferences.builder()
+                .id(UUID.randomUUID())
+                .host("relay.internal")
+                .port(25)
+                .fromAddress("noreply@example.com")
+                .requiresAuth(false)
+                .startTlsEnabled(false)
+                .build();
+        when(repository.findAll()).thenReturn(List.of(prefs));
+
+        NotificationPreferencesResponseDto result = service.get();
+
+        assertTrue(result.isConfigured());
+        assertFalse(result.isRequiresAuth());
+        assertNull(result.getPassword());
+    }
+
+    // --- update() with auth ---
+
+    @Test
+    void update_FirstTime_WithAuth_CreatesNewPreferences() {
         when(repository.findAll()).thenReturn(Collections.emptyList());
         when(repository.save(any())).thenAnswer(inv -> {
             NotificationPreferences saved = inv.getArgument(0);
@@ -69,7 +96,9 @@ class NotificationPreferencesServiceTest {
 
         NotificationPreferencesUpdateDto dto = new NotificationPreferencesUpdateDto();
         dto.setHost("smtp.test.com");
-        dto.setPort(25);
+        dto.setPort(587);
+        dto.setFromAddress("from@test.com");
+        dto.setRequiresAuth(true);
         dto.setUsername("admin@test.com");
         dto.setPassword("newpassword");
         dto.setStartTlsEnabled(false);
@@ -78,17 +107,20 @@ class NotificationPreferencesServiceTest {
 
         assertTrue(result.isConfigured());
         assertEquals("smtp.test.com", result.getHost());
+        assertEquals("from@test.com", result.getFromAddress());
         assertEquals("(unchanged)", result.getPassword());
         verify(repository).save(any());
     }
 
     @Test
-    void update_FirstTime_ThrowsWhenPasswordIsPlaceholder() {
+    void update_FirstTime_WithAuth_ThrowsWhenPasswordIsPlaceholder() {
         when(repository.findAll()).thenReturn(Collections.emptyList());
 
         NotificationPreferencesUpdateDto dto = new NotificationPreferencesUpdateDto();
         dto.setHost("smtp.test.com");
-        dto.setPort(25);
+        dto.setPort(587);
+        dto.setFromAddress("from@test.com");
+        dto.setRequiresAuth(true);
         dto.setUsername("admin@test.com");
         dto.setPassword("(unchanged)");
         dto.setStartTlsEnabled(false);
@@ -97,11 +129,51 @@ class NotificationPreferencesServiceTest {
     }
 
     @Test
-    void update_Existing_PreservesPasswordWhenPlaceholder() {
+    void update_FirstTime_WithAuth_ThrowsWhenUsernameBlank() {
+        NotificationPreferencesUpdateDto dto = new NotificationPreferencesUpdateDto();
+        dto.setHost("smtp.test.com");
+        dto.setPort(587);
+        dto.setFromAddress("from@test.com");
+        dto.setRequiresAuth(true);
+        dto.setUsername("");
+        dto.setPassword("pass");
+        dto.setStartTlsEnabled(false);
+
+        assertThrows(IllegalArgumentException.class, () -> service.update(dto));
+    }
+
+    @Test
+    void update_FirstTime_NoAuth_CreatesWithoutCredentials() {
+        when(repository.findAll()).thenReturn(Collections.emptyList());
+        when(repository.save(any())).thenAnswer(inv -> {
+            NotificationPreferences saved = inv.getArgument(0);
+            saved.setId(UUID.randomUUID());
+            return saved;
+        });
+
+        NotificationPreferencesUpdateDto dto = new NotificationPreferencesUpdateDto();
+        dto.setHost("relay.internal");
+        dto.setPort(25);
+        dto.setFromAddress("noreply@example.com");
+        dto.setRequiresAuth(false);
+        dto.setStartTlsEnabled(false);
+
+        NotificationPreferencesResponseDto result = service.update(dto);
+
+        assertTrue(result.isConfigured());
+        assertFalse(result.isRequiresAuth());
+        assertNull(result.getPassword());
+        verify(repository).save(any());
+    }
+
+    @Test
+    void update_Existing_WithAuth_PreservesPasswordWhenPlaceholder() {
         NotificationPreferences existing = NotificationPreferences.builder()
                 .id(UUID.randomUUID())
                 .host("old.host.com")
                 .port(25)
+                .fromAddress("old@example.com")
+                .requiresAuth(true)
                 .username("old@example.com")
                 .password("existingSecret")
                 .startTlsEnabled(false)
@@ -112,6 +184,8 @@ class NotificationPreferencesServiceTest {
         NotificationPreferencesUpdateDto dto = new NotificationPreferencesUpdateDto();
         dto.setHost("new.host.com");
         dto.setPort(587);
+        dto.setFromAddress("new@example.com");
+        dto.setRequiresAuth(true);
         dto.setUsername("new@example.com");
         dto.setPassword("(unchanged)");
         dto.setStartTlsEnabled(true);
@@ -126,11 +200,13 @@ class NotificationPreferencesServiceTest {
     }
 
     @Test
-    void update_Existing_UpdatesPasswordWhenNewValueProvided() {
+    void update_Existing_WithAuth_UpdatesPasswordWhenNewValueProvided() {
         NotificationPreferences existing = NotificationPreferences.builder()
                 .id(UUID.randomUUID())
                 .host("old.host.com")
                 .port(25)
+                .fromAddress("old@example.com")
+                .requiresAuth(true)
                 .username("old@example.com")
                 .password("existingSecret")
                 .startTlsEnabled(false)
@@ -141,6 +217,8 @@ class NotificationPreferencesServiceTest {
         NotificationPreferencesUpdateDto dto = new NotificationPreferencesUpdateDto();
         dto.setHost("old.host.com");
         dto.setPort(25);
+        dto.setFromAddress("old@example.com");
+        dto.setRequiresAuth(true);
         dto.setUsername("old@example.com");
         dto.setPassword("brandNewSecret");
         dto.setStartTlsEnabled(false);
@@ -149,6 +227,37 @@ class NotificationPreferencesServiceTest {
 
         assertEquals("brandNewSecret", existing.getPassword());
     }
+
+    @Test
+    void update_Existing_SwitchingToNoAuth_ClearsCredentials() {
+        NotificationPreferences existing = NotificationPreferences.builder()
+                .id(UUID.randomUUID())
+                .host("smtp.host.com")
+                .port(587)
+                .fromAddress("noreply@example.com")
+                .requiresAuth(true)
+                .username("user@example.com")
+                .password("secret")
+                .startTlsEnabled(true)
+                .build();
+        when(repository.findAll()).thenReturn(List.of(existing));
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        NotificationPreferencesUpdateDto dto = new NotificationPreferencesUpdateDto();
+        dto.setHost("relay.internal");
+        dto.setPort(25);
+        dto.setFromAddress("noreply@example.com");
+        dto.setRequiresAuth(false);
+        dto.setStartTlsEnabled(false);
+
+        service.update(dto);
+
+        assertFalse(existing.isRequiresAuth());
+        assertNull(existing.getUsername());
+        assertNull(existing.getPassword());
+    }
+
+    // --- getEntity() ---
 
     @Test
     void getEntity_ReturnsNullWhenEmpty() {
@@ -162,6 +271,8 @@ class NotificationPreferencesServiceTest {
                 .id(UUID.randomUUID())
                 .host("smtp.example.com")
                 .port(587)
+                .fromAddress("noreply@example.com")
+                .requiresAuth(true)
                 .username("user@example.com")
                 .password("secret")
                 .startTlsEnabled(true)

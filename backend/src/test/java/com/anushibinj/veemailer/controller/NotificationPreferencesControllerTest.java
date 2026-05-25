@@ -12,7 +12,6 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
-import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -59,6 +58,8 @@ class NotificationPreferencesControllerTest {
         NotificationPreferencesResponseDto response = NotificationPreferencesResponseDto.builder()
                 .host("smtp.example.com")
                 .port(587)
+                .fromAddress("noreply@example.com")
+                .requiresAuth(true)
                 .username("admin@example.com")
                 .password("(unchanged)")
                 .startTlsEnabled(true)
@@ -72,16 +73,20 @@ class NotificationPreferencesControllerTest {
                 .andExpect(jsonPath("$.configured").value(true))
                 .andExpect(jsonPath("$.host").value("smtp.example.com"))
                 .andExpect(jsonPath("$.port").value(587))
+                .andExpect(jsonPath("$.fromAddress").value("noreply@example.com"))
+                .andExpect(jsonPath("$.requiresAuth").value(true))
                 .andExpect(jsonPath("$.username").value("admin@example.com"))
                 .andExpect(jsonPath("$.password").value("(unchanged)"))
                 .andExpect(jsonPath("$.startTlsEnabled").value(true));
     }
 
     @Test
-    void update_ReturnsUpdatedPreferences() throws Exception {
+    void update_WithAuth_ReturnsUpdatedPreferences() throws Exception {
         NotificationPreferencesResponseDto response = NotificationPreferencesResponseDto.builder()
                 .host("smtp.new.com")
                 .port(465)
+                .fromAddress("noreply@new.com")
+                .requiresAuth(true)
                 .username("new@example.com")
                 .password("(unchanged)")
                 .startTlsEnabled(false)
@@ -92,6 +97,8 @@ class NotificationPreferencesControllerTest {
         NotificationPreferencesUpdateDto request = new NotificationPreferencesUpdateDto();
         request.setHost("smtp.new.com");
         request.setPort(465);
+        request.setFromAddress("noreply@new.com");
+        request.setRequiresAuth(true);
         request.setUsername("new@example.com");
         request.setPassword("mypassword");
         request.setStartTlsEnabled(false);
@@ -102,7 +109,36 @@ class NotificationPreferencesControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.configured").value(true))
                 .andExpect(jsonPath("$.host").value("smtp.new.com"))
+                .andExpect(jsonPath("$.fromAddress").value("noreply@new.com"))
+                .andExpect(jsonPath("$.requiresAuth").value(true))
                 .andExpect(jsonPath("$.password").value("(unchanged)"));
+    }
+
+    @Test
+    void update_NoAuth_ReturnsUpdatedPreferences() throws Exception {
+        NotificationPreferencesResponseDto response = NotificationPreferencesResponseDto.builder()
+                .host("relay.internal")
+                .port(25)
+                .fromAddress("noreply@example.com")
+                .requiresAuth(false)
+                .startTlsEnabled(false)
+                .configured(true)
+                .build();
+        when(service.update(any())).thenReturn(response);
+
+        NotificationPreferencesUpdateDto request = new NotificationPreferencesUpdateDto();
+        request.setHost("relay.internal");
+        request.setPort(25);
+        request.setFromAddress("noreply@example.com");
+        request.setRequiresAuth(false);
+        request.setStartTlsEnabled(false);
+
+        mockMvc.perform(put("/api/admin/notification-preferences")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.configured").value(true))
+                .andExpect(jsonPath("$.requiresAuth").value(false));
     }
 
     @Test
@@ -110,7 +146,24 @@ class NotificationPreferencesControllerTest {
         NotificationPreferencesUpdateDto request = new NotificationPreferencesUpdateDto();
         request.setHost("");
         request.setPort(25);
-        request.setUsername("user@test.com");
+        request.setFromAddress("noreply@example.com");
+        request.setRequiresAuth(false);
+        request.setStartTlsEnabled(false);
+
+        mockMvc.perform(put("/api/admin/notification-preferences")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void update_ValidationFailsWhenFromAddressBlank() throws Exception {
+        NotificationPreferencesUpdateDto request = new NotificationPreferencesUpdateDto();
+        request.setHost("smtp.example.com");
+        request.setPort(587);
+        request.setFromAddress("");
+        request.setRequiresAuth(true);
+        request.setUsername("user@example.com");
         request.setPassword("pass");
         request.setStartTlsEnabled(false);
 
