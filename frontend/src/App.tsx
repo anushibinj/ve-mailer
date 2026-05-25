@@ -33,7 +33,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
             {isAdmin && (
               <button
                 onClick={() => navigate('/admin')}
-                className="text-sm text-blue-600 font-medium"
+                className="text-sm text-blue-600 font-medium cursor-pointer"
               >
                 Admin Control Panel
               </button>
@@ -102,7 +102,7 @@ export function AppContent() {
             {isAdmin && (
               <button
                 onClick={() => navigate('/admin')}
-                className="text-sm text-gray-500 hover:text-blue-600 font-medium transition-colors"
+                className="text-sm text-gray-500 hover:text-blue-600 font-medium transition-colors cursor-pointer"
               >
                 Admin Control Panel
               </button>
