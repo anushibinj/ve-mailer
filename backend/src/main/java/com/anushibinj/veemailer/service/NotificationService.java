@@ -15,10 +15,10 @@ import com.hpe.adm.nga.sdk.model.MultiReferenceFieldModel;
 import com.hpe.adm.nga.sdk.model.ReferenceFieldModel;
 import com.hpe.adm.nga.sdk.model.StringFieldModel;
 import jakarta.mail.MessagingException;
+import jakarta.mail.Session;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -118,15 +118,16 @@ public class NotificationService {
     }
 
     private void sendEmail(String to, String htmlBody, String subject) throws MessagingException {
-        JavaMailSender mailSender = dynamicMailSenderService.getMailSender();
+        Session session = dynamicMailSenderService.getSession();
         String from = dynamicMailSenderService.getFromAddress();
-        MimeMessage message = mailSender.createMimeMessage();
+        MimeMessage message = new MimeMessage(session);
         MimeMessageHelper helper = new MimeMessageHelper(message, false, "UTF-8");
         helper.setFrom(from);
         helper.setTo(to);
         helper.setSubject(subject);
         helper.setText(htmlBody, true); // true = HTML
-        mailSender.send(message);
+        message.saveChanges();
+        dynamicMailSenderService.send(message);
     }
 
     /**

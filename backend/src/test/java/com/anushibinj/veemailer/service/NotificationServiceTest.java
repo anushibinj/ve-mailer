@@ -14,7 +14,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.mail.javamail.JavaMailSender;
 
 import java.util.Collections;
 import java.util.List;
@@ -28,9 +27,6 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class NotificationServiceTest {
-
-    @Mock
-    private JavaMailSender mailSender;
 
     @Mock
     private DynamicMailSenderService dynamicMailSenderService;
@@ -56,22 +52,16 @@ class NotificationServiceTest {
         testWorkspace.setSharedSpaceId("4001");
         testWorkspace.setWorkspaceId("5015");
         testWorkspace.setRootUrl("https://ve.example.com");
-        lenient().when(dynamicMailSenderService.getMailSender()).thenReturn(mailSender);
+        lenient().when(dynamicMailSenderService.getSession()).thenReturn(Session.getInstance(new Properties()));
         lenient().when(dynamicMailSenderService.getFromAddress()).thenReturn("noreply@test.com");
+        lenient().doNothing().when(dynamicMailSenderService).send(any(MimeMessage.class));
         notificationService = new NotificationService(dynamicMailSenderService, registry, aiSummaryService, mailAuditService);
-    }
-
-    /** Creates a real MimeMessage backed by an empty Session so MimeMessageHelper works. */
-    private MimeMessage newMimeMessage() {
-        return new MimeMessage(Session.getInstance(new Properties()));
     }
 
     // ── processAndSendNotifications ───────────────────────────────────────────
 
     @Test
     void testProcessAndSendNotifications_SendsOneEmailPerSubscriber() {
-        when(mailSender.createMimeMessage()).thenReturn(newMimeMessage(), newMimeMessage());
-
         EmailSubscriber sub1 = new EmailSubscriber();
         sub1.setRecipientEmail("user1@example.com");
         EmailSubscriber sub2 = new EmailSubscriber();
@@ -80,7 +70,7 @@ class NotificationServiceTest {
         notificationService.processAndSendNotifications(
                 List.of(sub1, sub2), Collections.emptyList(), List.of("name"), 25, testWorkspace, "Open Defects");
 
-        verify(mailSender, times(2)).send(any(MimeMessage.class));
+        verify(dynamicMailSenderService, times(2)).send(any(MimeMessage.class));
         // Verify audit logging recorded success for each subscriber
         verify(mailAuditService, times(2)).recordSuccess(
                 eq(testWorkspace.getId()), eq(testWorkspace.getTitle()),
@@ -93,14 +83,11 @@ class NotificationServiceTest {
         notificationService.processAndSendNotifications(
                 Collections.emptyList(), Collections.emptyList(), List.of("name"), 25, testWorkspace, "Open Defects");
 
-        verify(mailSender, never()).send(any(MimeMessage.class));
+        verify(dynamicMailSenderService, never()).send(any(MimeMessage.class));
     }
 
     @Test
     void testProcessAndSendNotifications_SubjectUsesFilterTitle() throws Exception {
-        MimeMessage msg = newMimeMessage();
-        when(mailSender.createMimeMessage()).thenReturn(msg);
-
         EmailSubscriber sub = new EmailSubscriber();
         sub.setRecipientEmail("check@example.com");
 
@@ -108,7 +95,7 @@ class NotificationServiceTest {
                 List.of(sub), Collections.emptyList(), List.of("name"), 25, testWorkspace, "Open Defects");
 
         ArgumentCaptor<MimeMessage> captor = ArgumentCaptor.forClass(MimeMessage.class);
-        verify(mailSender).send(captor.capture());
+        verify(dynamicMailSenderService).send(captor.capture());
         assertEquals("[ve-mailer] Open Defects", captor.getValue().getSubject());
     }
 
@@ -155,7 +142,6 @@ class NotificationServiceTest {
 
     @Test
     void testProcessAndSendNotifications_AiSummaryEnabled_GeneratesSummaries() {
-        when(mailSender.createMimeMessage()).thenReturn(newMimeMessage());
         when(aiSummaryService.fetchComments(any(), any())).thenReturn("Some comment");
         when(aiSummaryService.generateSummary(any(), any(), any())).thenReturn("AI generated summary");
 
@@ -175,13 +161,11 @@ class NotificationServiceTest {
                 List.of(sub), List.of(entity), fields, 25, testWorkspace, "AI Filter");
 
         verify(aiSummaryService).generateSummary("Fix bug", "A bug needs fixing", "Some comment");
-        verify(mailSender).send(any(MimeMessage.class));
+        verify(dynamicMailSenderService).send(any(MimeMessage.class));
     }
 
     @Test
     void testProcessAndSendNotifications_AiSummaryDisabled_NoAiCalls() {
-        when(mailSender.createMimeMessage()).thenReturn(newMimeMessage());
-
         EntityModel entity = new EntityModel(Set.of(
                 new StringFieldModel("name", "Fix bug")
         ));
@@ -362,7 +346,6 @@ class NotificationServiceTest {
     void testProcessAndSendNotifications_AiSummaryEnabled_WithoutUserDisplayingNameDescription() {
         // Verifies decoupled architecture: backend fetches name/description internally for AI
         // generation even when the user did not select them as display fields.
-        when(mailSender.createMimeMessage()).thenReturn(newMimeMessage());
         when(aiSummaryService.fetchComments(any(), any())).thenReturn("");
         when(aiSummaryService.generateSummary(any(), any(), any())).thenReturn("AI generated summary");
 
@@ -386,7 +369,7 @@ class NotificationServiceTest {
 
         // AI summary must still be generated using the entity data fetched internally
         verify(aiSummaryService).generateSummary("Fix bug", "A bug needs fixing", "");
-        verify(mailSender).send(any(MimeMessage.class));
+        verify(dynamicMailSenderService).send(any(MimeMessage.class));
     }
 
     @Test
