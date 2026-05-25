@@ -9,7 +9,8 @@ import lombok.NoArgsConstructor;
 
 /**
  * Request DTO for creating/updating notification preferences.
- * Password can be null/blank/"(unchanged)" to preserve existing value on update.
+ * When requiresAuth is false, username and password are ignored.
+ * Password can be null/blank/"(unchanged)" to preserve the existing value on update.
  */
 @Data
 @NoArgsConstructor
@@ -23,7 +24,12 @@ public class NotificationPreferencesUpdateDto {
     @Max(value = 65535, message = "Port must be between 1 and 65535")
     private int port;
 
-    @NotBlank(message = "Username is required")
+    @NotBlank(message = "From address is required")
+    private String fromAddress;
+
+    private boolean requiresAuth;
+
+    // Required only when requiresAuth=true; validated in the service layer
     private String username;
 
     // Optional on update — if null/blank/"(unchanged)", preserves existing password

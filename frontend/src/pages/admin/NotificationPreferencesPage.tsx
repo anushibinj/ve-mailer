@@ -19,6 +19,8 @@ export default function NotificationPreferencesPage() {
 
   const [host, setHost] = useState('');
   const [port, setPort] = useState(25);
+  const [fromAddress, setFromAddress] = useState('');
+  const [requiresAuth, setRequiresAuth] = useState(true);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [startTlsEnabled, setStartTlsEnabled] = useState(false);
@@ -31,8 +33,10 @@ export default function NotificationPreferencesPage() {
       if (data.configured) {
         setHost(data.host);
         setPort(data.port);
-        setUsername(data.username);
-        setPassword(PASSWORD_PLACEHOLDER);
+        setFromAddress(data.fromAddress ?? '');
+        setRequiresAuth(data.requiresAuth);
+        setUsername(data.username ?? '');
+        setPassword(data.requiresAuth ? PASSWORD_PLACEHOLDER : '');
         setStartTlsEnabled(data.startTlsEnabled);
       }
     } catch {
@@ -47,6 +51,14 @@ export default function NotificationPreferencesPage() {
     loadPreferences();
   }, []);
 
+  const handleRequiresAuthChange = (value: boolean) => {
+    setRequiresAuth(value);
+    if (!value) {
+      setUsername('');
+      setPassword('');
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -58,20 +70,28 @@ export default function NotificationPreferencesPage() {
       toast.error('Port must be between 1 and 65535');
       return;
     }
-    if (!username.trim()) {
-      toast.error('Username is required');
+    if (!fromAddress.trim()) {
+      toast.error('From address is required');
       return;
     }
-    if (!configured && (!password || password === PASSWORD_PLACEHOLDER)) {
-      toast.error('Password is required for initial configuration');
-      return;
+    if (requiresAuth) {
+      if (!username.trim()) {
+        toast.error('Username is required when authentication is enabled');
+        return;
+      }
+      if (!configured && (!password || password === PASSWORD_PLACEHOLDER)) {
+        toast.error('Password is required for initial configuration');
+        return;
+      }
     }
 
     const payload: NotificationPreferencesUpdatePayload = {
       host: host.trim(),
       port,
-      username: username.trim(),
-      password: password,
+      fromAddress: fromAddress.trim(),
+      requiresAuth,
+      username: requiresAuth ? username.trim() : undefined,
+      password: requiresAuth ? password : undefined,
       startTlsEnabled,
     };
 
@@ -79,7 +99,9 @@ export default function NotificationPreferencesPage() {
       setSaving(true);
       const data = await adminUpdateNotificationPreferences(payload);
       setConfigured(data.configured);
-      setPassword(PASSWORD_PLACEHOLDER);
+      if (data.requiresAuth) {
+        setPassword(PASSWORD_PLACEHOLDER);
+      }
       setShowPassword(false);
       toast.success('Notification preferences saved successfully');
     } catch {
@@ -147,57 +169,107 @@ export default function NotificationPreferencesPage() {
         </div>
 
         <div>
-          <label htmlFor="smtp-username" className="block text-sm font-medium text-gray-700">
-            Username (also used as "From" address)
+          <label htmlFor="from-address" className="block text-sm font-medium text-gray-700">
+            From Address
           </label>
           <input
-            id="smtp-username"
-            type="text"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
+            id="from-address"
+            type="email"
+            value={fromAddress}
+            onChange={(e) => setFromAddress(e.target.value)}
             placeholder="noreply@example.com"
             className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
             required
           />
+          <p className="mt-1 text-xs text-gray-500">
+            This address appears in the From: header of all outgoing emails.
+          </p>
         </div>
 
         <div>
-          <label htmlFor="smtp-password" className="block text-sm font-medium text-gray-700">
-            Password
-          </label>
-          <div className="mt-1 relative">
-            <input
-              id="smtp-password"
-              type={showPassword ? 'text' : 'password'}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              onFocus={() => {
-                if (password === PASSWORD_PLACEHOLDER) {
-                  setPassword('');
-                }
-              }}
-              onBlur={() => {
-                if (configured && password === '') {
-                  setPassword(PASSWORD_PLACEHOLDER);
-                }
-              }}
-              placeholder={configured ? '(unchanged)' : 'Enter SMTP password'}
-              className="block w-full rounded-md border border-gray-300 px-3 py-2 pr-16 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute inset-y-0 right-0 px-3 flex items-center text-xs text-gray-500 hover:text-gray-700"
-            >
-              {showPassword ? 'Hide' : 'Show'}
-            </button>
+          <span className="block text-sm font-medium text-gray-700 mb-2">
+            Authentication Required
+          </span>
+          <div className="flex gap-6">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="requiresAuth"
+                checked={requiresAuth}
+                onChange={() => handleRequiresAuthChange(true)}
+                className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+              />
+              <span className="text-sm text-gray-700">Yes</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="requiresAuth"
+                checked={!requiresAuth}
+                onChange={() => handleRequiresAuthChange(false)}
+                className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+              />
+              <span className="text-sm text-gray-700">No (unauthenticated relay)</span>
+            </label>
           </div>
-          {configured && (
-            <p className="mt-1 text-xs text-gray-500">
-              Leave as "(unchanged)" to keep the existing password.
-            </p>
-          )}
         </div>
+
+        {requiresAuth && (
+          <>
+            <div>
+              <label htmlFor="smtp-username" className="block text-sm font-medium text-gray-700">
+                Username
+              </label>
+              <input
+                id="smtp-username"
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="user@example.com"
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                required={requiresAuth}
+              />
+            </div>
+
+            <div>
+              <label htmlFor="smtp-password" className="block text-sm font-medium text-gray-700">
+                Password
+              </label>
+              <div className="mt-1 relative">
+                <input
+                  id="smtp-password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  onFocus={() => {
+                    if (password === PASSWORD_PLACEHOLDER) {
+                      setPassword('');
+                    }
+                  }}
+                  onBlur={() => {
+                    if (configured && password === '') {
+                      setPassword(PASSWORD_PLACEHOLDER);
+                    }
+                  }}
+                  placeholder={configured ? '(unchanged)' : 'Enter SMTP password'}
+                  className="block w-full rounded-md border border-gray-300 px-3 py-2 pr-16 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 px-3 flex items-center text-xs text-gray-500 hover:text-gray-700"
+                >
+                  {showPassword ? 'Hide' : 'Show'}
+                </button>
+              </div>
+              {configured && (
+                <p className="mt-1 text-xs text-gray-500">
+                  Leave as "(unchanged)" to keep the existing password.
+                </p>
+              )}
+            </div>
+          </>
+        )}
 
         <div className="flex items-center gap-2">
           <input

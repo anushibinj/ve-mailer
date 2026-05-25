@@ -204,8 +204,10 @@ export const runSubscription = async (workspaceId: string, subscriptionId: strin
 export interface NotificationPreferencesResponse {
   host: string;
   port: number;
+  fromAddress: string;
+  requiresAuth: boolean;
   username: string;
-  password: string; // always "(unchanged)" from the API
+  password: string; // always "(unchanged)" from the API when requiresAuth=true
   startTlsEnabled: boolean;
   configured: boolean;
 }
@@ -213,7 +215,9 @@ export interface NotificationPreferencesResponse {
 export interface NotificationPreferencesUpdatePayload {
   host: string;
   port: number;
-  username: string;
+  fromAddress: string;
+  requiresAuth: boolean;
+  username?: string;
   // Leave as "(unchanged)" to preserve existing password; provide new value to replace
   password?: string;
   startTlsEnabled: boolean;
