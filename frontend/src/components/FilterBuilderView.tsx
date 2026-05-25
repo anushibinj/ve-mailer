@@ -4,13 +4,14 @@ import {
   createFilter,
   updateFilter,
   executeFilter,
+  cloneFilter,
   type Filter,
   type FilterCriteriaClause,
   type FilterCreatePayload,
   type FilterUpdatePayload
 } from '../services/apiService';
 import { useAuth } from '../hooks/useAuth';
-import { Loader2, ArrowLeft, Plus, Trash2, Play, Pencil, ChevronDown, ChevronUp } from 'lucide-react';
+import { Loader2, ArrowLeft, Plus, Trash2, Play, Pencil, Copy, ChevronDown, ChevronUp } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface FilterBuilderViewProps {
@@ -123,6 +124,21 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
     setEditingFilter(f);
     populateFormFromFilter(f);
     setViewMode('edit');
+  };
+
+  const handleClone = async (f: Filter) => {
+    try {
+      const cloned = await cloneFilter(workspaceId, f.id);
+      setEditingFilter(null);
+      setTitle(cloned.title);
+      setDescription(cloned.description || '');
+      setEntityType(cloned.entityType);
+      setSelectedFields(cloned.fields);
+      setCriteria(cloned.criteria.length > 0 ? cloned.criteria : [emptyCriterion()]);
+      setViewMode('create');
+    } catch {
+      toast.error('Failed to load filter for cloning.');
+    }
   };
 
   const handleBackToList = () => {
@@ -587,13 +603,23 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
                     {/* Action buttons */}
                     <div className="flex items-center gap-2 shrink-0">
                       {isAdmin && (
-                        <button
-                          onClick={() => handleEdit(f)}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 rounded-md text-xs font-medium text-gray-700 bg-white hover:bg-gray-50 hover:border-blue-300 transition-colors"
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                          Edit
-                        </button>
+                        <>
+                          <button
+                            onClick={() => handleEdit(f)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 rounded-md text-xs font-medium text-gray-700 bg-white hover:bg-gray-50 hover:border-blue-300 transition-colors"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleClone(f)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 rounded-md text-xs font-medium text-gray-700 bg-white hover:bg-gray-50 hover:border-purple-300 transition-colors"
+                            title="Clone filter template"
+                          >
+                            <Copy className="h-3.5 w-3.5" />
+                            Clone
+                          </button>
+                        </>
                       )}
                       <button
                         onClick={() => handleExecute(f.id)}
