@@ -37,4 +37,7 @@ public interface EmailSubscriberRepository extends JpaRepository<EmailSubscriber
 
     /** Used by the migration runner to find legacy subscribers not yet on the new schedule model. */
     List<EmailSubscriber> findByScheduleTypeIsNull();
+
+    /** Deletes all subscriptions associated with the given filter. Used when a filter template is deleted. */
+    void deleteByFilter_Id(UUID filterId);
 }
