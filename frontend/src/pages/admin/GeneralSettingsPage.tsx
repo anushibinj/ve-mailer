@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Loader2, Info } from 'lucide-react';
+import { Loader2, Info, AlertTriangle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import type { GeneralSettings } from '../../services/apiService';
 import { adminGetGeneralSettings, adminUpdateGeneralSettings } from '../../services/apiService';
@@ -59,85 +59,72 @@ export default function GeneralSettingsPage() {
     }
   };
 
-  return (
-    <div>
-      {/* Page header */}
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">General</h1>
-        <p className="mt-1 text-sm text-gray-500">
-          Application-wide configuration settings.
-        </p>
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20">
+        <Loader2 className="h-7 w-7 animate-spin text-indigo-500 mb-3" />
+        <p className="text-sm text-slate-400">Loading settings…</p>
       </div>
+    );
+  }
 
-      {isLoading ? (
-        <div className="flex flex-col items-center justify-center py-20">
-          <Loader2 className="h-8 w-8 animate-spin text-blue-500 mb-3" />
-          <p className="text-sm text-gray-500">Loading settings…</p>
+  return (
+    <div className="space-y-6 max-w-lg">
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+        <div className="px-6 py-4 border-b border-slate-100">
+          <h2 className="text-sm font-semibold text-slate-900">Query Result Limit</h2>
+          <p className="text-xs text-slate-400 mt-0.5">Controls the maximum number of tickets included per email digest.</p>
         </div>
-      ) : (
-        <div className="space-y-6 max-w-xl">
-          {/* Query Result Limit section */}
-          <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-6">
-            <h2 className="text-base font-semibold text-gray-900 mb-4">Query Result Limit</h2>
-
-            <div className="space-y-3">
-              <div>
-                <label
-                  htmlFor="query-limit"
-                  className="block text-sm font-medium text-gray-700 mb-1"
-                >
-                  Maximum Tickets Per Mail
-                </label>
-                <input
-                  id="query-limit"
-                  type="number"
-                  value={inputValue}
-                  onChange={e => setInputValue(e.target.value)}
-                  className={`w-40 px-3 py-2 border rounded-md shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                    !isValidLimit && inputValue !== ''
-                      ? 'border-red-400 bg-red-50'
-                      : 'border-gray-300'
-                  }`}
-                  placeholder="e.g. 25"
-                />
-                <p className="mt-1.5 text-xs text-gray-500">
-                  Set to <code className="bg-gray-100 px-1 rounded">-1</code> for unlimited results.
-                </p>
-                {!isValidLimit && inputValue !== '' && (
-                  <p className="mt-1 text-xs text-red-600">
-                    Enter a positive integer or <code>-1</code> for unlimited. 0 is not allowed.
-                  </p>
-                )}
+        <div className="p-6 space-y-4">
+          <div className="space-y-1.5">
+            <label htmlFor="query-limit" className="block text-sm font-medium text-slate-700">
+              Maximum Tickets Per Mail
+            </label>
+            <input
+              id="query-limit"
+              type="number"
+              value={inputValue}
+              onChange={e => setInputValue(e.target.value)}
+              className={`w-40 px-3.5 py-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all ${
+                !isValidLimit && inputValue !== ''
+                  ? 'border-rose-300 bg-rose-50 text-rose-900'
+                  : 'border-slate-200 text-slate-900'
+              }`}
+              placeholder="e.g. 25"
+            />
+            <p className="text-xs text-slate-400 mt-1">
+              Set to <code className="bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded-md font-mono text-xs">-1</code> for unlimited results.
+            </p>
+            {!isValidLimit && inputValue !== '' && (
+              <div className="flex items-center gap-1.5 text-xs text-rose-600 mt-1">
+                <AlertTriangle className="h-3.5 w-3.5 flex-shrink-0" />
+                Enter a positive integer or <code className="font-mono">-1</code> for unlimited. 0 is not allowed.
               </div>
-
-              {parsedLimit === -1 && isValidLimit && (
-                <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-md text-xs text-amber-800">
-                  <Info className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                  <span>
-                    Unlimited results may increase email size and query execution time.
-                  </span>
-                </div>
-              )}
-
-              <div className="pt-2">
-                <button
-                  type="button"
-                  onClick={handleSaveRequest}
-                  disabled={!isValidLimit || !isDirty || isSaving}
-                  className="inline-flex items-center gap-2 px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
-                >
-                  {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                  {isSaving ? 'Saving…' : 'Save Settings'}
-                </button>
-              </div>
-            </div>
+            )}
           </div>
+
+          {parsedLimit === -1 && isValidLimit && (
+            <div className="flex items-start gap-2.5 p-3.5 bg-amber-50 border border-amber-100 rounded-xl text-xs text-amber-700">
+              <Info className="h-4 w-4 flex-shrink-0 mt-0.5 text-amber-500" />
+              <span>Unlimited results may increase email size and query execution time significantly.</span>
+            </div>
+          )}
+
+          <button
+            type="button"
+            onClick={handleSaveRequest}
+            disabled={!isValidLimit || !isDirty || isSaving}
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+          >
+            {isSaving && <Loader2 className="h-4 w-4 animate-spin" />}
+            {isSaving ? 'Saving…' : 'Save Settings'}
+          </button>
         </div>
-      )}
+      </div>
 
       <ConfirmDialog
         isOpen={confirmOpen}
-        title="Enable Unlimited Query Results?"
+        title="Enable Unlimited Results?"
         message="Unlimited query results may impact performance and significantly increase email size. Continue?"
         confirmLabel="Yes, set unlimited"
         onConfirm={() => doSave(-1)}
