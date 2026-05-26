@@ -365,6 +365,7 @@ public class FilterService {
         if (values.length == 0) return false;
         for (String v : values) {
             if (v.contains(".") || v.length() > 15) return true;
+            if (v.matches("^[0-9]+$")) return true; // IDs like "10001234567" are also references, not phases
         }
         return false;
     }
