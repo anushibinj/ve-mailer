@@ -44,6 +44,12 @@ public class AiSummaryService {
      * @return a concise summary string, or a fallback message on failure
      */
     public String generateSummary(String name, String description, String comments) {
+
+        if(comments == null || comments.isBlank()) {
+            log.debug("Ticket '{}' has no comments; skipping AI summary generation.", name);
+            return "There is not enough comment data to understand the context of the ticket.";
+        }
+
         try {
             ChatClient chatClient = dynamicAiClientService.getChatClient();
 
