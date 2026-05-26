@@ -594,8 +594,8 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
                                       key={col}
                                       className="px-4 py-2 text-slate-600 dark:text-slate-300 whitespace-normal break-words"
                                       style={{ overflowWrap: 'anywhere' }}
+                                      dangerouslySetInnerHTML={{ __html: String(display).replace(/\n/g, '<br>') }}
                                     >
-                                      {display}
                                     </td>
                                   );
                                 })}
