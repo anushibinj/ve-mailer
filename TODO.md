@@ -18,4 +18,5 @@
 - [ ] The e-mail body should have a link to ve-mailer frontend pointing to the workspace. People should be able to directly go and view their workspace subscriptions from their e-mail.
 - [ ] Allow multiple super admins and multiple workspace admins. Super admins only create workspaces (not configure params/secrets). Workspace admins have to configure secrets, filters and other values for the workspace as per their need. This means that there should be an "Enabled" mode for the workspace to mark a workspace as available to the public only after it is fully ready for use.
 - [ ] In the filter template execution window, show a proper preview of the output with columns instead of json output that it is currently showing
+- [ ] Limit the number of tickets in the filter preview to just 10. And change the "Execute" button lable to "Preview"
 - [ ] Create user groups/teams that the admin can add users to to receive notification mails in bulk
