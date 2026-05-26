@@ -115,7 +115,7 @@ const LandingView: React.FC<LandingViewProps> = ({ onSelectWorkspace }) => {
                   key={workspace.id}
                   onClick={() => onSelectWorkspace(workspace.id)}
                   style={{ animationDelay: `${idx * 60}ms` }}
-                  className="group animate-slide-up bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-lg dark:hover:shadow-slate-900/60 hover:border-indigo-200 dark:hover:border-indigo-700/50 hover:-translate-y-0.5 transition-all duration-200 text-left p-5 flex items-center gap-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-950"
+                  className="group animate-slide-up bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-lg dark:hover:shadow-slate-900/60 hover:border-indigo-200 dark:hover:border-indigo-700/50 hover:-translate-y-0.5 transition-all duration-200 text-left p-5 flex items-center gap-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-950 cursor-pointer"
                 >
                   <div className={`h-12 w-12 rounded-xl bg-gradient-to-br ${gradient} flex items-center justify-center flex-shrink-0 shadow-lg ${shadow} group-hover:scale-110 group-hover:shadow-xl transition-all duration-300`}>
                     <span className="text-white font-bold text-lg">{initial}</span>
