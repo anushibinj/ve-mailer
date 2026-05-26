@@ -41,6 +41,42 @@ const OPERATORS = [
 const emptyCriterion = (): FilterCriteriaClause => ({ field: '', operator: 'IN', values: [''] });
 const defaultFields = ['id', 'name', 'phase', 'owner'];
 
+/**
+ * Octane EntityModel serializes field data as:
+ *   { id, type, values: [{ name, value, jsonvalue }, ...] }
+ *
+ * Nested reference entities (e.g. owner, phase) appear as:
+ *   { name: 'owner', value: { id, type, values: [{ name: 'full_name', value: '...' }, ...] } }
+ *
+ * This helper flattens that structure into a plain { fieldName: displayValue } map
+ * so the preview table can do simple row[col] lookups.
+ */
+const flattenOctaneItem = (item: Record<string, unknown>): Record<string, unknown> => {
+  type OctaneFieldEntry = { name: string; value: unknown };
+  type OctaneNestedEntity = { id?: string; type?: string; values?: OctaneFieldEntry[] };
+
+  const valuesArr = item.values as OctaneFieldEntry[] | undefined;
+  if (!Array.isArray(valuesArr)) return item; // unexpected shape — return as-is
+
+  const flat: Record<string, unknown> = {};
+  for (const entry of valuesArr) {
+    const { name, value } = entry;
+    if (value === null || value === undefined) {
+      flat[name] = null;
+    } else if (typeof value === 'object' && Array.isArray((value as OctaneNestedEntity).values)) {
+      // Nested entity: resolve to human-readable display value
+      const nested = value as OctaneNestedEntity;
+      const nestedVals = nested.values ?? [];
+      const find = (key: string) => nestedVals.find(v => v.name === key)?.value ?? null;
+      // Priority: name > full_name > id (covers phases, users, etc.)
+      flat[name] = find('name') ?? find('full_name') ?? find('id') ?? nested.id ?? null;
+    } else {
+      flat[name] = value;
+    }
+  }
+  return flat;
+};
+
 const inputClass =
   'w-full px-3.5 py-2.5 border border-slate-200 dark:border-slate-600 rounded-xl text-sm ' +
   'text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 ' +
@@ -173,7 +209,8 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
   const handleExecute = async (filterId: string) => {
     setExecuteState(prev => ({ ...prev, [filterId]: { isExecuting: true, results: null, expanded: true } }));
     try {
-      const results = await previewFilter(workspaceId, filterId, 10);
+      const raw = await previewFilter(workspaceId, filterId, 10);
+      const results = raw.map(flattenOctaneItem);
       setExecuteState(prev => ({ ...prev, [filterId]: { isExecuting: false, results, expanded: true } }));
       toast.success(`Preview returned ${results.length} result(s).`);
     } catch (err: unknown) {
