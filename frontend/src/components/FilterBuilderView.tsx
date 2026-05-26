@@ -463,6 +463,7 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
             const criteriaList = parseCriteria(f.criteria);
             const fieldsList = parseFields(f.fields);
             const exState = executeState[f.id];
+            const hasResults = !exState?.isExecuting && exState?.results != null && exState.results.length > 0;
 
             return (
               <div
@@ -539,19 +540,33 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
                           : <><Eye className="h-3.5 w-3.5" />Preview</>
                         }
                       </button>
-                      {exState?.results !== null && (
-                        <button
-                          onClick={() => toggleResultsPanel(f.id)}
-                          className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs text-slate-400 dark:text-slate-500 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/60 transition-colors cursor-pointer"
-                        >
-                          {exState?.expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                        </button>
-                      )}
                     </div>
                   </div>
+                  {/* Show/hide toggle — bottom-right, only when preview returned results */}
+                  {hasResults && (
+                    <div className="flex justify-end pt-2">
+                      <button
+                        onClick={() => toggleResultsPanel(f.id)}
+                        aria-label={exState?.expanded ? 'Hide preview results' : 'Show preview results'}
+                        className="inline-flex items-center gap-1.5 text-xs text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors cursor-pointer select-none"
+                      >
+                        {exState?.expanded
+                          ? <><ChevronUp className="h-3.5 w-3.5" />Hide results</>
+                          : <><ChevronDown className="h-3.5 w-3.5" />Show results</>
+                        }
+                      </button>
+                    </div>
+                  )}
                 </div>
 
-                {exState?.results !== null && exState?.expanded && (
+                {/* Empty state — always visible after a preview that returned no results */}
+                {!exState?.isExecuting && exState?.results != null && exState.results.length === 0 && (
+                  <div className="border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30">
+                    <div className="p-6 text-center text-sm text-slate-400 dark:text-slate-500">No matching results found.</div>
+                  </div>
+                )}
+                {/* Results panel — only when results exist and the toggle is expanded */}
+                {hasResults && exState?.expanded && (
                   <div className="border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30">
                     <div className="px-5 py-2.5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
                       <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
@@ -561,50 +576,46 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
                         )}
                       </span>
                     </div>
-                    {exState.results!.length === 0 ? (
-                      <div className="p-6 text-center text-sm text-slate-400 dark:text-slate-500">No matching results found.</div>
-                    ) : (
-                      <div className="overflow-x-auto max-h-[32rem]">
-                        <table className="min-w-full divide-y divide-slate-100 dark:divide-slate-800 text-xs table-auto">
-                          <thead className="bg-slate-100/70 dark:bg-slate-800/60 sticky top-0 z-10">
-                            <tr>
-                              {fieldsList.map(col => (
-                                <th
-                                  key={col}
-                                  className={`px-4 py-2.5 text-left font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider whitespace-nowrap ${
-                                    col === AI_SUMMARY_FIELD || col === 'name' || col === 'description'
-                                      ? 'min-w-[220px]'
-                                      : col === 'id'
-                                      ? 'min-w-[60px]'
-                                      : 'min-w-[90px]'
-                                  }`}
-                                >
-                                  {col === AI_SUMMARY_FIELD ? '✨ AI Summary' : col.replace(/_/g, ' ')}
-                                </th>
-                              ))}
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-slate-100 dark:divide-slate-800 bg-white dark:bg-slate-900">
-                            {exState.results!.map((row, ri) => (
-                              <tr key={ri} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors align-top">
-                                {fieldsList.map(col => {
-                                  const display = row[col] ?? '—';
-                                  return (
-                                    <td
-                                      key={col}
-                                      className="px-4 py-2 text-slate-600 dark:text-slate-300 whitespace-normal break-words"
-                                      style={{ overflowWrap: 'anywhere' }}
-                                      dangerouslySetInnerHTML={{ __html: String(display).replace(/\n/g, '<br>') }}
-                                    >
-                                    </td>
-                                  );
-                                })}
-                              </tr>
+                    <div className="overflow-x-auto max-h-[32rem]">
+                      <table className="min-w-full divide-y divide-slate-100 dark:divide-slate-800 text-xs table-auto">
+                        <thead className="bg-slate-100/70 dark:bg-slate-800/60 sticky top-0 z-10">
+                          <tr>
+                            {fieldsList.map(col => (
+                              <th
+                                key={col}
+                                className={`px-4 py-2.5 text-left font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider whitespace-nowrap ${
+                                  col === AI_SUMMARY_FIELD || col === 'name' || col === 'description'
+                                    ? 'min-w-[220px]'
+                                    : col === 'id'
+                                    ? 'min-w-[60px]'
+                                    : 'min-w-[90px]'
+                                }`}
+                              >
+                                {col === AI_SUMMARY_FIELD ? '✨ AI Summary' : col.replace(/_/g, ' ')}
+                              </th>
                             ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800 bg-white dark:bg-slate-900">
+                          {exState.results!.map((row, ri) => (
+                            <tr key={ri} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors align-top">
+                              {fieldsList.map(col => {
+                                const display = row[col] ?? '—';
+                                return (
+                                  <td
+                                    key={col}
+                                    className="px-4 py-2 text-slate-600 dark:text-slate-300 whitespace-normal break-words"
+                                    style={{ overflowWrap: 'anywhere' }}
+                                    dangerouslySetInnerHTML={{ __html: String(display).replace(/\n/g, '<br>') }}
+                                  >
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 )}
               </div>
