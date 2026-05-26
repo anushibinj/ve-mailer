@@ -1,6 +1,7 @@
 package com.anushibinj.veemailer.controller;
 
 import com.anushibinj.veemailer.dto.FilterDto;
+import com.anushibinj.veemailer.dto.PreviewResponse;
 import com.anushibinj.veemailer.model.Filter;
 import com.anushibinj.veemailer.repository.FilterRepository;
 import com.anushibinj.veemailer.service.FilterService;
@@ -86,11 +87,11 @@ public class FilterController {
     }
 
     @GetMapping("/{filterId}/preview")
-    public ResponseEntity<List<EntityModel>> previewFilter(
+    public ResponseEntity<PreviewResponse> previewFilter(
             @PathVariable UUID workspaceId,
             @PathVariable UUID filterId,
             @RequestParam(defaultValue = "10") int limit) {
-        List<EntityModel> results = filterService.previewFilter(filterId, workspaceId, limit);
-        return ResponseEntity.ok(results);
+        PreviewResponse preview = filterService.previewFilter(filterId, workspaceId, limit);
+        return ResponseEntity.ok(preview);
     }
 }

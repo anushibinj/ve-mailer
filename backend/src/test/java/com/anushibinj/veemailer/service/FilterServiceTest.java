@@ -3,6 +3,7 @@ package com.anushibinj.veemailer.service;
 import com.anushibinj.veemailer.repository.EmailSubscriberRepository;
 import com.anushibinj.veemailer.repository.FilterRepository;
 import com.anushibinj.veemailer.repository.WorkspaceRepository;
+import com.anushibinj.veemailer.service.extractor.FieldExtractorRegistry;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -28,6 +29,8 @@ class FilterServiceTest {
     @Mock private EmailSubscriberRepository emailSubscriberRepository;
     @Mock private OctaneCacheService octaneCacheService;
     @Mock private GeneralSettingsService generalSettingsService;
+    @Mock private AiSummaryService aiSummaryService;
+    @Mock private FieldExtractorRegistry fieldExtractorRegistry;
 
     private FilterService filterService;
 
@@ -35,7 +38,8 @@ class FilterServiceTest {
     void setUp() {
         filterService = new FilterService(
                 filterRepository, workspaceRepository, emailSubscriberRepository,
-                octaneCacheService, new ObjectMapper(), generalSettingsService);
+                octaneCacheService, new ObjectMapper(), generalSettingsService,
+                aiSummaryService, fieldExtractorRegistry);
     }
 
     @Test

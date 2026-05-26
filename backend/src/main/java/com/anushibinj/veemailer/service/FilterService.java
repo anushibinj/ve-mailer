@@ -1,26 +1,39 @@
 package com.anushibinj.veemailer.service;
 
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.anushibinj.veemailer.dto.FilterDto;
+import com.anushibinj.veemailer.dto.PreviewResponse;
 import com.anushibinj.veemailer.model.Filter;
 import com.anushibinj.veemailer.model.FilterCriteriaClause;
 import com.anushibinj.veemailer.model.Workspace;
 import com.anushibinj.veemailer.repository.EmailSubscriberRepository;
 import com.anushibinj.veemailer.repository.FilterRepository;
 import com.anushibinj.veemailer.repository.WorkspaceRepository;
-import org.springframework.transaction.annotation.Transactional;
+import com.anushibinj.veemailer.service.extractor.FieldExtractorRegistry;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hpe.adm.nga.sdk.Octane;
-import com.hpe.adm.nga.sdk.entities.get.GetEntities;
 import com.hpe.adm.nga.sdk.entities.OctaneCollection;
+import com.hpe.adm.nga.sdk.entities.get.GetEntities;
+import com.hpe.adm.nga.sdk.model.BooleanFieldModel;
+import com.hpe.adm.nga.sdk.model.DateFieldModel;
 import com.hpe.adm.nga.sdk.model.EntityModel;
+import com.hpe.adm.nga.sdk.model.FieldModel;
+import com.hpe.adm.nga.sdk.model.FloatFieldModel;
+import com.hpe.adm.nga.sdk.model.LongFieldModel;
+import com.hpe.adm.nga.sdk.model.MultiReferenceFieldModel;
+import com.hpe.adm.nga.sdk.model.ReferenceFieldModel;
+import com.hpe.adm.nga.sdk.model.StringFieldModel;
 import com.hpe.adm.nga.sdk.query.Query;
 import com.hpe.adm.nga.sdk.query.QueryMethod;
 
@@ -38,6 +51,8 @@ public class FilterService {
     private final OctaneCacheService octaneCacheService;
     private final ObjectMapper objectMapper;
     private final GeneralSettingsService generalSettingsService;
+    private final AiSummaryService aiSummaryService;
+    private final FieldExtractorRegistry fieldExtractorRegistry;
 
     /**
      * Persist a new filter template associated with a workspace.
@@ -189,9 +204,11 @@ public class FilterService {
 
     /**
      * Preview mode: executes the filter with a hard limit (independent of the global
-     * query limit setting). Used by the UI to show a quick sample of results.
+     * query limit setting) and fully replicates real email-generation behaviour,
+     * including AI summary generation when the AI Summary pseudo-field is selected.
+     * Used by the UI to show an accurate sample of results before sending.
      */
-    public List<EntityModel> previewFilter(UUID filterId, UUID workspaceId, int limit) {
+    public PreviewResponse previewFilter(UUID filterId, UUID workspaceId, int limit) {
         int effectivePreviewLimit = Math.max(1, Math.min(limit, 50)); // cap between 1 and 50
         Filter filter = filterRepository.findById(filterId)
                 .orElseThrow(() -> new IllegalArgumentException("Filter not found"));
@@ -220,7 +237,47 @@ public class FilterService {
                     .limit(effectivePreviewLimit);
 
             OctaneCollection<EntityModel> result = getEntities.execute();
-            return result.stream().toList();
+            List<EntityModel> entities = result.stream().toList();
+
+            // AI Summary generation — matches the real email-send flow exactly.
+            boolean aiSummaryEnabled = fields.contains(AiSummaryService.AI_SUMMARY_FIELD);
+            String[] aiSummaries = null;
+            if (aiSummaryEnabled) {
+                aiSummaries = new String[entities.size()];
+                for (int i = 0; i < entities.size(); i++) {
+                    EntityModel entity = entities.get(i);
+                    String name = extractFieldValue("name", entity.getValue("name"));
+                    String description = extractFieldValue("description", entity.getValue("description"));
+                    String ticketId = extractFieldValue("id", entity.getValue("id"));
+                    String comments = aiSummaryService.fetchComments(ticketId, workspace);
+                    aiSummaries[i] = aiSummaryService.generateSummary(name, description, comments);
+                }
+            }
+
+            // Display fields = user-selected fields minus the AI Summary pseudo-field.
+            List<String> displayFields = fields.stream()
+                    .filter(f -> !AiSummaryService.AI_SUMMARY_FIELD.equals(f))
+                    .collect(Collectors.toList());
+
+            // Flatten each EntityModel into a human-readable Map<fieldName, displayValue>.
+            List<Map<String, String>> records = new ArrayList<>(entities.size());
+            for (int i = 0; i < entities.size(); i++) {
+                EntityModel entity = entities.get(i);
+                Map<String, String> record = new LinkedHashMap<>();
+                for (String field : displayFields) {
+                    record.put(field, extractFieldValue(field, entity.getValue(field)));
+                }
+                if (aiSummaryEnabled && aiSummaries != null) {
+                    record.put(AiSummaryService.AI_SUMMARY_FIELD, aiSummaries[i]);
+                }
+                records.add(record);
+            }
+
+            return PreviewResponse.builder()
+                    .records(records)
+                    .aiSummaryGenerated(aiSummaryEnabled)
+                    .build();
+
         } catch (JsonProcessingException e) {
             throw new RuntimeException("Failed to deserialize filter data", e);
         }
@@ -310,5 +367,54 @@ public class FilterService {
             if (v.contains(".") || v.length() > 15) return true;
         }
         return false;
+    }
+
+    /**
+     * Extracts a display-friendly string from any FieldModel type.
+     *
+     * <p>For reference fields, delegates to {@link FieldExtractorRegistry}
+     * so that field-specific sub-field preferences are applied automatically.
+     *
+     * @param fieldName the Octane field name (used for the extractor registry lookup)
+     * @param fm        the raw field model (may be {@code null})
+     */
+    private String extractFieldValue(String fieldName, FieldModel<?> fm) {
+        if (fm == null || !fm.hasValue() || fm.getValue() == null) {
+            return "";
+        }
+        if (fm instanceof StringFieldModel sfm) {
+            return sfm.getValue() != null ? sfm.getValue() : "";
+        }
+        if (fm instanceof LongFieldModel lfm) {
+            return String.valueOf(lfm.getValue());
+        }
+        if (fm instanceof FloatFieldModel ffm) {
+            return String.valueOf(ffm.getValue());
+        }
+        if (fm instanceof BooleanFieldModel bfm) {
+            return String.valueOf(bfm.getValue());
+        }
+        if (fm instanceof DateFieldModel dfm) {
+            return dfm.getValue() != null ? dfm.getValue().toString() : "";
+        }
+        if (fm instanceof MultiReferenceFieldModel mrfm) {
+            return mrfm.getValue().stream()
+                    .map(ref -> resolveRefName(fieldName, ref))
+                    .collect(Collectors.joining(", "));
+        }
+        if (fm instanceof ReferenceFieldModel) {
+            return fieldExtractorRegistry.forField(fieldName).extract(fm);
+        }
+        return fm.getValue().toString();
+    }
+
+    /**
+     * Resolves the display name of one entity inside a multi-reference field,
+     * using the same registry lookup as single references.
+     */
+    private String resolveRefName(String fieldName, EntityModel ref) {
+        if (ref == null) return "";
+        ReferenceFieldModel synthetic = new ReferenceFieldModel(fieldName, ref);
+        return fieldExtractorRegistry.forField(fieldName).extract(synthetic);
     }
 }

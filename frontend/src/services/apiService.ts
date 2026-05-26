@@ -152,7 +152,12 @@ export const executeFilter = async (workspaceId: string, filterId: string): Prom
   return response.data;
 };
 
-export const previewFilter = async (workspaceId: string, filterId: string, limit = 10): Promise<Record<string, unknown>[]> => {
+export interface PreviewResponse {
+  records: Record<string, string>[];
+  aiSummaryGenerated: boolean;
+}
+
+export const previewFilter = async (workspaceId: string, filterId: string, limit = 10): Promise<PreviewResponse> => {
   const response = await api.get(`/api/v1/workspaces/${workspaceId}/filters/${filterId}/preview`, {
     params: { limit },
   });

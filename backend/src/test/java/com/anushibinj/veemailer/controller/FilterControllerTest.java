@@ -1,6 +1,7 @@
 package com.anushibinj.veemailer.controller;
 
 import com.anushibinj.veemailer.dto.FilterDto;
+import com.anushibinj.veemailer.dto.PreviewResponse;
 import com.anushibinj.veemailer.model.Filter;
 import com.anushibinj.veemailer.model.Workspace;
 import com.anushibinj.veemailer.repository.FilterRepository;
@@ -16,10 +17,13 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -186,5 +190,27 @@ class FilterControllerTest {
         mockMvc.perform(delete("/api/v1/workspaces/{workspaceId}/filters/{filterId}",
                         WORKSPACE_ID, filterId))
                 .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void testPreviewFilter_returnsPreviewResponse() throws Exception {
+        UUID filterId = UUID.randomUUID();
+        PreviewResponse previewResponse = PreviewResponse.builder()
+                .records(List.of(Map.of("id", "100", "name", "Test Bug")))
+                .aiSummaryGenerated(false)
+                .build();
+
+        when(filterService.previewFilter(eq(filterId), eq(WORKSPACE_ID), eq(10)))
+                .thenReturn(previewResponse);
+
+        mockMvc.perform(get("/api/v1/workspaces/{workspaceId}/filters/{filterId}/preview",
+                        WORKSPACE_ID, filterId)
+                        .param("limit", "10")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.aiSummaryGenerated").value(false))
+                .andExpect(jsonPath("$.records", hasSize(1)))
+                .andExpect(jsonPath("$.records[0].id").value("100"))
+                .andExpect(jsonPath("$.records[0].name").value("Test Bug"));
     }
 }
