@@ -62,7 +62,10 @@ public class DynamicAiClientService {
                 .model(prefs.getModel())
                 .build();
 
-        OpenAiChatModel chatModel = new OpenAiChatModel(openAiApi, options);
+        OpenAiChatModel chatModel = OpenAiChatModel.builder()
+                .openAiApi(openAiApi)
+                .defaultOptions(options)
+                .build();
         return ChatClient.create(chatModel);
     }
 
