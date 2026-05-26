@@ -188,6 +188,45 @@ public class FilterService {
     }
 
     /**
+     * Preview mode: executes the filter with a hard limit (independent of the global
+     * query limit setting). Used by the UI to show a quick sample of results.
+     */
+    public List<EntityModel> previewFilter(UUID filterId, UUID workspaceId, int limit) {
+        int effectivePreviewLimit = Math.max(1, Math.min(limit, 50)); // cap between 1 and 50
+        Filter filter = filterRepository.findById(filterId)
+                .orElseThrow(() -> new IllegalArgumentException("Filter not found"));
+        Workspace workspace = workspaceRepository.findById(workspaceId)
+                .orElseThrow(() -> new IllegalArgumentException("Workspace not found"));
+
+        try {
+            List<String> fields = objectMapper.readValue(filter.getFields(), new TypeReference<>() {});
+            List<FilterCriteriaClause> clauses = objectMapper.readValue(filter.getCriteria(), new TypeReference<>() {});
+            List<String> effectiveFetchFields = computeEffectiveFetchFields(fields);
+
+            Octane octaneClient = octaneCacheService.getOctaneClient(
+                    workspace.getRootUrl(),
+                    workspace.getClientId(),
+                    workspace.getClientKey(),
+                    Integer.parseInt(workspace.getSharedSpaceId()),
+                    Integer.parseInt(workspace.getWorkspaceId()));
+
+            Query query = buildQuery(filter.getEntityType(), clauses);
+
+            GetEntities getEntities = octaneClient
+                    .entityList("work_items")
+                    .get()
+                    .query(query)
+                    .addFields(effectiveFetchFields.toArray(new String[0]))
+                    .limit(effectivePreviewLimit);
+
+            OctaneCollection<EntityModel> result = getEntities.execute();
+            return result.stream().toList();
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("Failed to deserialize filter data", e);
+        }
+    }
+
+    /**
      * Computes the effective set of fields to fetch from Octane for a given set of
      * user-selected field names.
      *

@@ -1,6 +1,6 @@
 - [ ] Allow concatenators like AND and OR operators in the Filter Builder
 - [x] Migrate the DB to use Flyway
-- [ ] The collapse button in "Execute" section should not be visible if there are no results for that filter
+- [x] The collapse button in "Execute" section should not be visible if there are no results for that filter
 - [x] Everything on the GUI should be a unique URI. As of now, everything is on the same endpoint.
 - [x] Per subscription "Run" should be limited only to Admins
 - [x] "Manager Filter Templates" should be limited only to admins
@@ -17,6 +17,6 @@
 - [x] Allow unlimited tickets to come in the e-mail report. Currently there is a property to limit it to an integer. There should be an option to set it to -1 or something so that it doesn't add a limit to the query.
 - [ ] The e-mail body should have a link to ve-mailer frontend pointing to the workspace. People should be able to directly go and view their workspace subscriptions from their e-mail.
 - [ ] Allow multiple super admins and multiple workspace admins. Super admins only create workspaces (not configure params/secrets). Workspace admins have to configure secrets, filters and other values for the workspace as per their need. This means that there should be an "Enabled" mode for the workspace to mark a workspace as available to the public only after it is fully ready for use.
-- [ ] In the filter template execution window, show a proper preview of the output with columns instead of json output that it is currently showing
-- [ ] Limit the number of tickets in the filter preview to just 10. And change the "Execute" button lable to "Preview"
+- [x] In the filter template execution window, show a proper preview of the output with columns instead of json output that it is currently showing
+- [x] Limit the number of tickets in the filter preview to just 10. And change the "Execute" button lable to "Preview"
 - [ ] Create user groups/teams that the admin can add users to to receive notification mails in bulk

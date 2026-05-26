@@ -3,7 +3,7 @@ import {
   fetchFilters,
   createFilter,
   updateFilter,
-  executeFilter,
+  previewFilter,
   cloneFilter,
   deleteFilter,
   type Filter,
@@ -12,7 +12,7 @@ import {
   type FilterUpdatePayload
 } from '../services/apiService';
 import { useAuth } from '../hooks/useAuth';
-import { Loader2, ArrowLeft, Plus, Trash2, Play, Pencil, Copy, ChevronDown, ChevronUp, SlidersHorizontal } from 'lucide-react';
+import { Loader2, ArrowLeft, Plus, Trash2, Eye, Pencil, Copy, ChevronDown, ChevronUp, SlidersHorizontal } from 'lucide-react';
 import toast from 'react-hot-toast';
 import ConfirmDialog from './ConfirmDialog';
 
@@ -173,13 +173,13 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
   const handleExecute = async (filterId: string) => {
     setExecuteState(prev => ({ ...prev, [filterId]: { isExecuting: true, results: null, expanded: true } }));
     try {
-      const results = await executeFilter(workspaceId, filterId);
+      const results = await previewFilter(workspaceId, filterId, 10);
       setExecuteState(prev => ({ ...prev, [filterId]: { isExecuting: false, results, expanded: true } }));
-      toast.success(`Query returned ${results.length} result(s).`);
+      toast.success(`Preview returned ${results.length} result(s).`);
     } catch (err: unknown) {
       setExecuteState(prev => ({ ...prev, [filterId]: { isExecuting: false, results: [], expanded: true } }));
       const axiosErr = err as { response?: { data?: { message?: string } } };
-      toast.error(axiosErr.response?.data?.message ? `Execute failed: ${axiosErr.response.data.message}` : 'Failed to execute filter.');
+      toast.error(axiosErr.response?.data?.message ? `Preview failed: ${axiosErr.response.data.message}` : 'Failed to preview filter.');
     }
   };
 
@@ -502,8 +502,8 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
                       >
                         {exState?.isExecuting
                           ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          : <Play className="h-3.5 w-3.5" />
-                        }Execute
+                          : <Eye className="h-3.5 w-3.5" />
+                        }Preview
                       </button>
                       {exState?.results !== null && (
                         <button
@@ -521,19 +521,19 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
                   <div className="border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30">
                     <div className="px-5 py-2.5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
                       <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                        Results — {exState.results!.length} item{exState.results!.length !== 1 ? 's' : ''}
+                        Preview — {exState.results!.length} item{exState.results!.length !== 1 ? 's' : ''} (max 10)
                       </span>
                     </div>
                     {exState.results!.length === 0 ? (
-                      <div className="p-6 text-center text-sm text-slate-400 dark:text-slate-500">No results matched the filter criteria.</div>
+                      <div className="p-6 text-center text-sm text-slate-400 dark:text-slate-500">No matching results found.</div>
                     ) : (
-                      <div className="overflow-x-auto">
+                      <div className="overflow-x-auto max-h-96">
                         <table className="min-w-full divide-y divide-slate-100 dark:divide-slate-800 text-xs">
-                          <thead className="bg-slate-100/70 dark:bg-slate-800/60">
+                          <thead className="bg-slate-100/70 dark:bg-slate-800/60 sticky top-0 z-10">
                             <tr>
-                              {Object.keys(exState.results![0]).map(col => (
-                                <th key={col} className="px-4 py-2 text-left font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider whitespace-nowrap">
-                                  {col}
+                              {fieldsList.filter(col => col !== AI_SUMMARY_FIELD).map(col => (
+                                <th key={col} className="px-4 py-2.5 text-left font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider whitespace-nowrap">
+                                  {col.replace(/_/g, ' ')}
                                 </th>
                               ))}
                             </tr>
@@ -541,11 +541,24 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
                           <tbody className="divide-y divide-slate-100 dark:divide-slate-800 bg-white dark:bg-slate-900">
                             {exState.results!.map((row, ri) => (
                               <tr key={ri} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                                {Object.keys(exState.results![0]).map(col => {
+                                {fieldsList.filter(col => col !== AI_SUMMARY_FIELD).map(col => {
                                   const value = row[col];
-                                  const display = value === null || value === undefined ? '' : typeof value === 'object' ? JSON.stringify(value) : String(value);
+                                  let display: string;
+                                  if (value === null || value === undefined) {
+                                    display = '—';
+                                  } else if (typeof value === 'object') {
+                                    // Handle nested Octane reference objects (e.g. { id: "x", name: "Open" })
+                                    const obj = value as Record<string, unknown>;
+                                    display = (obj.name as string) ?? (obj.id as string) ?? JSON.stringify(value);
+                                  } else {
+                                    display = String(value);
+                                  }
                                   return (
-                                    <td key={col} className="px-4 py-2 text-slate-600 dark:text-slate-300 whitespace-nowrap max-w-xs truncate" title={display}>
+                                    <td
+                                      key={col}
+                                      className="px-4 py-2 text-slate-600 dark:text-slate-300 whitespace-nowrap max-w-[200px] truncate"
+                                      title={display}
+                                    >
                                       {display}
                                     </td>
                                   );

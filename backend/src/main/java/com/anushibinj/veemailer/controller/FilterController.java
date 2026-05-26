@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -81,6 +82,15 @@ public class FilterController {
             @PathVariable UUID workspaceId,
             @PathVariable UUID filterId) {
         List<EntityModel> results = filterService.executeFilter(filterId, workspaceId);
+        return ResponseEntity.ok(results);
+    }
+
+    @GetMapping("/{filterId}/preview")
+    public ResponseEntity<List<EntityModel>> previewFilter(
+            @PathVariable UUID workspaceId,
+            @PathVariable UUID filterId,
+            @RequestParam(defaultValue = "10") int limit) {
+        List<EntityModel> results = filterService.previewFilter(filterId, workspaceId, limit);
         return ResponseEntity.ok(results);
     }
 }

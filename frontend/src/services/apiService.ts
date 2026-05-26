@@ -152,6 +152,13 @@ export const executeFilter = async (workspaceId: string, filterId: string): Prom
   return response.data;
 };
 
+export const previewFilter = async (workspaceId: string, filterId: string, limit = 10): Promise<Record<string, unknown>[]> => {
+  const response = await api.get(`/api/v1/workspaces/${workspaceId}/filters/${filterId}/preview`, {
+    params: { limit },
+  });
+  return response.data;
+};
+
 export const cloneFilter = async (workspaceId: string, filterId: string): Promise<FilterCreatePayload> => {
   const response = await api.get(`/api/v1/workspaces/${workspaceId}/filters/${filterId}/clone`);
   return response.data;
