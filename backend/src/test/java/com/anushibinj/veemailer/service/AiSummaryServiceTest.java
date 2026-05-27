@@ -76,16 +76,27 @@ class AiSummaryServiceTest {
         when(requestSpec.call()).thenReturn(callResponseSpec);
         when(callResponseSpec.content()).thenReturn(null);
 
-        String summary = aiSummaryService.generateSummary("Some ticket", "desc", "");
+        String summary = aiSummaryService.generateSummary("Some ticket", "desc", "User comment here");
 
         assertEquals("AI summary unavailable.", summary);
+    }
+
+    @Test
+    void testGenerateSummary_BlankComments_ReturnsEarlyFallback() {
+        String summary = aiSummaryService.generateSummary("Ticket", "Desc", "");
+        assertEquals("There is not enough comment data to understand the context of the ticket.", summary);
+
+        String summaryNull = aiSummaryService.generateSummary("Ticket", "Desc", null);
+        assertEquals("There is not enough comment data to understand the context of the ticket.", summaryNull);
+
+        verifyNoInteractions(chatClient);
     }
 
     @Test
     void testGenerateSummary_ExceptionThrown_ReturnsFallback() {
         when(chatClient.prompt()).thenThrow(new RuntimeException("API error"));
 
-        String summary = aiSummaryService.generateSummary("Some ticket", "desc", "");
+        String summary = aiSummaryService.generateSummary("Some ticket", "desc", "User comment here");
 
         assertEquals("AI summary unavailable.", summary);
     }
@@ -98,7 +109,7 @@ class AiSummaryServiceTest {
         when(requestSpec.call()).thenReturn(callResponseSpec);
         when(callResponseSpec.content()).thenReturn("Summary with null inputs");
 
-        String summary = aiSummaryService.generateSummary(null, null, null);
+        String summary = aiSummaryService.generateSummary(null, null, "Some comment");
 
         assertEquals("Summary with null inputs", summary);
     }
@@ -111,7 +122,7 @@ class AiSummaryServiceTest {
         when(requestSpec.call()).thenReturn(callResponseSpec);
         when(callResponseSpec.content()).thenReturn("  Summary with spaces  \n");
 
-        String summary = aiSummaryService.generateSummary("Ticket", "Desc", "");
+        String summary = aiSummaryService.generateSummary("Ticket", "Desc", "User comment");
 
         assertEquals("Summary with spaces", summary);
     }
@@ -178,7 +189,7 @@ class AiSummaryServiceTest {
         when(requestSpec.call()).thenReturn(callResponseSpec);
         when(callResponseSpec.content()).thenReturn("Works");
 
-        String result = service.generateSummary("Test", "Desc", "");
+        String result = service.generateSummary("Test", "Desc", "Some comment");
         assertEquals("Works", result);
     }
 }
