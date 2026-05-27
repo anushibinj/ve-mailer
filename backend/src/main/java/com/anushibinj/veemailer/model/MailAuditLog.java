@@ -37,6 +37,9 @@ public class MailAuditLog {
 
     private UUID filterTemplateId;
 
+    // Declared as 'text' to prevent Hibernate auto-DDL from creating this as bytea
+    // on legacy PostgreSQL deployments, which would break LOWER() queries.
+    @Column(columnDefinition = "text")
     private String filterTitle;
 
     private UUID subscriptionId;

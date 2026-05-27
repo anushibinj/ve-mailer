@@ -83,11 +83,15 @@ public interface MailAuditLogRepository extends JpaRepository<MailAuditLog, UUID
 
     // --- Paginated history with filters ---
 
+    // filterTitlePattern must be pre-built by the caller as "%value%" (lowercased),
+    // or null to skip the filter. This avoids CONCAT in JPQL, which Hibernate translates
+    // to database-specific string concatenation that can cause type-inference errors when
+    // the underlying column has a legacy bytea type.
     @Query("""
         SELECT m FROM MailAuditLog m
         WHERE (:workspaceId IS NULL OR m.workspaceId = :workspaceId)
           AND (:recipientEmail IS NULL OR m.recipientEmail = :recipientEmail)
-          AND (:filterTitle IS NULL OR LOWER(m.filterTitle) LIKE LOWER(CONCAT('%', :filterTitle, '%')))
+          AND (:filterTitlePattern IS NULL OR LOWER(m.filterTitle) LIKE :filterTitlePattern)
           AND (:status IS NULL OR m.deliveryStatus = :status)
           AND (:from IS NULL OR m.sentAt >= :from)
           AND (:to IS NULL OR m.sentAt <= :to)
@@ -95,7 +99,7 @@ public interface MailAuditLogRepository extends JpaRepository<MailAuditLog, UUID
     Page<MailAuditLog> findFiltered(
             @Param("workspaceId") UUID workspaceId,
             @Param("recipientEmail") String recipientEmail,
-            @Param("filterTitle") String filterTitle,
+            @Param("filterTitlePattern") String filterTitlePattern,
             @Param("status") DeliveryStatus status,
             @Param("from") Instant from,
             @Param("to") Instant to,
