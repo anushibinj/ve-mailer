@@ -3,6 +3,7 @@ package com.anushibinj.veemailer.service;
 import com.anushibinj.veemailer.model.DeliveryStatus;
 import com.anushibinj.veemailer.model.MailAuditLog;
 import com.anushibinj.veemailer.repository.MailAuditLogRepository;
+import com.anushibinj.veemailer.repository.MailAuditLogSpecs;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -92,10 +93,8 @@ public class MailAnalyticsService {
                                          Instant from, Instant to,
                                          int page, int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "sentAt"));
-        // Pre-build the LIKE pattern in Java so the JPQL only binds a ready-made parameter.
-        // This avoids CONCAT in JPQL and the database-specific string-concatenation it generates,
-        // which can cause type-inference failures when filter_title has a legacy bytea column type.
-        String filterTitlePattern = (filterTitle != null) ? "%" + filterTitle.toLowerCase() + "%" : null;
-        return repository.findFiltered(workspaceId, recipientEmail, filterTitlePattern, status, from, to, pageable);
+        return repository.findAll(
+                MailAuditLogSpecs.filtered(workspaceId, recipientEmail, filterTitle, status, from, to),
+                pageable);
     }
 }

@@ -5,6 +5,7 @@ import com.anushibinj.veemailer.model.MailAuditLog;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -14,7 +15,7 @@ import java.util.List;
 import java.util.UUID;
 
 @Repository
-public interface MailAuditLogRepository extends JpaRepository<MailAuditLog, UUID> {
+public interface MailAuditLogRepository extends JpaRepository<MailAuditLog, UUID>, JpaSpecificationExecutor<MailAuditLog> {
 
     // --- Summary aggregations ---
 
@@ -82,27 +83,7 @@ public interface MailAuditLogRepository extends JpaRepository<MailAuditLog, UUID
     String findTopFilterSince(@Param("since") Instant since);
 
     // --- Paginated history with filters ---
-
-    // filterTitlePattern must be pre-built by the caller as "%value%" (lowercased),
-    // or null to skip the filter. This avoids CONCAT in JPQL, which Hibernate translates
-    // to database-specific string concatenation that can cause type-inference errors when
-    // the underlying column has a legacy bytea type.
-    @Query("""
-        SELECT m FROM MailAuditLog m
-        WHERE (:workspaceId IS NULL OR m.workspaceId = :workspaceId)
-          AND (:recipientEmail IS NULL OR m.recipientEmail = :recipientEmail)
-          AND (:filterTitlePattern IS NULL OR LOWER(m.filterTitle) LIKE :filterTitlePattern)
-          AND (:status IS NULL OR m.deliveryStatus = :status)
-          AND (:from IS NULL OR m.sentAt >= :from)
-          AND (:to IS NULL OR m.sentAt <= :to)
-        """)
-    Page<MailAuditLog> findFiltered(
-            @Param("workspaceId") UUID workspaceId,
-            @Param("recipientEmail") String recipientEmail,
-            @Param("filterTitlePattern") String filterTitlePattern,
-            @Param("status") DeliveryStatus status,
-            @Param("from") Instant from,
-            @Param("to") Instant to,
-            Pageable pageable
-    );
+    // Dynamic filtering is done via JpaSpecificationExecutor in MailAuditLogSpecs.
+    // This avoids the Hibernate 6 / PostgreSQL issue where (:param IS NULL OR ...) patterns
+    // fail with "could not determine data type of parameter" for null bindings.
 }

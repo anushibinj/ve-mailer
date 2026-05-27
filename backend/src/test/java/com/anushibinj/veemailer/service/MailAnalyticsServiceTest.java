@@ -11,6 +11,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -117,7 +118,7 @@ class MailAnalyticsServiceTest {
                 .ticketCount(3)
                 .build();
         Page<MailAuditLog> page = new PageImpl<>(List.of(log));
-        when(repository.findFiltered(any(), any(), any(), any(), any(), any(), any(Pageable.class)))
+        when(repository.findAll(any(Specification.class), any(Pageable.class)))
                 .thenReturn(page);
 
         Page<MailAuditLog> result = analyticsService.getHistory(
