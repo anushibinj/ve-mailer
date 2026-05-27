@@ -2,6 +2,7 @@ package com.anushibinj.veemailer.repository;
 
 import com.anushibinj.veemailer.model.DeliveryStatus;
 import com.anushibinj.veemailer.model.MailAuditLog;
+import com.anushibinj.veemailer.repository.PostgresAvailableCondition.EnabledIfPostgresAvailable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,11 +26,13 @@ import static org.assertj.core.api.Assertions.assertThat;
  * errors when using the (:param IS NULL OR ...) JPQL pattern.
  *
  * Requires a running PostgreSQL instance (from docker-compose).
+ * Gracefully skips if Docker is unavailable.
  */
 @DataJpaTest
+@EnabledIfPostgresAvailable
 @ActiveProfiles("postgres-test")
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-class MailAuditLogRepositoryPostgresTest {
+class MailAuditLogRepositoryPostgresIT {
 
     @Autowired
     private MailAuditLogRepository repository;

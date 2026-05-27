@@ -17,6 +17,9 @@
 	<properties>
 		<java.version>17</java.version>
 		<spring-ai.version>1.0.0-M6</spring-ai.version>
+		<testcontainers.version>1.20.4</testcontainers.version>
+		<!-- Skip integration tests by default; activate with -Ptestcontainers -->
+		<skipITs>true</skipITs>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -138,10 +141,56 @@
 			<artifactId>spring-security-test</artifactId>
 			<scope>test</scope>
 		</dependency>
+
+		<!-- Testcontainers — used by *IT.java integration tests (requires Docker) -->
+		<dependency>
+			<groupId>org.testcontainers</groupId>
+			<artifactId>postgresql</artifactId>
+			<version>${testcontainers.version}</version>
+			<scope>test</scope>
+		</dependency>
 	</dependencies>
 
 	<build>
 		<plugins>
+			<!--
+				Unit tests (maven-surefire-plugin): runs *Test.java files.
+				Always executed during 'mvn test' and 'mvn verify'.
+			-->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<configuration>
+					<excludes>
+						<!-- Exclude integration tests from the unit-test phase -->
+						<exclude>**/*IT.java</exclude>
+					</excludes>
+				</configuration>
+			</plugin>
+			<!--
+				Integration tests (maven-failsafe-plugin): runs *IT.java files.
+				Skipped by default because Testcontainers requires a Docker/container
+				runtime which is not always available in CI environments.
+				Enable with: mvn verify -Ptestcontainers
+			-->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-failsafe-plugin</artifactId>
+				<configuration>
+					<skipITs>${skipITs}</skipITs>
+					<includes>
+						<include>**/*IT.java</include>
+					</includes>
+				</configuration>
+				<executions>
+					<execution>
+						<goals>
+							<goal>integration-test</goal>
+							<goal>verify</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
@@ -202,6 +251,21 @@
 			</plugin>
 		</plugins>
 	</build>
+
+	<profiles>
+		<!--
+			Profile: testcontainers
+			Activates Testcontainers-based integration tests (*IT.java).
+			Requires a running Docker/container runtime (Docker Desktop, Rancher Desktop, Podman, etc.).
+			Usage: mvn verify -Ptestcontainers
+		-->
+		<profile>
+			<id>testcontainers</id>
+			<properties>
+				<skipITs>false</skipITs>
+			</properties>
+		</profile>
+	</profiles>
 
 	<repositories>
 		<repository>
