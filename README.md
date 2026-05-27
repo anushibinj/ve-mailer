@@ -30,6 +30,7 @@ A full-stack application that lets users subscribe to email digest notifications
     - [AI Summary Configuration (Optional)](#ai-summary-configuration-optional)
     - [Frontend — Environment Variables](#frontend--environment-variables)
       - [`VITE_FOOTER_HTML` — custom footer](#vite_footer_html--custom-footer)
+    - [Docker — Timezone (`TZ`)](#docker--timezone-tz)
   - [Running Tests](#running-tests)
     - [Backend](#backend-1)
     - [Frontend](#frontend-1)
@@ -645,6 +646,51 @@ VITE_FOOTER_HTML=<div><a href="https://company.com">Company Portal</a> — Inter
 
 Allowed tags: `div`, `span`, `a`, `p`, `small`, `strong`, `em`, `br`, `ul`, `ol`, `li`.  
 Blocked automatically: `<script>`, `<iframe>`, inline event handlers (`onclick`, `onerror`, …), and `javascript:` URLs.
+
+---
+
+### Docker — Timezone (`TZ`)
+
+The Docker image defaults to `Asia/Calcutta`. Override the timezone at runtime via the `TZ` environment variable; the JVM timezone is set to match via `-Duser.timezone=$TZ`.
+
+| Variable | Default         | Description                                      |
+|----------|-----------------|--------------------------------------------------|
+| `TZ`     | `Asia/Calcutta` | IANA timezone applied to both the OS and the JVM |
+
+**Examples:**
+
+```bash
+# Default (Asia/Calcutta)
+docker run ve-mailer-backend
+
+# UTC
+docker run -e TZ=UTC ve-mailer-backend
+
+# UK / Europe
+docker run -e TZ=Europe/London ve-mailer-backend
+
+# US East Coast
+docker run -e TZ=America/New_York ve-mailer-backend
+```
+
+**docker-compose override:**
+
+```yaml
+environment:
+  TZ: Europe/London
+```
+
+The timezone controls:
+
+- Log timestamps
+- Spring `@Scheduled` cron executions (`PollingService`)
+- Mail dispatch timestamps
+
+On startup the active timezone is printed to the log:
+
+```
+Application timezone: Asia/Calcutta
+```
 
 ---
 

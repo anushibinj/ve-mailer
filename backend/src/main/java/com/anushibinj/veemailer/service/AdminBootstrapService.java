@@ -12,6 +12,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 import java.util.Set;
+import java.util.TimeZone;
 
 @Component
 @RequiredArgsConstructor
@@ -33,6 +34,8 @@ public class AdminBootstrapService implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
+        log.info("Application timezone: {}", TimeZone.getDefault().getID());
+
         // Ensure roles exist
         Role adminRole = roleRepository.findByRoleName("ADMIN")
                 .orElseGet(() -> roleRepository.save(Role.builder().roleName("ADMIN").build()));

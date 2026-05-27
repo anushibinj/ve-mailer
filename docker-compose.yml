@@ -8,6 +8,7 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-vemailerdb}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      TZ: ${TZ:-Asia/Calcutta}
     ports:
       - "5432:5432"
     volumes:

@@ -21,4 +21,4 @@
 - [x] Limit the number of tickets in the filter preview to just 10. And change the "Execute" button lable to "Preview"
 - [ ] Create user groups/teams that the admin can add users to to receive notification mails in bulk
 - [ ] Show count of tickets in the mail body beginning and in the subject
-- [ ] Set timezone of Docker container as a env variable
+- [x] Set timezone of Docker container as a env variable
