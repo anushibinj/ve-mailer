@@ -5,6 +5,7 @@ import com.anushibinj.veemailer.dto.SubscriptionResponseDTO;
 import com.anushibinj.veemailer.dto.WorkspaceCreateRequestDto;
 import com.anushibinj.veemailer.dto.WorkspaceResponseDto;
 import com.anushibinj.veemailer.model.ScheduleType;
+import com.anushibinj.veemailer.model.WorkspaceStatus;
 import com.anushibinj.veemailer.service.AppUserDetailsService;
 import com.anushibinj.veemailer.service.JwtService;
 import com.anushibinj.veemailer.service.SubscriptionService;
@@ -59,6 +60,7 @@ class WorkspaceControllerTest {
     private AppUserDetailsService appUserDetailsService;
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     void testGetWorkspaces_MasksClientKey() throws Exception {
         UUID id = UUID.randomUUID();
         WorkspaceResponseDto dto = WorkspaceResponseDto.builder()
@@ -70,9 +72,11 @@ class WorkspaceControllerTest {
                 .clientKey("(unchanged)")
                 .clientKeyConfigured(true)
                 .rootUrl("https://ve.example.com")
+                .status(WorkspaceStatus.ENABLED)
                 .build();
 
-        when(workspaceService.findAll()).thenReturn(Arrays.asList(dto));
+        when(workspaceService.findAllForAdmin()).thenReturn(Arrays.asList(dto));
+        when(workspaceService.findAllForUser()).thenReturn(Arrays.asList(dto));
 
         mockMvc.perform(get("/api/v1/workspaces").contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
@@ -88,7 +92,7 @@ class WorkspaceControllerTest {
     void testCreateWorkspace_ReturnsCreated() throws Exception {
         UUID id = UUID.randomUUID();
         WorkspaceCreateRequestDto request =
-                new WorkspaceCreateRequestDto("New WS", "sp-1", "ws-1", "cid-1", "secret-key", "https://ve.example.com");
+                new WorkspaceCreateRequestDto("New WS", "sp-1", "ws-1", "cid-1", "secret-key", "https://ve.example.com", null);
         WorkspaceResponseDto dto = WorkspaceResponseDto.builder()
                 .id(id)
                 .title("New WS")
@@ -98,6 +102,7 @@ class WorkspaceControllerTest {
                 .clientKey("(unchanged)")
                 .clientKeyConfigured(true)
                 .rootUrl("https://ve.example.com")
+                .status(WorkspaceStatus.DRAFT)
                 .build();
 
         when(workspaceService.create(any())).thenReturn(dto);
@@ -123,13 +128,14 @@ class WorkspaceControllerTest {
                 .clientKey("(unchanged)")
                 .clientKeyConfigured(true)
                 .rootUrl("https://ve.example.com")
+                .status(WorkspaceStatus.ENABLED)
                 .build();
 
         when(workspaceService.update(any(), any())).thenReturn(dto);
 
         String body = "{\"title\":\"Updated WS\",\"sharedSpaceId\":\"sp-1\","
                 + "\"workspaceId\":\"ws-1\",\"clientId\":\"cid-1\",\"clientKey\":\"(unchanged)\","
-                + "\"rootUrl\":\"https://ve.example.com\"}";
+                + "\"rootUrl\":\"https://ve.example.com\",\"status\":\"ENABLED\"}";
 
         mockMvc.perform(put("/api/v1/workspaces/" + id)
                         .contentType(MediaType.APPLICATION_JSON)

@@ -4,6 +4,7 @@ import com.anushibinj.veemailer.dto.WorkspaceCreateRequestDto;
 import com.anushibinj.veemailer.dto.WorkspaceResponseDto;
 import com.anushibinj.veemailer.dto.WorkspaceUpdateRequestDto;
 import com.anushibinj.veemailer.model.Workspace;
+import com.anushibinj.veemailer.model.WorkspaceStatus;
 import com.anushibinj.veemailer.repository.WorkspaceRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -39,6 +40,7 @@ class WorkspaceServiceTest {
         ws.setClientId("cid-1");
         ws.setClientKey("real-secret");
         ws.setRootUrl("https://ve.example.com");
+        ws.setStatus(WorkspaceStatus.ENABLED);
         return ws;
     }
 
@@ -69,7 +71,7 @@ class WorkspaceServiceTest {
         when(workspaceRepository.existsByWorkspaceId("ws-1")).thenReturn(true);
 
         WorkspaceCreateRequestDto req =
-                new WorkspaceCreateRequestDto("T", "sp", "ws-1", "cid", "key", "https://ve.example.com");
+                new WorkspaceCreateRequestDto("T", "sp", "ws-1", "cid", "key", "https://ve.example.com", null);
 
         assertThatThrownBy(() -> workspaceService.create(req))
                 .isInstanceOf(IllegalArgumentException.class)
@@ -83,7 +85,7 @@ class WorkspaceServiceTest {
         when(workspaceRepository.save(any())).thenReturn(saved);
 
         WorkspaceCreateRequestDto req =
-                new WorkspaceCreateRequestDto("My WS", "sp-1", "ws-1", "cid-1", "real-secret", "https://ve.example.com");
+                new WorkspaceCreateRequestDto("My WS", "sp-1", "ws-1", "cid-1", "real-secret", "https://ve.example.com", null);
 
         WorkspaceResponseDto result = workspaceService.create(req);
 
@@ -100,7 +102,7 @@ class WorkspaceServiceTest {
 
         WorkspaceUpdateRequestDto req =
                 new WorkspaceUpdateRequestDto("Updated", "sp-1", "ws-1", "cid-1",
-                        WorkspaceService.CLIENT_KEY_PLACEHOLDER, "https://ve.example.com");
+                        WorkspaceService.CLIENT_KEY_PLACEHOLDER, "https://ve.example.com", WorkspaceStatus.ENABLED);
 
         workspaceService.update(id, req);
 
@@ -116,7 +118,7 @@ class WorkspaceServiceTest {
         when(workspaceRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         WorkspaceUpdateRequestDto req =
-                new WorkspaceUpdateRequestDto("Updated", "sp-1", "ws-1", "cid-1", "new-secret", "https://ve.example.com");
+                new WorkspaceUpdateRequestDto("Updated", "sp-1", "ws-1", "cid-1", "new-secret", "https://ve.example.com", WorkspaceStatus.ENABLED);
 
         workspaceService.update(id, req);
 
@@ -131,7 +133,7 @@ class WorkspaceServiceTest {
         when(workspaceRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         WorkspaceUpdateRequestDto req =
-                new WorkspaceUpdateRequestDto("Updated", "sp-1", "ws-1", "cid-1", null, "https://ve.example.com");
+                new WorkspaceUpdateRequestDto("Updated", "sp-1", "ws-1", "cid-1", null, "https://ve.example.com", WorkspaceStatus.ENABLED);
 
         workspaceService.update(id, req);
 

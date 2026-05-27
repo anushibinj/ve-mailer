@@ -1,5 +1,6 @@
 package com.anushibinj.veemailer.dto;
 
+import com.anushibinj.veemailer.model.WorkspaceStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -21,4 +22,5 @@ public class WorkspaceResponseDto {
     private String clientKey;
     private boolean clientKeyConfigured;
     private String rootUrl;
+    private WorkspaceStatus status;
 }

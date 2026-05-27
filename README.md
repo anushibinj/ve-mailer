@@ -246,6 +246,7 @@ Workspace
   workspaceId     -- ValueEdge workspace
   clientId        -- API client ID for this workspace
   clientKey       -- API client secret for this workspace
+  status          -- ENABLED | DRAFT | DISABLED (lifecycle state)
 
 Filter
   id (UUID PK)
@@ -364,13 +365,22 @@ All endpoints are prefixed with `/api/v1` for business APIs, `/api/auth` for aut
 
 All workspace endpoints require authentication. Mutation endpoints (POST/PUT/DELETE) require the `ADMIN` role.
 
-| Method   | Path                      | Role required | Description                    |
-|----------|---------------------------|:-------------:|--------------------------------|
-| `GET`    | `/workspaces`             | Any           | List all registered workspaces |
-| `GET`    | `/workspaces/{id}`        | Any           | Get workspace details          |
-| `POST`   | `/workspaces`             | ADMIN         | Create a workspace             |
-| `PUT`    | `/workspaces/{id}`        | ADMIN         | Update a workspace             |
-| `DELETE` | `/workspaces/{id}`        | ADMIN         | Delete a workspace             |
+| Method   | Path                      | Role required | Description                                                        |
+|----------|---------------------------|:-------------:|--------------------------------------------------------------------|
+| `GET`    | `/workspaces`             | Any           | List workspaces (role-aware: normal users see ENABLED only, admins see ENABLED+DRAFT) |
+| `GET`    | `/workspaces/all`         | ADMIN         | List ALL workspaces including DISABLED (management view)           |
+| `GET`    | `/workspaces/{id}`        | Any           | Get workspace details                                              |
+| `POST`   | `/workspaces`             | ADMIN         | Create a workspace (defaults to DRAFT status)                      |
+| `PUT`    | `/workspaces/{id}`        | ADMIN         | Update a workspace (including status)                              |
+| `DELETE` | `/workspaces/{id}`        | ADMIN         | Delete a workspace                                                 |
+
+**Workspace Status Lifecycle:**
+
+| Status     | Visible to Users | Visible to Admins | Participates in Jobs |
+|------------|:----------------:|:-----------------:|:--------------------:|
+| `ENABLED`  | ✅               | ✅                | ✅                   |
+| `DRAFT`    | ❌               | ✅                | ✅                   |
+| `DISABLED` | ❌               | ❌ (management only) | ❌              |
 
 ### Filters
 

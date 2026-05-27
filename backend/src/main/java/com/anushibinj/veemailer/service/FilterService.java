@@ -15,6 +15,7 @@ import com.anushibinj.veemailer.dto.PreviewResponse;
 import com.anushibinj.veemailer.model.Filter;
 import com.anushibinj.veemailer.model.FilterCriteriaClause;
 import com.anushibinj.veemailer.model.Workspace;
+import com.anushibinj.veemailer.model.WorkspaceStatus;
 import com.anushibinj.veemailer.repository.EmailSubscriberRepository;
 import com.anushibinj.veemailer.repository.FilterRepository;
 import com.anushibinj.veemailer.repository.WorkspaceRepository;
@@ -161,6 +162,7 @@ public class FilterService {
                 .orElseThrow(() -> new IllegalArgumentException("Filter not found"));
         Workspace workspace = workspaceRepository.findById(workspaceId)
                 .orElseThrow(() -> new IllegalArgumentException("Workspace not found"));
+        enforceWorkspaceNotDisabled(workspace);
 
         try {
             List<String> fields = objectMapper.readValue(filter.getFields(), new TypeReference<>() {});
@@ -214,6 +216,7 @@ public class FilterService {
                 .orElseThrow(() -> new IllegalArgumentException("Filter not found"));
         Workspace workspace = workspaceRepository.findById(workspaceId)
                 .orElseThrow(() -> new IllegalArgumentException("Workspace not found"));
+        enforceWorkspaceNotDisabled(workspace);
 
         try {
             List<String> fields = objectMapper.readValue(filter.getFields(), new TypeReference<>() {});
@@ -417,5 +420,11 @@ public class FilterService {
         if (ref == null) return "";
         ReferenceFieldModel synthetic = new ReferenceFieldModel(fieldName, ref);
         return fieldExtractorRegistry.forField(fieldName).extract(synthetic);
+    }
+
+    private void enforceWorkspaceNotDisabled(Workspace workspace) {
+        if (workspace.getStatus() == WorkspaceStatus.DISABLED) {
+            throw new IllegalArgumentException("Workspace is disabled and cannot execute filters");
+        }
     }
 }

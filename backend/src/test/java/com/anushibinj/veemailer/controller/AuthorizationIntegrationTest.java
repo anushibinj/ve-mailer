@@ -74,7 +74,7 @@ class AuthorizationIntegrationTest {
     @Test
     @WithMockUser(username = "member@test.com", roles = "MEMBER")
     void member_canListWorkspaces() throws Exception {
-        when(workspaceService.findAll()).thenReturn(List.of());
+        when(workspaceService.findAllForUser()).thenReturn(List.of());
 
         mockMvc.perform(get("/api/v1/workspaces"))
                 .andExpect(status().isOk());
@@ -114,7 +114,7 @@ class AuthorizationIntegrationTest {
     void member_cannotUpdateWorkspace() throws Exception {
         mockMvc.perform(put("/api/v1/workspaces/{id}", WORKSPACE_ID)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"title\":\"x\",\"sharedSpaceId\":\"s\",\"workspaceId\":\"w\",\"clientId\":\"c\",\"clientKey\":\"(unchanged)\",\"rootUrl\":\"https://ve.example.com\"}"))
+                        .content("{\"title\":\"x\",\"sharedSpaceId\":\"s\",\"workspaceId\":\"w\",\"clientId\":\"c\",\"clientKey\":\"(unchanged)\",\"rootUrl\":\"https://ve.example.com\",\"status\":\"ENABLED\"}"))
                 .andExpect(status().isForbidden());
     }
 
@@ -235,7 +235,7 @@ class AuthorizationIntegrationTest {
     @Test
     @WithMockUser(username = "admin@test.com", roles = "ADMIN")
     void admin_canListWorkspaces() throws Exception {
-        when(workspaceService.findAll()).thenReturn(List.of());
+        when(workspaceService.findAllForAdmin()).thenReturn(List.of());
 
         mockMvc.perform(get("/api/v1/workspaces"))
                 .andExpect(status().isOk());

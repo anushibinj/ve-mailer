@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { X, Eye, EyeOff, Loader2, Building2 } from 'lucide-react';
-import type { WorkspaceAdmin, WorkspaceCreatePayload, WorkspaceUpdatePayload } from '../services/apiService';
+import type { WorkspaceAdmin, WorkspaceCreatePayload, WorkspaceUpdatePayload, WorkspaceStatus } from '../services/apiService';
 import { adminCreateWorkspace, adminUpdateWorkspace } from '../services/apiService';
 import toast from 'react-hot-toast';
 
@@ -20,6 +20,7 @@ interface FormValues {
   clientId: string;
   clientKey: string;
   rootUrl: string;
+  status: WorkspaceStatus;
 }
 
 interface FormErrors {
@@ -29,6 +30,7 @@ interface FormErrors {
   clientId?: string;
   clientKey?: string;
   rootUrl?: string;
+  status?: string;
 }
 
 const inputClass =
@@ -49,7 +51,7 @@ const WorkspaceFormModal: React.FC<WorkspaceFormModalProps> = ({
   const isEditing = !!workspace;
 
   const [values, setValues] = useState<FormValues>({
-    title: '', sharedSpaceId: '', workspaceId: '', clientId: '', clientKey: '', rootUrl: '',
+    title: '', sharedSpaceId: '', workspaceId: '', clientId: '', clientKey: '', rootUrl: '', status: 'DRAFT',
   });
   const [errors, setErrors] = useState<FormErrors>({});
   const [showKey, setShowKey] = useState(false);
@@ -66,9 +68,10 @@ const WorkspaceFormModal: React.FC<WorkspaceFormModalProps> = ({
           clientId: workspace.clientId,
           clientKey: CLIENT_KEY_PLACEHOLDER,
           rootUrl: workspace.rootUrl,
+          status: workspace.status,
         });
       } else {
-        setValues({ title: '', sharedSpaceId: '', workspaceId: '', clientId: '', clientKey: '', rootUrl: '' });
+        setValues({ title: '', sharedSpaceId: '', workspaceId: '', clientId: '', clientKey: '', rootUrl: '', status: 'DRAFT' });
       }
       setErrors({});
       setShowKey(false);
@@ -109,6 +112,7 @@ const WorkspaceFormModal: React.FC<WorkspaceFormModalProps> = ({
           title: values.title.trim(), sharedSpaceId: values.sharedSpaceId.trim(),
           workspaceId: values.workspaceId.trim(), clientId: values.clientId.trim(),
           clientKey: values.clientKey.trim() || CLIENT_KEY_PLACEHOLDER, rootUrl: values.rootUrl.trim(),
+          status: values.status,
         };
         saved = await adminUpdateWorkspace(workspace.id, payload);
         toast.success('Workspace updated successfully');
@@ -117,6 +121,7 @@ const WorkspaceFormModal: React.FC<WorkspaceFormModalProps> = ({
           title: values.title.trim(), sharedSpaceId: values.sharedSpaceId.trim(),
           workspaceId: values.workspaceId.trim(), clientId: values.clientId.trim(),
           clientKey: values.clientKey.trim(), rootUrl: values.rootUrl.trim(),
+          status: values.status,
         };
         saved = await adminCreateWorkspace(payload);
         toast.success('Workspace created successfully');
@@ -171,9 +176,6 @@ const WorkspaceFormModal: React.FC<WorkspaceFormModalProps> = ({
           {[
             { field: 'title' as const, label: 'Title', type: 'text', placeholder: 'e.g. ALM Octane — Team Alpha', required: true },
             { field: 'rootUrl' as const, label: 'Root URL', type: 'url', placeholder: 'https://octane.example.com', required: true, hint: 'Base URL of the ValueEdge / Octane server.' },
-            { field: 'sharedSpaceId' as const, label: 'Shared Space ID', type: 'text', placeholder: 'e.g. 4001', required: true },
-            { field: 'workspaceId' as const, label: 'Workspace ID', type: 'text', placeholder: 'e.g. 5015', required: true },
-            { field: 'clientId' as const, label: 'Client ID', type: 'text', placeholder: 'e.g. my-api-client-id', required: true },
           ].map(({ field, label, type, placeholder, required, hint }) => (
             <div key={field}>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
@@ -188,6 +190,49 @@ const WorkspaceFormModal: React.FC<WorkspaceFormModalProps> = ({
               />
               {errors[field] && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors[field]}</p>}
               {hint && !errors[field] && <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{hint}</p>}
+            </div>
+          ))}
+
+          {/* Workspace Status */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+              Workspace Status <span className="text-red-500">*</span>
+            </label>
+            <select
+              value={values.status}
+              onChange={(e) => {
+                setValues(prev => ({ ...prev, status: e.target.value as WorkspaceStatus }));
+                if (errors.status) setErrors(prev => ({ ...prev, status: undefined }));
+              }}
+              className={fieldInputClass(!!errors.status)}
+            >
+              <option value="ENABLED">Enabled</option>
+              <option value="DRAFT">Draft</option>
+              <option value="DISABLED">Disabled</option>
+            </select>
+            {errors.status && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.status}</p>}
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+              Draft workspaces are only visible to admins. Disabled workspaces are hidden from all views.
+            </p>
+          </div>
+
+          {[
+            { field: 'sharedSpaceId' as const, label: 'Shared Space ID', type: 'text', placeholder: 'e.g. 4001', required: true },
+            { field: 'workspaceId' as const, label: 'Workspace ID', type: 'text', placeholder: 'e.g. 5015', required: true },
+            { field: 'clientId' as const, label: 'Client ID', type: 'text', placeholder: 'e.g. my-api-client-id', required: true },
+          ].map(({ field, label, type, placeholder, required }) => (
+            <div key={field}>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                {label} {required && <span className="text-red-500">*</span>}
+              </label>
+              <input
+                type={type}
+                value={values[field]}
+                onChange={handleChange(field)}
+                placeholder={placeholder}
+                className={fieldInputClass(!!errors[field])}
+              />
+              {errors[field] && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors[field]}</p>}
             </div>
           ))}
 

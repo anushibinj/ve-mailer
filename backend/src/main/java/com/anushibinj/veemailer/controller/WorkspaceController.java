@@ -41,6 +41,21 @@ public class WorkspaceController {
 
     @GetMapping
     public ResponseEntity<List<WorkspaceResponseDto>> getWorkspaces() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        boolean isAdmin = authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        List<WorkspaceResponseDto> result = isAdmin
+                ? workspaceService.findAllForAdmin()
+                : workspaceService.findAllForUser();
+        return ResponseEntity.ok(result);
+    }
+
+    /**
+     * Admin-only endpoint to list ALL workspaces including DISABLED (for management views).
+     */
+    @GetMapping("/all")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<WorkspaceResponseDto>> getAllWorkspaces() {
         return ResponseEntity.ok(workspaceService.findAll());
     }
 

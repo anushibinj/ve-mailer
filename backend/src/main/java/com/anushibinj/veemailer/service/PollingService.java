@@ -3,6 +3,7 @@ package com.anushibinj.veemailer.service;
 import com.anushibinj.veemailer.model.EmailSubscriber;
 import com.anushibinj.veemailer.model.ScheduleType;
 import com.anushibinj.veemailer.model.Status;
+import com.anushibinj.veemailer.model.WorkspaceStatus;
 import com.anushibinj.veemailer.repository.EmailSubscriberRepository;
 import com.hpe.adm.nga.sdk.model.EntityModel;
 import lombok.RequiredArgsConstructor;
@@ -63,8 +64,14 @@ public class PollingService {
     private void processSubscriberList(List<EmailSubscriber> subscribers) {
         if (subscribers.isEmpty()) return;
 
+        // Filter out subscribers belonging to DISABLED workspaces
+        List<EmailSubscriber> activeSubscribers = subscribers.stream()
+                .filter(sub -> sub.getWorkspace().getStatus() != WorkspaceStatus.DISABLED)
+                .collect(Collectors.toList());
+        if (activeSubscribers.isEmpty()) return;
+
         // Group by Workspace ID and Filter ID to batch notifications
-        Map<UUID, Map<UUID, List<EmailSubscriber>>> grouped = subscribers.stream()
+        Map<UUID, Map<UUID, List<EmailSubscriber>>> grouped = activeSubscribers.stream()
                 .collect(Collectors.groupingBy(
                         sub -> sub.getWorkspace().getId(),
                         Collectors.groupingBy(sub -> sub.getFilter().getId())

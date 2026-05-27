@@ -121,9 +121,16 @@ const LandingView: React.FC<LandingViewProps> = ({ onSelectWorkspace }) => {
                     <span className="text-white font-bold text-lg">{initial}</span>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-slate-900 dark:text-white text-sm truncate group-hover:text-indigo-700 dark:group-hover:text-indigo-400 transition-colors">
-                      {workspace.title}
-                    </p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-semibold text-slate-900 dark:text-white text-sm truncate group-hover:text-indigo-700 dark:group-hover:text-indigo-400 transition-colors">
+                        {workspace.title}
+                      </p>
+                      {workspace.status === 'DRAFT' && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-500/25 flex-shrink-0">
+                          Draft
+                        </span>
+                      )}
+                    </div>
                     <p className="text-slate-400 dark:text-slate-500 text-xs mt-0.5 group-hover:text-indigo-400/70 dark:group-hover:text-indigo-500 transition-colors">
                       Open workspace
                     </p>

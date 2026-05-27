@@ -4,6 +4,7 @@ import com.anushibinj.veemailer.dto.WorkspaceCreateRequestDto;
 import com.anushibinj.veemailer.dto.WorkspaceResponseDto;
 import com.anushibinj.veemailer.dto.WorkspaceUpdateRequestDto;
 import com.anushibinj.veemailer.model.Workspace;
+import com.anushibinj.veemailer.model.WorkspaceStatus;
 import com.anushibinj.veemailer.repository.WorkspaceRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -20,6 +21,27 @@ public class WorkspaceService {
 
     private final WorkspaceRepository workspaceRepository;
 
+    /**
+     * Returns workspaces visible to normal (non-admin) users: only ENABLED.
+     */
+    public List<WorkspaceResponseDto> findAllForUser() {
+        return workspaceRepository.findByStatusIn(List.of(WorkspaceStatus.ENABLED)).stream()
+                .map(this::toResponseDto)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Returns workspaces visible to admin users: ENABLED and DRAFT.
+     */
+    public List<WorkspaceResponseDto> findAllForAdmin() {
+        return workspaceRepository.findByStatusIn(List.of(WorkspaceStatus.ENABLED, WorkspaceStatus.DRAFT)).stream()
+                .map(this::toResponseDto)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Returns ALL workspaces including DISABLED — for admin management views only.
+     */
     public List<WorkspaceResponseDto> findAll() {
         return workspaceRepository.findAll().stream()
                 .map(this::toResponseDto)
@@ -36,6 +58,7 @@ public class WorkspaceService {
         if (workspaceRepository.existsByWorkspaceId(request.getWorkspaceId())) {
             throw new IllegalArgumentException("Workspace ID already exists: " + request.getWorkspaceId());
         }
+        WorkspaceStatus status = request.getStatus() != null ? request.getStatus() : WorkspaceStatus.DRAFT;
         Workspace workspace = Workspace.builder()
                 .title(request.getTitle())
                 .sharedSpaceId(request.getSharedSpaceId())
@@ -43,6 +66,7 @@ public class WorkspaceService {
                 .clientId(request.getClientId())
                 .clientKey(request.getClientKey())
                 .rootUrl(request.getRootUrl())
+                .status(status)
                 .build();
         return toResponseDto(workspaceRepository.save(workspace));
     }
@@ -56,6 +80,7 @@ public class WorkspaceService {
         workspace.setWorkspaceId(request.getWorkspaceId());
         workspace.setClientId(request.getClientId());
         workspace.setRootUrl(request.getRootUrl());
+        workspace.setStatus(request.getStatus());
 
         // Only replace clientKey when the caller provides a real new value
         String newKey = request.getClientKey();
@@ -84,6 +109,7 @@ public class WorkspaceService {
                 .clientKey(CLIENT_KEY_PLACEHOLDER)
                 .clientKeyConfigured(workspace.getClientKey() != null && !workspace.getClientKey().isBlank())
                 .rootUrl(workspace.getRootUrl())
+                .status(workspace.getStatus())
                 .build();
     }
 }

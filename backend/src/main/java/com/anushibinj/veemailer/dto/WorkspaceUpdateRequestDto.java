@@ -1,6 +1,8 @@
 package com.anushibinj.veemailer.dto;
 
+import com.anushibinj.veemailer.model.WorkspaceStatus;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -27,4 +29,7 @@ public class WorkspaceUpdateRequestDto {
 
     @NotBlank(message = "Root URL is required")
     private String rootUrl;
+
+    @NotNull(message = "Status is required")
+    private WorkspaceStatus status;
 }

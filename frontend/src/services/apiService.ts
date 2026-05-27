@@ -1,11 +1,14 @@
 import api from '../api';
 
+export type WorkspaceStatus = 'ENABLED' | 'DRAFT' | 'DISABLED';
+
 export interface Workspace {
   id: string;
   title: string;
   sharedSpaceId: string;
   workspaceId: string;
   rootUrl: string;
+  status: WorkspaceStatus;
 }
 
 // Admin workspace type — includes clientId, masked clientKey, and a config flag
@@ -18,6 +21,7 @@ export interface WorkspaceAdmin {
   clientKey: string; // always "(unchanged)" from the API
   clientKeyConfigured: boolean;
   rootUrl: string;
+  status: WorkspaceStatus;
 }
 
 export interface WorkspaceCreatePayload {
@@ -27,6 +31,7 @@ export interface WorkspaceCreatePayload {
   clientId: string;
   clientKey: string;
   rootUrl: string;
+  status?: WorkspaceStatus;
 }
 
 export interface WorkspaceUpdatePayload {
@@ -37,6 +42,7 @@ export interface WorkspaceUpdatePayload {
   // Leave as "(unchanged)" to preserve existing key; provide a new value to replace
   clientKey?: string;
   rootUrl: string;
+  status: WorkspaceStatus;
 }
 
 export interface FilterCriteriaClause {
@@ -102,7 +108,7 @@ export const fetchWorkspaces = async (): Promise<Workspace[]> => {
 // --- Admin workspace CRUD ---
 
 export const adminFetchWorkspaces = async (): Promise<WorkspaceAdmin[]> => {
-  const response = await api.get('/api/v1/workspaces');
+  const response = await api.get('/api/v1/workspaces/all');
   return response.data;
 };
 

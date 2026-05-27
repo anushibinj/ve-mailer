@@ -144,6 +144,9 @@ const WorkspaceManagementPage: React.FC = () => {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Root URL
                   </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Actions
                   </th>
@@ -182,6 +185,23 @@ const WorkspaceManagementPage: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate" title={ws.rootUrl}>
                       {ws.rootUrl || <span className="text-gray-300">—</span>}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      {ws.status === 'ENABLED' && (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200">
+                          Enabled
+                        </span>
+                      )}
+                      {ws.status === 'DRAFT' && (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
+                          Draft
+                        </span>
+                      )}
+                      {ws.status === 'DISABLED' && (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500 border border-gray-200">
+                          Disabled
+                        </span>
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right">
                       <div className="inline-flex items-center gap-2">

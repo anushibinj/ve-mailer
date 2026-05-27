@@ -2,6 +2,8 @@ package com.anushibinj.veemailer.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -33,4 +35,8 @@ public class Workspace {
     private String clientId;
     private String clientKey;
     private String rootUrl;
+
+    @Enumerated(EnumType.STRING)
+    @Builder.Default
+    private WorkspaceStatus status = WorkspaceStatus.DRAFT;
 }

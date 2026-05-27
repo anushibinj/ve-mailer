@@ -7,6 +7,7 @@ import com.anushibinj.veemailer.model.Filter;
 import com.anushibinj.veemailer.model.ScheduleType;
 import com.anushibinj.veemailer.model.Status;
 import com.anushibinj.veemailer.model.Workspace;
+import com.anushibinj.veemailer.model.WorkspaceStatus;
 import com.anushibinj.veemailer.repository.EmailSubscriberRepository;
 import com.anushibinj.veemailer.repository.FilterRepository;
 import com.anushibinj.veemailer.repository.WorkspaceRepository;
@@ -41,6 +42,8 @@ public class SubscriptionService {
 
         Workspace workspace = workspaceRepository.findById(workspaceId)
                 .orElseThrow(() -> new IllegalArgumentException("Workspace not found"));
+        enforceWorkspaceNotDisabled(workspace);
+
         Filter filter = filterRepository.findById(filterId)
                 .orElseThrow(() -> new IllegalArgumentException("Filter not found"));
 
@@ -115,10 +118,18 @@ public class SubscriptionService {
             throw new IllegalArgumentException("Subscription does not belong to the specified workspace");
         }
 
+        enforceWorkspaceNotDisabled(subscriber.getWorkspace());
+
         pollingService.runNow(subscriber);
     }
 
     // --- Private helpers ---
+
+    private void enforceWorkspaceNotDisabled(Workspace workspace) {
+        if (workspace.getStatus() == WorkspaceStatus.DISABLED) {
+            throw new IllegalArgumentException("Workspace is disabled and cannot be used for subscriptions or mail generation");
+        }
+    }
 
     private void enforceOwnership(String email, EmailSubscriber subscriber) {
         if (!subscriber.getRecipientEmail().equalsIgnoreCase(email)) {
