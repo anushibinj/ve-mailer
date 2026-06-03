@@ -1,9 +1,9 @@
 -- =============================================================================
--- V12 : Add WORKSPACE_ADMIN role and workspace_admins mapping table
+-- V12 : Add workspace_admins mapping table
 -- =============================================================================
-
--- Insert the new WORKSPACE_ADMIN role
-INSERT INTO roles (id, role_name) VALUES (RANDOM_UUID(), 'WORKSPACE_ADMIN');
+-- Note: The WORKSPACE_ADMIN role row is seeded by AdminBootstrapService at
+-- startup (consistent with how ADMIN and MEMBER roles are created), so it is
+-- not inserted here. This keeps the migration database-agnostic (H2/PostgreSQL).
 
 -- ---------------------------------------------------------------------------
 -- workspace_admins (maps users to workspaces they can administer)

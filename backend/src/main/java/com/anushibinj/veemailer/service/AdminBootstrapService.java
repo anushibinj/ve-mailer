@@ -41,6 +41,8 @@ public class AdminBootstrapService implements CommandLineRunner {
                 .orElseGet(() -> roleRepository.save(Role.builder().roleName("ADMIN").build()));
         roleRepository.findByRoleName("MEMBER")
                 .orElseGet(() -> roleRepository.save(Role.builder().roleName("MEMBER").build()));
+        roleRepository.findByRoleName("WORKSPACE_ADMIN")
+                .orElseGet(() -> roleRepository.save(Role.builder().roleName("WORKSPACE_ADMIN").build()));
 
         // Create admin user if not exists
         if (!appUserRepository.existsByEmail(adminEmail)) {
