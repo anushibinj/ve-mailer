@@ -1,12 +1,15 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Plus, Pencil, Trash2, Loader2, KeyRound, CheckCircle, XCircle } from 'lucide-react';
+import { Plus, Pencil, Trash2, Loader2, KeyRound, CheckCircle, XCircle, Shield } from 'lucide-react';
 import toast from 'react-hot-toast';
 import type { WorkspaceAdmin } from '../../services/apiService';
-import { adminFetchWorkspaces, adminDeleteWorkspace } from '../../services/apiService';
+import { adminFetchWorkspaces, adminDeleteWorkspace, fetchWorkspaces } from '../../services/apiService';
 import WorkspaceFormModal from '../../components/WorkspaceFormModal';
+import WorkspaceAdminManager from './WorkspaceAdminManager';
 import ConfirmDialog from '../../components/ConfirmDialog';
+import { useAuth } from '../../hooks/useAuth';
 
 const WorkspaceManagementPage: React.FC = () => {
+  const { isAdmin } = useAuth();
   const [workspaces, setWorkspaces] = useState<WorkspaceAdmin[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -18,10 +21,16 @@ const WorkspaceManagementPage: React.FC = () => {
   const [deleteTarget, setDeleteTarget] = useState<WorkspaceAdmin | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // Workspace admin management (ADMIN only)
+  const [adminManageTarget, setAdminManageTarget] = useState<WorkspaceAdmin | null>(null);
+
   const loadWorkspaces = useCallback(async () => {
     setIsLoading(true);
     try {
-      const data = await adminFetchWorkspaces();
+      // ADMIN uses /all endpoint; WORKSPACE_ADMIN uses normal /workspaces which is filtered server-side
+      const data = isAdmin
+        ? await adminFetchWorkspaces()
+        : (await fetchWorkspaces()) as unknown as WorkspaceAdmin[];
       setWorkspaces(data);
     } catch (err: unknown) {
       const axiosErr = err as { response?: { data?: { message?: string } } };
@@ -31,7 +40,7 @@ const WorkspaceManagementPage: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [isAdmin]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -85,16 +94,18 @@ const WorkspaceManagementPage: React.FC = () => {
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Workspace Management</h1>
           <p className="mt-1 text-sm text-gray-500">
-            Create and manage ValueEdge workspace connections.
+            {isAdmin ? 'Create and manage ValueEdge workspace connections.' : 'Manage your assigned workspaces.'}
           </p>
         </div>
-        <button
-          onClick={handleOpenCreate}
-          className="inline-flex items-center gap-2 px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all"
-        >
-          <Plus className="h-4 w-4" />
-          Add Workspace
-        </button>
+        {isAdmin && (
+          <button
+            onClick={handleOpenCreate}
+            className="inline-flex items-center gap-2 px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all"
+          >
+            <Plus className="h-4 w-4" />
+            Add Workspace
+          </button>
+        )}
       </div>
 
       {/* Content */}
@@ -212,13 +223,24 @@ const WorkspaceManagementPage: React.FC = () => {
                           <Pencil className="h-3.5 w-3.5" />
                           Edit
                         </button>
-                        <button
-                          onClick={() => setDeleteTarget(ws)}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-red-200 rounded-md text-xs font-medium text-red-600 bg-white hover:bg-red-50 hover:border-red-400 transition-colors"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                          Delete
-                        </button>
+                        {isAdmin && (
+                          <>
+                            <button
+                              onClick={() => setAdminManageTarget(adminManageTarget?.id === ws.id ? null : ws)}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-violet-200 rounded-md text-xs font-medium text-violet-600 bg-white hover:bg-violet-50 hover:border-violet-400 transition-colors"
+                            >
+                              <Shield className="h-3.5 w-3.5" />
+                              Admins
+                            </button>
+                            <button
+                              onClick={() => setDeleteTarget(ws)}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-red-200 rounded-md text-xs font-medium text-red-600 bg-white hover:bg-red-50 hover:border-red-400 transition-colors"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                              Delete
+                            </button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -239,6 +261,14 @@ const WorkspaceManagementPage: React.FC = () => {
         }}
         onSuccess={handleFormSuccess}
       />
+
+      {/* Workspace Admin Manager (shown below table when ADMIN clicks "Admins") */}
+      {isAdmin && adminManageTarget && (
+        <WorkspaceAdminManager
+          workspaceId={adminManageTarget.id}
+          workspaceTitle={adminManageTarget.title}
+        />
+      )}
 
       {/* Delete Confirmation */}
       <ConfirmDialog

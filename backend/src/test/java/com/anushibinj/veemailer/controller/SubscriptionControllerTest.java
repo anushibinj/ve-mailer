@@ -8,6 +8,7 @@ import com.anushibinj.veemailer.model.ScheduleType;
 import com.anushibinj.veemailer.service.AppUserDetailsService;
 import com.anushibinj.veemailer.service.JwtService;
 import com.anushibinj.veemailer.service.SubscriptionService;
+import com.anushibinj.veemailer.service.WorkspaceAdminService;
 import com.anushibinj.veemailer.service.WorkspaceService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
@@ -58,6 +59,9 @@ class SubscriptionControllerTest {
 
     @MockBean
     private AppUserDetailsService appUserDetailsService;
+
+    @MockBean
+    private WorkspaceAdminService workspaceAdminService;
 
     private final UUID workspaceId = UUID.randomUUID();
     private final UUID subscriptionId = UUID.randomUUID();

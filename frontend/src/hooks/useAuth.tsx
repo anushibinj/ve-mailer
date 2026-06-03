@@ -21,6 +21,7 @@ interface AuthContextType {
   updateUser: (user: UserProfile) => void;
   hasRole: (role: string) => boolean;
   isAdmin: boolean;
+  isWorkspaceAdmin: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -112,6 +113,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const isAdmin = user?.roles?.includes('ADMIN') ?? false;
+  const isWorkspaceAdmin = user?.roles?.includes('WORKSPACE_ADMIN') ?? false;
 
   const value: AuthContextType = {
     user,
@@ -122,6 +124,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     updateUser,
     hasRole,
     isAdmin,
+    isWorkspaceAdmin,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

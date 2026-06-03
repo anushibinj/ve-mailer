@@ -87,7 +87,7 @@ The backend is stateless between requests. An in-memory cache (`OctaneCacheServi
 | Frontend  | React 19, TypeScript, Vite 7, Tailwind CSS 4, Axios, react-hot-toast, react-router-dom, Recharts |
 | Backend   | Java 17, Spring Boot 3.2.5                                          |
 | Persistence | Spring Data JPA, H2 (dev), PostgreSQL (prod)                      |
-| Security  | Spring Security, JWT (HMAC-SHA256), BCrypt password hashing, role-based access |
+| Security  | Spring Security, JWT (HMAC-SHA256), BCrypt password hashing, role-based access (ADMIN, WORKSPACE_ADMIN, MEMBER) |
 | Email     | Dynamic SMTP via DB-stored NotificationPreferences (DynamicMailSenderService) |
 | AI        | Spring AI (OpenAI) — optional AI-generated ticket summaries; credentials stored in DB via AiPreferences (DynamicAiClientService) |
 | Scheduling | Spring `@Scheduled` — cron-based hourly trigger dispatches to subscribers by schedule type and configured hours |
@@ -148,12 +148,13 @@ ve-mailer/
 │   │   ├── model/
 │   │   │   ├── AiPreferences.java            # AI provider config entity (apiKey, baseUrl, completionsPath, model)
 │   │   │   ├── AppUser.java          # User entity (name, email, passwordHash, roles)
-│   │   │   ├── Role.java             # Role entity (ADMIN, MEMBER)
+│   │   │   ├── Role.java             # Role entity (ADMIN, MEMBER, WORKSPACE_ADMIN)
 │   │   │   ├── RefreshToken.java     # Refresh token entity (revocable, per-user)
 │   │   │   ├── NotificationPreferences.java # SMTP config entity (host, port, username, password, TLS)
 │   │   │   ├── DeliveryStatus.java          # Enum: SUCCESS | FAILED
 │   │   │   ├── MailAuditLog.java            # Mail delivery audit record entity
 │   │   │   ├── Workspace.java
+│   │   │   ├── WorkspaceAdminMapping.java   # Maps users to workspaces they administer
 │   │   │   ├── Filter.java                 # title, description, entityType, fields (JSON), criteria (JSON)
 │   │   │   ├── FilterCriteriaClause.java   # POJO: field, operator, negate, values[]
 │   │   │   ├── EmailSubscriber.java
@@ -172,6 +173,7 @@ ve-mailer/
 │   │   │   ├── OtpRequestRepository.java
 │   │   │   ├── RefreshTokenRepository.java
 │   │   │   ├── RoleRepository.java
+│   │   │   ├── WorkspaceAdminRepository.java
 │   │   │   └── WorkspaceRepository.java
 │   │   └── service/
 │   │       ├── AdminBootstrapService.java # Seeds ADMIN user + roles on first boot
@@ -196,6 +198,7 @@ ve-mailer/
 │   │       ├── RefreshTokenService.java # Refresh token lifecycle + single-session enforcement
 │   │       ├── ScheduleMigrationRunner.java # Startup migration: converts legacy Frequency records
 │   │       ├── SubscriptionService.java # Subscription business logic
+│   │       ├── WorkspaceAdminService.java # Workspace admin permission checks and CRUD
 │   │       └── ve/
 │   │           └── VeUtils.java              # Octane client factory
 │   └── src/main/resources/
@@ -225,8 +228,7 @@ ve-mailer/
     │   │       ├── GeneralSettingsPage.tsx        # Query result limit config (supports -1 for unlimited)
     │   │       ├── MailAnalyticsPage.tsx          # Mail delivery analytics dashboard (charts + history)
     │   │       ├── NotificationPreferencesPage.tsx # SMTP config form
-    │   │       ├── UsersPage.tsx                  # All registered users with sortable columns + role badges
-    │   │       └── WorkspaceManagementPage.tsx   # Workspace CRUD
+    │   │       ├── UsersPage.tsx                  # All registered users with sortable columns + role badges│   │       ├── WorkspaceAdminManager.tsx     # Assign/remove workspace admins per workspace    │   │       └── WorkspaceManagementPage.tsx   # Workspace CRUD
     │   ├── services/
     │   │   ├── apiService.ts         # All backend API calls (workspaces, filters, subscriptions)
     │   │   └── authService.ts        # Auth API calls + token management
@@ -295,9 +297,17 @@ AppUser
 
 Role
   id (UUID PK)
-  roleName (UNIQUE) -- ADMIN | MEMBER
+  roleName (UNIQUE) -- ADMIN | MEMBER | WORKSPACE_ADMIN
 
 user_roles (join table)
+
+WorkspaceAdminMapping
+  id (UUID PK)
+  workspace_id    -- FK → Workspace
+  user_id         -- FK → AppUser
+  createdAt
+  createdBy
+  UNIQUE(workspace_id, user_id)
   user_id         -- FK → AppUser
   role_id         -- FK → Role
 

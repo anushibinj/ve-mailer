@@ -40,6 +40,20 @@ public class WorkspaceService {
     }
 
     /**
+     * Returns workspaces visible to workspace admins: only those in the given list of IDs
+     * that are ENABLED or DRAFT.
+     */
+    public List<WorkspaceResponseDto> findAllForWorkspaceAdmin(List<UUID> workspaceIds) {
+        if (workspaceIds.isEmpty()) {
+            return List.of();
+        }
+        return workspaceRepository.findByIdInAndStatusIn(workspaceIds,
+                List.of(WorkspaceStatus.ENABLED, WorkspaceStatus.DRAFT)).stream()
+                .map(this::toResponseDto)
+                .collect(Collectors.toList());
+    }
+
+    /**
      * Returns ALL workspaces including DISABLED — for admin management views only.
      */
     public List<WorkspaceResponseDto> findAll() {
@@ -88,6 +102,30 @@ public class WorkspaceService {
             workspace.setClientKey(newKey);
         }
 
+        return toResponseDto(workspaceRepository.save(workspace));
+    }
+
+    /**
+     * Restricted update for WORKSPACE_ADMIN — can only edit: rootUrl, sharedSpaceId,
+     * workspaceId, clientId, clientKey. Cannot change title or status.
+     */
+    public WorkspaceResponseDto updateAsWorkspaceAdmin(UUID id, WorkspaceUpdateRequestDto request) {
+        Workspace workspace = workspaceRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Workspace not found: " + id));
+
+        // WORKSPACE_ADMIN can only update these fields
+        workspace.setRootUrl(request.getRootUrl());
+        workspace.setSharedSpaceId(request.getSharedSpaceId());
+        workspace.setWorkspaceId(request.getWorkspaceId());
+        workspace.setClientId(request.getClientId());
+
+        // Only replace clientKey when the caller provides a real new value
+        String newKey = request.getClientKey();
+        if (newKey != null && !newKey.isBlank() && !CLIENT_KEY_PLACEHOLDER.equals(newKey)) {
+            workspace.setClientKey(newKey);
+        }
+
+        // title and status are intentionally NOT updated
         return toResponseDto(workspaceRepository.save(workspace));
     }
 

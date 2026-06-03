@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { X, Eye, EyeOff, Loader2, Building2 } from 'lucide-react';
 import type { WorkspaceAdmin, WorkspaceCreatePayload, WorkspaceUpdatePayload, WorkspaceStatus } from '../services/apiService';
 import { adminCreateWorkspace, adminUpdateWorkspace } from '../services/apiService';
+import { useAuth } from '../hooks/useAuth';
 import toast from 'react-hot-toast';
 
 const CLIENT_KEY_PLACEHOLDER = '(unchanged)';
@@ -49,6 +50,9 @@ const WorkspaceFormModal: React.FC<WorkspaceFormModalProps> = ({
   isOpen, workspace, onClose, onSuccess,
 }) => {
   const isEditing = !!workspace;
+  const { isAdmin } = useAuth();
+  // WORKSPACE_ADMIN can only edit connection fields (not title/status)
+  const isRestrictedEdit = isEditing && !isAdmin;
 
   const [values, setValues] = useState<FormValues>({
     title: '', sharedSpaceId: '', workspaceId: '', clientId: '', clientKey: '', rootUrl: '', status: 'DRAFT',
@@ -173,30 +177,45 @@ const WorkspaceFormModal: React.FC<WorkspaceFormModalProps> = ({
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4 max-h-[70vh] overflow-y-auto">
-          {[
-            { field: 'title' as const, label: 'Title', type: 'text', placeholder: 'e.g. ALM Octane — Team Alpha', required: true },
-            { field: 'rootUrl' as const, label: 'Root URL', type: 'url', placeholder: 'https://octane.example.com', required: true, hint: 'Base URL of the ValueEdge / Octane server.' },
-          ].map(({ field, label, type, placeholder, required, hint }) => (
-            <div key={field}>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
-                {label} {required && <span className="text-red-500">*</span>}
-              </label>
-              <input
-                type={type}
-                value={values[field]}
-                onChange={handleChange(field)}
-                placeholder={placeholder}
-                className={fieldInputClass(!!errors[field])}
-              />
-              {errors[field] && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors[field]}</p>}
-              {hint && !errors[field] && <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{hint}</p>}
-            </div>
-          ))}
+          {/* Title field */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+              Title <span className="text-red-500">*</span>
+              {isRestrictedEdit && <span className="ml-1 text-xs text-slate-400 dark:text-slate-500 font-normal">(read-only)</span>}
+            </label>
+            <input
+              type="text"
+              value={values.title}
+              onChange={handleChange('title')}
+              placeholder="e.g. ALM Octane — Team Alpha"
+              className={fieldInputClass(!!errors.title)}
+              readOnly={isRestrictedEdit}
+              disabled={isRestrictedEdit}
+            />
+            {errors.title && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.title}</p>}
+          </div>
+
+          {/* Root URL field */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+              Root URL <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="url"
+              value={values.rootUrl}
+              onChange={handleChange('rootUrl')}
+              placeholder="https://octane.example.com"
+              className={fieldInputClass(!!errors.rootUrl)}
+            />
+            {errors.rootUrl && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.rootUrl}</p>}
+            {!errors.rootUrl && <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Base URL of the ValueEdge / Octane server.</p>}
+          </div>
 
           {/* Workspace Status */}
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
               Workspace Status <span className="text-red-500">*</span>
+              {isRestrictedEdit && <span className="ml-1 text-xs text-slate-400 dark:text-slate-500 font-normal">(read-only)</span>}
             </label>
             <select
               value={values.status}
@@ -205,6 +224,7 @@ const WorkspaceFormModal: React.FC<WorkspaceFormModalProps> = ({
                 if (errors.status) setErrors(prev => ({ ...prev, status: undefined }));
               }}
               className={fieldInputClass(!!errors.status)}
+              disabled={isRestrictedEdit}
             >
               <option value="ENABLED">Enabled</option>
               <option value="DRAFT">Draft</option>

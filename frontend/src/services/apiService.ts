@@ -407,3 +407,30 @@ export const adminUpdateGeneralSettings = async (
   const response = await api.put('/api/admin/general-settings', payload);
   return response.data;
 };
+
+// --- Workspace Admin Management ---
+
+export interface WorkspaceAdminEntry {
+  id: string;
+  workspaceId: string;
+  workspaceTitle: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  createdAt: string;
+  createdBy: string;
+}
+
+export const fetchWorkspaceAdmins = async (workspaceId: string): Promise<WorkspaceAdminEntry[]> => {
+  const response = await api.get(`/api/v1/workspaces/${workspaceId}/admins`);
+  return response.data;
+};
+
+export const assignWorkspaceAdmin = async (workspaceId: string, userId: string): Promise<WorkspaceAdminEntry> => {
+  const response = await api.post(`/api/v1/workspaces/${workspaceId}/admins`, { userId });
+  return response.data;
+};
+
+export const removeWorkspaceAdmin = async (workspaceId: string, userId: string): Promise<void> => {
+  await api.delete(`/api/v1/workspaces/${workspaceId}/admins/${userId}`);
+};

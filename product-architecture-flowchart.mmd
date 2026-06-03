@@ -14,6 +14,7 @@ flowchart TD
         NPP[Notification Preferences Page]
         AIPP[AI Preferences Page]
         WMP[Workspace Management Page]
+        WAM[Workspace Admin Manager]
         MAP[Mail Analytics Page]
         UP[Users Page]
         GSP[General Settings Page]
@@ -48,6 +49,7 @@ flowchart TD
             GSCtrl[General Settings Controller]
             FS[Filter Service]
             SS[Subscription Service]
+            WAS[Workspace Admin Service]
             NPS[Notification Preferences Service]
             APS[AI Preferences Service]
             DMS[Dynamic Mail Sender Service]
@@ -69,6 +71,7 @@ flowchart TD
             OTPR[OtpRequest Repository]
             FR[Filter Repository]
             WR[Workspace Repository]
+            WAR[WorkspaceAdmin Repository]
             ESR[EmailSubscriber Repository]
             NPR[NotificationPreferences Repository]
             APR[AiPreferences Repository]
@@ -105,6 +108,7 @@ flowchart TD
     NPP --> AI
     AIPP --> AI
     WMP --> AI
+    WAM --> AI
     MAP --> AI
     UP --> AI
     GSP --> AI
@@ -142,6 +146,9 @@ flowchart TD
 
     %% Business flows
     FCtrl --> FS
+    FCtrl --> WAS
+    WCtrl --> WAS
+    WAS --> WAR
     SCtrl --> SS
     NPCtrl --> NPS
     AIPCtrl --> APS
@@ -181,6 +188,7 @@ flowchart TD
     OTPR --> DB
     FR --> DB
     WR --> DB
+    WAR --> DB
     ESR --> DB
     NPR --> DB
     APR --> DB

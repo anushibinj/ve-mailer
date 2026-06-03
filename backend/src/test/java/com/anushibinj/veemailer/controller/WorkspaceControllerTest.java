@@ -9,8 +9,10 @@ import com.anushibinj.veemailer.model.WorkspaceStatus;
 import com.anushibinj.veemailer.service.AppUserDetailsService;
 import com.anushibinj.veemailer.service.JwtService;
 import com.anushibinj.veemailer.service.SubscriptionService;
+import com.anushibinj.veemailer.service.WorkspaceAdminService;
 import com.anushibinj.veemailer.service.WorkspaceService;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -58,6 +60,16 @@ class WorkspaceControllerTest {
 
     @MockBean
     private AppUserDetailsService appUserDetailsService;
+
+    @MockBean
+    private WorkspaceAdminService workspaceAdminService;
+
+    @BeforeEach
+    void setUp() {
+        // Default: treat authenticated user as global admin for existing tests
+        when(workspaceAdminService.isGlobalAdmin(any())).thenReturn(true);
+        when(workspaceAdminService.canViewWorkspaceSubscriptions(any(), any())).thenReturn(true);
+    }
 
     @Test
     @WithMockUser(roles = "ADMIN")
@@ -186,6 +198,9 @@ class WorkspaceControllerTest {
     @Test
     @WithMockUser(username = "member@test.com", roles = "MEMBER")
     void testGetSubscriptions_Member_ReturnsOnlyOwnSubscriptions() throws Exception {
+        // Override default: member cannot view all subscriptions
+        when(workspaceAdminService.canViewWorkspaceSubscriptions(any(), any())).thenReturn(false);
+
         UUID workspaceId = UUID.randomUUID();
         UUID subId = UUID.randomUUID();
         UUID filterId = UUID.randomUUID();

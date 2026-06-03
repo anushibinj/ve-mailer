@@ -34,9 +34,10 @@ function ThemeToggle() {
 }
 
 function AppHeader({ onLogoClick }: { onLogoClick?: () => void }) {
-  const { logout, user, isAdmin } = useAuth();
+  const { logout, user, isAdmin, isWorkspaceAdmin } = useAuth();
   const navigate = useNavigate();
   const initial = user?.name?.charAt(0).toUpperCase() ?? '?';
+  const showAdminNav = isAdmin || isWorkspaceAdmin;
 
   return (
     <header className="sticky top-0 z-30 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-200/60 dark:border-slate-700/40 shadow-sm dark:shadow-slate-900/20">
@@ -56,7 +57,7 @@ function AppHeader({ onLogoClick }: { onLogoClick?: () => void }) {
             </span>
           </Link>
 
-          {isAdmin && (
+          {showAdminNav && (
             <button
               onClick={() => navigate('/admin')}
               className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 text-sm font-medium transition-colors cursor-pointer"
@@ -82,10 +83,10 @@ function AppHeader({ onLogoClick }: { onLogoClick?: () => void }) {
             </span>
           </div>
 
-          {isAdmin && (
+          {showAdminNav && (
             <span className="hidden sm:flex items-center gap-1 text-xs bg-violet-50 dark:bg-violet-500/10 text-violet-600 dark:text-violet-300 border border-violet-200 dark:border-violet-500/25 px-2 py-0.5 rounded-full font-medium">
               <ShieldCheck className="h-3 w-3" />
-              Admin
+              {isAdmin ? 'Admin' : 'Workspace Admin'}
             </span>
           )}
 
@@ -189,7 +190,7 @@ function App() {
                 <Route
                   path="/admin"
                   element={
-                    <ProtectedRoute requiredRole="ADMIN">
+                    <ProtectedRoute requiredRoles={['ADMIN', 'WORKSPACE_ADMIN']}>
                       <div className="min-h-full bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-50 font-sans">
                         <AdminLayout>
                           <AdminControlPanel />

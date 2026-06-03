@@ -6,20 +6,23 @@ import MailAnalyticsPage from './MailAnalyticsPage';
 import UsersPage from './UsersPage';
 import GeneralSettingsPage from './GeneralSettingsPage';
 import { Settings, Layers, Bell, Sparkles, BarChart2, Users } from 'lucide-react';
+import { useAuth } from '../../hooks/useAuth';
 
 type AdminTab = 'notification-preferences' | 'ai-preferences' | 'workspaces' | 'mail-analytics' | 'users' | 'general';
 
-const tabs: { key: AdminTab; label: string; icon: React.ReactNode; description: string }[] = [
-  { key: 'general', label: 'General', icon: <Settings className="h-4 w-4" />, description: 'App-wide settings' },
+const allTabs: { key: AdminTab; label: string; icon: React.ReactNode; description: string; adminOnly?: boolean }[] = [
+  { key: 'general', label: 'General', icon: <Settings className="h-4 w-4" />, description: 'App-wide settings', adminOnly: true },
   { key: 'workspaces', label: 'Workspaces', icon: <Layers className="h-4 w-4" />, description: 'Manage workspaces' },
-  { key: 'notification-preferences', label: 'Notifications', icon: <Bell className="h-4 w-4" />, description: 'Delivery preferences' },
-  { key: 'ai-preferences', label: 'AI', icon: <Sparkles className="h-4 w-4" />, description: 'AI configuration' },
-  { key: 'mail-analytics', label: 'Analytics', icon: <BarChart2 className="h-4 w-4" />, description: 'Mail statistics' },
-  { key: 'users', label: 'Users', icon: <Users className="h-4 w-4" />, description: 'User management' },
+  { key: 'notification-preferences', label: 'Notifications', icon: <Bell className="h-4 w-4" />, description: 'Delivery preferences', adminOnly: true },
+  { key: 'ai-preferences', label: 'AI', icon: <Sparkles className="h-4 w-4" />, description: 'AI configuration', adminOnly: true },
+  { key: 'mail-analytics', label: 'Analytics', icon: <BarChart2 className="h-4 w-4" />, description: 'Mail statistics', adminOnly: true },
+  { key: 'users', label: 'Users', icon: <Users className="h-4 w-4" />, description: 'User management', adminOnly: true },
 ];
 
 export default function AdminControlPanel() {
-  const [activeTab, setActiveTab] = useState<AdminTab>('general');
+  const { isAdmin } = useAuth();
+  const tabs = isAdmin ? allTabs : allTabs.filter(t => !t.adminOnly);
+  const [activeTab, setActiveTab] = useState<AdminTab>(tabs[0]?.key ?? 'workspaces');
   const active = tabs.find(t => t.key === activeTab);
 
   return (

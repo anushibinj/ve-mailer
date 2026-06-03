@@ -81,7 +81,8 @@ const inputClass =
   'focus:ring-2 focus:ring-indigo-500/15 dark:focus:ring-indigo-400/15 transition-all';
 
 const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBack }) => {
-  const { isAdmin } = useAuth();
+  const { isAdmin, isWorkspaceAdmin } = useAuth();
+  const canManageFilters = isAdmin || isWorkspaceAdmin;
   const [filters, setFilters] = useState<Filter[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [viewMode, setViewMode] = useState<ViewMode>('list');
@@ -243,7 +244,7 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
   }
 
   /* ---- Create / Edit form ---- */
-  if ((viewMode === 'create' || viewMode === 'edit') && isAdmin) {
+  if ((viewMode === 'create' || viewMode === 'edit') && canManageFilters) {
     return (
       <div className="max-w-3xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
         <div className="mb-6 flex items-center gap-3 animate-fade-in">
@@ -429,7 +430,7 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
             <p className="text-slate-400 dark:text-slate-500 text-sm mt-0.5">Pre-built queries for your subscriptions</p>
           </div>
         </div>
-        {isAdmin && (
+        {canManageFilters && (
           <button
             onClick={handleCreateNew}
             className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 dark:bg-indigo-500 dark:hover:bg-indigo-400 text-white text-sm font-semibold rounded-xl shadow-sm shadow-indigo-500/20 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:focus:ring-offset-slate-950 transition-all cursor-pointer"
@@ -446,7 +447,7 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
             <SlidersHorizontal className="h-7 w-7 text-slate-300 dark:text-slate-600" />
           </div>
           <p className="text-slate-500 dark:text-slate-400 text-sm mb-1 font-medium">No filter templates yet</p>
-          {isAdmin && (
+          {canManageFilters && (
             <>
               <p className="text-slate-400 dark:text-slate-500 text-xs mb-6">Create your first filter template to get started.</p>
               <button onClick={handleCreateNew}
@@ -510,7 +511,7 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
                     </div>
 
                     <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
-                      {isAdmin && (
+                      {canManageFilters && (
                         <>
                           <button onClick={() => handleEdit(f)}
                             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/60 hover:border-indigo-200 dark:hover:border-indigo-700 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors cursor-pointer">

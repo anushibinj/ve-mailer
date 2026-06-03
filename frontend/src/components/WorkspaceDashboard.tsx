@@ -21,7 +21,8 @@ interface WorkspaceDashboardProps {
 }
 
 const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({ workspaceId, onBack, onOpenFilterBuilder }) => {
-  const { isAdmin } = useAuth();
+  const { isAdmin, isWorkspaceAdmin } = useAuth();
+  const canManage = isAdmin || isWorkspaceAdmin;
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [filters, setFilters] = useState<Filter[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -110,7 +111,7 @@ const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({ workspaceId, on
             className="inline-flex items-center gap-2 px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/60 hover:border-indigo-300 dark:hover:border-indigo-600 hover:text-indigo-600 dark:hover:text-indigo-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 transition-all shadow-sm cursor-pointer"
           >
             <SlidersHorizontal className="h-4 w-4" />
-            {isAdmin ? 'Manage Filters' : 'Browse Filters'}
+            {canManage ? 'Manage Filters' : 'Browse Filters'}
           </button>
           <button
             onClick={() => setIsCreateModalOpen(true)}
@@ -148,7 +149,7 @@ const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({ workspaceId, on
               <Bell className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
             </div>
             <h2 className="text-sm font-semibold text-slate-900 dark:text-white">
-              {isAdmin ? 'All Subscriptions' : 'My Subscriptions'}
+              {canManage ? 'All Subscriptions' : 'My Subscriptions'}
             </h2>
           </div>
           {subscriptions.length > 0 && (
@@ -178,7 +179,7 @@ const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({ workspaceId, on
             <table className="min-w-full divide-y divide-slate-100 dark:divide-slate-800">
               <thead>
                 <tr className="bg-slate-50/80 dark:bg-slate-800/50">
-                  {isAdmin && (
+                  {canManage && (
                     <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                       Recipient
                     </th>
@@ -199,7 +200,7 @@ const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({ workspaceId, on
                     style={{ animationDelay: `${idx * 40}ms` }}
                     className="animate-fade-in hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors"
                   >
-                    {isAdmin && (
+                    {canManage && (
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className="text-sm font-medium text-slate-900 dark:text-slate-200">{sub.recipientEmail}</span>
                       </td>
@@ -214,7 +215,7 @@ const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({ workspaceId, on
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right">
                       <div className="inline-flex items-center gap-2">
-                        {isAdmin && (
+                        {canManage && (
                           <button
                             onClick={() => handleRunSubscription(sub)}
                             disabled={runningIds.has(sub.id)}

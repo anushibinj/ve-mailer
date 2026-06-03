@@ -8,6 +8,8 @@ import com.anushibinj.veemailer.repository.FilterRepository;
 import com.anushibinj.veemailer.service.AppUserDetailsService;
 import com.anushibinj.veemailer.service.FilterService;
 import com.anushibinj.veemailer.service.JwtService;
+import com.anushibinj.veemailer.service.WorkspaceAdminService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -51,7 +53,16 @@ class FilterControllerTest {
     @MockBean
     private AppUserDetailsService appUserDetailsService;
 
+    @MockBean
+    private WorkspaceAdminService workspaceAdminService;
+
     private static final UUID WORKSPACE_ID = UUID.randomUUID();
+
+    @BeforeEach
+    void setUp() {
+        // Stub workspace admin permission check so mutation endpoints pass authorization
+        when(workspaceAdminService.canManageWorkspaceTemplates(any(), any())).thenReturn(true);
+    }
 
     private Filter buildTestFilter() {
         Workspace workspace = new Workspace();
