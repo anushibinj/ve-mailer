@@ -36,12 +36,14 @@ interface FormErrors {
 
 const inputClass =
   'w-full px-3.5 py-2.5 border rounded-xl text-sm transition-all ' +
-  'text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800/60 ' +
   'placeholder:text-slate-400 dark:placeholder:text-slate-500 ' +
   'focus:outline-none focus:ring-2';
 
-const fieldInputClass = (hasError: boolean) =>
-  `${inputClass} ${hasError
+const fieldInputClass = (hasError: boolean, readOnly = false) =>
+  `${inputClass} ${readOnly
+    ? 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 cursor-not-allowed'
+    : 'text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800/60'
+  } ${hasError
     ? 'border-red-400 dark:border-red-500/50 bg-red-50 dark:bg-red-500/5 focus:border-red-500 focus:ring-red-500/20'
     : 'border-slate-200 dark:border-slate-600 focus:border-indigo-500 dark:focus:border-indigo-400 focus:ring-indigo-500/15 dark:focus:ring-indigo-400/15'
   }`;
@@ -188,11 +190,36 @@ const WorkspaceFormModal: React.FC<WorkspaceFormModalProps> = ({
               value={values.title}
               onChange={handleChange('title')}
               placeholder="e.g. ALM Octane — Team Alpha"
-              className={fieldInputClass(!!errors.title)}
+              className={fieldInputClass(!!errors.title, isRestrictedEdit)}
               readOnly={isRestrictedEdit}
               disabled={isRestrictedEdit}
             />
             {errors.title && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.title}</p>}
+          </div>
+
+          {/* Workspace Status */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+              Workspace Status <span className="text-red-500">*</span>
+              {isRestrictedEdit && <span className="ml-1 text-xs text-slate-400 dark:text-slate-500 font-normal">(read-only)</span>}
+            </label>
+            <select
+              value={values.status}
+              onChange={(e) => {
+                setValues(prev => ({ ...prev, status: e.target.value as WorkspaceStatus }));
+                if (errors.status) setErrors(prev => ({ ...prev, status: undefined }));
+              }}
+              className={fieldInputClass(!!errors.status, isRestrictedEdit)}
+              disabled={isRestrictedEdit}
+            >
+              <option value="ENABLED">Enabled</option>
+              <option value="DRAFT">Draft</option>
+              <option value="DISABLED">Disabled</option>
+            </select>
+            {errors.status && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.status}</p>}
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+              Draft workspaces are only visible to admins. Disabled workspaces are hidden from all views.
+            </p>
           </div>
 
           {/* Root URL field */}
@@ -209,31 +236,6 @@ const WorkspaceFormModal: React.FC<WorkspaceFormModalProps> = ({
             />
             {errors.rootUrl && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.rootUrl}</p>}
             {!errors.rootUrl && <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Base URL of the ValueEdge / Octane server.</p>}
-          </div>
-
-          {/* Workspace Status */}
-          <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
-              Workspace Status <span className="text-red-500">*</span>
-              {isRestrictedEdit && <span className="ml-1 text-xs text-slate-400 dark:text-slate-500 font-normal">(read-only)</span>}
-            </label>
-            <select
-              value={values.status}
-              onChange={(e) => {
-                setValues(prev => ({ ...prev, status: e.target.value as WorkspaceStatus }));
-                if (errors.status) setErrors(prev => ({ ...prev, status: undefined }));
-              }}
-              className={fieldInputClass(!!errors.status)}
-              disabled={isRestrictedEdit}
-            >
-              <option value="ENABLED">Enabled</option>
-              <option value="DRAFT">Draft</option>
-              <option value="DISABLED">Disabled</option>
-            </select>
-            {errors.status && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.status}</p>}
-            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-              Draft workspaces are only visible to admins. Disabled workspaces are hidden from all views.
-            </p>
           </div>
 
           {[
