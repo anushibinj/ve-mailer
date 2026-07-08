@@ -1,6 +1,7 @@
 package com.anushibinj.veemailer.controller;
 
 import com.anushibinj.veemailer.dto.FilterDto;
+import com.anushibinj.veemailer.dto.ParsedFilterQueryResponse;
 import com.anushibinj.veemailer.dto.PreviewResponse;
 import com.anushibinj.veemailer.model.Filter;
 import com.anushibinj.veemailer.model.Workspace;
@@ -182,6 +183,7 @@ class FilterControllerTest {
                 .entityType("defect")
                 .fields(java.util.List.of("id", "name"))
                 .criteria(java.util.List.of())
+                .filterQueryString("fields=id,name&query=severity EQ ^High^")
                 .build();
 
         when(filterService.cloneFilter(filterId)).thenReturn(cloned);
@@ -191,7 +193,40 @@ class FilterControllerTest {
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.title").value("Clone of Urgent Tickets"))
-                .andExpect(jsonPath("$.entityType").value("defect"));
+                .andExpect(jsonPath("$.entityType").value("defect"))
+                .andExpect(jsonPath("$.filterQueryString").value("fields=id,name&query=severity EQ ^High^"));
+    }
+
+    @Test
+    void testParseQueryString_returnsParsedFilterDefinition() throws Exception {
+        ParsedFilterQueryResponse parsed = ParsedFilterQueryResponse.builder()
+                .fields(List.of("id", "name"))
+                .criteria(List.of())
+                .filterQueryString("fields=id,name&query=name EQ ^*Case360*^")
+                .build();
+        when(filterService.parseFilterQueryString("fields=id,name&query=name EQ ^*Case360*^"))
+                .thenReturn(parsed);
+
+        mockMvc.perform(post("/api/v1/workspaces/{workspaceId}/filters/parse-query-string", WORKSPACE_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"filterQueryString\":\"fields=id,name&query=name EQ ^*Case360*^\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.fields", hasSize(2)))
+                .andExpect(jsonPath("$.fields[0]").value("id"))
+                .andExpect(jsonPath("$.fields[1]").value("name"))
+                .andExpect(jsonPath("$.filterQueryString").value("fields=id,name&query=name EQ ^*Case360*^"));
+    }
+
+    @Test
+    void testGetFilterQueryString_returnsSerializedString() throws Exception {
+        UUID filterId = UUID.randomUUID();
+        when(filterService.getFilterQueryString(filterId))
+                .thenReturn("fields=id,name&query=name EQ ^*Case360*^");
+
+        mockMvc.perform(get("/api/v1/workspaces/{workspaceId}/filters/{filterId}/query-string", WORKSPACE_ID, filterId)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.filterQueryString").value("fields=id,name&query=name EQ ^*Case360*^"));
     }
 
     @Test

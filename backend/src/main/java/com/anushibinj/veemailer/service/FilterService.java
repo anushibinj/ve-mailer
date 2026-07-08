@@ -1,16 +1,24 @@
 package com.anushibinj.veemailer.service;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.LinkedHashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.anushibinj.veemailer.dto.FilterDto;
+import com.anushibinj.veemailer.dto.ParsedFilterQueryResponse;
 import com.anushibinj.veemailer.dto.PreviewResponse;
 import com.anushibinj.veemailer.model.Filter;
 import com.anushibinj.veemailer.model.FilterCriteriaClause;
@@ -45,6 +53,10 @@ import lombok.extern.slf4j.Slf4j;
 @Service
 @RequiredArgsConstructor
 public class FilterService {
+    private static final Pattern FILTER_QUERY_CLAUSE_PATTERN = Pattern.compile(
+            "^([A-Za-z0-9_]+)\\s+(EQ|NEQ|IN|NOT_IN)\\s+(.+)$",
+            Pattern.CASE_INSENSITIVE);
+
 
     private final FilterRepository filterRepository;
     private final WorkspaceRepository workspaceRepository;
@@ -61,15 +73,16 @@ public class FilterService {
     public Filter createFilter(FilterDto dto) {
         Workspace workspace = workspaceRepository.findById(dto.getWorkspaceId())
                 .orElseThrow(() -> new IllegalArgumentException("Workspace not found: " + dto.getWorkspaceId()));
+        FilterDto resolvedDto = resolveFilterDefinition(dto);
         try {
-            String fieldsJson = objectMapper.writeValueAsString(dto.getFields());
-            String criteriaJson = objectMapper.writeValueAsString(dto.getCriteria());
+            String fieldsJson = objectMapper.writeValueAsString(resolvedDto.getFields());
+            String criteriaJson = objectMapper.writeValueAsString(resolvedDto.getCriteria());
 
             Filter filter = Filter.builder()
-                    .title(dto.getTitle())
-                    .description(dto.getDescription())
+                    .title(resolvedDto.getTitle())
+                    .description(resolvedDto.getDescription())
                     .workspace(workspace)
-                    .entityType(dto.getEntityType())
+                    .entityType(resolvedDto.getEntityType())
                     .fields(fieldsJson)
                     .criteria(criteriaJson)
                     .build();
@@ -77,6 +90,54 @@ public class FilterService {
             return filterRepository.save(filter);
         } catch (JsonProcessingException e) {
             throw new RuntimeException("Failed to serialize filter data", e);
+        }
+    }
+
+    public ParsedFilterQueryResponse parseFilterQueryString(String filterQueryString) {
+        String normalizedInput = filterQueryString == null ? "" : filterQueryString.trim();
+        if (normalizedInput.isEmpty()) {
+            throw new IllegalArgumentException("filterQueryString must not be blank");
+        }
+
+        Map<String, String> params = parseFilterQueryParams(normalizedInput);
+        String fieldsRaw = params.get("fields");
+        String queryRaw = params.get("query");
+
+        if (fieldsRaw == null || fieldsRaw.isBlank()) {
+            throw new IllegalArgumentException("Invalid filter query string: missing fields parameter");
+        }
+        if (queryRaw == null || queryRaw.isBlank()) {
+            throw new IllegalArgumentException("Invalid filter query string: missing query parameter");
+        }
+
+        List<String> parsedFields = Arrays.stream(fieldsRaw.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .distinct()
+                .collect(Collectors.toList());
+        if (parsedFields.isEmpty()) {
+            throw new IllegalArgumentException("Invalid filter query string: fields parameter is empty");
+        }
+
+        List<FilterCriteriaClause> parsedCriteria = parseCriteriaExpression(queryRaw);
+        String normalized = buildFilterQueryString(parsedFields, parsedCriteria);
+
+        return ParsedFilterQueryResponse.builder()
+                .fields(parsedFields)
+                .criteria(parsedCriteria)
+                .filterQueryString(normalized)
+                .build();
+    }
+
+    public String getFilterQueryString(UUID filterId) {
+        Filter filter = filterRepository.findById(filterId)
+                .orElseThrow(() -> new IllegalArgumentException("Filter not found: " + filterId));
+        try {
+            List<String> fields = objectMapper.readValue(filter.getFields(), new TypeReference<>() {});
+            List<FilterCriteriaClause> criteria = objectMapper.readValue(filter.getCriteria(), new TypeReference<>() {});
+            return buildFilterQueryString(fields, criteria);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("Failed to deserialize filter data", e);
         }
     }
 
@@ -111,6 +172,7 @@ public class FilterService {
                     .entityType(filter.getEntityType())
                     .fields(fields)
                     .criteria(criteria)
+                    .filterQueryString(buildFilterQueryString(fields, criteria))
                     .build();
         } catch (JsonProcessingException e) {
             throw new RuntimeException("Failed to deserialize filter data", e);
@@ -123,13 +185,14 @@ public class FilterService {
     public Filter updateFilter(UUID filterId, FilterDto dto) {
         Filter filter = filterRepository.findById(filterId)
                 .orElseThrow(() -> new IllegalArgumentException("Filter not found: " + filterId));
+        FilterDto resolvedDto = resolveFilterDefinition(dto);
         try {
-            String fieldsJson = objectMapper.writeValueAsString(dto.getFields());
-            String criteriaJson = objectMapper.writeValueAsString(dto.getCriteria());
+            String fieldsJson = objectMapper.writeValueAsString(resolvedDto.getFields());
+            String criteriaJson = objectMapper.writeValueAsString(resolvedDto.getCriteria());
 
-            filter.setTitle(dto.getTitle());
-            filter.setDescription(dto.getDescription());
-            filter.setEntityType(dto.getEntityType());
+            filter.setTitle(resolvedDto.getTitle());
+            filter.setDescription(resolvedDto.getDescription());
+            filter.setEntityType(resolvedDto.getEntityType());
             filter.setFields(fieldsJson);
             filter.setCriteria(criteriaJson);
 
@@ -426,5 +489,393 @@ public class FilterService {
         if (workspace.getStatus() == WorkspaceStatus.DISABLED) {
             throw new IllegalArgumentException("Workspace is disabled and cannot execute filters");
         }
+    }
+
+    private FilterDto resolveFilterDefinition(FilterDto dto) {
+        boolean hasFilterQueryString = dto.getFilterQueryString() != null && !dto.getFilterQueryString().isBlank();
+        if (hasFilterQueryString) {
+            ParsedFilterQueryResponse parsed = parseFilterQueryString(dto.getFilterQueryString());
+            return FilterDto.builder()
+                    .workspaceId(dto.getWorkspaceId())
+                    .title(dto.getTitle())
+                    .description(dto.getDescription())
+                    .entityType(dto.getEntityType())
+                    .fields(parsed.getFields())
+                    .criteria(parsed.getCriteria())
+                    .filterQueryString(parsed.getFilterQueryString())
+                    .build();
+        }
+
+        if (dto.getFields() == null || dto.getFields().isEmpty()) {
+            throw new IllegalArgumentException("fields must not be empty");
+        }
+        if (dto.getCriteria() == null || dto.getCriteria().isEmpty()) {
+            throw new IllegalArgumentException("criteria must not be empty");
+        }
+        for (FilterCriteriaClause clause : dto.getCriteria()) {
+            validateClause(clause);
+        }
+        return dto;
+    }
+
+    private List<FilterCriteriaClause> parseCriteriaExpression(String queryRaw) {
+        String normalizedQuery = stripWrappingDoubleQuotes(queryRaw == null ? "" : queryRaw.trim());
+        if (normalizedQuery.isEmpty()) {
+            throw new IllegalArgumentException("Invalid filter query string: query parameter is empty");
+        }
+
+        List<FilterCriteriaClause> clauses = new ArrayList<>();
+        for (String rawClause : splitTopLevelClauses(normalizedQuery, false)) {
+            String clauseToken = stripOuterParentheses(rawClause.trim());
+            if (clauseToken.isEmpty()) {
+                continue;
+            }
+            FilterCriteriaClause clause = parseClauseOrOrGroup(clauseToken);
+            validateClause(clause);
+            clauses.add(clause);
+        }
+        if (clauses.isEmpty()) {
+            throw new IllegalArgumentException("Invalid filter query string: query parameter is empty");
+        }
+        return clauses;
+    }
+
+    private FilterCriteriaClause parseClause(String rawClause) {
+        Matcher matcher = FILTER_QUERY_CLAUSE_PATTERN.matcher(rawClause);
+        if (!matcher.matches()) {
+            throw new IllegalArgumentException("Invalid filter query clause: " + rawClause);
+        }
+
+        String field = matcher.group(1).trim();
+        String operatorToken = matcher.group(2).trim().toUpperCase();
+        String rawValues = matcher.group(3).trim();
+        List<String> values = parseValueTokens(rawValues, rawClause);
+
+        String mappedOperator;
+        if ("EQ".equals(operatorToken) || "IN".equals(operatorToken)) {
+            mappedOperator = "IN";
+        } else if ("NEQ".equals(operatorToken) || "NOT_IN".equals(operatorToken)) {
+            mappedOperator = "NOT_IN";
+        } else {
+            throw new IllegalArgumentException("Unsupported operator in clause: " + rawClause);
+        }
+
+        if (("EQ".equals(operatorToken) || "NEQ".equals(operatorToken)) && values.size() > 1) {
+            throw new IllegalArgumentException("EQ/NEQ clauses must contain exactly one value: " + rawClause);
+        }
+
+        return FilterCriteriaClause.builder()
+                .field(field)
+                .operator(mappedOperator)
+                .values(values)
+                .build();
+    }
+
+    private FilterCriteriaClause parseClauseOrOrGroup(String rawClause) {
+        List<String> orParts = splitTopLevelClauses(rawClause, true);
+        if (orParts.size() == 1) {
+            return parseClause(orParts.get(0).trim());
+        }
+
+        String resolvedField = null;
+        String resolvedOperator = null;
+        Set<String> mergedValues = new LinkedHashSet<>();
+
+        for (String token : orParts) {
+            FilterCriteriaClause part = parseClause(stripOuterParentheses(token.trim()));
+            if ("NOT_IN".equalsIgnoreCase(part.getOperator())) {
+                throw new IllegalArgumentException("OR groups do not support NOT_IN clauses: " + rawClause);
+            }
+            if (resolvedField == null) {
+                resolvedField = part.getField();
+                resolvedOperator = part.getOperator();
+            } else {
+                if (!resolvedField.equalsIgnoreCase(part.getField())) {
+                    throw new IllegalArgumentException("OR group must use a single field: " + rawClause);
+                }
+                if (!resolvedOperator.equalsIgnoreCase(part.getOperator())) {
+                    throw new IllegalArgumentException("OR group must use a single operator: " + rawClause);
+                }
+            }
+            mergedValues.addAll(part.getValues());
+        }
+
+        return FilterCriteriaClause.builder()
+                .field(resolvedField)
+                .operator(resolvedOperator)
+                .values(new ArrayList<>(mergedValues))
+                .build();
+    }
+
+    private List<String> parseValueTokens(String rawValues, String rawClause) {
+        String trimmed = rawValues.trim();
+        String unwrapped = unwrapCarets(trimmed);
+        if (unwrapped.startsWith("{") && unwrapped.endsWith("}")) {
+            return parseReferenceIdValues(unwrapped, rawClause);
+        }
+        List<String> values = Arrays.stream(unwrapped.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .collect(Collectors.toList());
+        if (values.isEmpty()) {
+            throw new IllegalArgumentException("Invalid filter query clause values: " + rawClause);
+        }
+        return values;
+    }
+
+    private List<String> parseReferenceIdValues(String rawReference, String rawClause) {
+        String inner = stripOuterParentheses(rawReference.substring(1, rawReference.length() - 1).trim());
+        if (inner.isEmpty() || "null".equalsIgnoreCase(inner)) {
+            throw new IllegalArgumentException("Invalid filter query clause values: " + rawClause);
+        }
+        Set<String> values = new LinkedHashSet<>();
+        for (String token : splitTopLevelClauses(inner, true)) {
+            Matcher matcher = FILTER_QUERY_CLAUSE_PATTERN.matcher(stripOuterParentheses(token.trim()));
+            if (!matcher.matches()) {
+                throw new IllegalArgumentException("Invalid reference filter in clause: " + rawClause);
+            }
+            String innerField = matcher.group(1).trim();
+            String innerOperator = matcher.group(2).trim().toUpperCase();
+            if (!"ID".equalsIgnoreCase(innerField)) {
+                throw new IllegalArgumentException("Reference filters must use id field: " + rawClause);
+            }
+            if (!"EQ".equals(innerOperator) && !"IN".equals(innerOperator)) {
+                throw new IllegalArgumentException("Reference filters support EQ/IN only: " + rawClause);
+            }
+            String innerRawValue = matcher.group(3).trim();
+            values.addAll(Arrays.stream(unwrapCarets(innerRawValue).split(","))
+                    .map(String::trim)
+                    .filter(s -> !s.isEmpty())
+                    .collect(Collectors.toList()));
+        }
+        if (values.isEmpty()) {
+            throw new IllegalArgumentException("Invalid filter query clause values: " + rawClause);
+        }
+        return new ArrayList<>(values);
+    }
+
+    private List<String> splitTopLevelClauses(String input, boolean splitOr) {
+        List<String> parts = new ArrayList<>();
+        StringBuilder current = new StringBuilder();
+        int parenDepth = 0;
+        int braceDepth = 0;
+        boolean inCaret = false;
+
+        for (int i = 0; i < input.length(); i++) {
+            char ch = input.charAt(i);
+            if (ch == '^' && (i == 0 || input.charAt(i - 1) != '\\')) {
+                inCaret = !inCaret;
+                current.append(ch);
+                continue;
+            }
+            if (inCaret) {
+                current.append(ch);
+                continue;
+            }
+            if (ch == '(') {
+                parenDepth++;
+                current.append(ch);
+                continue;
+            }
+            if (ch == ')') {
+                parenDepth = Math.max(0, parenDepth - 1);
+                current.append(ch);
+                continue;
+            }
+            if (ch == '{') {
+                braceDepth++;
+                current.append(ch);
+                continue;
+            }
+            if (ch == '}') {
+                braceDepth = Math.max(0, braceDepth - 1);
+                current.append(ch);
+                continue;
+            }
+
+            if (parenDepth == 0 && braceDepth == 0) {
+                if (splitOr) {
+                    if (ch == '|' && i + 1 < input.length() && input.charAt(i + 1) == '|') {
+                        addToken(parts, current);
+                        i++;
+                        continue;
+                    }
+                    if (startsWithWordIgnoreCase(input, i, "OR")) {
+                        addToken(parts, current);
+                        i = i + 1;
+                        continue;
+                    }
+                } else {
+                    if (ch == ';') {
+                        addToken(parts, current);
+                        continue;
+                    }
+                    if (startsWithWordIgnoreCase(input, i, "AND")) {
+                        addToken(parts, current);
+                        i = i + 2;
+                        continue;
+                    }
+                }
+            }
+            current.append(ch);
+        }
+        addToken(parts, current);
+        return parts;
+    }
+
+    private void addToken(List<String> parts, StringBuilder token) {
+        String value = token.toString().trim();
+        if (!value.isEmpty()) {
+            parts.add(value);
+        }
+        token.setLength(0);
+    }
+
+    private boolean startsWithWordIgnoreCase(String input, int index, String word) {
+        int end = index + word.length();
+        if (end > input.length()) {
+            return false;
+        }
+        if (!input.regionMatches(true, index, word, 0, word.length())) {
+            return false;
+        }
+        char before = index > 0 ? input.charAt(index - 1) : ' ';
+        char after = end < input.length() ? input.charAt(end) : ' ';
+        return !Character.isLetterOrDigit(before) && before != '_'
+                && !Character.isLetterOrDigit(after) && after != '_';
+    }
+
+    private String stripOuterParentheses(String value) {
+        String trimmed = value.trim();
+        while (trimmed.startsWith("(") && trimmed.endsWith(")") && isSingleWrappedExpression(trimmed)) {
+            trimmed = trimmed.substring(1, trimmed.length() - 1).trim();
+        }
+        return trimmed;
+    }
+
+    private boolean isSingleWrappedExpression(String expr) {
+        int parenDepth = 0;
+        int braceDepth = 0;
+        boolean inCaret = false;
+        for (int i = 0; i < expr.length(); i++) {
+            char ch = expr.charAt(i);
+            if (ch == '^' && (i == 0 || expr.charAt(i - 1) != '\\')) {
+                inCaret = !inCaret;
+                continue;
+            }
+            if (inCaret) {
+                continue;
+            }
+            if (ch == '{') {
+                braceDepth++;
+            } else if (ch == '}') {
+                braceDepth = Math.max(0, braceDepth - 1);
+            } else if (ch == '(') {
+                parenDepth++;
+            } else if (ch == ')') {
+                parenDepth--;
+                if (parenDepth == 0 && i < expr.length() - 1 && braceDepth == 0) {
+                    return false;
+                }
+            }
+        }
+        return parenDepth == 0;
+    }
+
+    private String stripWrappingDoubleQuotes(String value) {
+        if (value.length() >= 2 && value.startsWith("\"") && value.endsWith("\"")) {
+            return value.substring(1, value.length() - 1).trim();
+        }
+        return value;
+    }
+
+    private String unwrapCarets(String valueToken) {
+        if (valueToken.length() >= 2 && valueToken.startsWith("^") && valueToken.endsWith("^")) {
+            return valueToken.substring(1, valueToken.length() - 1);
+        }
+        return valueToken;
+    }
+
+    String buildFilterQueryString(List<String> fields, List<FilterCriteriaClause> criteria) {
+        if (fields == null || fields.isEmpty()) {
+            throw new IllegalArgumentException("fields must not be empty");
+        }
+        if (criteria == null || criteria.isEmpty()) {
+            throw new IllegalArgumentException("criteria must not be empty");
+        }
+
+        String fieldsPart = fields.stream()
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .collect(Collectors.joining(","));
+        if (fieldsPart.isEmpty()) {
+            throw new IllegalArgumentException("fields must not be empty");
+        }
+
+        String queryPart = criteria.stream()
+                .peek(this::validateClause)
+                .map(this::serializeClause)
+                .collect(Collectors.joining(" AND "));
+
+        return "fields=" + fieldsPart + "&query=" + queryPart;
+    }
+
+    private String serializeClause(FilterCriteriaClause clause) {
+        List<String> values = clause.getValues().stream().map(String::trim).collect(Collectors.toList());
+        String valueLiteral = "^" + String.join(",", values) + "^";
+        String operator;
+        if ("NOT_IN".equalsIgnoreCase(clause.getOperator())) {
+            operator = values.size() == 1 ? "NEQ" : "NOT_IN";
+        } else {
+            operator = values.size() == 1 ? "EQ" : "IN";
+        }
+        return clause.getField().trim() + " " + operator + " " + valueLiteral;
+    }
+
+    private void validateClause(FilterCriteriaClause clause) {
+        if (clause == null) {
+            throw new IllegalArgumentException("criteria contains an empty clause");
+        }
+        if (clause.getField() == null || clause.getField().isBlank()) {
+            throw new IllegalArgumentException("criteria field must not be blank");
+        }
+        if (clause.getOperator() == null || clause.getOperator().isBlank()) {
+            throw new IllegalArgumentException("criteria operator must not be blank");
+        }
+        String operator = clause.getOperator().toUpperCase();
+        if (!"IN".equals(operator) && !"NOT_IN".equals(operator)) {
+            throw new IllegalArgumentException("criteria operator must be IN or NOT_IN");
+        }
+        if (clause.getValues() == null || clause.getValues().isEmpty()) {
+            throw new IllegalArgumentException("criteria values must not be empty");
+        }
+        if (clause.getValues().stream().anyMatch(v -> v == null || v.isBlank())) {
+            throw new IllegalArgumentException("criteria values must not contain blanks");
+        }
+    }
+
+    private Map<String, String> parseFilterQueryParams(String filterQueryString) {
+        Map<String, String> params = new LinkedHashMap<>();
+        for (String part : filterQueryString.split("&")) {
+            String pair = part.trim();
+            if (pair.isEmpty()) {
+                continue;
+            }
+            int separator = pair.indexOf('=');
+            if (separator <= 0 || separator == pair.length() - 1) {
+                throw new IllegalArgumentException("Invalid filter query segment: " + pair);
+            }
+            String key = decodeQueryComponent(pair.substring(0, separator)).trim().toLowerCase();
+            String value = decodeQueryComponent(pair.substring(separator + 1)).trim();
+            if (!"fields".equals(key) && !"query".equals(key)) {
+                throw new IllegalArgumentException("Unsupported filter query parameter: " + key);
+            }
+            params.put(key, value);
+        }
+        return params;
+    }
+
+    private String decodeQueryComponent(String value) {
+        return URLDecoder.decode(value, StandardCharsets.UTF_8);
     }
 }

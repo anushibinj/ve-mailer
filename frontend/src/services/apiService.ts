@@ -66,6 +66,7 @@ export interface FilterCreatePayload {
   entityType: string;
   fields: string[];
   criteria: FilterCriteriaClause[];
+  filterQueryString?: string;
 }
 
 export interface FilterUpdatePayload {
@@ -74,6 +75,17 @@ export interface FilterUpdatePayload {
   entityType: string;
   fields: string[];
   criteria: FilterCriteriaClause[];
+  filterQueryString?: string;
+}
+
+export interface ParseFilterQueryStringPayload {
+  filterQueryString: string;
+}
+
+export interface ParsedFilterQueryResponse {
+  fields: string[];
+  criteria: FilterCriteriaClause[];
+  filterQueryString: string;
 }
 
 export interface Schedule {
@@ -173,6 +185,19 @@ export const previewFilter = async (workspaceId: string, filterId: string, limit
 export const cloneFilter = async (workspaceId: string, filterId: string): Promise<FilterCreatePayload> => {
   const response = await api.get(`/api/v1/workspaces/${workspaceId}/filters/${filterId}/clone`);
   return response.data;
+};
+
+export const parseFilterQueryString = async (
+  workspaceId: string,
+  payload: ParseFilterQueryStringPayload
+): Promise<ParsedFilterQueryResponse> => {
+  const response = await api.post(`/api/v1/workspaces/${workspaceId}/filters/parse-query-string`, payload);
+  return response.data;
+};
+
+export const getFilterQueryString = async (workspaceId: string, filterId: string): Promise<string> => {
+  const response = await api.get(`/api/v1/workspaces/${workspaceId}/filters/${filterId}/query-string`);
+  return response.data.filterQueryString;
 };
 
 export const deleteFilter = async (workspaceId: string, filterId: string): Promise<void> => {

@@ -29,6 +29,7 @@ A full-stack application that lets users subscribe to email digest notifications
     - [Backend — `application-dev.properties`](#backend--application-devproperties)
     - [AI Summary Configuration (Optional)](#ai-summary-configuration-optional)
     - [Frontend — Environment Variables](#frontend--environment-variables)
+      - [`VITE_ALLOW_CUSTOM_QUERY_STRING` — query-string filter workflow toggle](#vite_allow_custom_query_string--query-string-filter-workflow-toggle)
       - [`VITE_FOOTER_HTML` — custom footer](#vite_footer_html--custom-footer)
     - [Docker — Timezone (`TZ`)](#docker--timezone-tz)
   - [Running Tests](#running-tests)
@@ -395,13 +396,15 @@ All workspace endpoints require authentication. Mutation endpoints (POST/PUT/DEL
 
 ### Filters
 
-Filter template read endpoints are open to all authenticated users. Create/update require the `ADMIN` role.
+Filter template read endpoints are open to all authenticated users. Create/update/query-string parsing requires `ADMIN` or `WORKSPACE_ADMIN` access.
 
 | Method | Path                                           | Role required | Description                                     |
 |--------|------------------------------------------------|:-------------:|-------------------------------------------------|
 | `GET`  | `/workspaces/{id}/filters`                     | Any           | List filter templates for a workspace           |
-| `POST` | `/workspaces/{id}/filters`                     | ADMIN         | Create a filter template                        |
-| `PUT`  | `/workspaces/{id}/filters/{filterId}`          | ADMIN         | Update a filter template                        |
+| `POST` | `/workspaces/{id}/filters`                     | ADMIN / WORKSPACE_ADMIN | Create a filter template                        |
+| `PUT`  | `/workspaces/{id}/filters/{filterId}`          | ADMIN / WORKSPACE_ADMIN | Update a filter template                        |
+| `POST` | `/workspaces/{id}/filters/parse-query-string`  | ADMIN / WORKSPACE_ADMIN | Validate and parse `fields=...&query=...` into structured criteria |
+| `GET`  | `/workspaces/{id}/filters/{filterId}/query-string` | ADMIN / WORKSPACE_ADMIN | Export an existing filter as copyable string |
 | `POST` | `/workspaces/{id}/filters/{filterId}/execute`  | Any           | Execute a filter against Octane and return entities |
 
 **FilterCriteriaClause** (element of the `criteria` array):
@@ -415,6 +418,15 @@ Filter template read endpoints are open to all authenticated users. Create/updat
 ```
 
 Supported operators: `IN`, `NOT_IN`.
+
+**Query-string format:** `fields=id,name&query=name EQ ^*Case360*^`
+
+- `fields` is a comma-separated list of output fields
+- `query` supports one or more clauses joined by `AND` or `;`
+- `query` can include `||` OR groups when all OR-joined expressions target the same field
+- Accepted operators in query-string mode: `EQ`, `NEQ`, `IN`, `NOT_IN` (mapped internally to `IN`/`NOT_IN`)
+- Values can be wrapped with `^...^` and multiple values are comma-separated inside the wrapper
+- Cross-filter values like `owner EQ {id EQ 8666}` and `phase EQ {id EQ ^...^}` are supported
 
 ### Subscriptions
 
@@ -546,6 +558,7 @@ The `.env.local` file must contain:
 
 ```env
 VITE_BACKEND_ROOT_URL=http://localhost:8080
+VITE_ALLOW_CUSTOM_QUERY_STRING=false
 ```
 
 ---
@@ -638,9 +651,17 @@ Prompts are stored in `backend/src/main/resources/prompts/` and can be customize
 | Variable                | Description                                                              | Example                                                    |
 |-------------------------|--------------------------------------------------------------------------|------------------------------------------------------------||
 | `VITE_BACKEND_ROOT_URL` | Base URL of the Spring Boot backend                                      | `http://localhost:8080`                                    |
+| `VITE_ALLOW_CUSTOM_QUERY_STRING` | Enables query-string based filter creation and copy-string actions in the UI | `false` |
 | `VITE_FOOTER_HTML`      | Optional HTML injected as the global app footer (sanitized before render) | `<div style="text-align:center">Powered by VE Mailer</div>` |
 
 Create a `.env.local` file in the `frontend/` directory. Vite exposes only variables prefixed with `VITE_` to the browser bundle.
+
+#### `VITE_ALLOW_CUSTOM_QUERY_STRING` — query-string filter workflow toggle
+
+Controls whether the filter builder exposes query-string based workflow.
+
+- `false` (default): hide all query-string UI (generate-from-string flow and copy-string action).
+- `true`: show query-string workflow and related controls.
 
 #### `VITE_FOOTER_HTML` — custom footer
 
@@ -798,7 +819,7 @@ User                    Frontend               Backend
 
 ### Filter Templates
 
-Filter templates replace the old hardcoded query approach. Instead of storing a raw Octane query string, each filter stores structured data:
+Filter templates replace the old hardcoded query approach. Filters are still stored as structured data, and the UI can now import/export a compact string form (`fields=...&query=...`) that the backend validates and converts into structured clauses.
 
 1. **Entity type** — the Octane entity to query (e.g. `defect`, `story`)
 2. **Fields** — which fields to return in the result set (e.g. `["id", "name", "phase", "owner"]`)

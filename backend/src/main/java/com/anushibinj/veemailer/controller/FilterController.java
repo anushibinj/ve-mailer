@@ -1,6 +1,8 @@
 package com.anushibinj.veemailer.controller;
 
 import com.anushibinj.veemailer.dto.FilterDto;
+import com.anushibinj.veemailer.dto.FilterQueryStringRequest;
+import com.anushibinj.veemailer.dto.ParsedFilterQueryResponse;
 import com.anushibinj.veemailer.dto.PreviewResponse;
 import com.anushibinj.veemailer.model.Filter;
 import com.anushibinj.veemailer.repository.FilterRepository;
@@ -25,6 +27,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -85,6 +88,26 @@ public class FilterController {
         requireWorkspaceManagement(workspaceId);
         FilterDto cloned = filterService.cloneFilter(filterId);
         return ResponseEntity.ok(cloned);
+    }
+
+    @PostMapping("/parse-query-string")
+    @PreAuthorize("hasAnyRole('ADMIN', 'WORKSPACE_ADMIN')")
+    public ResponseEntity<ParsedFilterQueryResponse> parseQueryString(
+            @PathVariable UUID workspaceId,
+            @Valid @RequestBody FilterQueryStringRequest request) {
+        requireWorkspaceManagement(workspaceId);
+        ParsedFilterQueryResponse parsed = filterService.parseFilterQueryString(request.getFilterQueryString());
+        return ResponseEntity.ok(parsed);
+    }
+
+    @GetMapping("/{filterId}/query-string")
+    @PreAuthorize("hasAnyRole('ADMIN', 'WORKSPACE_ADMIN')")
+    public ResponseEntity<Map<String, String>> getFilterQueryString(
+            @PathVariable UUID workspaceId,
+            @PathVariable UUID filterId) {
+        requireWorkspaceManagement(workspaceId);
+        String filterQueryString = filterService.getFilterQueryString(filterId);
+        return ResponseEntity.ok(Map.of("filterQueryString", filterQueryString));
     }
 
     @PostMapping("/{filterId}/execute")

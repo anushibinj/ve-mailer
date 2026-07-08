@@ -2,7 +2,6 @@ package com.anushibinj.veemailer.dto;
 
 import com.anushibinj.veemailer.model.FilterCriteriaClause;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotEmpty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -28,9 +27,16 @@ public class FilterDto {
     @NotBlank
     private String entityType;
 
-    @NotEmpty
     private List<String> fields;
 
-    @NotEmpty
     private List<FilterCriteriaClause> criteria;
+
+    /**
+     * Optional compact form of filter definition:
+     * fields=id,name&query=name EQ ^*Case360*^
+     *
+     * When provided, backend parsing/validation is used and generated fields/criteria
+     * are persisted instead of the raw fields/criteria payload.
+     */
+    private String filterQueryString;
 }

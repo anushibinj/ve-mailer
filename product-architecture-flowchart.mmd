@@ -19,6 +19,7 @@ flowchart TD
         UP[Users Page]
         GSP[General Settings Page]
         AI[Axios Interceptors]
+        FFG[Frontend Feature Flags<br/>VITE_ALLOW_CUSTOM_QUERY_STRING]
     end
 
     subgraph Backend["Backend (Spring Boot)"]
@@ -41,6 +42,8 @@ flowchart TD
         subgraph BusinessModule["Business Module"]
             WCtrl[Workspace Controller]
             FCtrl[Filter Controller]
+            FParse[Parse Query String Endpoint]
+            FExport[Filter Query String Export Endpoint]
             SCtrl[Subscription Controller]
             NPCtrl[Notification Preferences Controller]
             AIPCtrl[AI Preferences Controller]
@@ -99,6 +102,7 @@ flowchart TD
     PR --> WD
     PR --> FB
     PR --> ACP
+    FFG --> FB
     ACP --> NPP
     ACP --> AIPP
     ACP --> WMP
@@ -117,6 +121,8 @@ flowchart TD
     FB --> AI
     AI --> WCtrl
     AI --> FCtrl
+    AI --> FParse
+    AI --> FExport
     AI --> SCtrl
     AI --> NPCtrl
     AI --> AIPCtrl
@@ -146,6 +152,8 @@ flowchart TD
 
     %% Business flows
     FCtrl --> FS
+    FParse --> FS
+    FExport --> FS
     FCtrl --> WAS
     WCtrl --> WAS
     WAS --> WAR
@@ -180,6 +188,10 @@ flowchart TD
     GSCtrl --> GSS
     GSS --> GSR
     GSS --> FS
+
+    %% Filter query-string flows
+    FB -->|Paste fields=...&query=...<br/>(only when flag=true)| FParse
+    FB -->|Copy existing filter as string<br/>(only when flag=true)| FExport
 
     %% Data layer
     UR --> DB

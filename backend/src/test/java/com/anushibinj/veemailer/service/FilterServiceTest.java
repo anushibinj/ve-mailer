@@ -3,6 +3,8 @@ package com.anushibinj.veemailer.service;
 import com.anushibinj.veemailer.repository.EmailSubscriberRepository;
 import com.anushibinj.veemailer.repository.FilterRepository;
 import com.anushibinj.veemailer.repository.WorkspaceRepository;
+import com.anushibinj.veemailer.dto.ParsedFilterQueryResponse;
+import com.anushibinj.veemailer.model.FilterCriteriaClause;
 import com.anushibinj.veemailer.service.extractor.FieldExtractorRegistry;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -102,5 +104,73 @@ class FilterServiceTest {
         List<String> input = new ArrayList<>(List.of("phase", "owner"));
         filterService.computeEffectiveFetchFields(input);
         assertEquals(List.of("phase", "owner"), input, "input list must not be mutated");
+    }
+
+    @Test
+    void testParseFilterQueryString_ParsesEqAndNormalizes() {
+        ParsedFilterQueryResponse parsed = filterService.parseFilterQueryString("fields=id,name&query=name EQ ^*Case360*^");
+        assertEquals(List.of("id", "name"), parsed.getFields());
+        assertEquals(1, parsed.getCriteria().size());
+        assertEquals("name", parsed.getCriteria().get(0).getField());
+        assertEquals("IN", parsed.getCriteria().get(0).getOperator());
+        assertEquals(List.of("*Case360*"), parsed.getCriteria().get(0).getValues());
+        assertEquals("fields=id,name&query=name EQ ^*Case360*^", parsed.getFilterQueryString());
+    }
+
+    @Test
+    void testParseFilterQueryString_ParsesAndClauses() {
+        ParsedFilterQueryResponse parsed = filterService.parseFilterQueryString(
+                "fields=id,name,phase&query=name EQ ^*Case360*^ AND phase NOT_IN ^phase.defect.closed,phase.defect.rejected^");
+        assertEquals(2, parsed.getCriteria().size());
+        assertEquals("IN", parsed.getCriteria().get(0).getOperator());
+        assertEquals("NOT_IN", parsed.getCriteria().get(1).getOperator());
+        assertEquals(List.of("phase.defect.closed", "phase.defect.rejected"),
+                parsed.getCriteria().get(1).getValues());
+    }
+
+    @Test
+    void testParseFilterQueryString_ParsesQuotedOctaneQueryWithCrossFilterAndOr() {
+        ParsedFilterQueryResponse parsed = filterService.parseFilterQueryString(
+                "fields=id,name,owner,phase&query=\"owner EQ {id EQ 8666};(phase EQ {id EQ ^pgxw2gll8xe6du9y1jx87596z^}||phase EQ {id EQ ^dk9y4yv0r3w6dcy1r8ny94xv8^})\"");
+
+        assertEquals(List.of("id", "name", "owner", "phase"), parsed.getFields());
+        assertEquals(2, parsed.getCriteria().size());
+
+        assertEquals("owner", parsed.getCriteria().get(0).getField());
+        assertEquals("IN", parsed.getCriteria().get(0).getOperator());
+        assertEquals(List.of("8666"), parsed.getCriteria().get(0).getValues());
+
+        assertEquals("phase", parsed.getCriteria().get(1).getField());
+        assertEquals("IN", parsed.getCriteria().get(1).getOperator());
+        assertEquals(List.of("pgxw2gll8xe6du9y1jx87596z", "dk9y4yv0r3w6dcy1r8ny94xv8"),
+                parsed.getCriteria().get(1).getValues());
+    }
+
+    @Test
+    void testParseFilterQueryString_RejectsOrAcrossDifferentFields() {
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> filterService.parseFilterQueryString(
+                        "fields=id,name&query=(owner EQ {id EQ 1}||phase EQ {id EQ ^phase.defect.new^})"));
+        assertTrue(ex.getMessage().contains("OR group must use a single field"));
+    }
+
+    @Test
+    void testParseFilterQueryString_InvalidSegmentThrows() {
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> filterService.parseFilterQueryString("fields=id,name&query"));
+        assertTrue(ex.getMessage().contains("Invalid filter query segment"));
+    }
+
+    @Test
+    void testBuildFilterQueryString_SerializesCriteria() {
+        String output = filterService.buildFilterQueryString(
+                List.of("id", "name"),
+                List.of(
+                        FilterCriteriaClause.builder().field("name").operator("IN").values(List.of("*Case360*")).build(),
+                        FilterCriteriaClause.builder().field("phase").operator("NOT_IN")
+                                .values(List.of("phase.defect.closed", "phase.defect.rejected")).build()
+                ));
+        assertEquals("fields=id,name&query=name EQ ^*Case360*^ AND phase NOT_IN ^phase.defect.closed,phase.defect.rejected^",
+                output);
     }
 }
