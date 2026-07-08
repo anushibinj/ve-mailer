@@ -63,6 +63,18 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponseWrapper.success(message));
     }
 
+    @PostMapping("/accept-invite")
+    public ResponseEntity<AuthResponseDto> acceptInvite(@Valid @RequestBody AcceptInviteRequestDto request) {
+        AuthResponseDto response = authService.acceptInvite(request);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/resend-invite")
+    public ResponseEntity<ApiResponseWrapper> resendInvite(@RequestBody ForgotPasswordRequestDto request) {
+        String message = authService.resendInvite(request.getEmail());
+        return ResponseEntity.ok(ApiResponseWrapper.success(message));
+    }
+
     @GetMapping("/me")
     public ResponseEntity<AuthResponseDto.UserProfileDto> getCurrentUser(Authentication authentication) {
         AuthResponseDto.UserProfileDto profile = authService.getCurrentUser(authentication.getName());

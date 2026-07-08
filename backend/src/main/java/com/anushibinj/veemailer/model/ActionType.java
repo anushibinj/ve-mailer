@@ -5,5 +5,6 @@ public enum ActionType {
     UPDATE,
     UNSUBSCRIBE,
     SIGNUP_VERIFICATION,
-    PASSWORD_RESET
+    PASSWORD_RESET,
+    INVITE
 }

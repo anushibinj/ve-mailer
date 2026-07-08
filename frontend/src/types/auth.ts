@@ -3,6 +3,8 @@ export interface UserProfile {
   name: string;
   email: string;
   roles: string[];
+  /** True when the account was admin-created and the user has not yet set their own password. */
+  mustSetPassword?: boolean;
 }
 
 export interface AuthResponse {
@@ -61,4 +63,15 @@ export interface ResetPasswordRequest {
 
 export interface RefreshTokenRequest {
   refreshToken: string;
+}
+
+export interface AcceptInviteRequest {
+  email: string;
+  otp: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
+export interface ResendInviteRequest {
+  email: string;
 }

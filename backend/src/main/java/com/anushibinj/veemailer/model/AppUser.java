@@ -40,6 +40,10 @@ public class AppUser {
     private boolean enabled = true;
 
     @Builder.Default
+    @Column(nullable = false)
+    private boolean mustSetPassword = false;
+
+    @Builder.Default
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
             name = "user_roles",

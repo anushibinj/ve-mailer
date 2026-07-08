@@ -28,5 +28,7 @@ public class AuthResponseDto {
         private String name;
         private String email;
         private Set<String> roles;
+        /** True when the account was admin-created and the user has not yet set their own password. */
+        private boolean mustSetPassword;
     }
 }

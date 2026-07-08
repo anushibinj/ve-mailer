@@ -5,6 +5,7 @@ import com.anushibinj.veemailer.model.Role;
 import com.anushibinj.veemailer.repository.AppUserRepository;
 import com.anushibinj.veemailer.repository.EmailSubscriberRepository;
 import com.anushibinj.veemailer.service.AppUserDetailsService;
+import com.anushibinj.veemailer.service.AuthService;
 import com.anushibinj.veemailer.service.JwtService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -43,6 +44,9 @@ class UserManagementControllerTest {
 
     @MockBean
     private AppUserDetailsService appUserDetailsService;
+
+    @MockBean
+    private AuthService authService;
 
     @Test
     void testGetAllUsers_returnsUserSummaries() throws Exception {

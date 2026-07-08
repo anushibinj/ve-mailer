@@ -282,7 +282,7 @@ subscriber_scheduled_hours  (element collection table)
 OtpRequest
   id
   email
-  actionType      -- SUBSCRIBE | UPDATE | UNSUBSCRIBE | SIGNUP_VERIFICATION | PASSWORD_RESET
+  actionType      -- SUBSCRIBE | UPDATE | UNSUBSCRIBE | SIGNUP_VERIFICATION | PASSWORD_RESET | INVITE
   payload         -- JSON: { workspaceId, filterId, schedule: { type, hours[] } } or user signup data
   otpHash         -- BCrypt hash of the 6-digit OTP
   expiresAt       -- 10 minutes from creation
@@ -293,6 +293,7 @@ AppUser
   email (UNIQUE)
   passwordHash    -- BCrypt hash
   enabled         -- boolean
+  mustSetPassword -- true when admin-created; cleared when user accepts invite
   createdAt
   updatedAt
 
@@ -362,6 +363,8 @@ All endpoints are prefixed with `/api/v1` for business APIs, `/api/auth` for aut
 | `POST` | `/auth/forgot-password`| `email`                                              | No            | Send password reset OTP                 |
 | `POST` | `/auth/verify-reset-otp`| `email`, `otp`                                      | No            | Verify password reset OTP               |
 | `POST` | `/auth/reset-password` | `email`, `otp`, `newPassword`, `confirmPassword`     | No            | Reset password (invalidates sessions)   |
+| `POST` | `/auth/accept-invite`  | `email`, `otp`, `newPassword`, `confirmPassword`     | No            | Accept admin invite — sets password, auto-logs in |
+| `POST` | `/auth/resend-invite`  | `email`                                              | No            | Resend invite OTP for pending account   |
 | `GET`  | `/auth/me`             | —                                                    | Yes           | Get current user profile                |
 
 **Signup restrictions:**
@@ -484,6 +487,26 @@ All mail analytics endpoints require the `ADMIN` role. They provide aggregated s
 | `to`             | —       | End date (ISO date)                |
 | `page`           | `0`     | Page number (0-indexed)            |
 | `size`           | `20`    | Page size                          |
+
+### Admin — User Management (`/api/admin/users`)
+
+Superadmins can list all users and onboard new users without requiring self-signup.
+
+| Method | Path              | Role required | Description                                                        |
+|--------|-------------------|:-------------:|--------------------------------------------------------------------|
+| `GET`  | `/admin/users`    | ADMIN         | List all users with role and subscription counts                   |
+| `POST` | `/admin/users`    | ADMIN         | Onboard a new user (creates account + sends invite OTP to email)   |
+
+**Onboard user request body:** `{ "name": "Jane Smith", "email": "jane@company.com" }`
+
+**User onboarding flow:**
+1. Admin submits name + email via the Admin Panel → Users page.
+2. Backend creates an account with a random temporary password and `mustSetPassword = true`.
+3. An invite email containing a 6-digit OTP is sent to the user.
+4. The user navigates to `/accept-invite`, enters their email and the OTP, and chooses a new password.
+5. On success, the user is automatically logged in and `mustSetPassword` is cleared.
+
+Users with a pending invite appear with an **amber "Pending invite"** badge in the Users table. If the OTP expires, the user can click "Resend invite code" on the Accept Invite page.
 
 ---
 

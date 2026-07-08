@@ -408,10 +408,17 @@ export interface UserSummary {
   email: string;
   roles: string[];
   subscribedFilterCount: number;
+  /** True when the account was admin-created and the user has not yet set their own password. */
+  mustSetPassword?: boolean;
 }
 
 export const adminGetUsers = async (): Promise<UserSummary[]> => {
   const response = await api.get('/api/admin/users');
+  return response.data;
+};
+
+export const adminOnboardUser = async (name: string, email: string): Promise<{ message: string }> => {
+  const response = await api.post('/api/admin/users', { name, email });
   return response.data;
 };
 

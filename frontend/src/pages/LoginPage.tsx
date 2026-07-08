@@ -28,8 +28,13 @@ export default function LoginPage() {
     try {
       const response = await loginApi({ email, password });
       login(response);
-      toast.success('Logged in successfully!');
-      navigate('/', { replace: true });
+      if (response.user.mustSetPassword) {
+        toast.success('Welcome! Please set your password to continue.');
+        navigate('/accept-invite', { state: { email }, replace: true });
+      } else {
+        toast.success('Logged in successfully!');
+        navigate('/', { replace: true });
+      }
     } catch (err: unknown) {
       const axiosError = err as { response?: { data?: ApiErrorResponse } };
       setError(axiosError.response?.data?.message || 'Login failed. Please try again.');
@@ -118,6 +123,13 @@ export default function LoginPage() {
           Don't have an account?{' '}
           <Link to="/signup" className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 font-semibold transition-colors">
             Create one
+          </Link>
+        </p>
+
+        <p className="text-center text-sm text-slate-500 dark:text-slate-400">
+          Invited by an admin?{' '}
+          <Link to="/accept-invite" className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 font-semibold transition-colors">
+            Accept Invite
           </Link>
         </p>
       </form>

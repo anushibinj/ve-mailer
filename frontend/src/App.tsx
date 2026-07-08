@@ -10,6 +10,7 @@ import VerifySignupPage from './pages/VerifySignupPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import AdminControlPanel from './pages/admin/AdminControlPanel';
+import AcceptInvitePage from './pages/AcceptInvitePage';
 import AppFooter from './components/AppFooter';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
@@ -177,6 +178,7 @@ function App() {
                 <Route path="/verify-signup"   element={<VerifySignupPage />} />
                 <Route path="/forgot-password" element={<ForgotPasswordPage />} />
                 <Route path="/reset-password"  element={<ResetPasswordPage />} />
+                <Route path="/accept-invite"   element={<AcceptInvitePage />} />
 
                 <Route
                   path="/"

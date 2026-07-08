@@ -21,4 +21,6 @@ public class UserSummaryDto {
     private List<String> roles;
     /** Number of active subscriptions the user currently holds. */
     private long subscribedFilterCount;
+    /** True when the account was admin-created and the user has not yet set their own password. */
+    private boolean mustSetPassword;
 }

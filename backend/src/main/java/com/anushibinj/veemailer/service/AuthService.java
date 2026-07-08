@@ -192,6 +192,8 @@ public class AuthService {
                 .orElseThrow(() -> new IllegalArgumentException("User not found."));
 
         user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+        // If the user was invited but used forgot-password as a fallback, clear the flag
+        user.setMustSetPassword(false);
         appUserRepository.save(user);
 
         // Invalidate all existing sessions
@@ -203,6 +205,88 @@ public class AuthService {
         return "Password has been reset successfully. Please login with your new password.";
     }
 
+    /**
+     * Creates a new user account without requiring self-signup.
+     * Sends an invite OTP so the user can set their own password via /accept-invite.
+     */
+    @Transactional
+    public String onboardUser(AdminOnboardUserRequestDto request) {
+        if (appUserRepository.existsByEmail(request.getEmail())) {
+            throw new IllegalArgumentException("A user with this email is already registered.");
+        }
+
+        Role memberRole = roleRepository.findByRoleName("MEMBER")
+                .orElseGet(() -> roleRepository.save(Role.builder().roleName("MEMBER").build()));
+
+        // Random temp password — the user will never know it; they must use the invite OTP flow
+        String tempPasswordHash = passwordEncoder.encode(java.util.UUID.randomUUID().toString());
+
+        AppUser user = AppUser.builder()
+                .name(request.getName())
+                .email(request.getEmail())
+                .passwordHash(tempPasswordHash)
+                .enabled(true)
+                .mustSetPassword(true)
+                .roles(Set.of(memberRole))
+                .build();
+
+        appUserRepository.save(user);
+
+        otpService.createAndSendInviteOtp(request.getEmail(), request.getName());
+
+        return "User onboarded successfully. An invite has been sent to " + request.getEmail() + ".";
+    }
+
+    /**
+     * Validates an invite OTP, sets the user's password, and auto-logs them in.
+     */
+    @Transactional
+    public AuthResponseDto acceptInvite(AcceptInviteRequestDto request) {
+        OtpRequest otpRequest = otpService.validateOtp(request.getEmail(), request.getOtp());
+
+        if (otpRequest.getActionType() != ActionType.INVITE) {
+            throw new IllegalArgumentException("Invalid OTP purpose.");
+        }
+
+        if (!request.getNewPassword().equals(request.getConfirmPassword())) {
+            throw new IllegalArgumentException("Passwords do not match.");
+        }
+
+        validatePasswordStrength(request.getNewPassword());
+
+        AppUser user = appUserRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new IllegalArgumentException("User not found."));
+
+        if (!user.isMustSetPassword()) {
+            throw new IllegalArgumentException("This invite has already been accepted.");
+        }
+
+        user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+        user.setMustSetPassword(false);
+        appUserRepository.save(user);
+
+        otpService.cleanupOtp(otpRequest);
+
+        return buildAuthResponse(user);
+    }
+
+    /**
+     * Resends an invite OTP to a pending (mustSetPassword=true) user.
+     */
+    @Transactional
+    public String resendInvite(String email) {
+        AppUser user = appUserRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("No account found with this email."));
+
+        if (!user.isMustSetPassword()) {
+            throw new IllegalArgumentException("This account has already been activated.");
+        }
+
+        otpService.createAndSendInviteOtp(email, user.getName());
+
+        return "A new invite code has been sent to " + email + ".";
+    }
+
     public AuthResponseDto.UserProfileDto getCurrentUser(String email) {
         AppUser user = appUserRepository.findByEmail(email)
                 .orElseThrow(() -> new IllegalArgumentException("User not found."));
@@ -212,6 +296,7 @@ public class AuthService {
                 .name(user.getName())
                 .email(user.getEmail())
                 .roles(user.getRoles().stream().map(Role::getRoleName).collect(Collectors.toSet()))
+                .mustSetPassword(user.isMustSetPassword())
                 .build();
     }
 
@@ -229,6 +314,7 @@ public class AuthService {
                         .name(user.getName())
                         .email(user.getEmail())
                         .roles(user.getRoles().stream().map(Role::getRoleName).collect(Collectors.toSet()))
+                        .mustSetPassword(user.isMustSetPassword())
                         .build())
                 .build();
     }

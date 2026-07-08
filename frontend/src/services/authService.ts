@@ -9,6 +9,7 @@ import type {
   VerifyResetOtpRequest,
   ResetPasswordRequest,
   RefreshTokenRequest,
+  AcceptInviteRequest,
   UserProfile,
 } from '../types/auth';
 
@@ -97,6 +98,17 @@ export const verifyResetOtp = async (data: VerifyResetOtpRequest): Promise<ApiRe
 
 export const resetPassword = async (data: ResetPasswordRequest): Promise<ApiResponseWrapper> => {
   const response = await api.post<ApiResponseWrapper>('/api/auth/reset-password', data);
+  return response.data;
+};
+
+export const acceptInvite = async (data: AcceptInviteRequest): Promise<AuthResponse> => {
+  const response = await api.post<AuthResponse>('/api/auth/accept-invite', data);
+  storeAuthData(response.data);
+  return response.data;
+};
+
+export const resendInvite = async (email: string): Promise<ApiResponseWrapper> => {
+  const response = await api.post<ApiResponseWrapper>('/api/auth/resend-invite', { email });
   return response.data;
 };
 
