@@ -23,6 +23,6 @@
 - [ ] Show count of tickets in the mail body beginning and in the subject
 - [x] Set timezone of Docker container as a env variable
 - [x] As a superadmin, I should be able to onboard users onto the application without them signing up. But when they do sign up, they should be greeted with a "Rest password" kind of screen or a "Set your password" screen so that they can choose their own password.
-- [ ] As an workspace admin, I should be able to subscribe and unsubscribe people from filters.
+- [x] As an workspace admin, I should be able to subscribe and unsubscribe people from filters.
 - [ ] As an user, I should receive mails from ve-mailer even if I never signed up to the application.
 - [x] As a workspace admin, I should see an "Edit workspace" button when I open a workspace dashboard view

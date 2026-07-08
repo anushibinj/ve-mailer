@@ -78,6 +78,22 @@ public class SubscriptionService {
     }
 
     /**
+     * Updates the schedule for any subscription without ownership enforcement.
+     * For use by admins and workspace admins only — authorization must be checked in the controller.
+     */
+    public SubscriptionResponseDTO updateSubscriptionByAdmin(UUID subscriptionId, UUID workspaceId, ScheduleDto schedule) {
+        validateSchedule(schedule);
+
+        EmailSubscriber subscriber = emailSubscriberRepository.findById(subscriptionId)
+                .orElseThrow(() -> new IllegalArgumentException("Subscription not found"));
+
+        enforceWorkspace(workspaceId, subscriber);
+
+        applySchedule(subscriber, schedule);
+        return toResponseDto(emailSubscriberRepository.save(subscriber));
+    }
+
+    /**
      * Deletes a subscription owned by the authenticated user.
      * Enforces ownership: throws AccessDeniedException if the subscription belongs to another user.
      */
@@ -86,6 +102,19 @@ public class SubscriptionService {
                 .orElseThrow(() -> new IllegalArgumentException("Subscription not found"));
 
         enforceOwnership(email, subscriber);
+        enforceWorkspace(workspaceId, subscriber);
+
+        emailSubscriberRepository.delete(subscriber);
+    }
+
+    /**
+     * Deletes any subscription without ownership enforcement.
+     * For use by admins and workspace admins only — authorization must be checked in the controller.
+     */
+    public void deleteSubscriptionByAdmin(UUID subscriptionId, UUID workspaceId) {
+        EmailSubscriber subscriber = emailSubscriberRepository.findById(subscriptionId)
+                .orElseThrow(() -> new IllegalArgumentException("Subscription not found"));
+
         enforceWorkspace(workspaceId, subscriber);
 
         emailSubscriberRepository.delete(subscriber);

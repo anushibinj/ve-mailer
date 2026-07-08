@@ -72,7 +72,8 @@ class SubscriptionControllerTest {
     void testCreateSubscription_ReturnsCreated() throws Exception {
         SubscriptionCreateDto request = new SubscriptionCreateDto(
                 filterId,
-                ScheduleDto.builder().type(ScheduleType.DAILY).hours(List.of(9, 15)).build());
+                ScheduleDto.builder().type(ScheduleType.DAILY).hours(List.of(9, 15)).build(),
+                null);
 
         SubscriptionResponseDTO dto = SubscriptionResponseDTO.builder()
                 .id(UUID.randomUUID())
@@ -101,7 +102,8 @@ class SubscriptionControllerTest {
 
         SubscriptionCreateDto request = new SubscriptionCreateDto(
                 filterId,
-                ScheduleDto.builder().type(ScheduleType.DAILY).hours(List.of()).build());
+                ScheduleDto.builder().type(ScheduleType.DAILY).hours(List.of()).build(),
+                null);
 
         mockMvc.perform(post("/api/v1/workspaces/" + workspaceId + "/subscriptions")
                         .contentType(MediaType.APPLICATION_JSON)

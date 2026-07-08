@@ -104,6 +104,8 @@ export interface Subscription {
 export interface SubscriptionCreatePayload {
   filterId: string;
   schedule: Schedule;
+  /** Admins and workspace admins may pass this to subscribe another user. */
+  recipientEmail?: string;
 }
 
 export interface SubscriptionUpdatePayload {

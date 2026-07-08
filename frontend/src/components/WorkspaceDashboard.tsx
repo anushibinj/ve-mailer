@@ -158,6 +158,7 @@ const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({ workspaceId, on
         isOpen={isCreateModalOpen}
         workspaceId={workspaceId}
         filters={filters}
+        canManage={canManage}
         onClose={() => setIsCreateModalOpen(false)}
         onSuccess={() => { setIsCreateModalOpen(false); loadData(); }}
       />

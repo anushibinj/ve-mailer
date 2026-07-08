@@ -1,17 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   createSubscription,
+  adminGetUsers,
   type Filter,
   type Schedule,
+  type UserSummary,
 } from '../services/apiService';
 import { formatHourLabel } from '../services/scheduleUtils';
-import { Loader2, X, Plus, Bell } from 'lucide-react';
+import { useAuth } from '../hooks/useAuth';
+import { Loader2, X, Plus, Bell, ChevronDown, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface SubscriptionFormModalProps {
   isOpen: boolean;
   workspaceId: string;
   filters: Filter[];
+  canManage?: boolean;
   onClose: () => void;
   onSuccess: () => void;
 }
@@ -22,16 +26,67 @@ const selectClass =
   'focus:outline-none focus:border-indigo-500 dark:focus:border-indigo-400 ' +
   'focus:ring-2 focus:ring-indigo-500/15 dark:focus:ring-indigo-400/15 transition-all appearance-none';
 
+/** Returns the display label for a user: "Name (email)" */
+function userLabel(u: UserSummary) {
+  return `${u.name} (${u.email})`;
+}
+
 const SubscriptionFormModal: React.FC<SubscriptionFormModalProps> = ({
-  isOpen, workspaceId, filters, onClose, onSuccess,
+  isOpen, workspaceId, filters, canManage = false, onClose, onSuccess,
 }) => {
+  const { user } = useAuth();
+
+  // --- core form state ---
   const [selectedFilter, setSelectedFilter] = useState('');
   const [scheduleType, setScheduleType] = useState<'DAILY' | 'WEEKLY'>('DAILY');
   const [scheduledHours, setScheduledHours] = useState<number[]>([]);
   const [hourToAdd, setHourToAdd] = useState<number>(9);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  if (!isOpen) return null;
+  // --- recipient combobox state (admin-only) ---
+  const [users, setUsers] = useState<UserSummary[]>([]);
+  const [usersLoading, setUsersLoading] = useState(false);
+  // null = "Myself"; a UserSummary = subscribe that person
+  const [selectedRecipient, setSelectedRecipient] = useState<UserSummary | null>(null);
+  const [query, setQuery] = useState('');
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const comboboxRef = useRef<HTMLDivElement>(null);
+
+  // Fetch users once when modal opens (only for admins)
+  useEffect(() => {
+    if (!isOpen || !canManage) return;
+    const loadUsers = () => {
+      setUsersLoading(true);
+      adminGetUsers()
+        .then(data => setUsers(data))
+        .catch(() => toast.error('Could not load users list.'))
+        .finally(() => setUsersLoading(false));
+    };
+    loadUsers();
+  }, [isOpen, canManage]);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (comboboxRef.current && !comboboxRef.current.contains(e.target as Node)) {
+        setDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  // "Myself" synthetic entry shown at top of list
+  const myselfLabel = `${user?.name ?? 'Myself'} (${user?.email ?? ''}) — you`;
+
+  // Filter: empty query shows all; otherwise search through display label
+  const filteredUsers = query.trim()
+    ? users.filter(u => userLabel(u).toLowerCase().includes(query.trim().toLowerCase()))
+    : users;
+
+  const displayValue = selectedRecipient
+    ? userLabel(selectedRecipient)
+    : query;
 
   const isFormValid = selectedFilter !== '' && scheduledHours.length > 0;
 
@@ -41,11 +96,37 @@ const SubscriptionFormModal: React.FC<SubscriptionFormModalProps> = ({
     }
   };
 
-  const resetForm = () => {
-    setSelectedFilter(''); setScheduleType('DAILY'); setScheduledHours([]); setHourToAdd(9);
-  };
+  const resetForm = useCallback(() => {
+    setSelectedFilter('');
+    setScheduleType('DAILY');
+    setScheduledHours([]);
+    setHourToAdd(9);
+    setSelectedRecipient(null);
+    setQuery('');
+    setDropdownOpen(false);
+  }, []);
 
   const handleClose = () => { resetForm(); onClose(); };
+
+  const handleSelectUser = (u: UserSummary | null) => {
+    setSelectedRecipient(u);
+    setQuery('');
+    setDropdownOpen(false);
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSelectedRecipient(null); // clear selection when typing
+    setQuery(e.target.value);
+    setDropdownOpen(true);
+  };
+
+  const handleInputFocus = () => setDropdownOpen(true);
+
+  const handleClearRecipient = () => {
+    setSelectedRecipient(null);
+    setQuery('');
+    setDropdownOpen(false);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,7 +134,15 @@ const SubscriptionFormModal: React.FC<SubscriptionFormModalProps> = ({
     setIsSubmitting(true);
     try {
       const schedule: Schedule = { type: scheduleType, hours: scheduledHours };
-      await createSubscription(workspaceId, { filterId: selectedFilter, schedule });
+      const payload: { filterId: string; schedule: Schedule; recipientEmail?: string } = {
+        filterId: selectedFilter,
+        schedule,
+      };
+      // Send recipientEmail only when admin explicitly picked someone other than themselves
+      if (canManage && selectedRecipient && selectedRecipient.email.toLowerCase() !== user?.email?.toLowerCase()) {
+        payload.recipientEmail = selectedRecipient.email;
+      }
+      await createSubscription(workspaceId, payload);
       toast.success('Subscribed successfully!');
       resetForm();
       onSuccess();
@@ -68,6 +157,8 @@ const SubscriptionFormModal: React.FC<SubscriptionFormModalProps> = ({
       setIsSubmitting(false);
     }
   };
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="sub-form-title">
@@ -102,6 +193,103 @@ const SubscriptionFormModal: React.FC<SubscriptionFormModalProps> = ({
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Recipient picker — admins can subscribe any user */}
+            {canManage && (
+              <div className="space-y-1.5">
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+                  Recipient
+                </label>
+                <div ref={comboboxRef} className="relative">
+                  <div className="relative flex items-center">
+                    <input
+                      type="text"
+                      autoComplete="off"
+                      value={displayValue}
+                      onChange={handleInputChange}
+                      onFocus={handleInputFocus}
+                      placeholder={`${user?.name ?? 'Myself'} (${user?.email ?? ''}) — you`}
+                      className="w-full pl-3.5 pr-16 py-2.5 border border-slate-200 dark:border-slate-600 rounded-xl text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 bg-white dark:bg-slate-800/60 focus:outline-none focus:border-indigo-500 dark:focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/15 dark:focus:ring-indigo-400/15 transition-all"
+                    />
+                    <div className="absolute right-2 flex items-center gap-1">
+                      {selectedRecipient && (
+                        <button
+                          type="button"
+                          onClick={handleClearRecipient}
+                          className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                          aria-label="Clear selection"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                      {usersLoading
+                        ? <Loader2 className="h-4 w-4 text-slate-400 animate-spin" />
+                        : (
+                          <button
+                            type="button"
+                            onMouseDown={e => { e.preventDefault(); setDropdownOpen(prev => !prev); }}
+                            className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                            aria-label={dropdownOpen ? 'Close dropdown' : 'Open dropdown'}
+                          >
+                            <ChevronDown className={`h-4 w-4 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
+                          </button>
+                        )
+                      }
+                    </div>
+                  </div>
+
+                  {/* Dropdown */}
+                  {dropdownOpen && !usersLoading && (
+                    <div className="absolute z-10 mt-1.5 w-full bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 shadow-lg overflow-hidden max-h-52 overflow-y-auto">
+                      {/* Myself option */}
+                      <button
+                        type="button"
+                        onMouseDown={e => { e.preventDefault(); handleSelectUser(null); }}
+                        className={`w-full text-left px-3.5 py-2.5 text-sm flex items-center justify-between gap-2 transition-colors
+                          ${!selectedRecipient
+                            ? 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300'
+                            : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
+                      >
+                        <span className="truncate">{myselfLabel}</span>
+                        {!selectedRecipient && <Check className="h-3.5 w-3.5 flex-shrink-0" />}
+                      </button>
+
+                      {/* Divider */}
+                      {filteredUsers.length > 0 && (
+                        <div className="border-t border-slate-100 dark:border-slate-800" />
+                      )}
+
+                      {filteredUsers.length === 0 && query.trim() ? (
+                        <p className="px-3.5 py-3 text-sm text-slate-400 dark:text-slate-500">
+                          No users match "{query}".
+                        </p>
+                      ) : (
+                        filteredUsers.map(u => {
+                          const isSelected = selectedRecipient?.email === u.email;
+                          return (
+                            <button
+                              key={u.id}
+                              type="button"
+                              onMouseDown={e => { e.preventDefault(); handleSelectUser(u); }}
+                              className={`w-full text-left px-3.5 py-2.5 text-sm flex items-center justify-between gap-2 transition-colors
+                                ${isSelected
+                                  ? 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300'
+                                  : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
+                            >
+                              <span className="truncate">{userLabel(u)}</span>
+                              {isSelected && <Check className="h-3.5 w-3.5 flex-shrink-0" />}
+                            </button>
+                          );
+                        })
+                      )}
+                    </div>
+                  )}
+                </div>
+                <p className="text-xs text-slate-400 dark:text-slate-500">
+                  Leave as yourself or pick another user to subscribe on their behalf.
+                </p>
+              </div>
+            )}
+
             <div className="space-y-1.5">
               <label htmlFor="sub-filter" className="block text-sm font-medium text-slate-700 dark:text-slate-300">Filter Template</label>
               <select

@@ -131,9 +131,21 @@ public class WorkspaceController {
             @PathVariable UUID workspaceId,
             @RequestBody @Valid SubscriptionCreateDto request,
             @AuthenticationPrincipal UserDetails userDetails) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        // Admins and workspace admins may subscribe any user by specifying recipientEmail.
+        // Regular users always subscribe themselves.
+        String targetEmail = userDetails.getUsername();
+        if (request.getRecipientEmail() != null && !request.getRecipientEmail().isBlank()) {
+            if (!workspaceAdminService.canViewWorkspaceSubscriptions(authentication, workspaceId)) {
+                throw new AccessDeniedException("Only admins and workspace admins can subscribe others");
+            }
+            targetEmail = request.getRecipientEmail().trim().toLowerCase();
+        }
+
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(subscriptionService.createSubscription(
-                        userDetails.getUsername(), workspaceId,
+                        targetEmail, workspaceId,
                         request.getFilterId(), request.getSchedule()));
     }
 
@@ -143,6 +155,14 @@ public class WorkspaceController {
             @PathVariable UUID subscriptionId,
             @RequestBody @Valid SubscriptionUpdateDto request,
             @AuthenticationPrincipal UserDetails userDetails) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        // Admins and workspace admins may update any subscription in their workspace.
+        if (workspaceAdminService.canViewWorkspaceSubscriptions(authentication, workspaceId)) {
+            return ResponseEntity.ok(subscriptionService.updateSubscriptionByAdmin(
+                    subscriptionId, workspaceId, request.getSchedule()));
+        }
+
         return ResponseEntity.ok(subscriptionService.updateSubscription(
                 userDetails.getUsername(), subscriptionId, workspaceId, request.getSchedule()));
     }
@@ -152,7 +172,14 @@ public class WorkspaceController {
             @PathVariable UUID workspaceId,
             @PathVariable UUID subscriptionId,
             @AuthenticationPrincipal UserDetails userDetails) {
-        subscriptionService.deleteSubscription(userDetails.getUsername(), subscriptionId, workspaceId);
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        // Admins and workspace admins may delete any subscription in their workspace.
+        if (workspaceAdminService.canViewWorkspaceSubscriptions(authentication, workspaceId)) {
+            subscriptionService.deleteSubscriptionByAdmin(subscriptionId, workspaceId);
+        } else {
+            subscriptionService.deleteSubscription(userDetails.getUsername(), subscriptionId, workspaceId);
+        }
         return ResponseEntity.noContent().build();
     }
 

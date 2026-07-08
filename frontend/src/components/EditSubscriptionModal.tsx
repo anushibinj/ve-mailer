@@ -6,6 +6,7 @@ import {
   type Schedule,
 } from '../services/apiService';
 import { formatHourLabel } from '../services/scheduleUtils';
+import { useAuth } from '../hooks/useAuth';
 import { Loader2, X, Plus, Bell, AlertTriangle } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -28,6 +29,8 @@ const selectClass =
 const EditSubscriptionModal: React.FC<EditSubscriptionModalProps> = ({
   subscription, workspaceId, isOpen, onClose, onSuccess,
 }) => {
+  const { user } = useAuth();
+  const isOwnSubscription = subscription.recipientEmail.toLowerCase() === (user?.email ?? '').toLowerCase();
   const [step, setStep] = useState<Step>('edit');
   const [scheduleType, setScheduleType] = useState<'DAILY' | 'WEEKLY'>(subscription.schedule.type);
   const [scheduledHours, setScheduledHours] = useState<number[]>([...subscription.schedule.hours]);
@@ -178,8 +181,13 @@ const EditSubscriptionModal: React.FC<EditSubscriptionModalProps> = ({
               <div className="flex items-start gap-3 p-4 bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 rounded-xl">
                 <AlertTriangle className="h-5 w-5 text-rose-500 dark:text-rose-400 flex-shrink-0 mt-0.5" />
                 <p className="text-sm text-rose-700 dark:text-rose-300">
-                  This will permanently remove your subscription to{' '}
-                  <span className="font-semibold">{subscription.filterTitle}</span>. Are you sure?
+                  {isOwnSubscription ? (
+                    <>This will permanently remove your subscription to{' '}
+                    <span className="font-semibold">{subscription.filterTitle}</span>. Are you sure?</>
+                  ) : (
+                    <>This will permanently remove <span className="font-semibold">{subscription.recipientEmail}</span>'s subscription to{' '}
+                    <span className="font-semibold">{subscription.filterTitle}</span>. Are you sure?</>
+                  )}
                 </p>
               </div>
               <div className="flex items-center justify-end gap-2.5">
