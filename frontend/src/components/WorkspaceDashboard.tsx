@@ -3,16 +3,19 @@ import {
   fetchSubscriptionsByWorkspace,
   fetchFilters,
   runSubscription,
+  adminFetchWorkspace,
   type Subscription,
   type Filter,
   type Schedule,
+  type WorkspaceAdmin,
 } from '../services/apiService';
 import { formatHourLabel } from '../services/scheduleUtils';
 import { useAuth } from '../hooks/useAuth';
-import { Loader2, ArrowLeft, SlidersHorizontal, Pencil, Play, Plus, Bell, Mail } from 'lucide-react';
+import { Loader2, ArrowLeft, SlidersHorizontal, Pencil, Play, Plus, Bell, Mail, Settings2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import EditSubscriptionModal from './EditSubscriptionModal';
 import SubscriptionFormModal from './SubscriptionFormModal';
+import WorkspaceFormModal from './WorkspaceFormModal';
 
 interface WorkspaceDashboardProps {
   workspaceId: string;
@@ -29,6 +32,8 @@ const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({ workspaceId, on
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingSubscription, setEditingSubscription] = useState<Subscription | null>(null);
   const [runningIds, setRunningIds] = useState<Set<string>>(new Set());
+  const [workspaceData, setWorkspaceData] = useState<WorkspaceAdmin | null>(null);
+  const [isEditWorkspaceOpen, setIsEditWorkspaceOpen] = useState(false);
 
   const handleRunSubscription = async (sub: Subscription) => {
     setRunningIds(prev => new Set(prev).add(sub.id));
@@ -50,12 +55,15 @@ const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({ workspaceId, on
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const [subsData, filtersData] = await Promise.all([
+      const promises: [Promise<Subscription[]>, Promise<Filter[]>, Promise<WorkspaceAdmin | null>] = [
         fetchSubscriptionsByWorkspace(workspaceId),
         fetchFilters(workspaceId),
-      ]);
+        canManage ? adminFetchWorkspace(workspaceId) : Promise.resolve(null),
+      ];
+      const [subsData, filtersData, wsData] = await Promise.all(promises);
       setSubscriptions(subsData);
       setFilters(filtersData);
+      if (wsData) setWorkspaceData(wsData);
     } catch {
       toast.error('Failed to load dashboard data.');
     } finally {
@@ -100,12 +108,23 @@ const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({ workspaceId, on
             <ArrowLeft className="h-5 w-5" />
           </button>
           <div>
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Dashboard</h1>
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
+              {workspaceData?.title ?? 'Dashboard'}
+            </h1>
             <p className="text-slate-400 dark:text-slate-500 text-sm mt-0.5">Manage your email subscriptions</p>
           </div>
         </div>
 
         <div className="flex items-center gap-2.5 flex-shrink-0">
+          {canManage && (
+            <button
+              onClick={() => setIsEditWorkspaceOpen(true)}
+              className="inline-flex items-center gap-2 px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/60 hover:border-violet-300 dark:hover:border-violet-600 hover:text-violet-600 dark:hover:text-violet-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 transition-all shadow-sm cursor-pointer"
+            >
+              <Settings2 className="h-4 w-4" />
+              Edit Workspace
+            </button>
+          )}
           <button
             onClick={onOpenFilterBuilder}
             className="inline-flex items-center gap-2 px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/60 hover:border-indigo-300 dark:hover:border-indigo-600 hover:text-indigo-600 dark:hover:text-indigo-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 transition-all shadow-sm cursor-pointer"
@@ -122,6 +141,18 @@ const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({ workspaceId, on
           </button>
         </div>
       </div>
+
+      {canManage && (
+        <WorkspaceFormModal
+          isOpen={isEditWorkspaceOpen}
+          workspace={workspaceData}
+          onClose={() => setIsEditWorkspaceOpen(false)}
+          onSuccess={(saved) => {
+            setWorkspaceData(saved);
+            setIsEditWorkspaceOpen(false);
+          }}
+        />
+      )}
 
       <SubscriptionFormModal
         isOpen={isCreateModalOpen}
