@@ -19,7 +19,7 @@
 - [x] Allow multiple super admins and multiple workspace admins. Super admins only create workspaces (not configure params/secrets). Workspace admins have to configure secrets, filters and other values for the workspace as per their need. This means that there should be an "Enabled" mode for the workspace to mark a workspace as available to the public only after it is fully ready for use.
 - [x] In the filter template execution window, show a proper preview of the output with columns instead of json output that it is currently showing
 - [x] Limit the number of tickets in the filter preview to just 10. And change the "Execute" button lable to "Preview"
-- [ ] Create user groups/teams that the admin can add users to to receive notification mails in bulk
+- [x] Create user groups/teams that the admin can add users to to receive notification mails in bulk
 - [ ] Show count of tickets in the mail body beginning and in the subject
 - [x] Set timezone of Docker container as a env variable
 - [x] As a superadmin, I should be able to onboard users onto the application without them signing up. But when they do sign up, they should be greeted with a "Rest password" kind of screen or a "Set your password" screen so that they can choose their own password.
