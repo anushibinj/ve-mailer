@@ -19,12 +19,14 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
+import org.mockito.ArgumentCaptor;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @ExtendWith(MockitoExtension.class)
 class PollingServiceTest {
@@ -97,6 +99,45 @@ class PollingServiceTest {
         // Group 1: sub1, sub2  |  Group 2: sub3  |  Group 3: sub4
         verify(notificationService, times(3))
                 .processAndSendNotifications(anyList(), anyList(), anyList(), anyInt(), any(), any());
+    }
+
+    /**
+     * Core deduplication test: when two subscribers share the same workspace+filter and
+     * the same scheduled hour, the filter must be executed exactly ONCE and both
+     * recipients must appear in the single processAndSendNotifications call.
+     */
+    @Test
+    @SuppressWarnings("unchecked")
+    void testProcessAtHour_SharedFilter_ExecutesFilterOnce() {
+        EmailSubscriber sub1 = new EmailSubscriber();
+        sub1.setWorkspace(workspace1);
+        sub1.setFilter(filter1);
+        sub1.setRecipientEmail("alice@example.com");
+
+        EmailSubscriber sub2 = new EmailSubscriber();
+        sub2.setWorkspace(workspace1);
+        sub2.setFilter(filter1); // Same workspace + filter → same group
+        sub2.setRecipientEmail("bob@example.com");
+
+        when(emailSubscriberRepository.findActiveByScheduledHourAndScheduleType(9, ScheduleType.DAILY, Status.ACTIVE))
+                .thenReturn(Arrays.asList(sub1, sub2));
+        when(filterService.getFilterFields(filter1.getId())).thenReturn(List.of("name"));
+        when(filterService.executeFilter(filter1.getId(), workspace1.getId())).thenReturn(Collections.emptyList());
+        when(filterService.getQueryLimit()).thenReturn(25);
+
+        pollingService.processAtHour(9, DayOfWeek.WEDNESDAY);
+
+        // Filter must be executed exactly once, not once per subscriber
+        verify(filterService, times(1)).executeFilter(filter1.getId(), workspace1.getId());
+
+        // Both recipients must be included in a single notification call
+        ArgumentCaptor<List<EmailSubscriber>> recipientsCaptor = ArgumentCaptor.forClass(List.class);
+        verify(notificationService, times(1))
+                .processAndSendNotifications(recipientsCaptor.capture(), anyList(), anyList(), anyInt(), any(), any());
+        List<EmailSubscriber> captured = recipientsCaptor.getValue();
+        assertEquals(2, captured.size(), "Both subscribers must receive the notification");
+        assertEquals(true, captured.contains(sub1));
+        assertEquals(true, captured.contains(sub2));
     }
 
     @Test

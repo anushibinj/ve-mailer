@@ -6,10 +6,10 @@
 - [x] "Manager Filter Templates" should be limited only to admins
 - [x] If the ve client expires due to timeout, it should auto retry login
 - [ ] ORDER BY for queries
-- [ ] A mail ID cannot have duplicate subscriptions to the same filter. With the new schedule model, the composite key should be (recipientEmail, filterId) â€” a user should not be able to subscribe to the same filter more than once.
+- [ ] A mail ID cannot have duplicate subscriptions to the same filter. With the new schedule model, the composite key should be (recipientEmail, filterId) — a user should not be able to subscribe to the same filter more than once.
 - [x] Add an option called "Show AI Summary for each ticket". Enabling this should bring in a new column in the resulting e-mail HTML with summary of each ticket.
 - [ ] OTP regeneration timeout. Should be validated both on backend and frontend to prevent people hammering the e-mail service. Make the resend interval start with 30 seconds and increment 30 seconds every retry.
-- [ ] If multiple people are subscribed to the same filter at the same time, then don't execute the filter multiple times. Execute it once and send the same copy to all the users registered for that time.
+- [x] If multiple people are subscribed to the same filter at the same time, then don't execute the filter multiple times. Execute it once and send the same copy to all the users registered for that time.
 - [x] The e-mail subject should be "[ve-mailer] filter_title"
 - [x] Add a new property in frontend called VITE_FOOTER_HTML that accepts a HTML element (a div) that can be set as the app's footer
 - [ ] Lazy load every component in the frontend
@@ -26,3 +26,4 @@
 - [x] As an workspace admin, I should be able to subscribe and unsubscribe people from filters.
 - [ ] As an user, I should receive mails from ve-mailer even if I never signed up to the application.
 - [x] As a workspace admin, I should see an "Edit workspace" button when I open a workspace dashboard view
+
