@@ -1,14 +1,17 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   createSubscription,
-  adminGetUsers,
+  createGroupSubscription,
+  fetchWorkspaceUsers,
+  fetchRecipientGroups,
   type Filter,
   type Schedule,
   type UserSummary,
+  type RecipientGroup,
 } from '../services/apiService';
 import { formatHourLabel } from '../services/scheduleUtils';
 import { useAuth } from '../hooks/useAuth';
-import { Loader2, X, Plus, Bell, ChevronDown, Check } from 'lucide-react';
+import { Loader2, X, Plus, Bell, ChevronDown, Check, Users } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface SubscriptionFormModalProps {
@@ -36,6 +39,9 @@ const SubscriptionFormModal: React.FC<SubscriptionFormModalProps> = ({
 }) => {
   const { user } = useAuth();
 
+  // --- mode: 'individual' or 'group' ---
+  const [mode, setMode] = useState<'individual' | 'group'>('individual');
+
   // --- core form state ---
   const [selectedFilter, setSelectedFilter] = useState('');
   const [scheduleType, setScheduleType] = useState<'DAILY' | 'WEEKLY'>('DAILY');
@@ -43,7 +49,7 @@ const SubscriptionFormModal: React.FC<SubscriptionFormModalProps> = ({
   const [hourToAdd, setHourToAdd] = useState<number>(9);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // --- recipient combobox state (admin-only) ---
+  // --- recipient combobox state (admin-only, individual mode) ---
   const [users, setUsers] = useState<UserSummary[]>([]);
   const [usersLoading, setUsersLoading] = useState(false);
   // null = "Myself"; a UserSummary = subscribe that person
@@ -52,18 +58,34 @@ const SubscriptionFormModal: React.FC<SubscriptionFormModalProps> = ({
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const comboboxRef = useRef<HTMLDivElement>(null);
 
-  // Fetch users once when modal opens (only for admins)
+  // --- group picker state (admin-only, group mode) ---
+  const [groups, setGroups] = useState<RecipientGroup[]>([]);
+  const [groupsLoading, setGroupsLoading] = useState(false);
+  const [selectedGroupId, setSelectedGroupId] = useState('');
+
+  // Fetch users once when modal opens (only for admins, individual mode)
   useEffect(() => {
     if (!isOpen || !canManage) return;
     const loadUsers = () => {
       setUsersLoading(true);
-      adminGetUsers()
+      fetchWorkspaceUsers(workspaceId)
         .then(data => setUsers(data))
         .catch(() => toast.error('Could not load users list.'))
         .finally(() => setUsersLoading(false));
     };
     loadUsers();
-  }, [isOpen, canManage]);
+  }, [isOpen, canManage, workspaceId]);
+
+  // Fetch groups when modal opens in group mode
+  useEffect(() => {
+    if (!isOpen || !canManage) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setGroupsLoading(true);
+    fetchRecipientGroups(workspaceId)
+      .then(data => setGroups(data))
+      .catch(() => toast.error('Could not load recipient groups.'))
+      .finally(() => setGroupsLoading(false));
+  }, [isOpen, canManage, workspaceId]);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -88,7 +110,8 @@ const SubscriptionFormModal: React.FC<SubscriptionFormModalProps> = ({
     ? userLabel(selectedRecipient)
     : query;
 
-  const isFormValid = selectedFilter !== '' && scheduledHours.length > 0;
+  const isFormValid = selectedFilter !== '' && scheduledHours.length > 0
+    && (mode === 'individual' || (mode === 'group' && selectedGroupId !== ''));
 
   const handleAddHour = () => {
     if (!scheduledHours.includes(hourToAdd)) {
@@ -104,6 +127,8 @@ const SubscriptionFormModal: React.FC<SubscriptionFormModalProps> = ({
     setSelectedRecipient(null);
     setQuery('');
     setDropdownOpen(false);
+    setSelectedGroupId('');
+    setMode('individual');
   }, []);
 
   const handleClose = () => { resetForm(); onClose(); };
@@ -134,16 +159,30 @@ const SubscriptionFormModal: React.FC<SubscriptionFormModalProps> = ({
     setIsSubmitting(true);
     try {
       const schedule: Schedule = { type: scheduleType, hours: scheduledHours };
-      const payload: { filterId: string; schedule: Schedule; recipientEmail?: string } = {
-        filterId: selectedFilter,
-        schedule,
-      };
-      // Send recipientEmail only when admin explicitly picked someone other than themselves
-      if (canManage && selectedRecipient && selectedRecipient.email.toLowerCase() !== user?.email?.toLowerCase()) {
-        payload.recipientEmail = selectedRecipient.email;
+
+      if (mode === 'group' && selectedGroupId) {
+        // Create a single group subscription row — members are expanded at send time
+        const result = await createGroupSubscription(workspaceId, selectedGroupId, {
+          filterId: selectedFilter,
+          schedule,
+        });
+        const groupName = result.groupName ?? groups.find(g => g.id === selectedGroupId)?.name ?? 'group';
+        const count = result.groupMemberCount ?? 0;
+        toast.success(`Group "${groupName}" subscribed (${count} member${count !== 1 ? 's' : ''} will be notified)!`);
+      } else {
+        // Individual subscription
+        const payload: { filterId: string; schedule: Schedule; recipientEmail?: string } = {
+          filterId: selectedFilter,
+          schedule,
+        };
+        // Send recipientEmail only when admin explicitly picked someone other than themselves
+        if (canManage && selectedRecipient && selectedRecipient.email.toLowerCase() !== user?.email?.toLowerCase()) {
+          payload.recipientEmail = selectedRecipient.email;
+        }
+        await createSubscription(workspaceId, payload);
+        toast.success('Subscribed successfully!');
       }
-      await createSubscription(workspaceId, payload);
-      toast.success('Subscribed successfully!');
+
       resetForm();
       onSuccess();
     } catch (err: unknown) {
@@ -193,8 +232,73 @@ const SubscriptionFormModal: React.FC<SubscriptionFormModalProps> = ({
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Recipient picker — admins can subscribe any user */}
+            {/* Mode toggle — admins can choose individual or group */}
             {canManage && (
+              <div className="flex rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => setMode('individual')}
+                  className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-semibold transition-colors cursor-pointer ${
+                    mode === 'individual'
+                      ? 'bg-indigo-600 text-white'
+                      : 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'
+                  }`}
+                >
+                  <Bell className="h-3.5 w-3.5" />
+                  Individual
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMode('group')}
+                  className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-semibold transition-colors cursor-pointer ${
+                    mode === 'group'
+                      ? 'bg-indigo-600 text-white'
+                      : 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'
+                  }`}
+                >
+                  <Users className="h-3.5 w-3.5" />
+                  Group
+                </button>
+              </div>
+            )}
+
+            {/* Group picker (group mode, admin only) */}
+            {canManage && mode === 'group' && (
+              <div className="space-y-1.5">
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+                  Recipient Group
+                </label>
+                {groupsLoading ? (
+                  <div className="flex items-center gap-2 text-slate-400 text-sm py-2">
+                    <Loader2 className="h-4 w-4 animate-spin" /> Loading groups…
+                  </div>
+                ) : groups.length === 0 ? (
+                  <p className="text-xs text-slate-400 dark:text-slate-500 py-1">
+                    No groups found. Create one from the workspace dashboard.
+                  </p>
+                ) : (
+                  <select
+                    required={mode === 'group'}
+                    value={selectedGroupId}
+                    onChange={e => setSelectedGroupId(e.target.value)}
+                    className={selectClass}
+                  >
+                    <option value="" disabled>Select a group…</option>
+                    {groups.map(g => (
+                      <option key={g.id} value={g.id}>
+                        {g.name} ({g.memberCount} member{g.memberCount !== 1 ? 's' : ''})
+                      </option>
+                    ))}
+                  </select>
+                )}
+                <p className="text-xs text-slate-400 dark:text-slate-500">
+                  All members of the group will be subscribed to the selected filter.
+                </p>
+              </div>
+            )}
+
+            {/* Recipient picker — admins can subscribe any user (individual mode) */}
+            {canManage && mode === 'individual' && (
               <div className="space-y-1.5">
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
                   Recipient

@@ -5,14 +5,16 @@ import WorkspaceManagementPage from './WorkspaceManagementPage';
 import MailAnalyticsPage from './MailAnalyticsPage';
 import UsersPage from './UsersPage';
 import GeneralSettingsPage from './GeneralSettingsPage';
-import { Settings, Layers, Bell, Sparkles, BarChart2, Users } from 'lucide-react';
+import RecipientGroupsPage from './RecipientGroupsPage';
+import { Settings, Layers, Bell, Sparkles, BarChart2, Users, UsersRound } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 
-type AdminTab = 'notification-preferences' | 'ai-preferences' | 'workspaces' | 'mail-analytics' | 'users' | 'general';
+type AdminTab = 'notification-preferences' | 'ai-preferences' | 'workspaces' | 'mail-analytics' | 'users' | 'general' | 'recipient-groups';
 
 const allTabs: { key: AdminTab; label: string; icon: React.ReactNode; description: string; adminOnly?: boolean }[] = [
   { key: 'general', label: 'General', icon: <Settings className="h-4 w-4" />, description: 'App-wide settings', adminOnly: true },
   { key: 'workspaces', label: 'Workspaces', icon: <Layers className="h-4 w-4" />, description: 'Manage workspaces' },
+  { key: 'recipient-groups', label: 'Groups', icon: <UsersRound className="h-4 w-4" />, description: 'Recipient groups' },
   { key: 'notification-preferences', label: 'Notifications', icon: <Bell className="h-4 w-4" />, description: 'Delivery preferences', adminOnly: true },
   { key: 'ai-preferences', label: 'AI', icon: <Sparkles className="h-4 w-4" />, description: 'AI configuration', adminOnly: true },
   { key: 'mail-analytics', label: 'Analytics', icon: <BarChart2 className="h-4 w-4" />, description: 'Mail statistics', adminOnly: true },
@@ -83,6 +85,7 @@ export default function AdminControlPanel() {
           {activeTab === 'mail-analytics' && <MailAnalyticsPage />}
           {activeTab === 'users' && <UsersPage />}
           {activeTab === 'general' && <GeneralSettingsPage />}
+          {activeTab === 'recipient-groups' && <RecipientGroupsPage />}
         </div>
       </div>
     </div>

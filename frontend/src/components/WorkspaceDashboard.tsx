@@ -11,7 +11,7 @@ import {
 } from '../services/apiService';
 import { formatHourLabel } from '../services/scheduleUtils';
 import { useAuth } from '../hooks/useAuth';
-import { Loader2, ArrowLeft, SlidersHorizontal, Pencil, Play, Plus, Bell, Mail, Settings2 } from 'lucide-react';
+import { Loader2, ArrowLeft, SlidersHorizontal, Pencil, Play, Plus, Bell, Mail, Settings2, Users } from 'lucide-react';
 import toast from 'react-hot-toast';
 import EditSubscriptionModal from './EditSubscriptionModal';
 import SubscriptionFormModal from './SubscriptionFormModal';
@@ -21,9 +21,11 @@ interface WorkspaceDashboardProps {
   workspaceId: string;
   onBack: () => void;
   onOpenFilterBuilder: () => void;
+  /** Opens the recipient-groups management view for this workspace (admin/workspace-admin only). */
+  onOpenGroupManager: () => void;
 }
 
-const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({ workspaceId, onBack, onOpenFilterBuilder }) => {
+const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({ workspaceId, onBack, onOpenFilterBuilder, onOpenGroupManager }) => {
   const { isAdmin, isWorkspaceAdmin } = useAuth();
   const canManage = isAdmin || isWorkspaceAdmin;
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
@@ -39,7 +41,11 @@ const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({ workspaceId, on
     setRunningIds(prev => new Set(prev).add(sub.id));
     try {
       await runSubscription(workspaceId, sub.id);
-      toast.success(`Email sent to ${sub.recipientEmail}!`);
+      if (sub.groupName) {
+        toast.success(`Emails sent to group "${sub.groupName}"!`);
+      } else {
+        toast.success(`Email sent to ${sub.recipientEmail}!`);
+      }
     } catch (err: unknown) {
       const axiosErr = err as { response?: { data?: { message?: string } } };
       toast.error(axiosErr.response?.data?.message ?? 'Failed to send email. Please try again.');
@@ -123,6 +129,15 @@ const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({ workspaceId, on
             >
               <Settings2 className="h-4 w-4" />
               Edit Workspace
+            </button>
+          )}
+          {canManage && (
+            <button
+              onClick={onOpenGroupManager}
+              className="inline-flex items-center gap-2 px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/60 hover:border-teal-300 dark:hover:border-teal-600 hover:text-teal-600 dark:hover:text-teal-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 transition-all shadow-sm cursor-pointer"
+            >
+              <Users className="h-4 w-4" />
+              Groups
             </button>
           )}
           <button
@@ -234,7 +249,21 @@ const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({ workspaceId, on
                   >
                     {canManage && (
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="text-sm font-medium text-slate-900 dark:text-slate-200">{sub.recipientEmail}</span>
+                        {sub.groupId ? (
+                          <div className="flex items-center gap-2">
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-teal-50 dark:bg-teal-500/10 text-teal-700 dark:text-teal-300 text-xs font-semibold border border-teal-100 dark:border-teal-500/20">
+                              <Users className="h-3 w-3" />
+                              {sub.groupName}
+                            </span>
+                            {sub.groupMemberCount != null && (
+                              <span className="text-xs text-slate-400 dark:text-slate-500">
+                                {sub.groupMemberCount} member{sub.groupMemberCount !== 1 ? 's' : ''}
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-sm font-medium text-slate-900 dark:text-slate-200">{sub.recipientEmail}</span>
+                        )}
                       </td>
                     )}
                     <td className="px-6 py-4 whitespace-nowrap">

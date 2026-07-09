@@ -55,6 +55,7 @@ public class PollingService {
 
     /**
      * Immediately executes the filter for the given subscriber and sends a notification email.
+     * Group subscriptions send one email to all current group members.
      * Used by the on-demand "Run" action triggered from the UI.
      */
     public void runNow(EmailSubscriber subscriber) {
@@ -70,7 +71,7 @@ public class PollingService {
                 .collect(Collectors.toList());
         if (activeSubscribers.isEmpty()) return;
 
-        // Group by Workspace ID and Filter ID to batch notifications
+        // Group by Workspace ID and Filter ID to batch notifications (one filter query per batch)
         Map<UUID, Map<UUID, List<EmailSubscriber>>> grouped = activeSubscribers.stream()
                 .collect(Collectors.groupingBy(
                         sub -> sub.getWorkspace().getId(),

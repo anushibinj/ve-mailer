@@ -8,6 +8,7 @@ import com.anushibinj.veemailer.model.ScheduleType;
 import com.anushibinj.veemailer.service.AppUserDetailsService;
 import com.anushibinj.veemailer.service.JwtService;
 import com.anushibinj.veemailer.service.SubscriptionService;
+import com.anushibinj.veemailer.service.UserQueryService;
 import com.anushibinj.veemailer.service.WorkspaceAdminService;
 import com.anushibinj.veemailer.service.WorkspaceService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -63,6 +64,9 @@ class SubscriptionControllerTest {
     @MockBean
     private WorkspaceAdminService workspaceAdminService;
 
+    @MockBean
+    private UserQueryService userQueryService;
+
     private final UUID workspaceId = UUID.randomUUID();
     private final UUID subscriptionId = UUID.randomUUID();
     private final UUID filterId = UUID.randomUUID();
@@ -73,6 +77,7 @@ class SubscriptionControllerTest {
         SubscriptionCreateDto request = new SubscriptionCreateDto(
                 filterId,
                 ScheduleDto.builder().type(ScheduleType.DAILY).hours(List.of(9, 15)).build(),
+                null,
                 null);
 
         SubscriptionResponseDTO dto = SubscriptionResponseDTO.builder()
@@ -103,6 +108,7 @@ class SubscriptionControllerTest {
         SubscriptionCreateDto request = new SubscriptionCreateDto(
                 filterId,
                 ScheduleDto.builder().type(ScheduleType.DAILY).hours(List.of()).build(),
+                null,
                 null);
 
         mockMvc.perform(post("/api/v1/workspaces/" + workspaceId + "/subscriptions")

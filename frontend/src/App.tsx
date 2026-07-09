@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, Link, useNavigate } from 'react
 import LandingView from './components/LandingView';
 import WorkspaceDashboard from './components/WorkspaceDashboard';
 import FilterBuilderView from './components/FilterBuilderView';
+import RecipientGroupsView from './components/RecipientGroupsView';
 import ProtectedRoute from './components/ProtectedRoute';
 import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
@@ -116,7 +117,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
 }
 
 export function AppContent() {
-  const [currentView, setCurrentView] = useState<'landing' | 'workspace' | 'filters'>('landing');
+  const [currentView, setCurrentView] = useState<'landing' | 'workspace' | 'filters' | 'groups'>('landing');
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string | null>(null);
 
   const handleSelectWorkspace = (workspaceId: string) => {
@@ -131,6 +132,7 @@ export function AppContent() {
 
   const handleBackToWorkspace = () => setCurrentView('workspace');
   const handleOpenFilterBuilder = () => setCurrentView('filters');
+  const handleOpenGroupManager = () => setCurrentView('groups');
 
   return (
     <div className="min-h-full bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-50 font-sans">
@@ -144,10 +146,17 @@ export function AppContent() {
           workspaceId={selectedWorkspaceId}
           onBack={handleBackToLanding}
           onOpenFilterBuilder={handleOpenFilterBuilder}
+          onOpenGroupManager={handleOpenGroupManager}
         />
       )}
       {currentView === 'filters' && selectedWorkspaceId && (
         <FilterBuilderView
+          workspaceId={selectedWorkspaceId}
+          onBack={handleBackToWorkspace}
+        />
+      )}
+      {currentView === 'groups' && selectedWorkspaceId && (
+        <RecipientGroupsView
           workspaceId={selectedWorkspaceId}
           onBack={handleBackToWorkspace}
         />

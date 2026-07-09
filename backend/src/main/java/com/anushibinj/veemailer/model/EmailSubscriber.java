@@ -46,6 +46,17 @@ public class EmailSubscriber {
 
     private String recipientEmail;
 
+    /**
+     * Set when this is a group subscription. At send time the group's current member
+     * emails are expanded dynamically — one email per member — so updating the group's
+     * members automatically affects who gets notified.
+     * Mutually exclusive with {@link #recipientEmail}: exactly one of them is non-null.
+     */
+    @ManyToOne
+    @JoinColumn(name = "group_id", nullable = true,
+            foreignKey = @ForeignKey(name = "fk_email_subscribers_group_id"))
+    private RecipientGroup group;
+
     /** Legacy field – retained for backward-compatibility migration only. */
     @Enumerated(EnumType.STRING)
     @Column(name = "frequency", nullable = true)

@@ -7,7 +7,7 @@ import {
 } from '../services/apiService';
 import { formatHourLabel } from '../services/scheduleUtils';
 import { useAuth } from '../hooks/useAuth';
-import { Loader2, X, Plus, Bell, AlertTriangle } from 'lucide-react';
+import { Loader2, X, Plus, Bell, AlertTriangle, Users } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface EditSubscriptionModalProps {
@@ -30,7 +30,10 @@ const EditSubscriptionModal: React.FC<EditSubscriptionModalProps> = ({
   subscription, workspaceId, isOpen, onClose, onSuccess,
 }) => {
   const { user } = useAuth();
-  const isOwnSubscription = subscription.recipientEmail.toLowerCase() === (user?.email ?? '').toLowerCase();
+  const isGroupSubscription = Boolean(subscription.groupId);
+  // Group subscriptions have no recipientEmail — ownership check only applies to individual subs
+  const isOwnSubscription = !isGroupSubscription &&
+    subscription.recipientEmail?.toLowerCase() === (user?.email ?? '').toLowerCase();
   const [step, setStep] = useState<Step>('edit');
   const [scheduleType, setScheduleType] = useState<'DAILY' | 'WEEKLY'>(subscription.schedule.type);
   const [scheduledHours, setScheduledHours] = useState<number[]>([...subscription.schedule.hours]);
@@ -100,6 +103,21 @@ const EditSubscriptionModal: React.FC<EditSubscriptionModalProps> = ({
             </button>
           </div>
           <p className="text-xs text-slate-400 dark:text-slate-500 mb-5 ml-10">{subscription.filterTitle}</p>
+
+          {/* Group subscription badge */}
+          {isGroupSubscription && (
+            <div className="mb-4 flex items-center gap-2 px-3 py-2 rounded-xl bg-teal-50 dark:bg-teal-500/10 border border-teal-100 dark:border-teal-500/20">
+              <Users className="h-4 w-4 text-teal-600 dark:text-teal-400 flex-shrink-0" />
+              <div>
+                <span className="text-sm font-semibold text-teal-700 dark:text-teal-300">{subscription.groupName}</span>
+                {subscription.groupMemberCount != null && (
+                  <span className="text-xs text-teal-500 dark:text-teal-400 ml-1.5">
+                    · {subscription.groupMemberCount} member{subscription.groupMemberCount !== 1 ? 's' : ''}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
 
           {step === 'edit' && (
             <div className="space-y-4">
@@ -181,7 +199,11 @@ const EditSubscriptionModal: React.FC<EditSubscriptionModalProps> = ({
               <div className="flex items-start gap-3 p-4 bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 rounded-xl">
                 <AlertTriangle className="h-5 w-5 text-rose-500 dark:text-rose-400 flex-shrink-0 mt-0.5" />
                 <p className="text-sm text-rose-700 dark:text-rose-300">
-                  {isOwnSubscription ? (
+                  {isGroupSubscription ? (
+                    <>This will permanently remove the group subscription for{' '}
+                    <span className="font-semibold">{subscription.groupName}</span> to{' '}
+                    <span className="font-semibold">{subscription.filterTitle}</span>. Are you sure?</>
+                  ) : isOwnSubscription ? (
                     <>This will permanently remove your subscription to{' '}
                     <span className="font-semibold">{subscription.filterTitle}</span>. Are you sure?</>
                   ) : (

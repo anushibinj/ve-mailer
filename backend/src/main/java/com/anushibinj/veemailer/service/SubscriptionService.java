@@ -4,12 +4,14 @@ import com.anushibinj.veemailer.dto.ScheduleDto;
 import com.anushibinj.veemailer.dto.SubscriptionResponseDTO;
 import com.anushibinj.veemailer.model.EmailSubscriber;
 import com.anushibinj.veemailer.model.Filter;
+import com.anushibinj.veemailer.model.RecipientGroup;
 import com.anushibinj.veemailer.model.ScheduleType;
 import com.anushibinj.veemailer.model.Status;
 import com.anushibinj.veemailer.model.Workspace;
 import com.anushibinj.veemailer.model.WorkspaceStatus;
 import com.anushibinj.veemailer.repository.EmailSubscriberRepository;
 import com.anushibinj.veemailer.repository.FilterRepository;
+import com.anushibinj.veemailer.repository.RecipientGroupRepository;
 import com.anushibinj.veemailer.repository.WorkspaceRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
@@ -31,6 +33,7 @@ public class SubscriptionService {
     private final EmailSubscriberRepository emailSubscriberRepository;
     private final WorkspaceRepository workspaceRepository;
     private final FilterRepository filterRepository;
+    private final RecipientGroupRepository recipientGroupRepository;
     private final PollingService pollingService;
 
     /**
@@ -126,6 +129,39 @@ public class SubscriptionService {
     }
 
     /**
+     * Creates (or upserts) a single group subscription row for the specified recipient group.
+     * This is a first-class subscription: one row, one schedule to update.
+     * At send time, the group's current member emails are expanded dynamically, so adding/removing
+     * group members automatically affects who gets notified without touching this row.
+     */
+    public SubscriptionResponseDTO createGroupSubscription(UUID workspaceId, UUID groupId, UUID filterId, ScheduleDto schedule) {
+        validateSchedule(schedule);
+
+        RecipientGroup group = recipientGroupRepository.findByIdAndWorkspaceId(groupId, workspaceId)
+                .orElseThrow(() -> new IllegalArgumentException("Recipient group not found"));
+
+        Workspace workspace = workspaceRepository.findById(workspaceId)
+                .orElseThrow(() -> new IllegalArgumentException("Workspace not found"));
+        enforceWorkspaceNotDisabled(workspace);
+
+        Filter filter = filterRepository.findById(filterId)
+                .orElseThrow(() -> new IllegalArgumentException("Filter not found"));
+
+        // Upsert: one row per (group, workspace, filter) combination
+        EmailSubscriber subscriber = emailSubscriberRepository
+                .findByGroupIdAndWorkspaceIdAndFilterId(groupId, workspaceId, filterId)
+                .orElse(new EmailSubscriber());
+        subscriber.setRecipientEmail(null);
+        subscriber.setGroup(group);
+        subscriber.setWorkspace(workspace);
+        subscriber.setFilter(filter);
+        applySchedule(subscriber, schedule);
+        subscriber.setStatus(Status.ACTIVE);
+
+        return toResponseDto(emailSubscriberRepository.save(subscriber));
+    }
+
+    /**
      * Returns active subscriptions belonging to the authenticated user within a workspace.
      * Used for MEMBER-role requests to enforce per-user data isolation.
      */
@@ -161,6 +197,10 @@ public class SubscriptionService {
     }
 
     private void enforceOwnership(String email, EmailSubscriber subscriber) {
+        if (subscriber.getGroup() != null) {
+            // Group subscriptions are managed by admins only; regular users cannot own them
+            throw new AccessDeniedException("Access denied: group subscriptions can only be managed by admins");
+        }
         if (!subscriber.getRecipientEmail().equalsIgnoreCase(email)) {
             throw new AccessDeniedException("Access denied: you do not own this subscription");
         }
@@ -201,6 +241,9 @@ public class SubscriptionService {
                 .filterId(sub.getFilter().getId())
                 .filterTitle(sub.getFilter().getTitle())
                 .schedule(buildScheduleDto(sub))
+                .groupId(sub.getGroup() != null ? sub.getGroup().getId() : null)
+                .groupName(sub.getGroup() != null ? sub.getGroup().getName() : null)
+                .groupMemberCount(sub.getGroup() != null ? sub.getGroup().getMemberEmails().size() : null)
                 .build();
     }
 

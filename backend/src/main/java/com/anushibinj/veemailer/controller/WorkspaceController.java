@@ -3,12 +3,14 @@ package com.anushibinj.veemailer.controller;
 import com.anushibinj.veemailer.dto.SubscriptionCreateDto;
 import com.anushibinj.veemailer.dto.SubscriptionResponseDTO;
 import com.anushibinj.veemailer.dto.SubscriptionUpdateDto;
+import com.anushibinj.veemailer.dto.UserSummaryDto;
 import com.anushibinj.veemailer.dto.WorkspaceAdminAssignRequestDto;
 import com.anushibinj.veemailer.dto.WorkspaceAdminResponseDto;
 import com.anushibinj.veemailer.dto.WorkspaceCreateRequestDto;
 import com.anushibinj.veemailer.dto.WorkspaceResponseDto;
 import com.anushibinj.veemailer.dto.WorkspaceUpdateRequestDto;
 import com.anushibinj.veemailer.service.SubscriptionService;
+import com.anushibinj.veemailer.service.UserQueryService;
 import com.anushibinj.veemailer.service.WorkspaceAdminService;
 import com.anushibinj.veemailer.service.WorkspaceService;
 import jakarta.validation.Valid;
@@ -41,6 +43,7 @@ public class WorkspaceController {
     private final WorkspaceService workspaceService;
     private final SubscriptionService subscriptionService;
     private final WorkspaceAdminService workspaceAdminService;
+    private final UserQueryService userQueryService;
 
     // --- Workspace reads (any authenticated user) ---
 
@@ -111,6 +114,23 @@ public class WorkspaceController {
         return ResponseEntity.noContent().build();
     }
 
+    // --- Users list (accessible to ADMIN and workspace's WORKSPACE_ADMIN) ---
+
+    /**
+     * Returns all registered system users. Accessible to ADMIN and WORKSPACE_ADMIN
+     * who manages the specified workspace, so they can subscribe any user to a filter.
+     */
+    @GetMapping("/{workspaceId}/users")
+    @PreAuthorize("hasAnyRole('ADMIN', 'WORKSPACE_ADMIN')")
+    public ResponseEntity<List<UserSummaryDto>> getUsersForWorkspace(
+            @PathVariable UUID workspaceId,
+            Authentication authentication) {
+        if (!workspaceAdminService.canManageWorkspace(authentication, workspaceId)) {
+            throw new AccessDeniedException("You are not authorized to manage this workspace");
+        }
+        return ResponseEntity.ok(userQueryService.getAllUserSummaries());
+    }
+
     // --- Subscription read (role-aware: ADMIN/WORKSPACE_ADMIN sees all, MEMBER sees own only) ---
 
     @GetMapping("/{workspaceId}/subscriptions")
@@ -147,6 +167,29 @@ public class WorkspaceController {
                 .body(subscriptionService.createSubscription(
                         targetEmail, workspaceId,
                         request.getFilterId(), request.getSchedule()));
+    }
+
+    /**
+     * Creates (or upserts) a single group subscription row for the specified recipient group.
+     * The group's members are expanded dynamically at send time, so editing the group membership
+     * automatically affects who gets notified without touching the subscription.
+     * Requires ADMIN or WORKSPACE_ADMIN role.
+     */
+    @PostMapping("/{workspaceId}/subscriptions/bulk-group")
+    @PreAuthorize("hasAnyRole('ADMIN', 'WORKSPACE_ADMIN')")
+    public ResponseEntity<SubscriptionResponseDTO> createGroupSubscription(
+            @PathVariable UUID workspaceId,
+            @RequestBody @Valid SubscriptionCreateDto request,
+            Authentication authentication) {
+        if (!workspaceAdminService.canManageWorkspace(authentication, workspaceId)) {
+            throw new AccessDeniedException("You are not authorized to manage subscriptions for this workspace");
+        }
+        if (request.getGroupId() == null) {
+            throw new IllegalArgumentException("groupId is required for group subscriptions");
+        }
+        SubscriptionResponseDTO created = subscriptionService.createGroupSubscription(
+                workspaceId, request.getGroupId(), request.getFilterId(), request.getSchedule());
+        return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
     @PutMapping("/{workspaceId}/subscriptions/{subscriptionId}")

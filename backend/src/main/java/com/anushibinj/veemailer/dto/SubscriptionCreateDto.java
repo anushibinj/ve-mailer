@@ -27,4 +27,11 @@ public class SubscriptionCreateDto {
      */
     @Email(message = "recipientEmail must be a valid email address")
     private String recipientEmail;
+
+    /**
+     * Optional: admins and workspace admins may specify a recipient group ID to bulk-subscribe
+     * all members of the group. When provided, {@code recipientEmail} is ignored and one
+     * EmailSubscriber row is created per group member.
+     */
+    private UUID groupId;
 }

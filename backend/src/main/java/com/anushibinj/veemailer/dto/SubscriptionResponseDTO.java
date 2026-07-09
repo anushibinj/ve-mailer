@@ -17,4 +17,8 @@ public class SubscriptionResponseDTO {
     private UUID filterId;
     private String filterTitle;
     private ScheduleDto schedule;
+    /** Non-null when this is a group subscription (recipientEmail will be null). */
+    private UUID groupId;
+    private String groupName;
+    private Integer groupMemberCount;
 }
