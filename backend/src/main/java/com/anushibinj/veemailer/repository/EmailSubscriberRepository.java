@@ -21,6 +21,13 @@ public interface EmailSubscriberRepository extends JpaRepository<EmailSubscriber
 
     Optional<EmailSubscriber> findByRecipientEmailAndWorkspaceIdAndFilterId(String recipientEmail, UUID workspaceId, UUID filterId);
 
+    /** Finds an existing group subscription (dedup: one row per group+workspace+filter). */
+    @Query("SELECT e FROM EmailSubscriber e WHERE e.group.id = :groupId AND e.workspace.id = :workspaceId AND e.filter.id = :filterId")
+    Optional<EmailSubscriber> findByGroupIdAndWorkspaceIdAndFilterId(
+            @Param("groupId") UUID groupId,
+            @Param("workspaceId") UUID workspaceId,
+            @Param("filterId") UUID filterId);
+
     List<EmailSubscriber> findByRecipientEmail(String email);
 
     // Using FETCH JOIN to eagerly load Filter and avoid N+1 issues when getting filterTitle
@@ -43,8 +50,8 @@ public interface EmailSubscriberRepository extends JpaRepository<EmailSubscriber
 
     /**
      * Returns a list of [recipientEmail, count] pairs counting the number of active subscriptions
-     * (distinct filters) per user email. Used for the admin Users page to avoid N+1 queries.
+     * (distinct filters) per user email. Group subscriptions (recipientEmail IS NULL) are excluded.
      */
-    @Query("SELECT e.recipientEmail, COUNT(DISTINCT e.filter.id) FROM EmailSubscriber e WHERE e.status = 'ACTIVE' GROUP BY e.recipientEmail")
+    @Query("SELECT e.recipientEmail, COUNT(DISTINCT e.filter.id) FROM EmailSubscriber e WHERE e.status = 'ACTIVE' AND e.recipientEmail IS NOT NULL GROUP BY e.recipientEmail")
     List<Object[]> countActiveSubscriptionsGroupedByEmail();
 }

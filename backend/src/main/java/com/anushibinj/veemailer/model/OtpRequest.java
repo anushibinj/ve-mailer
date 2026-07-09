@@ -39,4 +39,12 @@ public class OtpRequest {
     private String payload;
 
     private LocalDateTime expiresAt;
+
+    /** How many times an OTP resend has been issued for this record. Used to compute the cooldown. */
+    @Builder.Default
+    @Column(nullable = false)
+    private int resendCount = 0;
+
+    /** Timestamp of the most recent OTP send or resend. Null for records created before this feature. */
+    private LocalDateTime lastSentAt;
 }

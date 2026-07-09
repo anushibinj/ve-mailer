@@ -6,9 +6,9 @@
 - [x] "Manager Filter Templates" should be limited only to admins
 - [x] If the ve client expires due to timeout, it should auto retry login
 - [ ] ORDER BY for queries
-- [ ] A mail ID cannot have duplicate subscriptions to the same filter. With the new schedule model, the composite key should be (recipientEmail, filterId) — a user should not be able to subscribe to the same filter more than once.
+- [ ] A mail ID cannot have duplicate subscriptions to the same filter. With the new schedule model, the composite key should be (recipientEmail, filterId) ï¿½ a user should not be able to subscribe to the same filter more than once.
 - [x] Add an option called "Show AI Summary for each ticket". Enabling this should bring in a new column in the resulting e-mail HTML with summary of each ticket.
-- [ ] OTP regeneration timeout. Should be validated both on backend and frontend to prevent people hammering the e-mail service. Make the resend interval start with 30 seconds and increment 30 seconds every retry.
+- [x] OTP regeneration timeout. Should be validated both on backend and frontend to prevent people hammering the e-mail service. Make the resend interval start with 30 seconds and increment 30 seconds every retry.
 - [x] If multiple people are subscribed to the same filter at the same time, then don't execute the filter multiple times. Execute it once and send the same copy to all the users registered for that time.
 - [x] The e-mail subject should be "[ve-mailer] filter_title"
 - [x] Add a new property in frontend called VITE_FOOTER_HTML that accepts a HTML element (a div) that can be set as the app's footer
@@ -19,11 +19,13 @@
 - [x] Allow multiple super admins and multiple workspace admins. Super admins only create workspaces (not configure params/secrets). Workspace admins have to configure secrets, filters and other values for the workspace as per their need. This means that there should be an "Enabled" mode for the workspace to mark a workspace as available to the public only after it is fully ready for use.
 - [x] In the filter template execution window, show a proper preview of the output with columns instead of json output that it is currently showing
 - [x] Limit the number of tickets in the filter preview to just 10. And change the "Execute" button lable to "Preview"
-- [ ] Create user groups/teams that the admin can add users to to receive notification mails in bulk
-- [ ] Show count of tickets in the mail body beginning and in the subject
+- [x] Create user groups/teams that the admin can add users to to receive notification mails in bulk
+- [x] Show count of tickets in the mail body beginning and in the subject
 - [x] Set timezone of Docker container as a env variable
 - [x] As a superadmin, I should be able to onboard users onto the application without them signing up. But when they do sign up, they should be greeted with a "Rest password" kind of screen or a "Set your password" screen so that they can choose their own password.
 - [x] As an workspace admin, I should be able to subscribe and unsubscribe people from filters.
 - [ ] As an user, I should receive mails from ve-mailer even if I never signed up to the application.
 - [x] As a workspace admin, I should see an "Edit workspace" button when I open a workspace dashboard view
-
+- [ ] As an user/workspace admin/super admin, I should be able to enable/disable an existing filter subscription that I have access to. This is in addition to the existing unsubscribe feature. Disabled filter subscriptions should be visually shown differently in the frontend.
+- [ ] As a non-admin user, I shouldn't be able to edit any property of a group subscription that I am part of. I should be able to see the group subscription. Instead of the "Edit" button, I should see "View" to see the filter details like frequency, etc. But I shouldn't be able to unsubscribe, change frequence, disable the filter, etc. Only the workspace admin or the super admin should be able to make these changes.
+- [ ] As an user, I should be able to subscribe to "Me" based filters like "New-phase tickets on my name" or "Code Review tickets on my name" etc.

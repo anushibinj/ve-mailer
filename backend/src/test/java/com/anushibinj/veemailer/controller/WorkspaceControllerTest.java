@@ -9,6 +9,7 @@ import com.anushibinj.veemailer.model.WorkspaceStatus;
 import com.anushibinj.veemailer.service.AppUserDetailsService;
 import com.anushibinj.veemailer.service.JwtService;
 import com.anushibinj.veemailer.service.SubscriptionService;
+import com.anushibinj.veemailer.service.UserQueryService;
 import com.anushibinj.veemailer.service.WorkspaceAdminService;
 import com.anushibinj.veemailer.service.WorkspaceService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -63,6 +64,9 @@ class WorkspaceControllerTest {
 
     @MockBean
     private WorkspaceAdminService workspaceAdminService;
+
+    @MockBean
+    private UserQueryService userQueryService;
 
     @BeforeEach
     void setUp() {

@@ -75,7 +75,7 @@ class NotificationServiceTest {
         verify(mailAuditService, times(2)).recordSuccess(
                 eq(testWorkspace.getId()), eq(testWorkspace.getTitle()),
                 anyString(), any(), eq("Open Defects"), any(), any(),
-                eq("[ve-mailer] Open Defects"), eq(0), anyLong());
+                eq("[ve-mailer] 0 tickets \u2013 Open Defects"), eq(0), anyLong());
     }
 
     @Test
@@ -96,48 +96,58 @@ class NotificationServiceTest {
 
         ArgumentCaptor<MimeMessage> captor = ArgumentCaptor.forClass(MimeMessage.class);
         verify(dynamicMailSenderService).send(captor.capture());
-        assertEquals("[ve-mailer] Open Defects", captor.getValue().getSubject());
+        assertEquals("[ve-mailer] 0 tickets \u2013 Open Defects", captor.getValue().getSubject());
     }
 
     // ── buildMailSubject ──────────────────────────────────────────────────────
 
     @Test
     void buildMailSubject_NormalTitle() {
-        assertEquals("[ve-mailer] Open Defects", NotificationService.buildMailSubject("Open Defects"));
+        assertEquals("[ve-mailer] 5 tickets \u2013 Open Defects", NotificationService.buildMailSubject("Open Defects", 5));
+    }
+
+    @Test
+    void buildMailSubject_SingularTicket() {
+        assertEquals("[ve-mailer] 1 ticket \u2013 Open Defects", NotificationService.buildMailSubject("Open Defects", 1));
+    }
+
+    @Test
+    void buildMailSubject_ZeroTickets() {
+        assertEquals("[ve-mailer] 0 tickets \u2013 Open Defects", NotificationService.buildMailSubject("Open Defects", 0));
     }
 
     @Test
     void buildMailSubject_SpecialCharactersPreserved() {
-        assertEquals("[ve-mailer] Critical: Security Bugs (P1)",
-                NotificationService.buildMailSubject("Critical: Security Bugs (P1)"));
+        assertEquals("[ve-mailer] 3 tickets \u2013 Critical: Security Bugs (P1)",
+                NotificationService.buildMailSubject("Critical: Security Bugs (P1)", 3));
     }
 
     @Test
     void buildMailSubject_WhitespaceIsTrimmed() {
-        assertEquals("[ve-mailer] Stories Waiting for QA",
-                NotificationService.buildMailSubject("  Stories Waiting for QA  "));
+        assertEquals("[ve-mailer] 2 tickets \u2013 Stories Waiting for QA",
+                NotificationService.buildMailSubject("  Stories Waiting for QA  ", 2));
     }
 
     @Test
-    void buildMailSubject_NullTitleUsesFallback() {
-        assertEquals("[ve-mailer] Notification", NotificationService.buildMailSubject(null));
+    void buildMailSubject_NullTitleOmitsFilterName() {
+        assertEquals("[ve-mailer] 4 tickets", NotificationService.buildMailSubject(null, 4));
     }
 
     @Test
-    void buildMailSubject_BlankTitleUsesFallback() {
-        assertEquals("[ve-mailer] Notification", NotificationService.buildMailSubject("   "));
+    void buildMailSubject_BlankTitleOmitsFilterName() {
+        assertEquals("[ve-mailer] 0 tickets", NotificationService.buildMailSubject("   ", 0));
     }
 
     @Test
-    void buildMailSubject_EmptyStringUsesFallback() {
-        assertEquals("[ve-mailer] Notification", NotificationService.buildMailSubject(""));
+    void buildMailSubject_EmptyStringOmitsFilterName() {
+        assertEquals("[ve-mailer] 7 tickets", NotificationService.buildMailSubject("", 7));
     }
 
     @Test
     void buildMailSubject_NoDuplicatePrefixing() {
         // If someone passes a title that already contains the prefix, it should not be doubled
-        assertEquals("[ve-mailer] [ve-mailer] Something",
-                NotificationService.buildMailSubject("[ve-mailer] Something"));
+        assertEquals("[ve-mailer] 1 ticket \u2013 [ve-mailer] Something",
+                NotificationService.buildMailSubject("[ve-mailer] Something", 1));
     }
 
     @Test

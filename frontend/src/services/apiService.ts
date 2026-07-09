@@ -95,10 +95,15 @@ export interface Schedule {
 
 export interface Subscription {
   id: string;
-  recipientEmail: string;
+  /** Null for group subscriptions. */
+  recipientEmail: string | null;
   filterId: string;
   filterTitle: string;
   schedule: Schedule;
+  /** Non-null when this is a group subscription. */
+  groupId?: string | null;
+  groupName?: string | null;
+  groupMemberCount?: number | null;
 }
 
 export interface SubscriptionCreatePayload {
@@ -419,6 +424,12 @@ export const adminGetUsers = async (): Promise<UserSummary[]> => {
   return response.data;
 };
 
+/** Fetch all users via the workspace-scoped endpoint, accessible to workspace admins. */
+export const fetchWorkspaceUsers = async (workspaceId: string): Promise<UserSummary[]> => {
+  const response = await api.get(`/api/v1/workspaces/${workspaceId}/users`);
+  return response.data;
+};
+
 export const adminOnboardUser = async (name: string, email: string): Promise<{ message: string }> => {
   const response = await api.post('/api/admin/users', { name, email });
   return response.data;
@@ -467,4 +478,93 @@ export const assignWorkspaceAdmin = async (workspaceId: string, userId: string):
 
 export const removeWorkspaceAdmin = async (workspaceId: string, userId: string): Promise<void> => {
   await api.delete(`/api/v1/workspaces/${workspaceId}/admins/${userId}`);
+};
+
+// --- Recipient Groups ---
+
+export interface RecipientGroup {
+  id: string;
+  workspaceId: string;
+  name: string;
+  description: string | null;
+  memberEmails: string[];
+  memberCount: number;
+  createdAt: string;
+  createdBy: string | null;
+}
+
+export interface RecipientGroupCreatePayload {
+  name: string;
+  description?: string;
+  memberEmails?: string[];
+}
+
+export interface RecipientGroupUpdatePayload {
+  name: string;
+  description?: string;
+  memberEmails: string[];
+}
+
+export const fetchRecipientGroups = async (workspaceId: string): Promise<RecipientGroup[]> => {
+  const response = await api.get(`/api/v1/workspaces/${workspaceId}/recipient-groups`);
+  return response.data;
+};
+
+export const createRecipientGroup = async (
+  workspaceId: string,
+  payload: RecipientGroupCreatePayload
+): Promise<RecipientGroup> => {
+  const response = await api.post(`/api/v1/workspaces/${workspaceId}/recipient-groups`, payload);
+  return response.data;
+};
+
+export const updateRecipientGroup = async (
+  workspaceId: string,
+  groupId: string,
+  payload: RecipientGroupUpdatePayload
+): Promise<RecipientGroup> => {
+  const response = await api.put(
+    `/api/v1/workspaces/${workspaceId}/recipient-groups/${groupId}`,
+    payload
+  );
+  return response.data;
+};
+
+export const deleteRecipientGroup = async (workspaceId: string, groupId: string): Promise<void> => {
+  await api.delete(`/api/v1/workspaces/${workspaceId}/recipient-groups/${groupId}`);
+};
+
+export const addRecipientGroupMember = async (
+  workspaceId: string,
+  groupId: string,
+  email: string
+): Promise<RecipientGroup> => {
+  const response = await api.post(
+    `/api/v1/workspaces/${workspaceId}/recipient-groups/${groupId}/members`,
+    { email }
+  );
+  return response.data;
+};
+
+export const removeRecipientGroupMember = async (
+  workspaceId: string,
+  groupId: string,
+  email: string
+): Promise<RecipientGroup> => {
+  const response = await api.delete(
+    `/api/v1/workspaces/${workspaceId}/recipient-groups/${groupId}/members/${encodeURIComponent(email)}`
+  );
+  return response.data;
+};
+
+export const createGroupSubscription = async (
+  workspaceId: string,
+  groupId: string,
+  payload: { filterId: string; schedule: Schedule }
+): Promise<Subscription> => {
+  const response = await api.post(
+    `/api/v1/workspaces/${workspaceId}/subscriptions/bulk-group`,
+    { ...payload, groupId }
+  );
+  return response.data;
 };

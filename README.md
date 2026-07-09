@@ -120,6 +120,7 @@ ve-mailer/
 │   │   │   ├── GeneralSettingsController.java      # Admin general settings (GET/PUT) — ADMIN only
 │   │   │   ├── MailAnalyticsController.java        # Admin mail analytics (summary, charts, history) — ADMIN only
 │   │   │   ├── NotificationPreferencesController.java # Admin SMTP config (GET/PUT)
+│   │   │   ├── RecipientGroupController.java       # Recipient group CRUD + member management (workspace-scoped)
 │   │   │   ├── SubscriptionController.java
 │   │   │   ├── UserManagementController.java       # Admin user listing — ADMIN only
 │   │   │   └── WorkspaceController.java
@@ -149,6 +150,7 @@ ve-mailer/
 │   │   ├── model/
 │   │   │   ├── AiPreferences.java            # AI provider config entity (apiKey, baseUrl, completionsPath, model)
 │   │   │   ├── AppUser.java          # User entity (name, email, passwordHash, roles)
+│   │   │   ├── RecipientGroup.java           # Recipient group entity (name, description, memberEmails)
 │   │   │   ├── Role.java             # Role entity (ADMIN, MEMBER, WORKSPACE_ADMIN)
 │   │   │   ├── RefreshToken.java     # Refresh token entity (revocable, per-user)
 │   │   │   ├── NotificationPreferences.java # SMTP config entity (host, port, username, password, TLS)
@@ -173,6 +175,7 @@ ve-mailer/
 │   │   │   ├── NotificationPreferencesRepository.java
 │   │   │   ├── OtpRequestRepository.java
 │   │   │   ├── RefreshTokenRepository.java
+│   │   │   ├── RecipientGroupRepository.java
 │   │   │   ├── RoleRepository.java
 │   │   │   ├── WorkspaceAdminRepository.java
 │   │   │   └── WorkspaceRepository.java
@@ -196,6 +199,7 @@ ve-mailer/
 │   │       ├── OctaneCacheService.java  # In-memory Octane client cache
 │   │       ├── OtpService.java       # OTP generation, hashing, validation
 │   │       ├── PollingService.java   # Hourly cron trigger — dispatches by schedule
+│   │       ├── RecipientGroupService.java # Recipient group CRUD + member management
 │   │       ├── RefreshTokenService.java # Refresh token lifecycle + single-session enforcement
 │   │       ├── ScheduleMigrationRunner.java # Startup migration: converts legacy Frequency records
 │   │       ├── SubscriptionService.java # Subscription business logic
@@ -214,6 +218,7 @@ ve-mailer/
     │   │   ├── LandingView.tsx       # Workspace picker + Filter Templates link
     │   │   ├── FilterBuilderView.tsx # Create / browse filter templates
     │   │   ├── ProtectedRoute.tsx    # Auth guard with role-based access
+    │   │   ├── RecipientGroupsView.tsx # Workspace-scoped recipient group management (admin/workspace admin)
     │   │   └── WorkspaceDashboard.tsx # Subscription management + filter execution
     │   ├── hooks/
     │   │   └── useAuth.tsx           # AuthContext + AuthProvider + useAuth hook
@@ -224,12 +229,15 @@ ve-mailer/
     │   │   ├── ForgotPasswordPage.tsx # Request password reset OTP
     │   │   ├── ResetPasswordPage.tsx # OTP verification + new password
     │   │   └── admin/
-    │   │       ├── AdminControlPanel.tsx         # Left-sidebar admin dashboard (Workspaces, Preferences, AI, General, Mail Analytics, Users)
+    │   │       ├── AdminControlPanel.tsx         # Left-sidebar admin dashboard (Workspaces, Preferences, AI, General, Mail Analytics, Users, Groups)
     │   │       ├── AiPreferencesPage.tsx          # AI model config form
     │   │       ├── GeneralSettingsPage.tsx        # Query result limit config (supports -1 for unlimited)
     │   │       ├── MailAnalyticsPage.tsx          # Mail delivery analytics dashboard (charts + history)
     │   │       ├── NotificationPreferencesPage.tsx # SMTP config form
-    │   │       ├── UsersPage.tsx                  # All registered users with sortable columns + role badges│   │       ├── WorkspaceAdminManager.tsx     # Assign/remove workspace admins per workspace    │   │       └── WorkspaceManagementPage.tsx   # Workspace CRUD
+    │   │       ├── RecipientGroupsPage.tsx        # Recipient group management with workspace selector
+    │   │       ├── UsersPage.tsx                  # All registered users with sortable columns + role badges
+    │   │       ├── WorkspaceAdminManager.tsx      # Assign/remove workspace admins per workspace
+    │   │       └── WorkspaceManagementPage.tsx    # Workspace CRUD
     │   ├── services/
     │   │   ├── apiService.ts         # All backend API calls (workspaces, filters, subscriptions)
     │   │   └── authService.ts        # Auth API calls + token management
@@ -343,6 +351,18 @@ MailAuditLog
   failureReason       -- nullable, error message on failure (max 2000 chars)
   sentAt              -- timestamp of dispatch (indexed)
   durationMs          -- time to send in milliseconds
+
+RecipientGroup
+  id (UUID PK)
+  workspace_id        -- FK → Workspace
+  name                -- group display name (UNIQUE per workspace)
+  description         -- optional description
+  createdAt
+  createdBy           -- email of the admin who created the group
+
+recipient_group_members (element collection)
+  group_id            -- FK → RecipientGroup
+  member_email        -- email address of the group member
 ```
 
 ---
@@ -441,9 +461,24 @@ All subscription endpoints require authentication. Users may only update/delete 
 |----------|-----------------------------------------------------------|:-------------:|----------------------------------------------------------|
 | `GET`    | `/workspaces/{id}/subscriptions`                          | Any           | ADMIN: all subscriptions; MEMBER: own subscriptions only |
 | `POST`   | `/workspaces/{id}/subscriptions`                          | Any           | Subscribe to a filter template                           |
+| `POST`   | `/workspaces/{id}/subscriptions/bulk-group`               | ADMIN/WS_ADMIN | Bulk-subscribe all members of a recipient group        |
 | `PUT`    | `/workspaces/{id}/subscriptions/{subId}`                  | Any (own)     | Update subscription schedule                             |
 | `DELETE` | `/workspaces/{id}/subscriptions/{subId}`                  | Any (own)     | Unsubscribe                                              |
 | `POST`   | `/workspaces/{id}/subscriptions/{subId}/run`              | ADMIN         | Immediately send a notification email                    |
+
+### Recipient Groups
+
+Recipient groups (teams) are workspace-scoped collections of email addresses. Admins and workspace admins can create groups and bulk-subscribe them to filter templates.
+
+| Method   | Path                                                              | Role required | Description                       |
+|----------|-------------------------------------------------------------------|:-------------:|-----------------------------------|
+| `GET`    | `/workspaces/{id}/recipient-groups`                               | Any           | List all groups for the workspace |
+| `GET`    | `/workspaces/{id}/recipient-groups/{groupId}`                     | Any           | Get a single group                |
+| `POST`   | `/workspaces/{id}/recipient-groups`                               | ADMIN/WS_ADMIN | Create a new group               |
+| `PUT`    | `/workspaces/{id}/recipient-groups/{groupId}`                     | ADMIN/WS_ADMIN | Update group name/description/members |
+| `DELETE` | `/workspaces/{id}/recipient-groups/{groupId}`                     | ADMIN/WS_ADMIN | Delete a group                   |
+| `POST`   | `/workspaces/{id}/recipient-groups/{groupId}/members`             | ADMIN/WS_ADMIN | Add a member email to a group    |
+| `DELETE` | `/workspaces/{id}/recipient-groups/{groupId}/members/{email}`     | ADMIN/WS_ADMIN | Remove a member email from a group |
 
 ### Admin — Notification Preferences (`/api/admin`)
 

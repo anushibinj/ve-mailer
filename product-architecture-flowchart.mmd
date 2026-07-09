@@ -18,6 +18,8 @@ flowchart TD
         MAP[Mail Analytics Page]
         UP[Users Page]
         GSP[General Settings Page]
+        RGV[Recipient Groups View]
+        RGP[Recipient Groups Page]
         AI[Axios Interceptors]
         FFG[Frontend Feature Flags<br/>VITE_ALLOW_CUSTOM_QUERY_STRING]
     end
@@ -51,8 +53,10 @@ flowchart TD
             UMCtrl[User Management Controller]
             GSCtrl[General Settings Controller]
             FS[Filter Service]
+            RGCtrl[Recipient Group Controller]
             SS[Subscription Service]
             WAS[Workspace Admin Service]
+            RGS[Recipient Group Service]
             NPS[Notification Preferences Service]
             APS[AI Preferences Service]
             DMS[Dynamic Mail Sender Service]
@@ -79,6 +83,7 @@ flowchart TD
             NPR[NotificationPreferences Repository]
             APR[AiPreferences Repository]
             MALR[MailAuditLog Repository]
+            RGR[RecipientGroup Repository]
             GSR[GeneralSettings Repository]
         end
     end
@@ -109,6 +114,7 @@ flowchart TD
     ACP --> MAP
     ACP --> UP
     ACP --> GSP
+    ACP --> RGP
     NPP --> AI
     AIPP --> AI
     WMP --> AI
@@ -116,8 +122,10 @@ flowchart TD
     MAP --> AI
     UP --> AI
     GSP --> AI
-    LV --> AI
+    RGP --> AI
+    RGV --> AI
     WD --> AI
+    WD --> RGV
     FB --> AI
     AI --> WCtrl
     AI --> FCtrl
@@ -129,6 +137,7 @@ flowchart TD
     AI --> MACtrl
     AI --> UMCtrl
     AI --> GSCtrl
+    AI --> RGCtrl
 
     %% Security flow
     JF --> JWT
@@ -164,6 +173,7 @@ flowchart TD
     APS --> APR
     DMS --> NPS
     SS --> OTP
+    SS --> RGR
     OTP --> OTPR
     OTP --> DMS
     OTP --> SMTP
@@ -185,6 +195,10 @@ flowchart TD
     MAS --> MALR
     UMCtrl --> UR
     UMCtrl --> ESR
+    RGCtrl --> RGS
+    RGCtrl --> WAS
+    RGS --> RGR
+    RGR --> DB
     GSCtrl --> GSS
     GSS --> GSR
     GSS --> FS

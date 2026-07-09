@@ -108,10 +108,13 @@ class OtpServiceTest {
 
     @Test
     void testCreateAndSendOtp_ExistingRequest_UpdatesRecord() {
-        // Existing OTP record already exists — should reuse and update it, not create a new one
+        // Existing OTP record already exists — should reuse and update it, not create a new one.
+        // lastSentAt is null (simulates a record created before the cooldown feature), so no cooldown is enforced.
         OtpRequest existing = new OtpRequest();
         existing.setEmail("test@test.com");
         existing.setOtpHash("old-hash");
+        existing.setResendCount(0);
+        // lastSentAt intentionally null — cooldown check is skipped for legacy records
 
         when(otpRequestRepository.findByEmail("test@test.com")).thenReturn(Optional.of(existing));
         when(passwordEncoder.encode(anyString())).thenReturn("new-hash");
@@ -128,8 +131,60 @@ class OtpServiceTest {
         assertEquals("new-payload", saved.getPayload());
         assertEquals("new-hash", saved.getOtpHash());
         assertTrue(saved.getExpiresAt().isAfter(LocalDateTime.now().plusMinutes(9)));
+        assertEquals(1, saved.getResendCount(), "resendCount must be incremented to 1");
+        assertNotNull(saved.getLastSentAt(), "lastSentAt must be set after send");
 
         verify(emailService, times(1)).sendOtpEmail(eq("test@test.com"), anyString());
+    }
+
+    @Test
+    void testCreateAndSendOtp_CooldownEnforced_ThrowsWhenTooEarly() {
+        // First resend happened 10 seconds ago; required cooldown = (0+1)*30 = 30s → still blocked
+        OtpRequest existing = new OtpRequest();
+        existing.setEmail("test@test.com");
+        existing.setResendCount(0);
+        existing.setLastSentAt(LocalDateTime.now().minusSeconds(10));
+
+        when(otpRequestRepository.findByEmail("test@test.com")).thenReturn(Optional.of(existing));
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class,
+                () -> otpService.createAndSendOtp("test@test.com", ActionType.SUBSCRIBE, null));
+
+        assertTrue(ex.getMessage().startsWith("Please wait"), "Error must mention wait time");
+        verify(otpRequestRepository, never()).save(any());
+    }
+
+    @Test
+    void testCreateAndSendOtp_CooldownPassed_AllowsResend() {
+        // Second resend, required cooldown = (1+1)*30 = 60s; last sent 65 seconds ago → allowed
+        OtpRequest existing = new OtpRequest();
+        existing.setEmail("test@test.com");
+        existing.setResendCount(1);
+        existing.setLastSentAt(LocalDateTime.now().minusSeconds(65));
+
+        when(otpRequestRepository.findByEmail("test@test.com")).thenReturn(Optional.of(existing));
+        when(passwordEncoder.encode(anyString())).thenReturn("new-hash");
+
+        assertDoesNotThrow(() -> otpService.createAndSendOtp("test@test.com", ActionType.SUBSCRIBE, null));
+
+        ArgumentCaptor<OtpRequest> captor = ArgumentCaptor.forClass(OtpRequest.class);
+        verify(otpRequestRepository).save(captor.capture());
+        assertEquals(2, captor.getValue().getResendCount(), "resendCount must increment to 2");
+    }
+
+    @Test
+    void testCreateAndSendOtp_IncrementingCooldown_ThirdResendRequires90s() {
+        // resendCount=2, required = (2+1)*30 = 90s; last sent 89s ago → still blocked
+        OtpRequest existing = new OtpRequest();
+        existing.setEmail("test@test.com");
+        existing.setResendCount(2);
+        existing.setLastSentAt(LocalDateTime.now().minusSeconds(89));
+
+        when(otpRequestRepository.findByEmail("test@test.com")).thenReturn(Optional.of(existing));
+
+        assertThrows(IllegalStateException.class,
+                () -> otpService.createAndSendOtp("test@test.com", ActionType.SUBSCRIBE, null));
+        verify(otpRequestRepository, never()).save(any());
     }
 
     @Test

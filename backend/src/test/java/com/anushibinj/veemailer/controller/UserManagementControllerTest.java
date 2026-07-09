@@ -1,12 +1,10 @@
 package com.anushibinj.veemailer.controller;
 
-import com.anushibinj.veemailer.model.AppUser;
-import com.anushibinj.veemailer.model.Role;
-import com.anushibinj.veemailer.repository.AppUserRepository;
-import com.anushibinj.veemailer.repository.EmailSubscriberRepository;
+import com.anushibinj.veemailer.dto.UserSummaryDto;
 import com.anushibinj.veemailer.service.AppUserDetailsService;
 import com.anushibinj.veemailer.service.AuthService;
 import com.anushibinj.veemailer.service.JwtService;
+import com.anushibinj.veemailer.service.UserQueryService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -15,9 +13,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
 
 import static org.hamcrest.Matchers.hasSize;
@@ -34,10 +30,7 @@ class UserManagementControllerTest {
     private MockMvc mockMvc;
 
     @MockBean
-    private AppUserRepository appUserRepository;
-
-    @MockBean
-    private EmailSubscriberRepository emailSubscriberRepository;
+    private UserQueryService userQueryService;
 
     @MockBean
     private JwtService jwtService;
@@ -50,20 +43,16 @@ class UserManagementControllerTest {
 
     @Test
     void testGetAllUsers_returnsUserSummaries() throws Exception {
-        Role adminRole = Role.builder().id(UUID.randomUUID()).roleName("ROLE_ADMIN").build();
-        AppUser user = AppUser.builder()
+        UserSummaryDto user = UserSummaryDto.builder()
                 .id(UUID.randomUUID())
                 .name("Alice Admin")
                 .email("alice@company.com")
-                .passwordHash("$2a$hash")
-                .roles(Set.of(adminRole))
+                .roles(List.of("ROLE_ADMIN"))
+                .subscribedFilterCount(3)
+                .mustSetPassword(false)
                 .build();
 
-        when(appUserRepository.findAll()).thenReturn(List.of(user));
-        List<Object[]> counts = new ArrayList<>();
-        counts.add(new Object[]{"alice@company.com", 3L});
-        when(emailSubscriberRepository.countActiveSubscriptionsGroupedByEmail())
-                .thenReturn(counts);
+        when(userQueryService.getAllUserSummaries()).thenReturn(List.of(user));
 
         mockMvc.perform(get("/api/admin/users").contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
@@ -76,17 +65,16 @@ class UserManagementControllerTest {
 
     @Test
     void testGetAllUsers_noSubscriptions_returnsZeroCount() throws Exception {
-        AppUser user = AppUser.builder()
+        UserSummaryDto user = UserSummaryDto.builder()
                 .id(UUID.randomUUID())
                 .name("Bob Member")
                 .email("bob@company.com")
-                .passwordHash("$2a$hash")
-                .roles(Set.of())
+                .roles(List.of())
+                .subscribedFilterCount(0)
+                .mustSetPassword(false)
                 .build();
 
-        when(appUserRepository.findAll()).thenReturn(List.of(user));
-        when(emailSubscriberRepository.countActiveSubscriptionsGroupedByEmail())
-                .thenReturn(List.of());
+        when(userQueryService.getAllUserSummaries()).thenReturn(List.of(user));
 
         mockMvc.perform(get("/api/admin/users").contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
