@@ -15,7 +15,8 @@ export default function VerifySignupPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isResending, setIsResending] = useState(false);
   const [error, setError] = useState('');
-  const [countdown, setCountdown] = useState(0);
+  const [countdown, setCountdown] = useState(30);
+  const [resendCount, setResendCount] = useState(0);
 
   const email = (location.state as { email?: string })?.email;
 
@@ -55,10 +56,14 @@ export default function VerifySignupPage() {
     try {
       await signup({ name: '', email, password: 'placeholder', confirmPassword: 'placeholder' });
       toast.success('New OTP sent!');
-      setCountdown(60);
+      const nextWait = (resendCount + 1) * 30;
+      setCountdown(nextWait);
+      setResendCount(prev => prev + 1);
     } catch {
       toast.success('If your email is registered, a new OTP was sent.');
-      setCountdown(60);
+      const nextWait = (resendCount + 1) * 30;
+      setCountdown(nextWait);
+      setResendCount(prev => prev + 1);
     } finally {
       setIsResending(false);
     }
@@ -116,7 +121,7 @@ export default function VerifySignupPage() {
             className="text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 font-medium disabled:text-slate-400 dark:disabled:text-slate-600 disabled:cursor-not-allowed transition-colors"
           >
             {countdown > 0
-              ? `Resend code in ${countdown}s`
+              ? `Resend code available in ${countdown}s`
               : isResending ? 'Sending…' : 'Resend code'}
           </button>
         </div>

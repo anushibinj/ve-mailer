@@ -39,7 +39,8 @@ export default function AcceptInvitePage() {
   const [isResending, setIsResending] = useState(false);
   const [error, setError] = useState('');
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [countdown, setCountdown] = useState(0);
+  const [countdown, setCountdown] = useState(30);
+  const [resendCount, setResendCount] = useState(0);
 
   useEffect(() => {
     if (countdown > 0) {
@@ -88,7 +89,9 @@ export default function AcceptInvitePage() {
     try {
       await resendInvite(email.trim());
       toast.success('New invite code sent!');
-      setCountdown(60);
+      const nextWait = (resendCount + 1) * 30;
+      setCountdown(nextWait);
+      setResendCount(prev => prev + 1);
     } catch (err: unknown) {
       const axiosError = err as { response?: { data?: ApiErrorResponse } };
       toast.error(axiosError.response?.data?.message || 'Failed to resend invite code.');
@@ -164,7 +167,7 @@ export default function AcceptInvitePage() {
                 disabled={isResending || countdown > 0 || !email.trim()}
                 className="text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 font-medium disabled:text-slate-400 dark:disabled:text-slate-600 disabled:cursor-not-allowed transition-colors"
               >
-                {countdown > 0 ? `Resend in ${countdown}s` : isResending ? 'Sending…' : 'Resend invite code'}
+                {countdown > 0 ? `Resend available in ${countdown}s` : isResending ? 'Sending…' : 'Resend invite code'}
               </button>
             </div>
           </form>

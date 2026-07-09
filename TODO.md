@@ -8,7 +8,7 @@
 - [ ] ORDER BY for queries
 - [ ] A mail ID cannot have duplicate subscriptions to the same filter. With the new schedule model, the composite key should be (recipientEmail, filterId) — a user should not be able to subscribe to the same filter more than once.
 - [x] Add an option called "Show AI Summary for each ticket". Enabling this should bring in a new column in the resulting e-mail HTML with summary of each ticket.
-- [ ] OTP regeneration timeout. Should be validated both on backend and frontend to prevent people hammering the e-mail service. Make the resend interval start with 30 seconds and increment 30 seconds every retry.
+- [x] OTP regeneration timeout. Should be validated both on backend and frontend to prevent people hammering the e-mail service. Make the resend interval start with 30 seconds and increment 30 seconds every retry.
 - [ ] If multiple people are subscribed to the same filter at the same time, then don't execute the filter multiple times. Execute it once and send the same copy to all the users registered for that time.
 - [x] The e-mail subject should be "[ve-mailer] filter_title"
 - [x] Add a new property in frontend called VITE_FOOTER_HTML that accepts a HTML element (a div) that can be set as the app's footer
@@ -20,7 +20,7 @@
 - [x] In the filter template execution window, show a proper preview of the output with columns instead of json output that it is currently showing
 - [x] Limit the number of tickets in the filter preview to just 10. And change the "Execute" button lable to "Preview"
 - [x] Create user groups/teams that the admin can add users to to receive notification mails in bulk
-- [ ] Show count of tickets in the mail body beginning and in the subject
+- [x] Show count of tickets in the mail body beginning and in the subject
 - [x] Set timezone of Docker container as a env variable
 - [x] As a superadmin, I should be able to onboard users onto the application without them signing up. But when they do sign up, they should be greeted with a "Rest password" kind of screen or a "Set your password" screen so that they can choose their own password.
 - [x] As an workspace admin, I should be able to subscribe and unsubscribe people from filters.

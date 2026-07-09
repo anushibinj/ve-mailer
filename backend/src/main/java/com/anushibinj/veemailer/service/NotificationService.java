@@ -47,12 +47,16 @@ public class NotificationService {
     private final MailAuditService mailAuditService;
 
     /**
-     * Builds a standardised email subject: "[ve-mailer] {filterTitle}".
-     * Falls back to "[ve-mailer] Notification" when the title is null or blank.
+     * Builds a standardised email subject including the ticket count.
+     * Format: "[ve-mailer] 5 tickets – {filterTitle}"
+     * Falls back to "[ve-mailer] {count} tickets" when the title is null or blank.
      */
-    static String buildMailSubject(String filterTitle) {
+    static String buildMailSubject(String filterTitle, int count) {
         String trimmed = filterTitle == null ? "" : filterTitle.strip();
-        return "[ve-mailer] " + (trimmed.isEmpty() ? "Notification" : trimmed);
+        String countPart = count + " ticket" + (count == 1 ? "" : "s");
+        return trimmed.isEmpty()
+                ? "[ve-mailer] " + countPart
+                : "[ve-mailer] " + countPart + " \u2013 " + trimmed;
     }
 
     @Async
@@ -90,8 +94,8 @@ public class NotificationService {
                 workspace.getRootUrl(),
                 workspace.getSharedSpaceId(),
                 workspace.getWorkspaceId());
-        String htmlBody = buildHtmlTable(results, displayFields, limit, aiSummaryEnabled, aiSummaries, linkContext);
-        String subject = buildMailSubject(filterTitle);
+        String htmlBody = buildHtmlTable(results, displayFields, limit, aiSummaryEnabled, aiSummaries, linkContext, filterTitle);
+        String subject = buildMailSubject(filterTitle, results.size());
         for (EmailSubscriber subscriber : subscribers) {
             long start = System.currentTimeMillis();
             try {
@@ -131,30 +135,60 @@ public class NotificationService {
     }
 
     /**
-     * Convenience overload — delegates to the full implementation with no hyperlink context.
+     * Convenience overload — delegates to the full implementation with no hyperlink context or filter title.
      */
     String buildHtmlTable(List<EntityModel> results, List<String> fields, int limit,
                           boolean aiSummaryEnabled, String[] aiSummaries) {
-        return buildHtmlTable(results, fields, limit, aiSummaryEnabled, aiSummaries, null);
+        return buildHtmlTable(results, fields, limit, aiSummaryEnabled, aiSummaries, null, null);
+    }
+
+    /**
+     * Convenience overload — delegates to the full implementation with no filter title.
+     * Used by tests and callers that only need hyperlink support without a filter name in the intro.
+     */
+    String buildHtmlTable(List<EntityModel> results, List<String> fields, int limit,
+                          boolean aiSummaryEnabled, String[] aiSummaries,
+                          TicketLinkContext linkContext) {
+        return buildHtmlTable(results, fields, limit, aiSummaryEnabled, aiSummaries, linkContext, null);
     }
 
     /**
      * Builds a styled HTML table whose columns are the filter's field names and
      * whose rows are the Octane entities returned by the filter execution.
+     * The intro line shows the ticket count and filter name.
      * When AI Summary is enabled, it appears as the first column.
      * When {@code linkContext} is provided, hyperlink-eligible fields ({@code id},
      * {@code global_id_udf}) are rendered as clickable deep-links to the ValueEdge ticket page.
      */
     String buildHtmlTable(List<EntityModel> results, List<String> fields, int limit,
                           boolean aiSummaryEnabled, String[] aiSummaries,
-                          TicketLinkContext linkContext) {
+                          TicketLinkContext linkContext, String filterTitle) {
         StringBuilder sb = new StringBuilder();
-        sb.append("<html><body style=\"font-family:Arial,sans-serif;font-size:14px;\">")
-          .append("<p>Here is your notification digest:</p>");
+        sb.append("<html><body style=\"font-family:Arial,sans-serif;font-size:14px;\">");
+
+        String trimmedTitle = filterTitle == null ? "" : filterTitle.strip();
+        int count = results.size();
 
         if (results.isEmpty()) {
-            sb.append("<p><em>No items matched the filter criteria.</em></p>");
+            if (!trimmedTitle.isEmpty()) {
+                sb.append("<p>No items matched the filter <strong>&quot;")
+                  .append(escapeHtml(trimmedTitle)).append("&quot;</strong>.</p>");
+            } else {
+                sb.append("<p><em>No items matched the filter criteria.</em></p>");
+            }
         } else {
+            // Intro line: ticket count + filter name
+            sb.append("<p>");
+            if (!trimmedTitle.isEmpty()) {
+                sb.append("<strong>").append(count).append(count == 1 ? " ticket" : " tickets")
+                  .append("</strong> available for the filter <strong>&quot;")
+                  .append(escapeHtml(trimmedTitle)).append("&quot;</strong>.");
+            } else {
+                sb.append("<strong>").append(count).append(count == 1 ? " ticket" : " tickets")
+                  .append("</strong> in this notification.");
+            }
+            sb.append("</p>");
+
             sb.append("<table border=\"1\" cellpadding=\"6\" cellspacing=\"0\" ")
               .append("style=\"border-collapse:collapse;width:100%;\">");
 
