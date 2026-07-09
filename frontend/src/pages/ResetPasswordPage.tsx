@@ -27,7 +27,8 @@ export default function ResetPasswordPage() {
   const [isResending, setIsResending] = useState(false);
   const [error, setError] = useState('');
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [countdown, setCountdown] = useState(0);
+  const [countdown, setCountdown] = useState(30);
+  const [resendCount, setResendCount] = useState(0);
 
   const email = (location.state as { email?: string })?.email;
 
@@ -87,9 +88,12 @@ export default function ResetPasswordPage() {
     try {
       await forgotPassword({ email });
       toast.success('New OTP sent!');
-      setCountdown(60);
-    } catch {
-      toast.error('Failed to resend OTP.');
+      const nextWait = (resendCount + 1) * 30;
+      setCountdown(nextWait);
+      setResendCount(prev => prev + 1);
+    } catch (err: unknown) {
+      const axiosError = err as { response?: { data?: { message?: string } } };
+      toast.error(axiosError.response?.data?.message || 'Failed to resend OTP.');
     } finally {
       setIsResending(false);
     }
@@ -139,7 +143,7 @@ export default function ResetPasswordPage() {
             <div className="text-center">
               <button type="button" onClick={handleResend} disabled={isResending || countdown > 0}
                 className="text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 font-medium disabled:text-slate-400 dark:disabled:text-slate-600 disabled:cursor-not-allowed transition-colors">
-                {countdown > 0 ? `Resend in ${countdown}s` : isResending ? 'Sending…' : 'Resend OTP'}
+                {countdown > 0 ? `Resend OTP available in ${countdown}s` : isResending ? 'Sending…' : 'Resend OTP'}
               </button>
             </div>
           </form>

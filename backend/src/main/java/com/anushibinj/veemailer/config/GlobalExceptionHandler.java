@@ -16,6 +16,16 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<ApiErrorResponse> handleTooManyRequests(IllegalStateException ex) {
+        ApiErrorResponse error = ApiErrorResponse.builder()
+                .status(429)
+                .error("Too Many Requests")
+                .message(ex.getMessage())
+                .build();
+        return ResponseEntity.status(429).body(error);
+    }
+
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ApiErrorResponse> handleIllegalArgument(IllegalArgumentException ex) {
         ApiErrorResponse error = ApiErrorResponse.builder()

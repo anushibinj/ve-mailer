@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 
 @Service
@@ -47,12 +48,35 @@ public class OtpService {
         String hash = passwordEncoder.encode(otp);
 
         Optional<OtpRequest> existingOtpOpt = otpRequestRepository.findByEmail(email);
-        OtpRequest otpRequest = existingOtpOpt.orElse(new OtpRequest());
+        OtpRequest otpRequest;
+
+        if (existingOtpOpt.isPresent()) {
+            otpRequest = existingOtpOpt.get();
+
+            // Enforce incrementing resend cooldown only when lastSentAt is known.
+            // Records created before this feature have lastSentAt = null and skip the check.
+            if (otpRequest.getLastSentAt() != null) {
+                int requiredSeconds = (otpRequest.getResendCount() + 1) * 30;
+                LocalDateTime allowedAt = otpRequest.getLastSentAt().plusSeconds(requiredSeconds);
+                if (allowedAt.isAfter(LocalDateTime.now())) {
+                    long remaining = ChronoUnit.SECONDS.between(LocalDateTime.now(), allowedAt);
+                    throw new IllegalStateException(
+                            "Please wait " + remaining + " more second" + (remaining == 1 ? "" : "s")
+                            + " before requesting a new code.");
+                }
+            }
+
+            otpRequest.setResendCount(otpRequest.getResendCount() + 1);
+        } else {
+            otpRequest = new OtpRequest();
+            otpRequest.setResendCount(0);
+        }
 
         otpRequest.setEmail(email);
         otpRequest.setActionType(actionType);
         otpRequest.setPayload(payload);
         otpRequest.setOtpHash(hash);
+        otpRequest.setLastSentAt(LocalDateTime.now());
         otpRequest.setExpiresAt(LocalDateTime.now().plusMinutes(10));
 
         otpRequestRepository.save(otpRequest);
