@@ -49,6 +49,10 @@ export interface FilterCriteriaClause {
   field: string;
   operator: string;
   values: string[];
+  /** How this clause is joined to the previous one: "AND" (default) or "OR". Ignored for the first clause. */
+  logicalOperator?: string;
+  /** True when values represent reference IDs and should be queried as field EQ {id IN ...}. */
+  referenceValues?: boolean;
 }
 
 export interface Filter {
@@ -209,6 +213,61 @@ export const getFilterQueryString = async (workspaceId: string, filterId: string
 
 export const deleteFilter = async (workspaceId: string, filterId: string): Promise<void> => {
   await api.delete(`/api/v1/workspaces/${workspaceId}/filters/${filterId}`);
+};
+
+// --- Octane Metadata (Easy Filter Builder) ---
+
+/** Describes a filterable Octane field. */
+export interface OctaneFieldDto {
+  /** Octane API field name, e.g. "phase", "owner", "severity" */
+  name: string;
+  /** Human-readable label shown in the UI, e.g. "Phase", "Owner", "Severity" */
+  label: string;
+  /** Octane field type: "string" | "memo" | "integer" | "float" | "boolean" | "date_time" | "reference" */
+  fieldType: string;
+  /** True when this is a reference field pointing to another entity */
+  reference: boolean;
+  /** True when multiple values can be selected */
+  multiReference: boolean;
+  /** For reference fields: the Octane entity type of the target (e.g. "list_node", "workspace_user") */
+  targetEntityType?: string;
+  /** For list_node targets: the logical name used to scope the list (e.g. "list_node.severity") */
+  targetLogicalName?: string;
+}
+
+/** A selectable value for a reference field (id = what is stored; name = what is shown). */
+export interface OctaneFieldValueDto {
+  id: string;
+  name: string;
+}
+
+/**
+ * Returns filterable fields for the given Octane entity type, with human-readable labels.
+ * Used to populate the "Field" dropdown in the Easy Filter Builder.
+ */
+export const fetchFilterableFields = async (
+  workspaceId: string,
+  entityType: string
+): Promise<OctaneFieldDto[]> => {
+  const response = await api.get(`/api/v1/workspaces/${workspaceId}/octane/fields`, {
+    params: { entityType },
+  });
+  return response.data;
+};
+
+/**
+ * Returns the selectable values for a reference field so the UI can show a
+ * searchable dropdown (e.g. phase names, user names, severity options).
+ */
+export const fetchFieldValues = async (
+  workspaceId: string,
+  fieldName: string,
+  entityType: string
+): Promise<OctaneFieldValueDto[]> => {
+  const response = await api.get(`/api/v1/workspaces/${workspaceId}/octane/field-values`, {
+    params: { fieldName, entityType },
+  });
+  return response.data;
 };
 
 // --- Subscriptions ---

@@ -1,4 +1,4 @@
-- [ ] Allow concatenators like AND and OR operators in the Filter Builder
+- [x] Allow concatenators like AND and OR operators in the Filter Builder
 - [x] Migrate the DB to use Flyway
 - [x] The collapse button in "Execute" section should not be visible if there are no results for that filter
 - [x] Everything on the GUI should be a unique URI. As of now, everything is on the same endpoint.

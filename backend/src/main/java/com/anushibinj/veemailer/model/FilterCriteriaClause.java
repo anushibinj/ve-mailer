@@ -25,4 +25,21 @@ public class FilterCriteriaClause {
 
     /** One or more values (Octane entity IDs or literal strings) */
     private List<String> values;
+
+    /**
+     * How this clause is joined to the <em>previous</em> clause in the criteria list.
+     * Accepted values: {@code "AND"} (default) or {@code "OR"}.
+     * Ignored for the first clause in the list.
+     * Null is treated as {@code "AND"} for backward compatibility with existing saved filters.
+     */
+    @Builder.Default
+    private String logicalOperator = "AND";
+
+    /**
+     * Whether this clause's values represent reference IDs and therefore should be
+     * serialized/built as {@code field EQ {id IN ...}}.
+     *
+     * <p>Null means "unspecified" (for backward compatibility with older saved filters).
+     */
+    private Boolean referenceValues;
 }

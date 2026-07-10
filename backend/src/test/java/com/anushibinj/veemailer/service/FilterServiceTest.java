@@ -139,11 +139,13 @@ class FilterServiceTest {
         assertEquals("owner", parsed.getCriteria().get(0).getField());
         assertEquals("IN", parsed.getCriteria().get(0).getOperator());
         assertEquals(List.of("8666"), parsed.getCriteria().get(0).getValues());
+        assertEquals(Boolean.TRUE, parsed.getCriteria().get(0).getReferenceValues());
 
         assertEquals("phase", parsed.getCriteria().get(1).getField());
         assertEquals("IN", parsed.getCriteria().get(1).getOperator());
         assertEquals(List.of("pgxw2gll8xe6du9y1jx87596z", "dk9y4yv0r3w6dcy1r8ny94xv8"),
                 parsed.getCriteria().get(1).getValues());
+        assertEquals(Boolean.TRUE, parsed.getCriteria().get(1).getReferenceValues());
     }
 
     @Test
@@ -170,7 +172,20 @@ class FilterServiceTest {
                         FilterCriteriaClause.builder().field("phase").operator("NOT_IN")
                                 .values(List.of("phase.defect.closed", "phase.defect.rejected")).build()
                 ));
-        assertEquals("fields=id,name&query=name EQ ^*Case360*^ AND phase NOT_IN ^phase.defect.closed,phase.defect.rejected^",
+        assertEquals("fields=id,name&query=name EQ ^*Case360*^ AND phase NEQ {id IN phase.defect.closed,phase.defect.rejected}",
                 output);
+    }
+
+    @Test
+    void testBuildFilterQueryString_SerializesReferenceCriteriaAsIdExpressions() {
+        String output = filterService.buildFilterQueryString(
+                List.of("id", "name"),
+                List.of(FilterCriteriaClause.builder()
+                        .field("code_review_owner_udf")
+                        .operator("IN")
+                        .values(List.of("8666"))
+                        .referenceValues(true)
+                        .build()));
+        assertEquals("fields=id,name&query=code_review_owner_udf EQ {id IN 8666}", output);
     }
 }

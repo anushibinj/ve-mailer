@@ -18,6 +18,7 @@ import { useAuth } from '../hooks/useAuth';
 import { Loader2, ArrowLeft, Plus, Trash2, Eye, Pencil, Copy, ChevronDown, ChevronUp, SlidersHorizontal } from 'lucide-react';
 import toast from 'react-hot-toast';
 import ConfirmDialog from './ConfirmDialog';
+import { SmartFilterRow } from './SmartFilterRow';
 
 interface FilterBuilderViewProps {
   workspaceId: string;
@@ -27,7 +28,11 @@ interface FilterBuilderViewProps {
 type ViewMode = 'list' | 'create' | 'edit';
 type FilterCreationMode = 'queryString' | 'manual';
 
-const ENTITY_TYPES = ['defect', 'story', 'feature', 'quality_story', 'epic'];
+const ENTITY_TYPES = [
+  { value: 'backlog_items', label: 'Backlog Items (Story/Defect/Quality Story)' },
+  { value: 'epic', label: 'Epics' },
+  { value: 'feature', label: 'Features' },
+];
 const AI_SUMMARY_FIELD = '✨ AI Summary';
 
 const COMMON_FIELDS = [
@@ -37,13 +42,20 @@ const COMMON_FIELDS = [
   'last_modified', 'detected_by', 'story_points', 'subtype'
 ];
 
-const OPERATORS = [
-  { value: 'IN', label: 'In' },
-  { value: 'NOT_IN', label: 'Not In' },
-];
-
-const emptyCriterion = (): FilterCriteriaClause => ({ field: '', operator: 'IN', values: [''] });
+const emptyCriterion = (): FilterCriteriaClause => ({ field: '', operator: 'IN', values: [], logicalOperator: 'AND' });
 const defaultFields = ['id', 'name', 'phase', 'owner'];
+
+const normalizeEntityType = (raw: string): string => {
+  if (raw === 'defect' || raw === 'story' || raw === 'quality_story') return 'backlog_items';
+  return raw;
+};
+
+const toEntityTypeLabel = (raw: string): string => {
+  const normalized = normalizeEntityType(raw);
+  const fromOptions = ENTITY_TYPES.find(t => t.value === normalized)?.label;
+  if (fromOptions) return fromOptions;
+  return raw.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+};
 
 /**
  * Octane EntityModel serializes field data as:
@@ -101,7 +113,7 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [entityType, setEntityType] = useState('defect');
+  const [entityType, setEntityType] = useState('backlog_items');
   const [creationMode, setCreationMode] = useState<FilterCreationMode | null>(allowCustomQueryString ? null : 'manual');
   const [selectedFields, setSelectedFields] = useState<string[]>(defaultFields);
   const [criteria, setCriteria] = useState<FilterCriteriaClause[]>([emptyCriterion()]);
@@ -131,7 +143,7 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
   }, [workspaceId]);
 
   const resetForm = () => {
-    setTitle(''); setDescription(''); setEntityType('defect');
+    setTitle(''); setDescription(''); setEntityType('backlog_items');
     setCreationMode(allowCustomQueryString ? null : 'manual');
     setSelectedFields(defaultFields);
     setCriteria([emptyCriterion()]);
@@ -141,12 +153,14 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
   };
 
   const populateFormFromFilter = (f: Filter) => {
-    setTitle(f.title); setDescription(f.description || ''); setEntityType(f.entityType);
+    setTitle(f.title); setDescription(f.description || ''); setEntityType(normalizeEntityType(f.entityType));
     setCreationMode('manual');
     try { setSelectedFields(JSON.parse(f.fields)); } catch { setSelectedFields(defaultFields); }
     try {
       const parsed: FilterCriteriaClause[] = JSON.parse(f.criteria);
-      setCriteria(parsed.length > 0 ? parsed : [emptyCriterion()]);
+      // Backfill logicalOperator for criteria saved before AND/OR support was added
+      const normalised = parsed.map(c => ({ ...c, logicalOperator: c.logicalOperator ?? 'AND' }));
+      setCriteria(normalised.length > 0 ? normalised : [emptyCriterion()]);
     } catch { setCriteria([emptyCriterion()]); }
     setFilterQueryString('');
     setQueryStringApplied(false);
@@ -159,7 +173,7 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
       const cloned = await cloneFilter(workspaceId, f.id);
       setEditingFilter(null);
       setTitle(cloned.title); setDescription(cloned.description || '');
-      setEntityType(cloned.entityType); setSelectedFields(cloned.fields);
+      setEntityType(normalizeEntityType(cloned.entityType)); setSelectedFields(cloned.fields);
       setCriteria(cloned.criteria.length > 0 ? cloned.criteria : [emptyCriterion()]);
       const canUseQueryString = allowCustomQueryString && !!cloned.filterQueryString;
       setFilterQueryString(canUseQueryString ? (cloned.filterQueryString || '') : '');
@@ -225,18 +239,11 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
     setCriteria(prev => prev.map((c, i) => i === index ? { ...c, ...updates } : c));
   };
 
-  const updateCriterionValue = (ci: number, vi: number, val: string) => {
-    setCriteria(prev => prev.map((c, i) => {
-      if (i !== ci) return c;
-      const newValues = [...c.values]; newValues[vi] = val; return { ...c, values: newValues };
-    }));
-  };
-
   const isQueryStringMode = allowCustomQueryString && creationMode === 'queryString';
 
   const isFormValid = title.trim() !== '' && creationMode !== null && selectedFields.length > 0
     && criteria.length > 0
-    && criteria.every(c => c.field.trim() !== '' && c.values.length > 0 && c.values.every(v => v.trim() !== ''))
+    && criteria.every(c => c.field.trim() !== '' && c.values.length > 0 && c.values.some(v => v.trim() !== ''))
     && (!isQueryStringMode || (filterQueryString.trim() !== '' && queryStringApplied));
 
   const handleSave = async (e: React.FormEvent) => {
@@ -244,7 +251,11 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
     if (!isFormValid) return;
     setIsSaving(true);
     try {
-      const cleanedCriteria = criteria.map(c => ({ ...c, values: c.values.map(v => v.trim()) }));
+      // Filter out empty values; keep IDs as-is (they may look like "123456789" or "phase.defect.new")
+      const cleanedCriteria = criteria.map(c => ({
+        ...c,
+        values: c.values.map(v => v.trim()).filter(v => v !== '')
+      }));
       const normalizedFilterQueryString = isQueryStringMode ? filterQueryString.trim() : '';
       if (viewMode === 'edit' && editingFilter) {
         const payload: FilterUpdatePayload = {
@@ -333,7 +344,7 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden animate-slide-up">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm animate-slide-up">
           <div className="p-6">
             <form onSubmit={handleSave} className="space-y-6">
 
@@ -365,7 +376,7 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
                   className={inputClass}
                 >
                   {ENTITY_TYPES.map(t => (
-                    <option key={t} value={t}>{t.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}</option>
+                    <option key={t.value} value={t.value}>{t.label}</option>
                   ))}
                 </select>
               </div>
@@ -513,64 +524,26 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
 
                   <div className="space-y-2">
                     <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Filter Criteria</label>
+                    <p className="text-xs text-slate-400 dark:text-slate-500">
+                      Pick fields from the dropdown — values are automatically loaded from your Octane workspace.
+                    </p>
                     <div className="space-y-3">
                       {criteria.map((criterion, ci) => (
-                        <div key={ci} className="border border-slate-200 dark:border-slate-700 rounded-xl p-4 bg-slate-50/70 dark:bg-slate-800/40">
-                          <div className="flex items-center justify-between mb-3">
-                            <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide">
-                              {ci === 0 ? 'Where' : 'And'}
-                            </span>
-                            {criteria.length > 1 && (
-                              <button type="button" onClick={() => setCriteria(prev => prev.filter((_, i) => i !== ci))}
-                                className="text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 transition-colors cursor-pointer">
-                                <Trash2 className="h-4 w-4" />
-                              </button>
-                            )}
-                          </div>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
-                            <input
-                              type="text" value={criterion.field}
-                              onChange={e => updateCriterion(ci, { field: e.target.value })}
-                              className={inputClass} placeholder="Field name"
-                            />
-                            <select
-                              value={criterion.operator}
-                              onChange={e => updateCriterion(ci, { operator: e.target.value })}
-                              className={inputClass}
-                            >
-                              {OPERATORS.map(op => <option key={op.value} value={op.value}>{op.label}</option>)}
-                            </select>
-                          </div>
-                          <div className="space-y-2">
-                            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Values</span>
-                            {criterion.values.map((val, vi) => (
-                              <div key={vi} className="flex items-center gap-2">
-                                <input
-                                  type="text" value={val}
-                                  onChange={e => updateCriterionValue(ci, vi, e.target.value)}
-                                  className={inputClass} placeholder="Value or Octane ID"
-                                />
-                                {criterion.values.length > 1 && (
-                                  <button type="button"
-                                    onClick={() => setCriteria(prev => prev.map((c, i) => i !== ci ? c : { ...c, values: c.values.filter((_, x) => x !== vi) }))}
-                                    className="text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 transition-colors flex-shrink-0 cursor-pointer">
-                                    <Trash2 className="h-3.5 w-3.5" />
-                                  </button>
-                                )}
-                              </div>
-                            ))}
-                            <button type="button"
-                              onClick={() => setCriteria(prev => prev.map((c, i) => i !== ci ? c : { ...c, values: [...c.values, ''] }))}
-                              className="text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 font-medium transition-colors cursor-pointer">
-                              + Add value
-                            </button>
-                          </div>
-                        </div>
+                        <SmartFilterRow
+                          key={ci}
+                          clause={criterion}
+                          index={ci}
+                          entityType={entityType}
+                          workspaceId={workspaceId}
+                          onChange={updates => updateCriterion(ci, updates)}
+                          onRemove={() => setCriteria(prev => prev.filter((_, i) => i !== ci))}
+                          canRemove={criteria.length > 1}
+                        />
                       ))}
                       <button type="button" onClick={() => setCriteria(prev => [...prev, emptyCriterion()])}
                         className="flex items-center gap-1.5 text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 font-medium transition-colors cursor-pointer">
                         <Plus className="h-4 w-4" />
-                        Add Criterion
+                        Add Filter Row
                       </button>
                     </div>
                   </div>
@@ -662,7 +635,7 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
                       <div className="flex items-center gap-2 flex-wrap mb-1">
                         <h3 className="font-semibold text-slate-900 dark:text-white text-sm">{f.title}</h3>
                         <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-500/20">
-                          {f.entityType}
+                          {toEntityTypeLabel(f.entityType)}
                         </span>
                       </div>
                       {f.description && (
@@ -684,10 +657,14 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
                         <div className="mt-2 text-xs text-slate-400 dark:text-slate-500">
                           {criteriaList.map((c, i) => (
                             <span key={i}>
+                              {i > 0 && (
+                                <span className="text-indigo-400 dark:text-indigo-500 mx-1 font-medium uppercase">
+                                  {c.logicalOperator ?? 'AND'}
+                                </span>
+                              )}
                               <span className="font-medium text-slate-500 dark:text-slate-400">{c.field}</span>{' '}
-                              <span className="text-slate-400 dark:text-slate-500">{c.operator.toLowerCase()}</span>{' '}
+                              <span className="text-slate-400 dark:text-slate-500">{c.operator.toLowerCase().replace('_', ' ')}</span>{' '}
                               [{c.values.join(', ')}]
-                              {i < criteriaList.length - 1 ? <span className="text-indigo-400 dark:text-indigo-500 mx-1 font-medium">AND</span> : ''}
                             </span>
                           ))}
                         </div>

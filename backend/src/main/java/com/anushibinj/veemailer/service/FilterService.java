@@ -2,6 +2,7 @@ package com.anushibinj.veemailer.service;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -34,6 +35,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hpe.adm.nga.sdk.Octane;
 import com.hpe.adm.nga.sdk.entities.OctaneCollection;
 import com.hpe.adm.nga.sdk.entities.get.GetEntities;
+import com.hpe.adm.nga.sdk.metadata.FieldMetadata;
 import com.hpe.adm.nga.sdk.model.BooleanFieldModel;
 import com.hpe.adm.nga.sdk.model.DateFieldModel;
 import com.hpe.adm.nga.sdk.model.EntityModel;
@@ -53,6 +55,9 @@ import lombok.extern.slf4j.Slf4j;
 @Service
 @RequiredArgsConstructor
 public class FilterService {
+    private static final String ENTITY_TYPE_BACKLOG_ITEMS = "backlog_items";
+    private static final List<String> BACKLOG_SUBTYPES = List.of("defect", "story", "quality_story");
+
     private static final Pattern FILTER_QUERY_CLAUSE_PATTERN = Pattern.compile(
             "^([A-Za-z0-9_]+)\\s+(EQ|NEQ|IN|NOT_IN)\\s+(.+)$",
             Pattern.CASE_INSENSITIVE);
@@ -135,7 +140,9 @@ public class FilterService {
         try {
             List<String> fields = objectMapper.readValue(filter.getFields(), new TypeReference<>() {});
             List<FilterCriteriaClause> criteria = objectMapper.readValue(filter.getCriteria(), new TypeReference<>() {});
-            return buildFilterQueryString(fields, criteria);
+            Workspace workspace = filter.getWorkspace();
+            Set<String> referenceFieldNames = resolveReferenceFieldNames(workspace, filter.getEntityType());
+            return buildFilterQueryString(fields, criteria, referenceFieldNames);
         } catch (JsonProcessingException e) {
             throw new RuntimeException("Failed to deserialize filter data", e);
         }
@@ -166,13 +173,14 @@ public class FilterService {
         try {
             List<String> fields = objectMapper.readValue(filter.getFields(), new TypeReference<>() {});
             List<FilterCriteriaClause> criteria = objectMapper.readValue(filter.getCriteria(), new TypeReference<>() {});
+            Set<String> referenceFieldNames = resolveReferenceFieldNames(filter.getWorkspace(), filter.getEntityType());
             return FilterDto.builder()
                     .title("Clone of " + filter.getTitle())
                     .description(filter.getDescription())
                     .entityType(filter.getEntityType())
                     .fields(fields)
                     .criteria(criteria)
-                    .filterQueryString(buildFilterQueryString(fields, criteria))
+                    .filterQueryString(buildFilterQueryString(fields, criteria, referenceFieldNames))
                     .build();
         } catch (JsonProcessingException e) {
             throw new RuntimeException("Failed to deserialize filter data", e);
@@ -242,7 +250,8 @@ public class FilterService {
                     Integer.parseInt(workspace.getSharedSpaceId()),
                     Integer.parseInt(workspace.getWorkspaceId()));
 
-            Query query = buildQuery(filter.getEntityType(), clauses);
+            Set<String> referenceFieldNames = resolveReferenceFieldNames(octaneClient, filter.getEntityType());
+            Query query = buildQuery(filter.getEntityType(), clauses, referenceFieldNames);
 
             int effectiveLimit = generalSettingsService.getQueryLimit();
             GetEntities getEntities = octaneClient
@@ -293,7 +302,8 @@ public class FilterService {
                     Integer.parseInt(workspace.getSharedSpaceId()),
                     Integer.parseInt(workspace.getWorkspaceId()));
 
-            Query query = buildQuery(filter.getEntityType(), clauses);
+            Set<String> referenceFieldNames = resolveReferenceFieldNames(octaneClient, filter.getEntityType());
+            Query query = buildQuery(filter.getEntityType(), clauses, referenceFieldNames);
 
             GetEntities getEntities = octaneClient
                     .entityList("work_items")
@@ -388,27 +398,40 @@ public class FilterService {
      * Dynamically builds an Octane SDK Query from the entity type and a list
      * of criteria clauses.
      *
-     * Each clause becomes a sub-query joined with AND.
-     * Reference fields (those whose values look like IDs rather than phases)
-     * use a nested Query.statement("id", IN, values) pattern.
+     * <p>Each clause becomes a sub-query. Consecutive clauses are joined with the
+     * operator stored in {@link FilterCriteriaClause#getLogicalOperator()} —
+     * either {@code AND} (default) or {@code OR}. The first clause's logicalOperator
+     * is ignored; all clauses are applied on top of the mandatory subtype filter.
+     *
+     * <p>Reference-ID clauses use a nested
+     * {@code Query.statement("id", IN, values)} pattern.
      */
-    private Query buildQuery(String entityType, List<FilterCriteriaClause> clauses) {
+    private Query buildQuery(String entityType, List<FilterCriteriaClause> clauses, Set<String> referenceFieldNames) {
         // Start with subtype filter
-        Query.QueryBuilder combined = Query.statement("subtype", QueryMethod.EqualTo, entityType);
+        Query.QueryBuilder combined = buildSubtypeScope(entityType);
 
         for (FilterCriteriaClause clause : clauses) {
-            Query.QueryBuilder clauseBuilder = buildClause(clause);
-            combined = combined.and(clauseBuilder);
+            Query.QueryBuilder clauseBuilder = buildClause(clause, referenceFieldNames);
+            boolean isOr = "OR".equalsIgnoreCase(clause.getLogicalOperator());
+            combined = isOr ? combined.or(clauseBuilder) : combined.and(clauseBuilder);
         }
 
         return combined.build();
     }
 
-    private Query.QueryBuilder buildClause(FilterCriteriaClause clause) {
+    private Query.QueryBuilder buildSubtypeScope(String entityType) {
+        if (ENTITY_TYPE_BACKLOG_ITEMS.equals(entityType)) {
+            return Query.statement("subtype", QueryMethod.In, BACKLOG_SUBTYPES.toArray(new String[0]));
+        }
+        return Query.statement("subtype", QueryMethod.EqualTo, entityType);
+    }
+
+    private Query.QueryBuilder buildClause(FilterCriteriaClause clause, Set<String> referenceFieldNames) {
         String[] values = clause.getValues().toArray(new String[0]);
         boolean negate = "NOT_IN".equalsIgnoreCase(clause.getOperator());
+        boolean referenceIds = shouldTreatAsReferenceIds(clause, referenceFieldNames, values);
 
-        if (isReferenceField(values)) {
+        if (referenceIds) {
             // Reference fields: field EqualTo (id IN [...])  or  NOT(field EqualTo (id IN [...]))
             Query.QueryBuilder inner = Query.statement(clause.getField(), QueryMethod.EqualTo,
                     Query.statement("id", QueryMethod.In, values));
@@ -423,17 +446,25 @@ public class FilterService {
         }
     }
 
-    /**
-     * Heuristic: values that contain a dot (like "phase.defect.closed") or are
-     * long alphanumeric strings (like "pgxw2gl93dd60aldlqq5w7596") are reference IDs.
-     */
-    private boolean isReferenceField(String[] values) {
+    /** Heuristic fallback used only when explicit/metadata signal is not available. */
+    private boolean isReferenceFieldHeuristic(String[] values) {
         if (values.length == 0) return false;
         for (String v : values) {
             if (v.contains(".") || v.length() > 15) return true;
-            if (v.matches("^[0-9]+$")) return true; // IDs like "10001234567" are also references, not phases
         }
         return false;
+    }
+
+    private boolean shouldTreatAsReferenceIds(
+            FilterCriteriaClause clause, Set<String> referenceFieldNames, String[] values) {
+        if (Boolean.TRUE.equals(clause.getReferenceValues())) {
+            return true;
+        }
+        if (referenceFieldNames.contains(clause.getField())) {
+            return true;
+        }
+        // Backward compatibility for old filters that don't carry type metadata.
+        return clause.getReferenceValues() == null && isReferenceFieldHeuristic(values);
     }
 
     /**
@@ -488,6 +519,44 @@ public class FilterService {
     private void enforceWorkspaceNotDisabled(Workspace workspace) {
         if (workspace.getStatus() == WorkspaceStatus.DISABLED) {
             throw new IllegalArgumentException("Workspace is disabled and cannot execute filters");
+        }
+    }
+
+    private Set<String> resolveReferenceFieldNames(Workspace workspace, String entityType) {
+        Octane octaneClient = octaneCacheService.getOctaneClient(
+                workspace.getRootUrl(),
+                workspace.getClientId(),
+                workspace.getClientKey(),
+                Integer.parseInt(workspace.getSharedSpaceId()),
+                Integer.parseInt(workspace.getWorkspaceId()));
+        return resolveReferenceFieldNames(octaneClient, entityType);
+    }
+
+    private Set<String> resolveReferenceFieldNames(Octane octaneClient, String entityType) {
+        try {
+            Collection<FieldMetadata> metadata;
+            if ("work_item".equals(entityType)) {
+                metadata = octaneClient.metadata().fields("work_item").execute();
+            } else if (ENTITY_TYPE_BACKLOG_ITEMS.equals(entityType)) {
+                metadata = octaneClient.metadata().fields(
+                        "work_item",
+                        BACKLOG_SUBTYPES.get(0),
+                        BACKLOG_SUBTYPES.get(1),
+                        BACKLOG_SUBTYPES.get(2)
+                ).execute();
+            } else {
+                metadata = octaneClient.metadata().fields("work_item", entityType).execute();
+            }
+            if (metadata == null) {
+                return Set.of();
+            }
+            return metadata.stream()
+                    .filter(fm -> fm.getFieldType() == FieldMetadata.FieldType.Reference)
+                    .map(FieldMetadata::getName)
+                    .collect(Collectors.toSet());
+        } catch (Exception e) {
+            log.warn("Failed to resolve reference metadata for entity type '{}': {}", entityType, e.getMessage());
+            return Set.of();
         }
     }
 
@@ -549,6 +618,7 @@ public class FilterService {
         String field = matcher.group(1).trim();
         String operatorToken = matcher.group(2).trim().toUpperCase();
         String rawValues = matcher.group(3).trim();
+        boolean referenceValues = isReferenceValueExpression(rawValues);
         List<String> values = parseValueTokens(rawValues, rawClause);
 
         String mappedOperator;
@@ -568,6 +638,7 @@ public class FilterService {
                 .field(field)
                 .operator(mappedOperator)
                 .values(values)
+                .referenceValues(referenceValues)
                 .build();
     }
 
@@ -579,6 +650,7 @@ public class FilterService {
 
         String resolvedField = null;
         String resolvedOperator = null;
+        Boolean resolvedReferenceValues = null;
         Set<String> mergedValues = new LinkedHashSet<>();
 
         for (String token : orParts) {
@@ -589,12 +661,16 @@ public class FilterService {
             if (resolvedField == null) {
                 resolvedField = part.getField();
                 resolvedOperator = part.getOperator();
+                resolvedReferenceValues = part.getReferenceValues();
             } else {
                 if (!resolvedField.equalsIgnoreCase(part.getField())) {
                     throw new IllegalArgumentException("OR group must use a single field: " + rawClause);
                 }
                 if (!resolvedOperator.equalsIgnoreCase(part.getOperator())) {
                     throw new IllegalArgumentException("OR group must use a single operator: " + rawClause);
+                }
+                if (!java.util.Objects.equals(resolvedReferenceValues, part.getReferenceValues())) {
+                    throw new IllegalArgumentException("OR group must use a single value style: " + rawClause);
                 }
             }
             mergedValues.addAll(part.getValues());
@@ -604,6 +680,7 @@ public class FilterService {
                 .field(resolvedField)
                 .operator(resolvedOperator)
                 .values(new ArrayList<>(mergedValues))
+                .referenceValues(resolvedReferenceValues)
                 .build();
     }
 
@@ -621,6 +698,11 @@ public class FilterService {
             throw new IllegalArgumentException("Invalid filter query clause values: " + rawClause);
         }
         return values;
+    }
+
+    private boolean isReferenceValueExpression(String rawValues) {
+        String unwrapped = unwrapCarets(rawValues == null ? "" : rawValues.trim());
+        return unwrapped.startsWith("{") && unwrapped.endsWith("}");
     }
 
     private List<String> parseReferenceIdValues(String rawReference, String rawClause) {
@@ -797,6 +879,11 @@ public class FilterService {
     }
 
     String buildFilterQueryString(List<String> fields, List<FilterCriteriaClause> criteria) {
+        return buildFilterQueryString(fields, criteria, Set.of());
+    }
+
+    private String buildFilterQueryString(
+            List<String> fields, List<FilterCriteriaClause> criteria, Set<String> referenceFieldNames) {
         if (fields == null || fields.isEmpty()) {
             throw new IllegalArgumentException("fields must not be empty");
         }
@@ -814,21 +901,27 @@ public class FilterService {
 
         String queryPart = criteria.stream()
                 .peek(this::validateClause)
-                .map(this::serializeClause)
+                .map(clause -> serializeClause(clause, referenceFieldNames))
                 .collect(Collectors.joining(" AND "));
 
         return "fields=" + fieldsPart + "&query=" + queryPart;
     }
 
-    private String serializeClause(FilterCriteriaClause clause) {
+    private String serializeClause(FilterCriteriaClause clause, Set<String> referenceFieldNames) {
         List<String> values = clause.getValues().stream().map(String::trim).collect(Collectors.toList());
-        String valueLiteral = "^" + String.join(",", values) + "^";
-        String operator;
-        if ("NOT_IN".equalsIgnoreCase(clause.getOperator())) {
-            operator = values.size() == 1 ? "NEQ" : "NOT_IN";
-        } else {
-            operator = values.size() == 1 ? "EQ" : "IN";
+        boolean referenceIds = shouldTreatAsReferenceIds(clause, referenceFieldNames, values.toArray(new String[0]));
+        boolean negate = "NOT_IN".equalsIgnoreCase(clause.getOperator());
+
+        if (referenceIds) {
+            String inner = "id IN " + String.join(",", values);
+            String outerOperator = negate ? "NEQ" : "EQ";
+            return clause.getField().trim() + " " + outerOperator + " {" + inner + "}";
         }
+
+        String valueLiteral = "^" + String.join(",", values) + "^";
+        String operator = negate
+                ? (values.size() == 1 ? "NEQ" : "NOT_IN")
+                : (values.size() == 1 ? "EQ" : "IN");
         return clause.getField().trim() + " " + operator + " " + valueLiteral;
     }
 

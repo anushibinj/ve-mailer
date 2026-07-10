@@ -120,6 +120,7 @@ ve-mailer/
 │   │   │   ├── GeneralSettingsController.java      # Admin general settings (GET/PUT) — ADMIN only
 │   │   │   ├── MailAnalyticsController.java        # Admin mail analytics (summary, charts, history) — ADMIN only
 │   │   │   ├── NotificationPreferencesController.java # Admin SMTP config (GET/PUT)
+│   │   │   ├── OctaneMetadataController.java # Easy Filter Builder metadata (GET fields, GET field-values)
 │   │   │   ├── RecipientGroupController.java       # Recipient group CRUD + member management (workspace-scoped)
 │   │   │   ├── SubscriptionController.java
 │   │   │   ├── UserManagementController.java       # Admin user listing — ADMIN only
@@ -159,7 +160,7 @@ ve-mailer/
 │   │   │   ├── Workspace.java
 │   │   │   ├── WorkspaceAdminMapping.java   # Maps users to workspaces they administer
 │   │   │   ├── Filter.java                 # title, description, entityType, fields (JSON), criteria (JSON)
-│   │   │   ├── FilterCriteriaClause.java   # POJO: field, operator, negate, values[]
+│   │   │   ├── FilterCriteriaClause.java   # POJO: field, operator, values[], logicalOperator (AND|OR)
 │   │   │   ├── EmailSubscriber.java
 │   │   │   ├── OtpRequest.java
 │   │   │   ├── ActionType.java       # SUBSCRIBE | UPDATE | UNSUBSCRIBE | SIGNUP_VERIFICATION | PASSWORD_RESET
@@ -264,15 +265,16 @@ Filter
   id (UUID PK)
   title
   description
-  entityType      -- Octane entity type (e.g. "defect", "story")
+  entityType      -- Octane filter scope (e.g. "backlog_items", "epic", "feature")
   fields          -- JSON array of field names to fetch (TEXT column)
   criteria        -- JSON array of FilterCriteriaClause objects (TEXT column)
 
   FilterCriteriaClause (embedded in criteria JSON):
     field         -- Octane field name
-    operator      -- EQUAL_TO | IN
-    negate        -- boolean (wraps clause in NOT)
+    operator      -- IN | NOT_IN
     values[]      -- list of match values or Octane IDs
+    logicalOperator -- AND | OR (join with previous clause)
+    referenceValues -- nullable boolean; true = query as field EQ {id IN ...}
 
 EmailSubscriber
   id (UUID PK)
@@ -436,11 +438,14 @@ Filter template read endpoints are open to all authenticated users. Create/updat
 {
   "field": "defect_type",
   "operator": "IN",
-  "values": ["Escaped"]
+  "values": ["Escaped"],
+  "logicalOperator": "AND"
 }
 ```
 
-Supported operators: `IN`, `NOT_IN`.
+- `operator`: `IN` or `NOT_IN`
+- `logicalOperator`: `AND` (default) or `OR` — controls how this clause is joined to the previous one. Ignored for the first clause.
+- `referenceValues`: optional; when `true`, criteria are emitted as reference-ID clauses like `code_review_owner_udf EQ {id IN 8666}`
 
 **Query-string format:** `fields=id,name&query=name EQ ^*Case360*^`
 
@@ -449,7 +454,46 @@ Supported operators: `IN`, `NOT_IN`.
 - `query` can include `||` OR groups when all OR-joined expressions target the same field
 - Accepted operators in query-string mode: `EQ`, `NEQ`, `IN`, `NOT_IN` (mapped internally to `IN`/`NOT_IN`)
 - Values can be wrapped with `^...^` and multiple values are comma-separated inside the wrapper
-- Cross-filter values like `owner EQ {id EQ 8666}` and `phase EQ {id EQ ^...^}` are supported
+- Reference-ID clauses are supported, e.g. `owner EQ {id IN 8666}` and `phase EQ {id IN phase.defect.new,phase.defect.in_progress}`
+
+### Octane Metadata (Easy Filter Builder)
+
+These endpoints expose Octane metadata to power the visual, non-technical Easy Filter Builder UI. Both are accessible to any authenticated user.
+
+| Method | Path                                                       | Description                                                      |
+|--------|------------------------------------------------------------|------------------------------------------------------------------|
+| `GET`  | `/workspaces/{id}/octane/fields?entityType=defect`         | Filterable fields with labels and type info (drives field dropdown) |
+| `GET`  | `/workspaces/{id}/octane/field-values?fieldName=phase&entityType=defect` | Selectable values for a reference field (drives value picker) |
+
+**OctaneFieldDto** (field metadata):
+```json
+{
+  "name": "phase",
+  "label": "Phase",
+  "fieldType": "reference",
+  "reference": true,
+  "multiReference": false,
+  "targetEntityType": "phase",
+  "targetLogicalName": null
+}
+```
+
+**OctaneFieldValueDto** (value option for reference fields):
+```json
+{ "id": "phase.defect.new", "name": "New" }
+```
+
+The backend automatically maps the `targetEntityType` to the correct Octane API collection:
+
+| Target entity type | Octane API | Notes |
+|---|---|---|
+| `list_node` | `list_nodes?query="list_root={logical_name EQ '...'}"` | Severity, Priority, Defect type, etc. |
+| `phase` | `phases` | Phase lifecycle states |
+| `workspace_user` | `workspace_users` | Team members (full_name displayed) |
+| `release` | `releases` | |
+| `sprint` | `sprints` | |
+| `product_area` | `product_areas` | |
+| `team` | `teams` | |
 
 ### Subscriptions
 
@@ -877,11 +921,35 @@ User                    Frontend               Backend
 
 ### Filter Templates
 
-Filter templates replace the old hardcoded query approach. Filters are still stored as structured data, and the UI can now import/export a compact string form (`fields=...&query=...`) that the backend validates and converts into structured clauses.
+Filter templates are the core building block. Each filter is stored as structured data (entity type, fields, criteria) and can be created via:
 
-1. **Entity type** — the Octane entity to query (e.g. `defect`, `story`)
+1. **Easy Filter Builder** (recommended) — a visual, non-technical UI where:
+   - Fields are selected from a searchable dropdown populated live from Octane's `/metadata/fields` API
+   - Values for reference fields (phase, owner, severity, etc.) are selected from a searchable multi-select populated from the corresponding Octane entity list
+   - Conditions can be joined with **AND** or **OR** using a per-row connector dropdown
+
+2. **Query-string import** (power users, optional) — paste a compact `fields=...&query=...` string that the backend validates and converts into structured clauses
+
+A filter has:
+
+1. **Entity type** — filter scope selected in UI:
+   - `backlog_items` → `subtype IN defect,story,quality_story`
+   - `epic` → `subtype EQ epic`
+   - `feature` → `subtype EQ feature`
 2. **Fields** — which fields to return in the result set (e.g. `["id", "name", "phase", "owner"]`)
-3. **Criteria** — an array of clauses that are AND-joined to build the Octane SDK query
+3. **Criteria** — an array of clauses that are AND/OR-joined to build the Octane SDK query
+
+#### Easy Filter Builder — How the metadata APIs work
+
+When the filter form opens, the `SmartFilterRow` component calls:
+- `GET /octane/fields?entityType=defect` → returns all filterable fields with human-readable labels, field types, and reference target info
+- When a reference field is selected → `GET /octane/field-values?fieldName=phase&entityType=defect` → returns `[{id, name}]` pairs for the dropdown
+
+The `OctaneMetadataService` handles the mapping:
+- `list_node` targets → queries `list_nodes?query="list_root={logical_name EQ '...'}"` (e.g. for severity, priority)
+- `phase` targets → queries `phases` scoped by entity type (deduplicated fallback if scope fails)
+- `workspace_user` targets → queries `workspace_users` (team members)
+- `release`/`sprint`/`team`/`product_area` → queries the respective entity list
 
 #### Filter Examples
 
