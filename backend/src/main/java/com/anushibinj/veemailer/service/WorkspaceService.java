@@ -12,9 +12,8 @@ import com.hpe.adm.nga.sdk.Octane;
 import com.hpe.adm.nga.sdk.entities.OctaneCollection;
 import com.hpe.adm.nga.sdk.model.EntityModel;
 import com.hpe.adm.nga.sdk.model.FieldModel;
-import com.hpe.adm.nga.sdk.query.Query;
-import com.hpe.adm.nga.sdk.query.QueryMethod;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -23,6 +22,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class WorkspaceService {
 
     static final String CLIENT_KEY_PLACEHOLDER = "(unchanged)";
@@ -168,10 +168,15 @@ public class WorkspaceService {
             workspaces = octane.entityList("workspaces")
                     .get()
                     .addFields("id", "name")
-                    .query(Query.statement("id", QueryMethod.EqualTo, workspaceId).build())
                     .execute();
         } catch (RuntimeException ex) {
-            throw new IllegalArgumentException("Connection test failed: unable to fetch workspace metadata", ex);
+            log.error(
+                    "Connection test failed while fetching workspace metadata via SDK [rootUrl={}, sharedSpaceId={}, workspaceId={}, clientId={}]: {}",
+                    rootUrl, sharedSpaceId, workspaceId, clientId, ex.getMessage(), ex);
+            String details = ex.getMessage() == null || ex.getMessage().isBlank()
+                    ? "Please check server URL and credentials."
+                    : ex.getMessage();
+            throw new IllegalArgumentException("Connection test failed: unable to fetch workspace metadata. " + details, ex);
         }
 
         if (workspaces == null || workspaces.isEmpty()) {
@@ -188,6 +193,8 @@ public class WorkspaceService {
         }
 
         if (matchedWorkspace == null) {
+            log.warn("Connection test mismatch: requested workspaceId={} but returned ids={}",
+                    workspaceId, extractWorkspaceIds(workspaces));
             throw new IllegalArgumentException(
                     "Connection test failed: returned workspace metadata does not match workspace ID " + workspaceId);
         }
@@ -235,6 +242,14 @@ public class WorkspaceService {
             return "";
         }
         return String.valueOf(field.getValue());
+    }
+
+    private List<String> extractWorkspaceIds(OctaneCollection<EntityModel> workspaces) {
+        List<String> ids = new java.util.ArrayList<>();
+        for (EntityModel workspaceEntity : workspaces) {
+            ids.add(extractFieldValue(workspaceEntity, "id"));
+        }
+        return ids;
     }
 
     private WorkspaceResponseDto toResponseDto(Workspace workspace) {

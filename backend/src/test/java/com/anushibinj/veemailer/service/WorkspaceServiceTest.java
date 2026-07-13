@@ -196,7 +196,6 @@ class WorkspaceServiceTest {
         when(octane.entityList("workspaces")
                 .get()
                 .addFields("id", "name")
-                .query(any())
                 .execute())
                 .thenReturn(resultCollection);
 
@@ -246,7 +245,6 @@ class WorkspaceServiceTest {
         when(octane.entityList("workspaces")
                 .get()
                 .addFields("id", "name")
-                .query(any())
                 .execute())
                 .thenReturn(resultCollection);
 
