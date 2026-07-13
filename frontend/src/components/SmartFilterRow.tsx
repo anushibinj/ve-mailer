@@ -249,6 +249,12 @@ const ValuePicker: React.FC<ValuePickerProps> = ({ values, selected, loading, se
               className="flex-1 text-sm bg-transparent outline-none text-slate-900 dark:text-slate-100 placeholder:text-slate-400"
             />
           </div>
+          {loading && (
+            <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-800 text-sm text-slate-500 flex items-center gap-2">
+              <Loader2 className="h-3.5 w-3.5 animate-spin text-slate-400" />
+              <span>Fetching fields…</span>
+            </div>
+          )}
           <div className="overflow-y-auto">
             {filtered.length === 0 ? (
               <p className="p-3 text-sm text-slate-400 text-center">
