@@ -140,6 +140,7 @@ const ValuePicker: React.FC<ValuePickerProps> = ({ values, selected, loading, se
   const [search, setSearch] = useState('');
   const ref = useRef<HTMLDivElement>(null);
   const requestedTermRef = useRef('');
+  const searchDebounceRef = useRef<number | null>(null);
 
   const filtered = values.filter(v =>
     v.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -165,14 +166,25 @@ const ValuePicker: React.FC<ValuePickerProps> = ({ values, selected, loading, se
     const normalized = search.trim();
     if (!open || loading || normalized.length < 2 || filtered.length > 0) return;
     if (requestedTermRef.current === normalized.toLowerCase()) return;
-    requestedTermRef.current = normalized.toLowerCase();
-    onSearchMiss(normalized);
+    if (searchDebounceRef.current !== null) {
+      window.clearTimeout(searchDebounceRef.current);
+    }
+    searchDebounceRef.current = window.setTimeout(() => {
+      requestedTermRef.current = normalized.toLowerCase();
+      onSearchMiss(normalized);
+    }, 300);
   }, [search, open, loading, filtered.length, onSearchMiss]);
 
   useEffect(() => {
     if (search.trim().length === 0) {
       requestedTermRef.current = '';
     }
+    return () => {
+      if (searchDebounceRef.current !== null) {
+        window.clearTimeout(searchDebounceRef.current);
+        searchDebounceRef.current = null;
+      }
+    };
   }, [search]);
 
   return (
