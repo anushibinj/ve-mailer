@@ -205,13 +205,7 @@ const ValuePicker: React.FC<ValuePickerProps> = ({ values, selected, loading, se
         className={`${inputClass} flex items-center justify-between gap-2 text-left min-h-[42px]`}
       >
         <div className="flex flex-wrap gap-1 flex-1 min-w-0">
-          {loading ? (
-            <span className="text-slate-400 dark:text-slate-500 text-sm flex items-center gap-1">
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />Loading…
-            </span>
-          ) : selectedItems.length === 0 ? (
-            <span className="text-slate-400 dark:text-slate-500 text-sm">Select value(s)…</span>
-          ) : (
+          {selectedItems.length > 0 ? (
             selectedItems.map(item => (
               <span
                 key={item.id}
@@ -227,12 +221,22 @@ const ValuePicker: React.FC<ValuePickerProps> = ({ values, selected, loading, se
                 >×</span>
               </span>
             ))
+          ) : loading ? (
+            <span className="text-slate-400 dark:text-slate-500 text-sm flex items-center gap-1">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />Loading…
+            </span>
+          ) : (
+            <span className="text-slate-400 dark:text-slate-500 text-sm">Select value(s)…</span>
           )}
         </div>
-        <ChevronDown className="h-4 w-4 text-slate-400 flex-shrink-0" />
+        {loading ? (
+          <Loader2 className="h-4 w-4 animate-spin text-slate-400 flex-shrink-0" />
+        ) : (
+          <ChevronDown className="h-4 w-4 text-slate-400 flex-shrink-0" />
+        )}
       </button>
 
-      {open && !loading && (
+      {open && (
         <div className="absolute z-50 mt-1 w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg max-h-72 flex flex-col overflow-hidden">
           <div className="p-2 border-b border-slate-100 dark:border-slate-800 flex items-center gap-2">
             <Search className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
@@ -248,7 +252,7 @@ const ValuePicker: React.FC<ValuePickerProps> = ({ values, selected, loading, se
           <div className="overflow-y-auto">
             {filtered.length === 0 ? (
               <p className="p-3 text-sm text-slate-400 text-center">
-                {searching ? 'Searching in Octane…' : 'No values found'}
+                {loading ? 'Loading values…' : (searching ? 'Searching in Octane…' : 'No values found')}
               </p>
             ) : (
               filtered.map(v => {
