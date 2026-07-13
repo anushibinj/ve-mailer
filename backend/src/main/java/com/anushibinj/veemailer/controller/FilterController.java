@@ -159,7 +159,7 @@ public class FilterController {
 
     private boolean canManageWorkspaceTemplates(Authentication authentication, UUID workspaceId) {
         if (authentication == null || authentication.getName() == null) {
-            return true;
+            return false;
         }
         return workspaceAdminService.canManageWorkspaceTemplates(authentication, workspaceId);
     }

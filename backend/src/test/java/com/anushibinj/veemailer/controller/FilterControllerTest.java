@@ -16,6 +16,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.Arrays;
@@ -147,6 +148,7 @@ class FilterControllerTest {
     }
 
     @Test
+    @WithMockUser(username = "admin@test.com", roles = "ADMIN")
     void testUpdateFilter() throws Exception {
         Filter updated = buildTestFilter();
         updated.setTitle("Updated Title");
@@ -228,6 +230,7 @@ class FilterControllerTest {
     }
 
     @Test
+    @WithMockUser(username = "admin@test.com", roles = "ADMIN")
     void testDeleteFilter_returnsNoContent() throws Exception {
         UUID filterId = UUID.randomUUID();
 
