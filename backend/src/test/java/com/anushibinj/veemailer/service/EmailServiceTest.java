@@ -9,6 +9,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.Properties;
 
@@ -62,5 +63,27 @@ class EmailServiceTest {
         emailService.sendOtpEmail("another@example.com", "111111");
 
         verify(dynamicMailSenderService, times(1)).send(any(MimeMessage.class));
+    }
+
+    @Test
+    void testSendInviteEmail_IncludesFrontendUrlLink() throws Exception {
+        String recipient = "invitee@example.com";
+        String otp = "123456";
+        String frontendUrl = "http://localhost:5173";
+
+        ReflectionTestUtils.setField(emailService, "frontendUrl", frontendUrl);
+        when(dynamicMailSenderService.getSession()).thenReturn(testSession());
+        when(dynamicMailSenderService.getFromAddress()).thenReturn("noreply@test.com");
+        doNothing().when(dynamicMailSenderService).send(any(MimeMessage.class));
+
+        emailService.sendInviteEmail(recipient, "Invitee", otp);
+
+        ArgumentCaptor<MimeMessage> captor = ArgumentCaptor.forClass(MimeMessage.class);
+        verify(dynamicMailSenderService, times(1)).send(captor.capture());
+        String body = captor.getValue().getContent().toString();
+
+        assertTrue(body.contains("Open VE Mailer in your browser: " + frontendUrl),
+                "Invite email body should include the VE Mailer frontend URL");
+        assertTrue(body.contains(otp), "Invite email body should include the OTP code");
     }
 }

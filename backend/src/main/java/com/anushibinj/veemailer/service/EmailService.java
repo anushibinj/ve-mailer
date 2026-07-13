@@ -7,6 +7,7 @@ import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
@@ -16,6 +17,8 @@ import org.springframework.stereotype.Service;
 public class EmailService {
 
     private final DynamicMailSenderService dynamicMailSenderService;
+    @Value("${app.frontend.url:http://localhost:5173}")
+    private String frontendUrl;
 
     @Async
     public void sendOtpEmail(String to, String otp) {
@@ -53,7 +56,7 @@ public class EmailService {
                 "Your one-time invite code is: " + otp + "\n" +
                 "This code will expire in 10 minutes.\n\n" +
                 "To set up your account:\n" +
-                "  1. Open VE Mailer in your browser.\n" +
+                "  1. Open VE Mailer in your browser: " + frontendUrl + "\n" +
                 "  2. On the login page, click \"Accept Invite\".\n" +
                 "  3. Enter your email address (" + to + ") and the code above.\n" +
                 "  4. Choose a new password.\n\n" +

@@ -595,7 +595,7 @@ Superadmins can list all users and onboard new users without requiring self-sign
 **User onboarding flow:**
 1. Admin submits name + email via the Admin Panel → Users page.
 2. Backend creates an account with a random temporary password and `mustSetPassword = true`.
-3. An invite email containing a 6-digit OTP is sent to the user.
+3. An invite email containing a 6-digit OTP and a direct VE Mailer GUI link is sent to the user.
 4. The user navigates to `/accept-invite`, enters their email and the OTP, and chooses a new password.
 5. On success, the user is automatically logged in and `mustSetPassword` is cleared.
 
@@ -709,6 +709,7 @@ app.auth.jwt.refresh-token-expiration-ms=604800000
 
 # CORS — comma-separated list of allowed origins
 app.cors.allowed-origins=http://localhost:5173,http://localhost:80,http://localhost
+app.frontend.url=http://localhost:5173
 
 # Admin Bootstrap (created on first startup)
 app.bootstrap.admin.email=admin@company.com
