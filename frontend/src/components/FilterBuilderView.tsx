@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   fetchFilters,
   createFilter,
@@ -95,6 +95,132 @@ const inputClass =
   'text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 ' +
   'bg-white dark:bg-slate-800/60 focus:outline-none focus:border-indigo-500 dark:focus:border-indigo-400 ' +
   'focus:ring-2 focus:ring-indigo-500/15 dark:focus:ring-indigo-400/15 transition-all';
+
+type PopoverPlacement = 'top' | 'left' | 'right' | 'bottom';
+
+interface FieldBadgeWithPopoverProps {
+  label: string;
+  selected: boolean;
+  onClick: () => void;
+  selectedClassName: string;
+  unselectedClassName: string;
+  popoverText: string;
+}
+
+const FieldBadgeWithPopover: React.FC<FieldBadgeWithPopoverProps> = ({
+  label,
+  selected,
+  onClick,
+  selectedClassName,
+  unselectedClassName,
+  popoverText,
+}) => {
+  const wrapperRef = useRef<HTMLDivElement | null>(null);
+  const popoverRef = useRef<HTMLDivElement | null>(null);
+  const [isOpen, setIsOpen] = useState(false);
+  const [placement, setPlacement] = useState<PopoverPlacement>('top');
+  const [coords, setCoords] = useState({ top: 0, left: 0 });
+
+  const updatePopoverPosition = useCallback(() => {
+    const wrapperEl = wrapperRef.current;
+    if (!wrapperEl) return;
+
+    const triggerRect = wrapperEl.getBoundingClientRect();
+    const popoverWidth = popoverRef.current?.offsetWidth ?? 280;
+    const popoverHeight = popoverRef.current?.offsetHeight ?? 96;
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const gap = 10;
+    const edgePadding = 8;
+
+    const topSpace = triggerRect.top;
+    const leftSpace = triggerRect.left;
+    const rightSpace = viewportWidth - triggerRect.right;
+
+    let nextPlacement: PopoverPlacement;
+    if (topSpace >= popoverHeight + gap) {
+      nextPlacement = 'top';
+    } else if (leftSpace >= popoverWidth + gap) {
+      nextPlacement = 'left';
+    } else if (rightSpace >= popoverWidth + gap) {
+      nextPlacement = 'right';
+    } else {
+      nextPlacement = 'bottom';
+    }
+
+    let top = 0;
+    let left = 0;
+    if (nextPlacement === 'top') {
+      top = triggerRect.top - popoverHeight - gap;
+      left = triggerRect.left + (triggerRect.width / 2) - (popoverWidth / 2);
+    } else if (nextPlacement === 'left') {
+      top = triggerRect.top + (triggerRect.height / 2) - (popoverHeight / 2);
+      left = triggerRect.left - popoverWidth - gap;
+    } else if (nextPlacement === 'right') {
+      top = triggerRect.top + (triggerRect.height / 2) - (popoverHeight / 2);
+      left = triggerRect.right + gap;
+    } else {
+      top = triggerRect.bottom + gap;
+      left = triggerRect.left + (triggerRect.width / 2) - (popoverWidth / 2);
+    }
+
+    top = Math.max(edgePadding, Math.min(top, viewportHeight - popoverHeight - edgePadding));
+    left = Math.max(edgePadding, Math.min(left, viewportWidth - popoverWidth - edgePadding));
+
+    setPlacement(nextPlacement);
+    setCoords({ top, left });
+  }, []);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    updatePopoverPosition();
+    const reposition = () => updatePopoverPosition();
+    window.addEventListener('resize', reposition);
+    window.addEventListener('scroll', reposition, true);
+    return () => {
+      window.removeEventListener('resize', reposition);
+      window.removeEventListener('scroll', reposition, true);
+    };
+  }, [isOpen, updatePopoverPosition]);
+
+  return (
+    <div
+      ref={wrapperRef}
+      className="inline-flex"
+      onMouseEnter={() => setIsOpen(true)}
+      onMouseLeave={() => setIsOpen(false)}
+      onFocusCapture={() => setIsOpen(true)}
+      onBlurCapture={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
+          setIsOpen(false);
+        }
+      }}
+    >
+      <button
+        type="button"
+        onClick={onClick}
+        aria-describedby={isOpen ? `${label}-popover` : undefined}
+        className={`px-3 py-1 rounded-full text-xs font-medium border transition-all ${
+          selected ? selectedClassName : unselectedClassName
+        }`}
+      >
+        {label}
+      </button>
+      {isOpen && (
+        <div
+          id={`${label}-popover`}
+          ref={popoverRef}
+          role="tooltip"
+          data-placement={placement}
+          style={{ top: `${coords.top}px`, left: `${coords.left}px` }}
+          className="fixed z-50 max-w-xs sm:max-w-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs leading-relaxed text-slate-700 dark:text-slate-200 shadow-xl whitespace-normal break-words"
+        >
+          {popoverText}
+        </div>
+      )}
+    </div>
+  );
+};
 
 const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBack }) => {
   const allowCustomQueryString = String(import.meta.env.VITE_ALLOW_CUSTOM_QUERY_STRING ?? 'false').toLowerCase() === 'true';
@@ -496,28 +622,22 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
                   <div className="space-y-2">
                     <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">{allowCustomQueryString ? 'Step 2: Choose Fields to Fetch' : 'Fields to Fetch'}</label>
                     <div className="flex flex-wrap gap-2">
-                      <button
-                        type="button"
+                      <FieldBadgeWithPopover
+                        label={AI_SUMMARY_FIELD}
+                        selected={selectedFields.includes(AI_SUMMARY_FIELD)}
                         onClick={() => toggleField(AI_SUMMARY_FIELD)}
-                        className={`px-3 py-1 rounded-full text-xs font-medium border transition-all ${
-                          selectedFields.includes(AI_SUMMARY_FIELD)
-                            ? 'bg-violet-100 dark:bg-violet-500/20 text-violet-700 dark:text-violet-300 border-violet-200 dark:border-violet-500/30 scale-105'
-                            : 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-600 hover:border-violet-300 dark:hover:border-violet-600 hover:text-violet-600 dark:hover:text-violet-400'
-                        }`}
-                      >
-                        {AI_SUMMARY_FIELD}
-                      </button>
-                      <button
-                        type="button"
+                        selectedClassName="bg-violet-100 dark:bg-violet-500/20 text-violet-700 dark:text-violet-300 border-violet-200 dark:border-violet-500/30 scale-105"
+                        unselectedClassName="bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-600 hover:border-violet-300 dark:hover:border-violet-600 hover:text-violet-600 dark:hover:text-violet-400"
+                        popoverText="An AI summary of the current progress in the ticket and potential next items"
+                      />
+                      <FieldBadgeWithPopover
+                        label={`🚦 ${TRIAGE_SLA_FIELD}`}
+                        selected={selectedFields.includes(TRIAGE_SLA_FIELD)}
                         onClick={() => toggleField(TRIAGE_SLA_FIELD)}
-                        className={`px-3 py-1 rounded-full text-xs font-medium border transition-all ${
-                          selectedFields.includes(TRIAGE_SLA_FIELD)
-                            ? 'bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-500/30 scale-105'
-                            : 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-600 hover:border-amber-300 dark:hover:border-amber-600 hover:text-amber-600 dark:hover:text-amber-400'
-                        }`}
-                      >
-                        {`🚦 ${TRIAGE_SLA_FIELD}`}
-                      </button>
+                        selectedClassName="bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-500/30 scale-105"
+                        unselectedClassName="bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-600 hover:border-amber-300 dark:hover:border-amber-600 hover:text-amber-600 dark:hover:text-amber-400"
+                        popoverText="A traffic light for SLA compliance of Customer tickets. Make sure that you adjust your filter to only show tickets that need the Triage SLA to be applied."
+                      />
                       {COMMON_FIELDS.map(field => (
                         <button
                           key={field} type="button"
