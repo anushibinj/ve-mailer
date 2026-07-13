@@ -45,6 +45,22 @@ export interface WorkspaceUpdatePayload {
   status: WorkspaceStatus;
 }
 
+export interface WorkspaceConnectionTestPayload {
+  workspaceRecordId?: string;
+  sharedSpaceId: string;
+  workspaceId: string;
+  clientId: string;
+  clientKey?: string;
+  rootUrl: string;
+}
+
+export interface WorkspaceConnectionTestResponse {
+  success: boolean;
+  workspaceId: string;
+  workspaceName: string;
+  message: string;
+}
+
 export interface FilterCriteriaClause {
   field: string;
   operator: string;
@@ -157,6 +173,13 @@ export const adminUpdateWorkspace = async (
 
 export const adminDeleteWorkspace = async (id: string): Promise<void> => {
   await api.delete(`/api/v1/workspaces/${id}`);
+};
+
+export const adminTestWorkspaceConnection = async (
+  payload: WorkspaceConnectionTestPayload
+): Promise<WorkspaceConnectionTestResponse> => {
+  const response = await api.post('/api/v1/workspaces/test-connection', payload);
+  return response.data;
 };
 
 // --- Filters (workspace-scoped) ---

@@ -55,6 +55,7 @@ flowchart TD
             FS[Filter Service]
             RGCtrl[Recipient Group Controller]
             SS[Subscription Service]
+            WSS[Workspace Service]
             WAS[Workspace Admin Service]
             RGS[Recipient Group Service]
             NPS[Notification Preferences Service]
@@ -167,6 +168,9 @@ flowchart TD
     FExport --> FS
     FCtrl --> WAS
     WCtrl --> WAS
+    WCtrl --> WSS
+    WSS --> WR
+    WSS --> VE
     WAS --> WAR
     SCtrl --> SS
     NPCtrl --> NPS

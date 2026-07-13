@@ -1,11 +1,19 @@
 package com.anushibinj.veemailer.service;
 
 import com.anushibinj.veemailer.dto.WorkspaceCreateRequestDto;
+import com.anushibinj.veemailer.dto.WorkspaceConnectionTestRequestDto;
+import com.anushibinj.veemailer.dto.WorkspaceConnectionTestResponseDto;
 import com.anushibinj.veemailer.dto.WorkspaceResponseDto;
 import com.anushibinj.veemailer.dto.WorkspaceUpdateRequestDto;
 import com.anushibinj.veemailer.model.Workspace;
 import com.anushibinj.veemailer.model.WorkspaceStatus;
 import com.anushibinj.veemailer.repository.WorkspaceRepository;
+import com.hpe.adm.nga.sdk.Octane;
+import com.hpe.adm.nga.sdk.entities.OctaneCollection;
+import com.hpe.adm.nga.sdk.model.EntityModel;
+import com.hpe.adm.nga.sdk.model.FieldModel;
+import com.hpe.adm.nga.sdk.query.Query;
+import com.hpe.adm.nga.sdk.query.QueryMethod;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -20,6 +28,7 @@ public class WorkspaceService {
     static final String CLIENT_KEY_PLACEHOLDER = "(unchanged)";
 
     private final WorkspaceRepository workspaceRepository;
+    private final OctaneCacheService octaneCacheService;
 
     /**
      * Returns workspaces visible to normal (non-admin) users: only ENABLED.
@@ -134,6 +143,98 @@ public class WorkspaceService {
             throw new IllegalArgumentException("Workspace not found: " + id);
         }
         workspaceRepository.deleteById(id);
+    }
+
+    public WorkspaceConnectionTestResponseDto testConnection(WorkspaceConnectionTestRequestDto request) {
+        String sharedSpaceId = request.getSharedSpaceId().trim();
+        String workspaceId = request.getWorkspaceId().trim();
+        String clientId = request.getClientId().trim();
+        String rootUrl = request.getRootUrl().trim();
+        String clientKey = resolveClientKey(request.getClientKey(), request.getWorkspaceRecordId());
+
+        int parsedSharedSpaceId = parseId(sharedSpaceId, "Shared Space ID");
+        int parsedWorkspaceId = parseId(workspaceId, "Workspace ID");
+
+        Octane octane = octaneCacheService.getOctaneClient(
+                rootUrl,
+                clientId,
+                clientKey,
+                parsedSharedSpaceId,
+                parsedWorkspaceId
+        );
+
+        final OctaneCollection<EntityModel> workspaces;
+        try {
+            workspaces = octane.entityList("workspaces")
+                    .get()
+                    .addFields("id", "name")
+                    .query(Query.statement("id", QueryMethod.EqualTo, workspaceId).build())
+                    .execute();
+        } catch (RuntimeException ex) {
+            throw new IllegalArgumentException("Connection test failed: unable to fetch workspace metadata", ex);
+        }
+
+        if (workspaces == null || workspaces.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "Connection test failed: workspace metadata was not returned for workspace ID " + workspaceId);
+        }
+
+        EntityModel matchedWorkspace = null;
+        for (EntityModel workspaceEntity : workspaces) {
+            if (workspaceId.equals(extractFieldValue(workspaceEntity, "id"))) {
+                matchedWorkspace = workspaceEntity;
+                break;
+            }
+        }
+
+        if (matchedWorkspace == null) {
+            throw new IllegalArgumentException(
+                    "Connection test failed: returned workspace metadata does not match workspace ID " + workspaceId);
+        }
+
+        return WorkspaceConnectionTestResponseDto.builder()
+                .success(true)
+                .workspaceId(workspaceId)
+                .workspaceName(extractFieldValue(matchedWorkspace, "name"))
+                .message("Connection successful")
+                .build();
+    }
+
+    private String resolveClientKey(String providedClientKey, UUID workspaceRecordId) {
+        if (providedClientKey != null) {
+            String trimmed = providedClientKey.trim();
+            if (!trimmed.isBlank() && !CLIENT_KEY_PLACEHOLDER.equals(trimmed)) {
+                return trimmed;
+            }
+        }
+
+        if (workspaceRecordId == null) {
+            throw new IllegalArgumentException("Client Key is required");
+        }
+
+        Workspace workspace = workspaceRepository.findById(workspaceRecordId)
+                .orElseThrow(() -> new IllegalArgumentException("Workspace not found: " + workspaceRecordId));
+
+        if (workspace.getClientKey() == null || workspace.getClientKey().isBlank()) {
+            throw new IllegalArgumentException("Client Key is not configured for this workspace");
+        }
+        return workspace.getClientKey();
+    }
+
+    private int parseId(String value, String fieldName) {
+        try {
+            return Integer.parseInt(value);
+        } catch (NumberFormatException ex) {
+            throw new IllegalArgumentException(fieldName + " must be a valid integer");
+        }
+    }
+
+    private String extractFieldValue(EntityModel entityModel, String fieldName) {
+        FieldModel<?> field = entityModel.getValue(fieldName);
+        if (field == null || !field.hasValue() || field.getValue() == null) {
+            return "";
+        }
+        return String.valueOf(field.getValue());
     }
 
     private WorkspaceResponseDto toResponseDto(Workspace workspace) {

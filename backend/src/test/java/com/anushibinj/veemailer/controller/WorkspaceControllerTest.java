@@ -2,6 +2,7 @@ package com.anushibinj.veemailer.controller;
 
 import com.anushibinj.veemailer.dto.ScheduleDto;
 import com.anushibinj.veemailer.dto.SubscriptionResponseDTO;
+import com.anushibinj.veemailer.dto.WorkspaceConnectionTestResponseDto;
 import com.anushibinj.veemailer.dto.WorkspaceCreateRequestDto;
 import com.anushibinj.veemailer.dto.WorkspaceResponseDto;
 import com.anushibinj.veemailer.model.ScheduleType;
@@ -172,6 +173,39 @@ class WorkspaceControllerTest {
 
     @Test
     @WithMockUser(username = "admin@test.com", roles = "ADMIN")
+    void testWorkspaceConnection_ReturnsOk() throws Exception {
+        UUID workspaceId = UUID.randomUUID();
+        WorkspaceConnectionTestResponseDto responseDto = WorkspaceConnectionTestResponseDto.builder()
+                .success(true)
+                .workspaceId("5015")
+                .workspaceName("Portfolio-Hyd - 77BD")
+                .message("Connection successful")
+                .build();
+
+        when(workspaceAdminService.canManageWorkspace(any(), any(UUID.class))).thenReturn(true);
+        when(workspaceService.testConnection(any())).thenReturn(responseDto);
+
+        String requestBody = """
+                {
+                  "workspaceRecordId": "%s",
+                  "sharedSpaceId": "4001",
+                  "workspaceId": "5015",
+                  "clientId": "cid-1",
+                  "clientKey": "(unchanged)",
+                  "rootUrl": "https://ve.example.com"
+                }
+                """.formatted(workspaceId);
+
+        mockMvc.perform(post("/api/v1/workspaces/test-connection")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.workspaceId").value("5015"));
+    }
+
+    @Test
+    @WithMockUser(username = "admin@test.com", roles = "ADMIN")
     void testGetSubscriptions_Admin_ReturnsAllSubscriptions() throws Exception {
         UUID workspaceId = UUID.randomUUID();
         UUID subId = UUID.randomUUID();
@@ -230,4 +264,3 @@ class WorkspaceControllerTest {
                 .andExpect(jsonPath("$[0].filterTitle").value("My Filter"));
     }
 }
-
