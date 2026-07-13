@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import ReactDOM from 'react-dom';
 import {
   fetchFilters,
   createFilter,
@@ -209,7 +210,7 @@ const FieldBadgeWithPopover: React.FC<FieldBadgeWithPopoverProps> = ({
       >
         {label}
       </button>
-      {isOpen && (
+      {isOpen && ReactDOM.createPortal(
         <div
           id={`${label}-popover`}
           ref={popoverRef}
@@ -219,7 +220,8 @@ const FieldBadgeWithPopover: React.FC<FieldBadgeWithPopoverProps> = ({
           className="fixed z-50 w-[min(22rem,calc(100vw-16px))] rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs leading-relaxed text-slate-700 dark:text-slate-200 shadow-xl whitespace-normal break-words"
         >
           {popoverText}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
