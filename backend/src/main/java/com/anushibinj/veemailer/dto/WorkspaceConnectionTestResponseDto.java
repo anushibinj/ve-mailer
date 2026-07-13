@@ -11,7 +11,7 @@ import lombok.NoArgsConstructor;
 @Builder
 public class WorkspaceConnectionTestResponseDto {
     private boolean success;
+    private boolean hasData;
     private String workspaceId;
-    private String workspaceName;
     private String message;
 }

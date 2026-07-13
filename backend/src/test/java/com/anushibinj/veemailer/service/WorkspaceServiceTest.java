@@ -11,7 +11,6 @@ import com.anushibinj.veemailer.repository.WorkspaceRepository;
 import com.hpe.adm.nga.sdk.Octane;
 import com.hpe.adm.nga.sdk.entities.OctaneCollection;
 import com.hpe.adm.nga.sdk.model.EntityModel;
-import com.hpe.adm.nga.sdk.model.FieldModel;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -173,7 +172,7 @@ class WorkspaceServiceTest {
     }
 
     @Test
-    void testConnection_Success_ReturnsMatchedWorkspace() {
+    void testConnection_Success_ReturnsHasDataTrue() {
         UUID workspaceRecordId = UUID.randomUUID();
         Workspace workspace = buildWorkspace(workspaceRecordId);
         when(workspaceRepository.findById(workspaceRecordId)).thenReturn(Optional.of(workspace));
@@ -181,9 +180,6 @@ class WorkspaceServiceTest {
         Octane octane = mock(Octane.class, RETURNS_DEEP_STUBS);
         @SuppressWarnings("unchecked")
         OctaneCollection<EntityModel> resultCollection = (OctaneCollection<EntityModel>) mock(OctaneCollection.class);
-        EntityModel entityModel = mock(EntityModel.class);
-        FieldModel<?> idField = mock(FieldModel.class);
-        FieldModel<?> nameField = mock(FieldModel.class);
 
         when(octaneCacheService.getOctaneClient(
                 eq("https://ve.example.com"),
@@ -193,22 +189,14 @@ class WorkspaceServiceTest {
                 eq(5015)))
                 .thenReturn(octane);
 
-        when(octane.entityList("workspaces")
+        when(octane.entityList("stories")
                 .get()
-                .addFields("id", "name")
+                .addFields("id")
+                .limit(1)
                 .execute())
                 .thenReturn(resultCollection);
 
         when(resultCollection.isEmpty()).thenReturn(false);
-        when(resultCollection.iterator()).thenReturn(List.of(entityModel).iterator());
-
-        when(entityModel.getValue("id")).thenReturn(idField);
-        when(idField.hasValue()).thenReturn(true);
-        when(idField.getValue()).thenReturn("5015");
-
-        when(entityModel.getValue("name")).thenReturn(nameField);
-        when(nameField.hasValue()).thenReturn(true);
-        when(nameField.getValue()).thenReturn("Portfolio-Hyd - 77BD");
 
         WorkspaceConnectionTestRequestDto request = new WorkspaceConnectionTestRequestDto(
                 workspaceRecordId,
@@ -222,17 +210,15 @@ class WorkspaceServiceTest {
         WorkspaceConnectionTestResponseDto response = workspaceService.testConnection(request);
 
         assertThat(response.isSuccess()).isTrue();
+        assertThat(response.isHasData()).isTrue();
         assertThat(response.getWorkspaceId()).isEqualTo("5015");
-        assertThat(response.getWorkspaceName()).isEqualTo("Portfolio-Hyd - 77BD");
     }
 
     @Test
-    void testConnection_MismatchedWorkspaceId_Throws() {
+    void testConnection_NoStories_ReturnsSuccessWithWarning() {
         Octane octane = mock(Octane.class, RETURNS_DEEP_STUBS);
         @SuppressWarnings("unchecked")
         OctaneCollection<EntityModel> resultCollection = (OctaneCollection<EntityModel>) mock(OctaneCollection.class);
-        EntityModel entityModel = mock(EntityModel.class);
-        FieldModel<?> idField = mock(FieldModel.class);
 
         when(octaneCacheService.getOctaneClient(
                 eq("https://ve.example.com"),
@@ -242,17 +228,14 @@ class WorkspaceServiceTest {
                 eq(5015)))
                 .thenReturn(octane);
 
-        when(octane.entityList("workspaces")
+        when(octane.entityList("stories")
                 .get()
-                .addFields("id", "name")
+                .addFields("id")
+                .limit(1)
                 .execute())
                 .thenReturn(resultCollection);
 
-        when(resultCollection.isEmpty()).thenReturn(false);
-        when(resultCollection.iterator()).thenReturn(List.of(entityModel).iterator());
-        when(entityModel.getValue("id")).thenReturn(idField);
-        when(idField.hasValue()).thenReturn(true);
-        when(idField.getValue()).thenReturn("9999");
+        when(resultCollection.isEmpty()).thenReturn(true);
 
         WorkspaceConnectionTestRequestDto request = new WorkspaceConnectionTestRequestDto(
                 null,
@@ -263,8 +246,10 @@ class WorkspaceServiceTest {
                 "https://ve.example.com"
         );
 
-        assertThatThrownBy(() -> workspaceService.testConnection(request))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("does not match workspace ID 5015");
+        WorkspaceConnectionTestResponseDto response = workspaceService.testConnection(request);
+
+        assertThat(response.isSuccess()).isTrue();
+        assertThat(response.isHasData()).isFalse();
+        assertThat(response.getMessage()).contains("no data");
     }
 }

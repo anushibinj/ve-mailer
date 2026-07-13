@@ -56,8 +56,8 @@ export interface WorkspaceConnectionTestPayload {
 
 export interface WorkspaceConnectionTestResponse {
   success: boolean;
+  hasData: boolean;
   workspaceId: string;
-  workspaceName: string;
   message: string;
 }
 

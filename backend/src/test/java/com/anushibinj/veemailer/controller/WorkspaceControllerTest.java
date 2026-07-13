@@ -177,8 +177,8 @@ class WorkspaceControllerTest {
         UUID workspaceId = UUID.randomUUID();
         WorkspaceConnectionTestResponseDto responseDto = WorkspaceConnectionTestResponseDto.builder()
                 .success(true)
+                .hasData(true)
                 .workspaceId("5015")
-                .workspaceName("Portfolio-Hyd - 77BD")
                 .message("Connection successful")
                 .build();
 

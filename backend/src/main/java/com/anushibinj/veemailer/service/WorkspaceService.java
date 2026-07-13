@@ -11,7 +11,6 @@ import com.anushibinj.veemailer.repository.WorkspaceRepository;
 import com.hpe.adm.nga.sdk.Octane;
 import com.hpe.adm.nga.sdk.entities.OctaneCollection;
 import com.hpe.adm.nga.sdk.model.EntityModel;
-import com.hpe.adm.nga.sdk.model.FieldModel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -163,46 +162,37 @@ public class WorkspaceService {
                 parsedWorkspaceId
         );
 
-        final OctaneCollection<EntityModel> workspaces;
+        final OctaneCollection<EntityModel> stories;
         try {
-            workspaces = octane.entityList("workspaces")
+            stories = octane.entityList("stories")
                     .get()
-                    .addFields("id", "name")
+                    .addFields("id")
+                    .limit(1)
                     .execute();
         } catch (RuntimeException ex) {
             log.error(
-                    "Connection test failed while fetching workspace metadata via SDK [rootUrl={}, sharedSpaceId={}, workspaceId={}, clientId={}]: {}",
+                    "Connection test failed while fetching stories via SDK [rootUrl={}, sharedSpaceId={}, workspaceId={}, clientId={}]: {}",
                     rootUrl, sharedSpaceId, workspaceId, clientId, ex.getMessage(), ex);
             String details = ex.getMessage() == null || ex.getMessage().isBlank()
                     ? "Please check server URL and credentials."
                     : ex.getMessage();
-            throw new IllegalArgumentException("Connection test failed: unable to fetch workspace metadata. " + details, ex);
+            throw new IllegalArgumentException("Connection test failed: unable to fetch stories. " + details, ex);
         }
 
-        if (workspaces == null || workspaces.isEmpty()) {
-            throw new IllegalArgumentException(
-                    "Connection test failed: workspace metadata was not returned for workspace ID " + workspaceId);
-        }
-
-        EntityModel matchedWorkspace = null;
-        for (EntityModel workspaceEntity : workspaces) {
-            if (workspaceId.equals(extractFieldValue(workspaceEntity, "id"))) {
-                matchedWorkspace = workspaceEntity;
-                break;
-            }
-        }
-
-        if (matchedWorkspace == null) {
-            log.warn("Connection test mismatch: requested workspaceId={} but returned ids={}",
-                    workspaceId, extractWorkspaceIds(workspaces));
-            throw new IllegalArgumentException(
-                    "Connection test failed: returned workspace metadata does not match workspace ID " + workspaceId);
+        if (stories == null || stories.isEmpty()) {
+            log.warn("Connection test passed but no stories were returned [workspaceId={}]", workspaceId);
+            return WorkspaceConnectionTestResponseDto.builder()
+                    .success(true)
+                    .hasData(false)
+                    .workspaceId(workspaceId)
+                    .message("Connection successful, but no data was returned from the server.")
+                    .build();
         }
 
         return WorkspaceConnectionTestResponseDto.builder()
                 .success(true)
+                .hasData(true)
                 .workspaceId(workspaceId)
-                .workspaceName(extractFieldValue(matchedWorkspace, "name"))
                 .message("Connection successful")
                 .build();
     }
@@ -234,22 +224,6 @@ public class WorkspaceService {
         } catch (NumberFormatException ex) {
             throw new IllegalArgumentException(fieldName + " must be a valid integer");
         }
-    }
-
-    private String extractFieldValue(EntityModel entityModel, String fieldName) {
-        FieldModel<?> field = entityModel.getValue(fieldName);
-        if (field == null || !field.hasValue() || field.getValue() == null) {
-            return "";
-        }
-        return String.valueOf(field.getValue());
-    }
-
-    private List<String> extractWorkspaceIds(OctaneCollection<EntityModel> workspaces) {
-        List<String> ids = new java.util.ArrayList<>();
-        for (EntityModel workspaceEntity : workspaces) {
-            ids.add(extractFieldValue(workspaceEntity, "id"));
-        }
-        return ids;
     }
 
     private WorkspaceResponseDto toResponseDto(Workspace workspace) {

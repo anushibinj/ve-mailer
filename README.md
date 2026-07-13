@@ -412,7 +412,7 @@ All workspace endpoints require authentication. Mutation endpoints (POST/PUT/DEL
 | `POST`   | `/workspaces`             | ADMIN         | Create a workspace (defaults to DRAFT status)                      |
 | `PUT`    | `/workspaces/{id}`        | ADMIN         | Update a workspace (including status)                              |
 | `DELETE` | `/workspaces/{id}`        | ADMIN         | Delete a workspace                                                 |
-| `POST`   | `/workspaces/test-connection` | ADMIN / WORKSPACE_ADMIN | Validate workspace connectivity via Octane SDK workspace metadata lookup (`workspaces`), requiring returned `id` to match requested `workspaceId` |
+| `POST`   | `/workspaces/test-connection` | ADMIN / WORKSPACE_ADMIN | Validate workspace connectivity via Octane SDK by reading `stories` with `limit=1`; returns success-with-warning when connection works but no data is returned |
 
 **Workspace Status Lifecycle:**
 

@@ -104,11 +104,11 @@ const WorkspaceManagementPage: React.FC = () => {
         clientKey: workspace.clientKey,
         rootUrl: workspace.rootUrl,
       });
-      toast.success(
-        response.workspaceName
-          ? `Connection successful: ${response.workspaceName} (${response.workspaceId})`
-          : `Connection successful for workspace ${response.workspaceId}`
-      );
+      if (response.hasData) {
+        toast.success(response.message || `Connection successful for workspace ${response.workspaceId}`);
+      } else {
+        toast(response.message || 'Connection successful, but no data was returned from the server.', { icon: '⚠️' });
+      }
     } catch (err: unknown) {
       const axiosErr = err as { response?: { data?: { message?: string } } };
       toast.error(axiosErr.response?.data?.message ?? 'Connection test failed');
