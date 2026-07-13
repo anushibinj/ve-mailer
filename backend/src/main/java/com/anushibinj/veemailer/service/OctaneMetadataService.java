@@ -308,8 +308,10 @@ public class OctaneMetadataService {
         } else if (hasText(searchQuery)) {
             Query.QueryBuilder searchBuilder = Query.statement("full_name", QueryMethod.EqualTo, wildcard(searchQuery))
                     .or(Query.statement("email", QueryMethod.EqualTo, wildcard(searchQuery)))
-                    .or(Query.statement("name", QueryMethod.EqualTo, wildcard(searchQuery)))
-                    .or(Query.statement("id", QueryMethod.EqualTo, searchQuery));
+                    .or(Query.statement("name", QueryMethod.EqualTo, wildcard(searchQuery)));
+            if (isNumeric(searchQuery)) {
+                searchBuilder = searchBuilder.or(Query.statement("id", QueryMethod.EqualTo, searchQuery.trim()));
+            }
             getUsers = getUsers.query(searchBuilder.build());
         }
         OctaneCollection<EntityModel> users = getUsers.execute();
@@ -507,6 +509,19 @@ public class OctaneMetadataService {
 
     private String[] toArray(List<String> values) {
         return values.toArray(new String[0]);
+    }
+
+    private boolean isNumeric(String value) {
+        if (!hasText(value)) {
+            return false;
+        }
+        String trimmed = value.trim();
+        for (int i = 0; i < trimmed.length(); i++) {
+            if (!Character.isDigit(trimmed.charAt(i))) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private String wildcard(String searchQuery) {
