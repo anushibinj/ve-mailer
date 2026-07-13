@@ -36,7 +36,7 @@ class WebConfigTest {
                 "http://localhost:5173",
                 "http://localhost:80",
                 "http://localhost");
-        verify(registration).allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS");
+        verify(registration).allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS");
         verify(registration).allowedHeaders("*");
         verify(registration).allowCredentials(true);
     }
