@@ -489,6 +489,13 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
     return !filter.ownerEmail;
   };
 
+  const creatorLabel = (filter: Filter): string => {
+    if (filter.ownerEmail && filter.ownerEmail.trim() !== '') {
+      return filter.ownerEmail;
+    }
+    return 'Admin';
+  };
+
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh]">
@@ -873,9 +880,23 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
                         <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-500/20">
                           {toEntityTypeLabel(f.entityType)}
                         </span>
+                        {isAdminManagedFilter(f) ? (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
+                            Admin template
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide bg-violet-100 dark:bg-violet-500/20 text-violet-700 dark:text-violet-300 border border-violet-200 dark:border-violet-500/30">
+                            Private template
+                          </span>
+                        )}
                       </div>
                       {f.description && (
                         <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 mb-2">{f.description}</p>
+                      )}
+                      {canManageAllFilters && (
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 mb-2">
+                          Created by: <span className="font-medium text-slate-600 dark:text-slate-300">{creatorLabel(f)}</span>
+                        </p>
                       )}
                       <div className="mt-1.5 flex flex-wrap gap-1">
                         {fieldsList.slice(0, 8).map(field => (
@@ -923,11 +944,6 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
                               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/60 hover:border-cyan-200 dark:hover:border-cyan-700 hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors cursor-pointer">
                               <Copy className="h-3.5 w-3.5" />Copy String
                             </button>
-                          )}
-                          {isAdminManagedFilter(f) && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
-                              Admin template
-                            </span>
                           )}
                           <button onClick={() => handleDeleteRequest(f)}
                             disabled={isDeleting && filterToDelete?.id === f.id}

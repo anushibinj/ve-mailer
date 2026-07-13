@@ -983,6 +983,10 @@ A filter has:
    - `null` for admin-created shared templates
    - user email for private member templates
 
+UI visibility cues:
+- In user view, shared templates are marked **Admin template** and user-owned ones are marked **Private template**.
+- In admin/workspace-admin view, each filter also shows **Created by** (`ownerEmail` when private, otherwise `Admin`).
+
 #### Easy Filter Builder — How the metadata APIs work
 
 When the filter form opens, the `SmartFilterRow` component calls:
