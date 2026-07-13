@@ -179,7 +179,7 @@ public class OctaneMetadataService {
         Query.QueryBuilder filter = Query.statement(
                 "list_root", QueryMethod.EqualTo, Query.statement("logical_name", QueryMethod.EqualTo, logicalName));
         if (hasText(searchQuery)) {
-            filter = filter.and(Query.statement("name", QueryMethod.In, wildcard(searchQuery)));
+            filter = filter.and(Query.statement("name", QueryMethod.EqualTo, wildcard(searchQuery)));
         }
         OctaneCollection<EntityModel> nodes = octane.entityList("list_nodes")
                 .get()
@@ -205,7 +205,7 @@ public class OctaneMetadataService {
             try {
                 Query.QueryBuilder scopedQuery = Query.statement("entity", QueryMethod.EqualTo, entityType);
                 if (hasText(searchQuery)) {
-                    scopedQuery = scopedQuery.and(Query.statement("name", QueryMethod.In, wildcard(searchQuery)));
+                    scopedQuery = scopedQuery.and(Query.statement("name", QueryMethod.EqualTo, wildcard(searchQuery)));
                 }
                 OctaneCollection<EntityModel> phases = octane.entityList("phases")
                         .get()
@@ -224,7 +224,7 @@ public class OctaneMetadataService {
                 .get()
                 .addFields("id", "name");
         if (hasText(searchQuery)) {
-            getPhases = getPhases.query(Query.statement("name", QueryMethod.In, wildcard(searchQuery)).build());
+            getPhases = getPhases.query(Query.statement("name", QueryMethod.EqualTo, wildcard(searchQuery)).build());
         }
         OctaneCollection<EntityModel> allPhases = getPhases.execute();
         return toDeduplicatedValueDtos(allPhases, "name");
@@ -237,7 +237,7 @@ public class OctaneMetadataService {
             try {
                 Query.QueryBuilder scopedQuery = Query.statement("entity", QueryMethod.EqualTo, subtype);
                 if (hasText(searchQuery)) {
-                    scopedQuery = scopedQuery.and(Query.statement("name", QueryMethod.In, wildcard(searchQuery)));
+                    scopedQuery = scopedQuery.and(Query.statement("name", QueryMethod.EqualTo, wildcard(searchQuery)));
                 }
                 OctaneCollection<EntityModel> phases = octane.entityList("phases")
                         .get()
@@ -264,7 +264,7 @@ public class OctaneMetadataService {
                     .get()
                     .addFields("id", "name");
             if (hasText(searchQuery)) {
-                getPhases = getPhases.query(Query.statement("name", QueryMethod.In, wildcard(searchQuery)).build());
+                getPhases = getPhases.query(Query.statement("name", QueryMethod.EqualTo, wildcard(searchQuery)).build());
             }
             OctaneCollection<EntityModel> allPhases = getPhases.execute();
             return toDeduplicatedValueDtos(allPhases, "name");
@@ -279,9 +279,9 @@ public class OctaneMetadataService {
                 .get()
                 .addFields("id", "full_name", "email", "name");
         if (hasText(searchQuery)) {
-            Query.QueryBuilder searchBuilder = Query.statement("full_name", QueryMethod.In, wildcard(searchQuery))
-                    .or(Query.statement("email", QueryMethod.In, wildcard(searchQuery)))
-                    .or(Query.statement("name", QueryMethod.In, wildcard(searchQuery)));
+            Query.QueryBuilder searchBuilder = Query.statement("full_name", QueryMethod.EqualTo, wildcard(searchQuery))
+                    .or(Query.statement("email", QueryMethod.EqualTo, wildcard(searchQuery)))
+                    .or(Query.statement("name", QueryMethod.EqualTo, wildcard(searchQuery)));
             getUsers = getUsers.query(searchBuilder.build());
         }
         OctaneCollection<EntityModel> users = getUsers.execute();
@@ -306,7 +306,7 @@ public class OctaneMetadataService {
                     .get()
                     .addFields("id", "name");
             if (hasText(searchQuery)) {
-                getEntities = getEntities.query(Query.statement("name", QueryMethod.In, wildcard(searchQuery)).build());
+                getEntities = getEntities.query(Query.statement("name", QueryMethod.EqualTo, wildcard(searchQuery)).build());
             }
             OctaneCollection<EntityModel> entities = getEntities.execute();
             return toSortedValueDtos(entities, "name");
