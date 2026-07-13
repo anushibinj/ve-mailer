@@ -435,16 +435,23 @@ Connectivity status is persisted per workspace and refreshed:
 
 ### Filters
 
-Filter template read endpoints are open to all authenticated users. Create/update/query-string parsing requires `ADMIN` or `WORKSPACE_ADMIN` access.
+Filter templates are visibility-scoped:
+- **Admin-created templates** are shared and visible to everyone in the workspace (`ownerEmail = null`).
+- **Member-created templates** are private to their owner (`ownerEmail = member email`).
+- Members can create/manage only their own private templates; admins/workspace admins can manage all templates.
 
 | Method | Path                                           | Role required | Description                                     |
 |--------|------------------------------------------------|:-------------:|-------------------------------------------------|
-| `GET`  | `/workspaces/{id}/filters`                     | Any           | List filter templates for a workspace           |
-| `POST` | `/workspaces/{id}/filters`                     | ADMIN / WORKSPACE_ADMIN | Create a filter template                        |
-| `PUT`  | `/workspaces/{id}/filters/{filterId}`          | ADMIN / WORKSPACE_ADMIN | Update a filter template                        |
-| `POST` | `/workspaces/{id}/filters/parse-query-string`  | ADMIN / WORKSPACE_ADMIN | Validate and parse `fields=...&query=...` into structured criteria |
-| `GET`  | `/workspaces/{id}/filters/{filterId}/query-string` | ADMIN / WORKSPACE_ADMIN | Export an existing filter as copyable string |
-| `POST` | `/workspaces/{id}/filters/{filterId}/execute`  | Any           | Execute a filter against Octane and return entities |
+| `GET`  | `/workspaces/{id}/filters`                     | Any           | List accessible templates (shared admin + own private) |
+| `POST` | `/workspaces/{id}/filters`                     | Any           | Create template (members create private; admins create shared) |
+| `PUT`  | `/workspaces/{id}/filters/{filterId}`          | Any (owner/admin) | Update owned private template or any template as admin |
+| `POST` | `/workspaces/{id}/filters/parse-query-string`  | Any           | Validate and parse `fields=...&query=...` into structured criteria |
+| `GET`  | `/workspaces/{id}/filters/{filterId}/query-string` | Any (accessible filter) | Export an accessible filter as copyable string |
+| `POST` | `/workspaces/{id}/filters/{filterId}/execute`  | Any (accessible filter) | Execute an accessible filter against Octane and return entities |
+
+`GET /filters` responses also include:
+- `editable`: whether the current user can edit/delete the filter
+- `adminManaged`: whether the filter is an admin-created shared template
 
 **FilterCriteriaClause** (element of the `criteria` array):
 
@@ -512,6 +519,10 @@ The backend automatically maps the `targetEntityType` to the correct Octane API 
 ### Subscriptions
 
 All subscription endpoints require authentication. Users may only update/delete their own subscriptions (ownership enforced server-side). The on-demand `run` endpoint requires the `ADMIN` role.
+
+Private filter subscriptions are enforced server-side:
+- A private filter can only be subscribed by its owner.
+- Group subscriptions can only use admin-shared filters.
 
 **Subscription visibility:** `ADMIN` users see all subscriptions for the workspace; `MEMBER` users see only their own subscriptions. The frontend hides the "Recipient Email" column and labels the section "My Subscriptions" for `MEMBER` users.
 
@@ -968,6 +979,9 @@ A filter has:
    - `feature` → `subtype EQ feature`
 2. **Fields** — which fields to return in the result set (e.g. `["id", "name", "phase", "owner"]`)
 3. **Criteria** — an array of clauses that are AND/OR-joined to build the Octane SDK query
+4. **Ownership (`ownerEmail`)**:
+   - `null` for admin-created shared templates
+   - user email for private member templates
 
 #### Easy Filter Builder — How the metadata APIs work
 

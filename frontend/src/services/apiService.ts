@@ -85,6 +85,9 @@ export interface Filter {
   entityType: string;
   fields: string;   // JSON string from backend
   criteria: string;  // JSON string from backend
+  ownerEmail?: string | null;
+  editable?: boolean;
+  adminManaged?: boolean;
 }
 
 export interface FilterCreatePayload {

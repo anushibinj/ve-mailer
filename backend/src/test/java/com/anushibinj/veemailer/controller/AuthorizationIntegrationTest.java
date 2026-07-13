@@ -7,7 +7,6 @@ import com.anushibinj.veemailer.dto.WorkspaceResponseDto;
 import com.anushibinj.veemailer.model.Filter;
 import com.anushibinj.veemailer.model.ScheduleType;
 import com.anushibinj.veemailer.model.Workspace;
-import com.anushibinj.veemailer.repository.FilterRepository;
 import com.anushibinj.veemailer.service.AiPreferencesService;
 import com.anushibinj.veemailer.service.FilterService;
 import com.anushibinj.veemailer.service.MailAnalyticsService;
@@ -26,6 +25,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
@@ -52,9 +52,6 @@ class AuthorizationIntegrationTest {
 
     @MockBean
     private SubscriptionService subscriptionService;
-
-    @MockBean
-    private FilterRepository filterRepository;
 
     @MockBean
     private FilterService filterService;
@@ -130,30 +127,49 @@ class AuthorizationIntegrationTest {
     @Test
     @WithMockUser(username = "member@test.com", roles = "MEMBER")
     void member_canListFilters() throws Exception {
-        when(filterRepository.findByWorkspace_Id(WORKSPACE_ID)).thenReturn(List.of());
+        when(filterService.getAccessibleFilters(any(UUID.class), anyString(), anyBoolean())).thenReturn(List.of());
 
         mockMvc.perform(get("/api/v1/workspaces/{id}/filters", WORKSPACE_ID))
                 .andExpect(status().isOk());
     }
 
-    // ── Filter mutations (MEMBER denied) ─────────────────────────────────────
+    // ── Filter mutations (MEMBER own templates allowed) ─────────────────────
 
     @Test
     @WithMockUser(username = "member@test.com", roles = "MEMBER")
-    void member_cannotCreateFilter() throws Exception {
+    void member_canCreateFilter() throws Exception {
+        Filter created = new Filter();
+        created.setId(FILTER_ID);
+        created.setTitle("f");
+        created.setOwnerEmail("member@test.com");
+        Workspace ws = new Workspace();
+        ws.setId(WORKSPACE_ID);
+        created.setWorkspace(ws);
+        when(filterService.createFilter(any(), any())).thenReturn(created);
+
         mockMvc.perform(post("/api/v1/workspaces/{id}/filters", WORKSPACE_ID)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"title\":\"f\",\"entityType\":\"defect\",\"fields\":[\"id\"],\"criteria\":[{\"field\":\"severity\",\"operator\":\"IN\",\"values\":[\"High\"]}]}"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isOk());
     }
 
     @Test
     @WithMockUser(username = "member@test.com", roles = "MEMBER")
-    void member_cannotUpdateFilter() throws Exception {
+    void member_canUpdateOwnedFilter() throws Exception {
+        Filter owned = new Filter();
+        owned.setId(FILTER_ID);
+        owned.setOwnerEmail("member@test.com");
+        owned.setTitle("f");
+        Workspace ws = new Workspace();
+        ws.setId(WORKSPACE_ID);
+        owned.setWorkspace(ws);
+        when(filterService.getFilterInWorkspace(FILTER_ID, WORKSPACE_ID)).thenReturn(owned);
+        when(filterService.updateFilter(any(UUID.class), any())).thenReturn(owned);
+
         mockMvc.perform(put("/api/v1/workspaces/{wid}/filters/{fid}", WORKSPACE_ID, FILTER_ID)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"title\":\"f\",\"entityType\":\"defect\",\"fields\":[\"id\"],\"criteria\":[{\"field\":\"severity\",\"operator\":\"IN\",\"values\":[\"High\"]}]}"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isOk());
     }
 
     // ── Subscriptions (MEMBER) ────────────────────────────────────────────────
@@ -277,7 +293,7 @@ class AuthorizationIntegrationTest {
     @Test
     @WithMockUser(username = "admin@test.com", roles = "ADMIN")
     void admin_canListFilters() throws Exception {
-        when(filterRepository.findByWorkspace_Id(WORKSPACE_ID)).thenReturn(List.of());
+        when(filterService.getAccessibleFilters(any(UUID.class), anyString(), anyBoolean())).thenReturn(List.of());
 
         mockMvc.perform(get("/api/v1/workspaces/{id}/filters", WORKSPACE_ID))
                 .andExpect(status().isOk());
@@ -295,7 +311,7 @@ class AuthorizationIntegrationTest {
         Workspace ws = new Workspace();
         ws.setId(WORKSPACE_ID);
         f.setWorkspace(ws);
-        when(filterService.createFilter(any())).thenReturn(f);
+        when(filterService.createFilter(any(), any())).thenReturn(f);
 
         mockMvc.perform(post("/api/v1/workspaces/{id}/filters", WORKSPACE_ID)
                         .contentType(MediaType.APPLICATION_JSON)

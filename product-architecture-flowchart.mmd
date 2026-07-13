@@ -44,9 +44,11 @@ flowchart TD
         subgraph BusinessModule["Business Module"]
             WCtrl[Workspace Controller]
             FCtrl[Filter Controller]
+            FAuth[Filter Access Guard<br/>shared admin + private owner]
             FParse[Parse Query String Endpoint]
             FExport[Filter Query String Export Endpoint]
             SCtrl[Subscription Controller]
+            SAuth[Subscription Filter Privacy Guard]
             NPCtrl[Notification Preferences Controller]
             AIPCtrl[AI Preferences Controller]
             MACtrl[Mail Analytics Controller]
@@ -165,6 +167,8 @@ flowchart TD
 
     %% Business flows
     FCtrl --> FS
+    FCtrl --> FAuth
+    FAuth --> FS
     FParse --> FS
     FExport --> FS
     FCtrl --> WAS
@@ -175,6 +179,8 @@ flowchart TD
     WCPS --> WSS
     WAS --> WAR
     SCtrl --> SS
+    SS --> SAuth
+    SAuth --> FR
     NPCtrl --> NPS
     AIPCtrl --> APS
     NPS --> NPR

@@ -77,6 +77,15 @@ public class FilterService {
      * Persist a new filter template associated with a workspace.
      */
     public Filter createFilter(FilterDto dto) {
+        return createFilter(dto, null);
+    }
+
+    /**
+     * Persist a new filter template associated with a workspace.
+     *
+     * @param ownerEmail null for shared admin template, non-null for user-private template.
+     */
+    public Filter createFilter(FilterDto dto, String ownerEmail) {
         Workspace workspace = workspaceRepository.findById(dto.getWorkspaceId())
                 .orElseThrow(() -> new IllegalArgumentException("Workspace not found: " + dto.getWorkspaceId()));
         FilterDto resolvedDto = resolveFilterDefinition(dto);
@@ -91,12 +100,25 @@ public class FilterService {
                     .entityType(resolvedDto.getEntityType())
                     .fields(fieldsJson)
                     .criteria(criteriaJson)
+                    .ownerEmail(normalizeEmail(ownerEmail))
                     .build();
 
             return filterRepository.save(filter);
         } catch (JsonProcessingException e) {
             throw new RuntimeException("Failed to serialize filter data", e);
         }
+    }
+
+    public List<Filter> getAccessibleFilters(UUID workspaceId, String email, boolean canManageWorkspaceTemplates) {
+        if (canManageWorkspaceTemplates) {
+            return filterRepository.findByWorkspace_Id(workspaceId);
+        }
+        return filterRepository.findVisibleForUser(workspaceId, normalizeEmail(email));
+    }
+
+    public Filter getFilterInWorkspace(UUID filterId, UUID workspaceId) {
+        return filterRepository.findByIdAndWorkspace_Id(filterId, workspaceId)
+                .orElseThrow(() -> new IllegalArgumentException("Filter not found"));
     }
 
     public ParsedFilterQueryResponse parseFilterQueryString(String filterQueryString) {
@@ -492,6 +514,14 @@ public class FilterService {
             if (v.contains(".") || v.length() > 15) return true;
         }
         return false;
+    }
+
+    private String normalizeEmail(String email) {
+        if (email == null) {
+            return null;
+        }
+        String normalized = email.trim().toLowerCase();
+        return normalized.isEmpty() ? null : normalized;
     }
 
     private boolean shouldTreatAsReferenceIds(
