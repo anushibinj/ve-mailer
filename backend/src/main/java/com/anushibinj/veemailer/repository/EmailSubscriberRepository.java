@@ -34,9 +34,17 @@ public interface EmailSubscriberRepository extends JpaRepository<EmailSubscriber
     @Query("SELECT e FROM EmailSubscriber e JOIN FETCH e.filter WHERE e.workspace.id = :workspaceId AND e.status = :status")
     List<EmailSubscriber> findByWorkspaceIdAndStatus(@Param("workspaceId") UUID workspaceId, @Param("status") Status status);
 
+    /** Returns ACTIVE and DISABLED subscriptions for a workspace (for listing in the UI). */
+    @Query("SELECT e FROM EmailSubscriber e JOIN FETCH e.filter WHERE e.workspace.id = :workspaceId AND e.status IN :statuses")
+    List<EmailSubscriber> findByWorkspaceIdAndStatusIn(@Param("workspaceId") UUID workspaceId, @Param("statuses") List<Status> statuses);
+
     /** Returns active subscriptions for a specific user within a workspace (used for MEMBER-role isolation). */
     @Query("SELECT e FROM EmailSubscriber e JOIN FETCH e.filter WHERE e.recipientEmail = :email AND e.workspace.id = :workspaceId AND e.status = :status")
     List<EmailSubscriber> findByRecipientEmailAndWorkspaceIdAndStatus(@Param("email") String email, @Param("workspaceId") UUID workspaceId, @Param("status") Status status);
+
+    /** Returns ACTIVE and DISABLED subscriptions for a user within a workspace (for listing in the UI). */
+    @Query("SELECT e FROM EmailSubscriber e JOIN FETCH e.filter WHERE e.recipientEmail = :email AND e.workspace.id = :workspaceId AND e.status IN :statuses")
+    List<EmailSubscriber> findByRecipientEmailAndWorkspaceIdAndStatusIn(@Param("email") String email, @Param("workspaceId") UUID workspaceId, @Param("statuses") List<Status> statuses);
 
     /** Finds all active subscribers that have :hour in their scheduled hours and match the given schedule type. */
     @Query("SELECT DISTINCT e FROM EmailSubscriber e JOIN e.scheduledHours h WHERE h = :hour AND e.scheduleType = :scheduleType AND e.status = :status")

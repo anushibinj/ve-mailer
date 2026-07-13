@@ -27,6 +27,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -224,6 +225,25 @@ public class WorkspaceController {
             subscriptionService.deleteSubscription(userDetails.getUsername(), subscriptionId, workspaceId);
         }
         return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Toggles a subscription between ACTIVE and DISABLED.
+     * Admins and workspace admins can toggle any subscription; regular users can only toggle their own.
+     */
+    @PatchMapping("/{workspaceId}/subscriptions/{subscriptionId}/toggle")
+    public ResponseEntity<SubscriptionResponseDTO> toggleSubscription(
+            @PathVariable UUID workspaceId,
+            @PathVariable UUID subscriptionId,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (workspaceAdminService.canViewWorkspaceSubscriptions(authentication, workspaceId)) {
+            return ResponseEntity.ok(subscriptionService.toggleSubscriptionByAdmin(subscriptionId, workspaceId));
+        }
+
+        return ResponseEntity.ok(subscriptionService.toggleSubscription(
+                userDetails.getUsername(), subscriptionId, workspaceId));
     }
 
     // --- On-demand run (admin or workspace admin) ---

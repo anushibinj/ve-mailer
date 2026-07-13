@@ -9,6 +9,7 @@ import com.anushibinj.veemailer.model.Status;
 import com.anushibinj.veemailer.model.Workspace;
 import com.anushibinj.veemailer.repository.EmailSubscriberRepository;
 import com.anushibinj.veemailer.repository.FilterRepository;
+import com.anushibinj.veemailer.repository.RecipientGroupRepository;
 import com.anushibinj.veemailer.repository.WorkspaceRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -45,6 +46,9 @@ class SubscriptionServiceTest {
 
     @Mock
     private FilterRepository filterRepository;
+
+    @Mock
+    private RecipientGroupRepository recipientGroupRepository;
 
     @Mock
     private PollingService pollingService;
@@ -282,8 +286,9 @@ class SubscriptionServiceTest {
         sub.setFilter(filter);
         sub.setScheduleType(ScheduleType.DAILY);
         sub.setScheduledHours(List.of(9, 15));
+        sub.setStatus(Status.ACTIVE);
 
-        when(emailSubscriberRepository.findByWorkspaceIdAndStatus(workspaceId, Status.ACTIVE))
+        when(emailSubscriberRepository.findByWorkspaceIdAndStatusIn(workspaceId, List.of(Status.ACTIVE, Status.DISABLED)))
                 .thenReturn(List.of(sub));
 
         List<SubscriptionResponseDTO> results = subscriptionService.getActiveSubscriptionsForWorkspace(workspaceId);
@@ -293,6 +298,25 @@ class SubscriptionServiceTest {
         assertEquals("All Bugs", results.get(0).getFilterTitle());
         assertEquals(ScheduleType.DAILY, results.get(0).getSchedule().getType());
         assertEquals(List.of(9, 15), results.get(0).getSchedule().getHours());
+        assertEquals(Status.ACTIVE, results.get(0).getStatus());
+    }
+
+    @Test
+    void testGetActiveSubscriptionsForWorkspace_IncludesDisabledSubscriptions() {
+        EmailSubscriber sub = new EmailSubscriber();
+        sub.setRecipientEmail("dev@test.com");
+        sub.setFilter(filter);
+        sub.setScheduleType(ScheduleType.DAILY);
+        sub.setScheduledHours(List.of(9));
+        sub.setStatus(Status.DISABLED);
+
+        when(emailSubscriberRepository.findByWorkspaceIdAndStatusIn(workspaceId, List.of(Status.ACTIVE, Status.DISABLED)))
+                .thenReturn(List.of(sub));
+
+        List<SubscriptionResponseDTO> results = subscriptionService.getActiveSubscriptionsForWorkspace(workspaceId);
+
+        assertEquals(1, results.size());
+        assertEquals(Status.DISABLED, results.get(0).getStatus());
     }
 
     @Test
@@ -305,8 +329,9 @@ class SubscriptionServiceTest {
         sub.setFilter(legacyFilter);
         sub.setScheduleType(null);
         sub.setScheduledHours(null);
+        sub.setStatus(Status.ACTIVE);
 
-        when(emailSubscriberRepository.findByWorkspaceIdAndStatus(workspaceId, Status.ACTIVE))
+        when(emailSubscriberRepository.findByWorkspaceIdAndStatusIn(workspaceId, List.of(Status.ACTIVE, Status.DISABLED)))
                 .thenReturn(List.of(sub));
 
         List<SubscriptionResponseDTO> results = subscriptionService.getActiveSubscriptionsForWorkspace(workspaceId);
@@ -318,7 +343,7 @@ class SubscriptionServiceTest {
 
     @Test
     void testGetActiveSubscriptionsForWorkspace_EmptyList() {
-        when(emailSubscriberRepository.findByWorkspaceIdAndStatus(workspaceId, Status.ACTIVE))
+        when(emailSubscriberRepository.findByWorkspaceIdAndStatusIn(workspaceId, List.of(Status.ACTIVE, Status.DISABLED)))
                 .thenReturn(Collections.emptyList());
 
         List<SubscriptionResponseDTO> results = subscriptionService.getActiveSubscriptionsForWorkspace(workspaceId);
@@ -336,8 +361,10 @@ class SubscriptionServiceTest {
         sub.setFilter(filter);
         sub.setScheduleType(ScheduleType.DAILY);
         sub.setScheduledHours(List.of(9));
+        sub.setStatus(Status.ACTIVE);
 
-        when(emailSubscriberRepository.findByRecipientEmailAndWorkspaceIdAndStatus("user@test.com", workspaceId, Status.ACTIVE))
+        when(emailSubscriberRepository.findByRecipientEmailAndWorkspaceIdAndStatusIn(
+                "user@test.com", workspaceId, List.of(Status.ACTIVE, Status.DISABLED)))
                 .thenReturn(List.of(sub));
 
         List<SubscriptionResponseDTO> results = subscriptionService.getActiveSubscriptionsForUser("user@test.com", workspaceId);
@@ -351,12 +378,85 @@ class SubscriptionServiceTest {
 
     @Test
     void testGetActiveSubscriptionsForUser_EmptyWhenNoSubscriptions() {
-        when(emailSubscriberRepository.findByRecipientEmailAndWorkspaceIdAndStatus("user@test.com", workspaceId, Status.ACTIVE))
+        when(emailSubscriberRepository.findByRecipientEmailAndWorkspaceIdAndStatusIn(
+                "user@test.com", workspaceId, List.of(Status.ACTIVE, Status.DISABLED)))
                 .thenReturn(Collections.emptyList());
 
         List<SubscriptionResponseDTO> results = subscriptionService.getActiveSubscriptionsForUser("user@test.com", workspaceId);
 
         assertNotNull(results);
         assertTrue(results.isEmpty());
+    }
+
+    // ─────────────────────── toggleSubscription ───────────────────────────────
+
+    @Test
+    void testToggleSubscription_ActiveToDisabled() {
+        UUID subscriptionId = UUID.randomUUID();
+        EmailSubscriber existing = new EmailSubscriber();
+        existing.setId(subscriptionId);
+        existing.setRecipientEmail("user@test.com");
+        existing.setWorkspace(workspace);
+        existing.setFilter(filter);
+        existing.setScheduleType(ScheduleType.DAILY);
+        existing.setScheduledHours(List.of(9));
+        existing.setStatus(Status.ACTIVE);
+        when(emailSubscriberRepository.findById(subscriptionId)).thenReturn(Optional.of(existing));
+        when(emailSubscriberRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        SubscriptionResponseDTO result = subscriptionService.toggleSubscription("user@test.com", subscriptionId, workspaceId);
+
+        assertEquals(Status.DISABLED, result.getStatus());
+    }
+
+    @Test
+    void testToggleSubscription_DisabledToActive() {
+        UUID subscriptionId = UUID.randomUUID();
+        EmailSubscriber existing = new EmailSubscriber();
+        existing.setId(subscriptionId);
+        existing.setRecipientEmail("user@test.com");
+        existing.setWorkspace(workspace);
+        existing.setFilter(filter);
+        existing.setScheduleType(ScheduleType.DAILY);
+        existing.setScheduledHours(List.of(9));
+        existing.setStatus(Status.DISABLED);
+        when(emailSubscriberRepository.findById(subscriptionId)).thenReturn(Optional.of(existing));
+        when(emailSubscriberRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        SubscriptionResponseDTO result = subscriptionService.toggleSubscription("user@test.com", subscriptionId, workspaceId);
+
+        assertEquals(Status.ACTIVE, result.getStatus());
+    }
+
+    @Test
+    void testToggleSubscription_WrongOwner_ThrowsAccessDenied() {
+        UUID subscriptionId = UUID.randomUUID();
+        EmailSubscriber existing = new EmailSubscriber();
+        existing.setRecipientEmail("other@test.com");
+        existing.setWorkspace(workspace);
+        existing.setFilter(filter);
+        when(emailSubscriberRepository.findById(subscriptionId)).thenReturn(Optional.of(existing));
+
+        assertThrows(AccessDeniedException.class, () ->
+                subscriptionService.toggleSubscription("user@test.com", subscriptionId, workspaceId));
+    }
+
+    @Test
+    void testToggleSubscriptionByAdmin_ActiveToDisabled() {
+        UUID subscriptionId = UUID.randomUUID();
+        EmailSubscriber existing = new EmailSubscriber();
+        existing.setId(subscriptionId);
+        existing.setRecipientEmail("user@test.com");
+        existing.setWorkspace(workspace);
+        existing.setFilter(filter);
+        existing.setScheduleType(ScheduleType.DAILY);
+        existing.setScheduledHours(List.of(9));
+        existing.setStatus(Status.ACTIVE);
+        when(emailSubscriberRepository.findById(subscriptionId)).thenReturn(Optional.of(existing));
+        when(emailSubscriberRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        SubscriptionResponseDTO result = subscriptionService.toggleSubscriptionByAdmin(subscriptionId, workspaceId);
+
+        assertEquals(Status.DISABLED, result.getStatus());
     }
 }

@@ -5,6 +5,7 @@ import com.anushibinj.veemailer.dto.SubscriptionResponseDTO;
 import com.anushibinj.veemailer.dto.WorkspaceCreateRequestDto;
 import com.anushibinj.veemailer.dto.WorkspaceResponseDto;
 import com.anushibinj.veemailer.model.ScheduleType;
+import com.anushibinj.veemailer.model.Status;
 import com.anushibinj.veemailer.model.WorkspaceStatus;
 import com.anushibinj.veemailer.service.AppUserDetailsService;
 import com.anushibinj.veemailer.service.JwtService;
@@ -33,6 +34,7 @@ import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -228,6 +230,33 @@ class WorkspaceControllerTest {
                 .andExpect(jsonPath("$", hasSize(1)))
                 .andExpect(jsonPath("$[0].recipientEmail").value("member@test.com"))
                 .andExpect(jsonPath("$[0].filterTitle").value("My Filter"));
+    }
+
+    @Test
+    @WithMockUser(username = "admin@test.com", roles = "ADMIN")
+    void testToggleSubscription_Admin_TogglesStatus() throws Exception {
+        UUID workspaceId = UUID.randomUUID();
+        UUID subId = UUID.randomUUID();
+        UUID filterId = UUID.randomUUID();
+        SubscriptionResponseDTO dto = SubscriptionResponseDTO.builder()
+                .id(subId)
+                .recipientEmail("other@test.com")
+                .filterId(filterId)
+                .filterTitle("All Bugs")
+                .schedule(ScheduleDto.builder()
+                        .type(ScheduleType.DAILY)
+                        .hours(List.of(9))
+                        .build())
+                .status(Status.DISABLED)
+                .build();
+
+        when(subscriptionService.toggleSubscriptionByAdmin(any(UUID.class), any(UUID.class)))
+                .thenReturn(dto);
+
+        mockMvc.perform(patch("/api/v1/workspaces/" + workspaceId + "/subscriptions/" + subId + "/toggle")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("DISABLED"));
     }
 }
 

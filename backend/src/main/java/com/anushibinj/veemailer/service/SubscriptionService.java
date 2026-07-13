@@ -124,7 +124,8 @@ public class SubscriptionService {
     }
 
     public List<SubscriptionResponseDTO> getActiveSubscriptionsForWorkspace(UUID workspaceId) {
-        List<EmailSubscriber> subscribers = emailSubscriberRepository.findByWorkspaceIdAndStatus(workspaceId, Status.ACTIVE);
+        List<EmailSubscriber> subscribers = emailSubscriberRepository.findByWorkspaceIdAndStatusIn(
+                workspaceId, List.of(Status.ACTIVE, Status.DISABLED));
         return subscribers.stream().map(this::toResponseDto).collect(Collectors.toList());
     }
 
@@ -162,12 +163,12 @@ public class SubscriptionService {
     }
 
     /**
-     * Returns active subscriptions belonging to the authenticated user within a workspace.
+     * Returns ACTIVE and DISABLED subscriptions belonging to the authenticated user within a workspace.
      * Used for MEMBER-role requests to enforce per-user data isolation.
      */
     public List<SubscriptionResponseDTO> getActiveSubscriptionsForUser(String email, UUID workspaceId) {
         List<EmailSubscriber> subscribers = emailSubscriberRepository
-                .findByRecipientEmailAndWorkspaceIdAndStatus(email, workspaceId, Status.ACTIVE);
+                .findByRecipientEmailAndWorkspaceIdAndStatusIn(email, workspaceId, List.of(Status.ACTIVE, Status.DISABLED));
         return subscribers.stream().map(this::toResponseDto).collect(Collectors.toList());
     }
 
@@ -186,6 +187,35 @@ public class SubscriptionService {
         enforceWorkspaceNotDisabled(subscriber.getWorkspace());
 
         pollingService.runNow(subscriber);
+    }
+
+    /**
+     * Toggles the status of a subscription between ACTIVE and DISABLED.
+     * Enforces ownership: throws AccessDeniedException if the subscription belongs to another user.
+     */
+    public SubscriptionResponseDTO toggleSubscription(String email, UUID subscriptionId, UUID workspaceId) {
+        EmailSubscriber subscriber = emailSubscriberRepository.findById(subscriptionId)
+                .orElseThrow(() -> new IllegalArgumentException("Subscription not found"));
+
+        enforceOwnership(email, subscriber);
+        enforceWorkspace(workspaceId, subscriber);
+
+        subscriber.setStatus(subscriber.getStatus() == Status.ACTIVE ? Status.DISABLED : Status.ACTIVE);
+        return toResponseDto(emailSubscriberRepository.save(subscriber));
+    }
+
+    /**
+     * Toggles the status of any subscription without ownership enforcement.
+     * For use by admins and workspace admins only — authorization must be checked in the controller.
+     */
+    public SubscriptionResponseDTO toggleSubscriptionByAdmin(UUID subscriptionId, UUID workspaceId) {
+        EmailSubscriber subscriber = emailSubscriberRepository.findById(subscriptionId)
+                .orElseThrow(() -> new IllegalArgumentException("Subscription not found"));
+
+        enforceWorkspace(workspaceId, subscriber);
+
+        subscriber.setStatus(subscriber.getStatus() == Status.ACTIVE ? Status.DISABLED : Status.ACTIVE);
+        return toResponseDto(emailSubscriberRepository.save(subscriber));
     }
 
     // --- Private helpers ---
@@ -244,6 +274,7 @@ public class SubscriptionService {
                 .groupId(sub.getGroup() != null ? sub.getGroup().getId() : null)
                 .groupName(sub.getGroup() != null ? sub.getGroup().getName() : null)
                 .groupMemberCount(sub.getGroup() != null ? sub.getGroup().getMemberEmails().size() : null)
+                .status(sub.getStatus())
                 .build();
     }
 

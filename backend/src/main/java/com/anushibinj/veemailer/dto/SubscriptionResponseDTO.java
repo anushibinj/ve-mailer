@@ -1,5 +1,6 @@
 package com.anushibinj.veemailer.dto;
 
+import com.anushibinj.veemailer.model.Status;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -21,4 +22,6 @@ public class SubscriptionResponseDTO {
     private UUID groupId;
     private String groupName;
     private Integer groupMemberCount;
+    /** ACTIVE means the subscription is sending emails; DISABLED means it is paused. */
+    private Status status;
 }

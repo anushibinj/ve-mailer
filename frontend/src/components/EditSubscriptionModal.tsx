@@ -2,12 +2,13 @@ import React, { useState } from 'react';
 import {
   updateSubscription,
   deleteSubscription,
+  toggleSubscription,
   type Subscription,
   type Schedule,
 } from '../services/apiService';
 import { formatHourLabel } from '../services/scheduleUtils';
 import { useAuth } from '../hooks/useAuth';
-import { Loader2, X, Plus, Bell, AlertTriangle, Users } from 'lucide-react';
+import { Loader2, X, Plus, Bell, AlertTriangle, Users, Power, PowerOff } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface EditSubscriptionModalProps {
@@ -18,7 +19,7 @@ interface EditSubscriptionModalProps {
   onSuccess: () => void;
 }
 
-type Step = 'edit' | 'confirmDelete';
+type Step = 'edit' | 'confirmDelete' | 'confirmToggle';
 
 const selectClass =
   'w-full px-3.5 py-2.5 border border-slate-200 dark:border-slate-600 rounded-xl text-sm ' +
@@ -40,6 +41,8 @@ const EditSubscriptionModal: React.FC<EditSubscriptionModalProps> = ({
   const [hourToAdd, setHourToAdd] = useState<number>(subscription.schedule.hours[0] ?? 9);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isToggling, setIsToggling] = useState(false);
+  const isDisabled = subscription.status === 'DISABLED';
 
   if (!isOpen) return null;
 
@@ -75,6 +78,17 @@ const EditSubscriptionModal: React.FC<EditSubscriptionModalProps> = ({
     } finally { setIsDeleting(false); }
   };
 
+  const handleToggle = async () => {
+    setIsToggling(true);
+    try {
+      await toggleSubscription(workspaceId, subscription.id);
+      toast.success(isDisabled ? 'Subscription enabled!' : 'Subscription disabled!');
+      handleClose(); onSuccess();
+    } catch (err: unknown) {
+      toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Failed to toggle subscription.');
+    } finally { setIsToggling(false); }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div
@@ -90,10 +104,17 @@ const EditSubscriptionModal: React.FC<EditSubscriptionModalProps> = ({
           {/* Header */}
           <div className="flex items-center justify-between mb-1">
             <div className="flex items-center gap-2.5">
-              <div className="h-8 w-8 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center">
-                <Bell className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+              <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${isDisabled ? 'bg-amber-50 dark:bg-amber-500/10' : 'bg-indigo-50 dark:bg-indigo-500/10'}`}>
+                <Bell className={`h-4 w-4 ${isDisabled ? 'text-amber-600 dark:text-amber-400' : 'text-indigo-600 dark:text-indigo-400'}`} />
               </div>
-              <h3 className="text-base font-semibold text-slate-900 dark:text-white">Edit Subscription</h3>
+              <div className="flex items-center gap-2">
+                <h3 className="text-base font-semibold text-slate-900 dark:text-white">Edit Subscription</h3>
+                {isDisabled && (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 text-xs font-semibold border border-amber-100 dark:border-amber-500/20">
+                    Disabled
+                  </span>
+                )}
+              </div>
             </div>
             <button
               onClick={handleClose}
@@ -175,13 +196,28 @@ const EditSubscriptionModal: React.FC<EditSubscriptionModalProps> = ({
               </div>
 
               <div className="flex items-center justify-between pt-1">
-                <button
-                  type="button"
-                  onClick={() => setStep('confirmDelete')}
-                  className="text-sm text-rose-500 dark:text-rose-400 hover:text-rose-600 dark:hover:text-rose-300 font-medium transition-colors cursor-pointer"
-                >
-                  Unsubscribe
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setStep('confirmToggle')}
+                    className={`flex items-center gap-1.5 text-sm font-medium transition-colors cursor-pointer ${
+                      isDisabled
+                        ? 'text-emerald-500 dark:text-emerald-400 hover:text-emerald-600 dark:hover:text-emerald-300'
+                        : 'text-amber-500 dark:text-amber-400 hover:text-amber-600 dark:hover:text-amber-300'
+                    }`}
+                  >
+                    {isDisabled ? <Power className="h-3.5 w-3.5" /> : <PowerOff className="h-3.5 w-3.5" />}
+                    {isDisabled ? 'Enable' : 'Disable'}
+                  </button>
+                  <span className="text-slate-300 dark:text-slate-600">|</span>
+                  <button
+                    type="button"
+                    onClick={() => setStep('confirmDelete')}
+                    className="text-sm text-rose-500 dark:text-rose-400 hover:text-rose-600 dark:hover:text-rose-300 font-medium transition-colors cursor-pointer"
+                  >
+                    Unsubscribe
+                  </button>
+                </div>
                 <button
                   type="button"
                   onClick={handleSave}
@@ -189,6 +225,54 @@ const EditSubscriptionModal: React.FC<EditSubscriptionModalProps> = ({
                   className="flex items-center gap-2 py-2 px-5 bg-indigo-600 hover:bg-indigo-500 dark:bg-indigo-500 dark:hover:bg-indigo-400 text-white text-sm font-semibold rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900 disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer"
                 >
                   {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save Changes'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {step === 'confirmToggle' && (
+            <div className="space-y-4">
+              <div className={`flex items-start gap-3 p-4 rounded-xl border ${
+                isDisabled
+                  ? 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/20'
+                  : 'bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/20'
+              }`}>
+                {isDisabled
+                  ? <Power className="h-5 w-5 text-emerald-500 dark:text-emerald-400 flex-shrink-0 mt-0.5" />
+                  : <PowerOff className="h-5 w-5 text-amber-500 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                }
+                <p className={`text-sm ${isDisabled ? 'text-emerald-700 dark:text-emerald-300' : 'text-amber-700 dark:text-amber-300'}`}>
+                  {isDisabled ? (
+                    <>This will <span className="font-semibold">re-enable</span> the subscription to{' '}
+                    <span className="font-semibold">{subscription.filterTitle}</span>. Email digests will resume as scheduled.</>
+                  ) : (
+                    <>This will <span className="font-semibold">disable</span> the subscription to{' '}
+                    <span className="font-semibold">{subscription.filterTitle}</span>. Email digests will be paused. You can re-enable it later.</>
+                  )}
+                </p>
+              </div>
+              <div className="flex items-center justify-end gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setStep('edit')}
+                  className="py-2 px-4 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/60 transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleToggle}
+                  disabled={isToggling}
+                  className={`flex items-center gap-2 py-2 px-4 text-white text-sm font-semibold rounded-xl focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-slate-900 disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer ${
+                    isDisabled
+                      ? 'bg-emerald-600 hover:bg-emerald-500 dark:bg-emerald-500 dark:hover:bg-emerald-400 focus:ring-emerald-500'
+                      : 'bg-amber-600 hover:bg-amber-500 dark:bg-amber-500 dark:hover:bg-amber-400 focus:ring-amber-500'
+                  }`}
+                >
+                  {isToggling
+                    ? <Loader2 className="h-4 w-4 animate-spin" />
+                    : isDisabled ? 'Yes, Enable' : 'Yes, Disable'
+                  }
                 </button>
               </div>
             </div>

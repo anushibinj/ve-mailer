@@ -104,6 +104,8 @@ export interface Subscription {
   groupId?: string | null;
   groupName?: string | null;
   groupMemberCount?: number | null;
+  /** ACTIVE means the subscription is sending emails; DISABLED means it is paused. */
+  status: 'ACTIVE' | 'DISABLED' | 'PENDING' | null;
 }
 
 export interface SubscriptionCreatePayload {
@@ -247,6 +249,13 @@ export const deleteSubscription = async (
 
 export const runSubscription = async (workspaceId: string, subscriptionId: string): Promise<void> => {
   await api.post(`/api/v1/workspaces/${workspaceId}/subscriptions/${subscriptionId}/run`);
+};
+
+export const toggleSubscription = async (workspaceId: string, subscriptionId: string): Promise<Subscription> => {
+  const response = await api.patch(
+    `/api/v1/workspaces/${workspaceId}/subscriptions/${subscriptionId}/toggle`
+  );
+  return response.data;
 };
 
 // --- Admin Notification Preferences ---

@@ -3,6 +3,7 @@ import {
   fetchSubscriptionsByWorkspace,
   fetchFilters,
   runSubscription,
+  toggleSubscription,
   adminFetchWorkspace,
   type Subscription,
   type Filter,
@@ -11,7 +12,7 @@ import {
 } from '../services/apiService';
 import { formatHourLabel } from '../services/scheduleUtils';
 import { useAuth } from '../hooks/useAuth';
-import { Loader2, ArrowLeft, SlidersHorizontal, Pencil, Play, Plus, Bell, Mail, Settings2, Users } from 'lucide-react';
+import { Loader2, ArrowLeft, SlidersHorizontal, Pencil, Play, Plus, Bell, Mail, Settings2, Users, PowerOff, Power } from 'lucide-react';
 import toast from 'react-hot-toast';
 import EditSubscriptionModal from './EditSubscriptionModal';
 import SubscriptionFormModal from './SubscriptionFormModal';
@@ -34,6 +35,7 @@ const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({ workspaceId, on
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingSubscription, setEditingSubscription] = useState<Subscription | null>(null);
   const [runningIds, setRunningIds] = useState<Set<string>>(new Set());
+  const [togglingIds, setTogglingIds] = useState<Set<string>>(new Set());
   const [workspaceData, setWorkspaceData] = useState<WorkspaceAdmin | null>(null);
   const [isEditWorkspaceOpen, setIsEditWorkspaceOpen] = useState(false);
 
@@ -51,6 +53,25 @@ const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({ workspaceId, on
       toast.error(axiosErr.response?.data?.message ?? 'Failed to send email. Please try again.');
     } finally {
       setRunningIds(prev => {
+        const next = new Set(prev);
+        next.delete(sub.id);
+        return next;
+      });
+    }
+  };
+
+  const handleToggleSubscription = async (sub: Subscription) => {
+    setTogglingIds(prev => new Set(prev).add(sub.id));
+    try {
+      await toggleSubscription(workspaceId, sub.id);
+      const isNowDisabled = sub.status === 'ACTIVE';
+      toast.success(isNowDisabled ? 'Subscription disabled.' : 'Subscription enabled.');
+      loadData();
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { data?: { message?: string } } };
+      toast.error(axiosErr.response?.data?.message ?? 'Failed to toggle subscription.');
+    } finally {
+      setTogglingIds(prev => {
         const next = new Set(prev);
         next.delete(sub.id);
         return next;
@@ -202,6 +223,11 @@ const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({ workspaceId, on
           {subscriptions.length > 0 && (
             <span className="text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 px-2.5 py-1 rounded-full font-medium">
               {subscriptions.length} subscription{subscriptions.length !== 1 ? 's' : ''}
+              {subscriptions.filter(s => s.status === 'DISABLED').length > 0 && (
+                <span className="ml-1 text-amber-500 dark:text-amber-400">
+                  · {subscriptions.filter(s => s.status === 'DISABLED').length} disabled
+                </span>
+              )}
             </span>
           )}
         </div>
@@ -241,66 +267,99 @@ const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({ workspaceId, on
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50 dark:divide-slate-800/60">
-                {subscriptions.map((sub, idx) => (
-                  <tr
-                    key={sub.id}
-                    style={{ animationDelay: `${idx * 40}ms` }}
-                    className="animate-fade-in hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors"
-                  >
-                    {canManage && (
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {sub.groupId ? (
-                          <div className="flex items-center gap-2">
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-teal-50 dark:bg-teal-500/10 text-teal-700 dark:text-teal-300 text-xs font-semibold border border-teal-100 dark:border-teal-500/20">
-                              <Users className="h-3 w-3" />
-                              {sub.groupName}
-                            </span>
-                            {sub.groupMemberCount != null && (
-                              <span className="text-xs text-slate-400 dark:text-slate-500">
-                                {sub.groupMemberCount} member{sub.groupMemberCount !== 1 ? 's' : ''}
+                    {subscriptions.map((sub, idx) => (
+                    <tr
+                      key={sub.id}
+                      style={{ animationDelay: `${idx * 40}ms` }}
+                      className={`animate-fade-in transition-colors ${
+                        sub.status === 'DISABLED'
+                          ? 'opacity-50 bg-slate-50/80 dark:bg-slate-800/30 hover:opacity-70'
+                          : 'hover:bg-slate-50/60 dark:hover:bg-slate-800/40'
+                      }`}
+                    >
+                      {canManage && (
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {sub.groupId ? (
+                            <div className="flex items-center gap-2">
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-teal-50 dark:bg-teal-500/10 text-teal-700 dark:text-teal-300 text-xs font-semibold border border-teal-100 dark:border-teal-500/20">
+                                <Users className="h-3 w-3" />
+                                {sub.groupName}
                               </span>
-                            )}
-                          </div>
-                        ) : (
-                          <span className="text-sm font-medium text-slate-900 dark:text-slate-200">{sub.recipientEmail}</span>
-                        )}
+                              {sub.groupMemberCount != null && (
+                                <span className="text-xs text-slate-400 dark:text-slate-500">
+                                  {sub.groupMemberCount} member{sub.groupMemberCount !== 1 ? 's' : ''}
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-sm font-medium text-slate-900 dark:text-slate-200">{sub.recipientEmail}</span>
+                          )}
+                        </td>
+                      )}
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                          <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium border ${
+                            sub.status === 'DISABLED'
+                              ? 'bg-slate-50 dark:bg-slate-700/40 text-slate-400 dark:text-slate-500 border-slate-200 dark:border-slate-600 line-through'
+                              : 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border-indigo-100 dark:border-indigo-500/20'
+                          }`}>
+                            {sub.filterTitle}
+                          </span>
+                          {sub.status === 'DISABLED' && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 text-xs font-semibold border border-amber-100 dark:border-amber-500/20">
+                              Disabled
+                            </span>
+                          )}
+                        </div>
                       </td>
-                    )}
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 text-xs font-medium border border-indigo-100 dark:border-indigo-500/20">
-                        {sub.filterTitle}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm text-slate-500 dark:text-slate-400">{formatSchedule(sub.schedule)}</span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right">
-                      <div className="inline-flex items-center gap-2">
-                        {canManage && (
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="text-sm text-slate-500 dark:text-slate-400">{formatSchedule(sub.schedule)}</span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right">
+                        <div className="inline-flex items-center gap-2">
+                          {canManage && sub.status !== 'DISABLED' && (
+                            <button
+                              onClick={() => handleRunSubscription(sub)}
+                              disabled={runningIds.has(sub.id)}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                              title="Send email now"
+                            >
+                              {runningIds.has(sub.id)
+                                ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                : <Play className="h-3.5 w-3.5" />
+                              }
+                              Run
+                            </button>
+                          )}
                           <button
-                            onClick={() => handleRunSubscription(sub)}
-                            disabled={runningIds.has(sub.id)}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
-                            title="Send email now"
+                            onClick={() => handleToggleSubscription(sub)}
+                            disabled={togglingIds.has(sub.id)}
+                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
+                              sub.status === 'DISABLED'
+                                ? 'text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 border-emerald-100 dark:border-emerald-500/20 hover:bg-emerald-100 dark:hover:bg-emerald-500/20'
+                                : 'text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/10 border-amber-100 dark:border-amber-500/20 hover:bg-amber-100 dark:hover:bg-amber-500/20'
+                            }`}
+                            title={sub.status === 'DISABLED' ? 'Enable subscription' : 'Disable subscription'}
                           >
-                            {runningIds.has(sub.id)
+                            {togglingIds.has(sub.id)
                               ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                              : <Play className="h-3.5 w-3.5" />
+                              : sub.status === 'DISABLED'
+                                ? <Power className="h-3.5 w-3.5" />
+                                : <PowerOff className="h-3.5 w-3.5" />
                             }
-                            Run
+                            {sub.status === 'DISABLED' ? 'Enable' : 'Disable'}
                           </button>
-                        )}
-                        <button
-                          onClick={() => setEditingSubscription(sub)}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/60 hover:border-indigo-200 dark:hover:border-indigo-700 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors cursor-pointer"
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                          Edit
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                          <button
+                            onClick={() => setEditingSubscription(sub)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/60 hover:border-indigo-200 dark:hover:border-indigo-700 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors cursor-pointer"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                            Edit
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
               </tbody>
             </table>
           </div>
