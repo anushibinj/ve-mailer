@@ -516,7 +516,7 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
                             : 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-600 hover:border-amber-300 dark:hover:border-amber-600 hover:text-amber-600 dark:hover:text-amber-400'
                         }`}
                       >
-                        {TRIAGE_SLA_FIELD}
+                        {`🚦 ${TRIAGE_SLA_FIELD}`}
                       </button>
                       {COMMON_FIELDS.map(field => (
                         <button
@@ -776,7 +776,7 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
                                 {col === AI_SUMMARY_FIELD
                                   ? '✨ AI Summary'
                                   : col === TRIAGE_SLA_FIELD
-                                  ? 'Triage SLA'
+                                  ? '🚦 Triage SLA'
                                   : col.replace(/_/g, ' ')}
                               </th>
                             ))}
