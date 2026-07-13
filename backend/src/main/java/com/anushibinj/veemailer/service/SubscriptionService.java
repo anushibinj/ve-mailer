@@ -49,6 +49,7 @@ public class SubscriptionService {
 
         Filter filter = filterRepository.findById(filterId)
                 .orElseThrow(() -> new IllegalArgumentException("Filter not found"));
+        enforceFilterCanBeSubscribedByRecipient(filter, email);
 
         Optional<EmailSubscriber> existingOpt = emailSubscriberRepository
                 .findByRecipientEmailAndWorkspaceIdAndFilterId(email, workspace.getId(), filter.getId());
@@ -147,6 +148,9 @@ public class SubscriptionService {
 
         Filter filter = filterRepository.findById(filterId)
                 .orElseThrow(() -> new IllegalArgumentException("Filter not found"));
+        if (filter.getOwnerEmail() != null) {
+            throw new AccessDeniedException("Private user filters cannot be used for group subscriptions");
+        }
 
         // Upsert: one row per (group, workspace, filter) combination
         EmailSubscriber subscriber = emailSubscriberRepository
@@ -292,5 +296,13 @@ public class SubscriptionService {
             }
         }
     }
-}
 
+    private void enforceFilterCanBeSubscribedByRecipient(Filter filter, String recipientEmail) {
+        if (filter.getOwnerEmail() == null) {
+            return;
+        }
+        if (!filter.getOwnerEmail().equalsIgnoreCase(recipientEmail)) {
+            throw new AccessDeniedException("You are not authorized to subscribe to this private filter");
+        }
+    }
+}

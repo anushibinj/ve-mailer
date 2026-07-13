@@ -1,8 +1,13 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Plus, Pencil, Trash2, Loader2, KeyRound, CheckCircle, XCircle, Shield } from 'lucide-react';
+import { Plus, Pencil, Trash2, Loader2, KeyRound, CheckCircle, XCircle, Shield, Plug } from 'lucide-react';
 import toast from 'react-hot-toast';
 import type { WorkspaceAdmin } from '../../services/apiService';
-import { adminFetchWorkspaces, adminDeleteWorkspace, fetchWorkspaces } from '../../services/apiService';
+import {
+  adminFetchWorkspaces,
+  adminDeleteWorkspace,
+  adminTestWorkspaceConnection,
+  fetchWorkspaces,
+} from '../../services/apiService';
 import WorkspaceFormModal from '../../components/WorkspaceFormModal';
 import WorkspaceAdminManager from './WorkspaceAdminManager';
 import ConfirmDialog from '../../components/ConfirmDialog';
@@ -20,6 +25,7 @@ const WorkspaceManagementPage: React.FC = () => {
   // Delete confirm dialog
   const [deleteTarget, setDeleteTarget] = useState<WorkspaceAdmin | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [testingWorkspaceId, setTestingWorkspaceId] = useState<string | null>(null);
 
   // Workspace admin management (ADMIN only)
   const [adminManageTarget, setAdminManageTarget] = useState<WorkspaceAdmin | null>(null);
@@ -84,6 +90,30 @@ const WorkspaceManagementPage: React.FC = () => {
     } finally {
       setIsDeleting(false);
       setDeleteTarget(null);
+    }
+  };
+
+  const handleTestConnection = async (workspace: WorkspaceAdmin) => {
+    setTestingWorkspaceId(workspace.id);
+    try {
+      const response = await adminTestWorkspaceConnection({
+        workspaceRecordId: workspace.id,
+        sharedSpaceId: workspace.sharedSpaceId,
+        workspaceId: workspace.workspaceId,
+        clientId: workspace.clientId,
+        clientKey: workspace.clientKey,
+        rootUrl: workspace.rootUrl,
+      });
+      if (response.hasData) {
+        toast.success(response.message || `Connection successful for workspace ${response.workspaceId}`);
+      } else {
+        toast(response.message || 'Connection successful, but no data was returned from the server.', { icon: '⚠️' });
+      }
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { data?: { message?: string } } };
+      toast.error(axiosErr.response?.data?.message ?? 'Connection test failed');
+    } finally {
+      setTestingWorkspaceId(null);
     }
   };
 
@@ -222,6 +252,18 @@ const WorkspaceManagementPage: React.FC = () => {
                         >
                           <Pencil className="h-3.5 w-3.5" />
                           Edit
+                        </button>
+                        <button
+                          onClick={() => handleTestConnection(ws)}
+                          disabled={testingWorkspaceId === ws.id}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-indigo-200 rounded-md text-xs font-medium text-indigo-600 bg-white hover:bg-indigo-50 hover:border-indigo-400 disabled:opacity-50 transition-colors"
+                        >
+                          {testingWorkspaceId === ws.id ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Plug className="h-3.5 w-3.5" />
+                          )}
+                          Test connection
                         </button>
                         {isAdmin && (
                           <>

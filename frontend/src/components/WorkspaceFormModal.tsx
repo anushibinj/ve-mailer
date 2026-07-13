@@ -1,7 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { X, Eye, EyeOff, Loader2, Building2 } from 'lucide-react';
+import { X, Eye, EyeOff, Loader2, Building2, Plug } from 'lucide-react';
 import type { WorkspaceAdmin, WorkspaceCreatePayload, WorkspaceUpdatePayload, WorkspaceStatus } from '../services/apiService';
-import { adminCreateWorkspace, adminUpdateWorkspace } from '../services/apiService';
+import {
+  adminCreateWorkspace,
+  adminTestWorkspaceConnection,
+  adminUpdateWorkspace,
+} from '../services/apiService';
 import { useAuth } from '../hooks/useAuth';
 import toast from 'react-hot-toast';
 
@@ -62,6 +66,7 @@ const WorkspaceFormModal: React.FC<WorkspaceFormModalProps> = ({
   const [errors, setErrors] = useState<FormErrors>({});
   const [showKey, setShowKey] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isTesting, setIsTesting] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -104,6 +109,53 @@ const WorkspaceFormModal: React.FC<WorkspaceFormModalProps> = ({
   const handleKeyFocus = () => {
     if (isEditing && values.clientKey === CLIENT_KEY_PLACEHOLDER) {
       setValues(prev => ({ ...prev, clientKey: '' }));
+    }
+  };
+
+  const validateConnectionInputs = (): boolean => {
+    const connectionErrors: FormErrors = {
+      sharedSpaceId: values.sharedSpaceId.trim() ? undefined : 'Shared Space ID is required',
+      workspaceId: values.workspaceId.trim() ? undefined : 'Workspace ID is required',
+      clientId: values.clientId.trim() ? undefined : 'Client ID is required',
+      rootUrl: values.rootUrl.trim() ? undefined : 'Root URL is required',
+      clientKey: undefined,
+    };
+
+    if (!isEditing && !values.clientKey.trim()) {
+      connectionErrors.clientKey = 'Client Key is required';
+    }
+
+    setErrors(prev => ({ ...prev, ...connectionErrors }));
+    return Object.values(connectionErrors).every(err => !err);
+  };
+
+  const handleTestConnection = async () => {
+    if (!validateConnectionInputs()) return;
+
+    setIsTesting(true);
+    try {
+      const response = await adminTestWorkspaceConnection({
+        workspaceRecordId: workspace?.id,
+        sharedSpaceId: values.sharedSpaceId.trim(),
+        workspaceId: values.workspaceId.trim(),
+        clientId: values.clientId.trim(),
+        clientKey: values.clientKey.trim() || CLIENT_KEY_PLACEHOLDER,
+        rootUrl: values.rootUrl.trim(),
+      });
+      if (response.hasData) {
+        toast.success(response.message || `Connection successful for workspace ${response.workspaceId}`);
+      } else {
+        toast(response.message || 'Connection successful, but no data was returned from the server.', { icon: '⚠️' });
+      }
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { data?: { message?: string; errors?: { message?: string }[] } } };
+      const msg =
+        axiosErr.response?.data?.message ??
+        axiosErr.response?.data?.errors?.[0]?.message ??
+        'Connection test failed';
+      toast.error(msg);
+    } finally {
+      setIsTesting(false);
     }
   };
 
@@ -301,14 +353,23 @@ const WorkspaceFormModal: React.FC<WorkspaceFormModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              disabled={isSubmitting}
+              disabled={isSubmitting || isTesting}
               className="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700/60 disabled:opacity-50 transition-colors cursor-pointer"
             >
               Cancel
             </button>
             <button
+              type="button"
+              onClick={handleTestConnection}
+              disabled={isSubmitting || isTesting}
+              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-700 rounded-xl hover:bg-indigo-100 dark:hover:bg-indigo-900/40 disabled:opacity-50 transition-all cursor-pointer"
+            >
+              {isTesting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plug className="h-4 w-4" />}
+              Test Connection
+            </button>
+            <button
               type="submit"
-              disabled={isSubmitting}
+              disabled={isSubmitting || isTesting}
               className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-500 dark:bg-indigo-500 dark:hover:bg-indigo-400 rounded-xl disabled:opacity-50 transition-all cursor-pointer"
             >
               {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}

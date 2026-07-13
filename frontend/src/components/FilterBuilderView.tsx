@@ -1,6 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import ReactDOM from 'react-dom';
 import {
   fetchFilters,
+  fetchFilterableFields,
   createFilter,
   updateFilter,
   previewFilter,
@@ -12,12 +14,14 @@ import {
   type FilterCriteriaClause,
   type FilterCreatePayload,
   type FilterUpdatePayload,
-  type PreviewResponse
+  type PreviewResponse,
+  type OctaneFieldDto
 } from '../services/apiService';
 import { useAuth } from '../hooks/useAuth';
-import { Loader2, ArrowLeft, Plus, Trash2, Eye, Pencil, Copy, ChevronDown, ChevronUp, SlidersHorizontal } from 'lucide-react';
+import { Loader2, ArrowLeft, Plus, Trash2, Eye, Pencil, Copy, ChevronDown, ChevronUp, SlidersHorizontal, Search, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import ConfirmDialog from './ConfirmDialog';
+import { SmartFilterRow } from './SmartFilterRow';
 
 interface FilterBuilderViewProps {
   workspaceId: string;
@@ -27,23 +31,29 @@ interface FilterBuilderViewProps {
 type ViewMode = 'list' | 'create' | 'edit';
 type FilterCreationMode = 'queryString' | 'manual';
 
-const ENTITY_TYPES = ['defect', 'story', 'feature', 'quality_story', 'epic'];
+const ENTITY_TYPES = [
+  { value: 'backlog_items', label: 'Backlog Items (Story/Defect/Quality Story)' },
+  { value: 'epic', label: 'Epics' },
+  { value: 'feature', label: 'Features' },
+];
 const AI_SUMMARY_FIELD = '✨ AI Summary';
+const TRIAGE_SLA_FIELD = 'Triage SLA';
+const CUSTOM_PSEUDO_FIELDS = [AI_SUMMARY_FIELD, TRIAGE_SLA_FIELD];
 
-const COMMON_FIELDS = [
-  'id', 'global_id_udf', 'name', 'description', 'comments', 'phase', 'owner',
-  'product_udf', 'customer_udf', 'defect_type', 'severity',
-  'priority', 'release', 'team', 'sprint', 'creation_time',
-  'last_modified', 'detected_by', 'story_points', 'subtype'
-];
-
-const OPERATORS = [
-  { value: 'IN', label: 'In' },
-  { value: 'NOT_IN', label: 'Not In' },
-];
-
-const emptyCriterion = (): FilterCriteriaClause => ({ field: '', operator: 'IN', values: [''] });
+const emptyCriterion = (): FilterCriteriaClause => ({ field: '', operator: 'IN', values: [], logicalOperator: 'AND' });
 const defaultFields = ['id', 'name', 'phase', 'owner'];
+
+const normalizeEntityType = (raw: string): string => {
+  if (raw === 'defect' || raw === 'story' || raw === 'quality_story') return 'backlog_items';
+  return raw;
+};
+
+const toEntityTypeLabel = (raw: string): string => {
+  const normalized = normalizeEntityType(raw);
+  const fromOptions = ENTITY_TYPES.find(t => t.value === normalized)?.label;
+  if (fromOptions) return fromOptions;
+  return raw.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+};
 
 /**
  * Octane EntityModel serializes field data as:
@@ -83,10 +93,141 @@ const inputClass =
   'bg-white dark:bg-slate-800/60 focus:outline-none focus:border-indigo-500 dark:focus:border-indigo-400 ' +
   'focus:ring-2 focus:ring-indigo-500/15 dark:focus:ring-indigo-400/15 transition-all';
 
+type PopoverPlacement = 'top' | 'left' | 'right' | 'bottom';
+
+interface FieldBadgeWithPopoverProps {
+  label: string;
+  selected: boolean;
+  onClick: () => void;
+  selectedClassName: string;
+  unselectedClassName: string;
+  popoverText: string;
+}
+
+const FieldBadgeWithPopover: React.FC<FieldBadgeWithPopoverProps> = ({
+  label,
+  selected,
+  onClick,
+  selectedClassName,
+  unselectedClassName,
+  popoverText,
+}) => {
+  const buttonRef = useRef<HTMLButtonElement | null>(null);
+  const popoverRef = useRef<HTMLDivElement | null>(null);
+  const [isOpen, setIsOpen] = useState(false);
+  const [placement, setPlacement] = useState<PopoverPlacement>('top');
+  const [coords, setCoords] = useState({ top: 0, left: 0 });
+
+  const updatePopoverPosition = useCallback(() => {
+    const buttonEl = buttonRef.current;
+    const popoverEl = popoverRef.current;
+    if (!buttonEl || !popoverEl) return;
+
+    const triggerRect = buttonEl.getBoundingClientRect();
+    const popoverRect = popoverEl.getBoundingClientRect();
+    const popoverWidth = popoverRect.width;
+    const popoverHeight = popoverRect.height;
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const gap = 10;
+    const edgePadding = 8;
+
+    const topSpace = triggerRect.top;
+    const leftSpace = triggerRect.left;
+    const rightSpace = viewportWidth - triggerRect.right;
+
+    let nextPlacement: PopoverPlacement;
+    if (topSpace >= popoverHeight + gap) {
+      nextPlacement = 'top';
+    } else if (leftSpace >= popoverWidth + gap) {
+      nextPlacement = 'left';
+    } else if (rightSpace >= popoverWidth + gap) {
+      nextPlacement = 'right';
+    } else {
+      nextPlacement = 'bottom';
+    }
+
+    let top = 0;
+    let left = 0;
+    if (nextPlacement === 'top') {
+      top = triggerRect.top - popoverHeight - gap;
+      left = triggerRect.left + (triggerRect.width / 2) - (popoverWidth / 2);
+    } else if (nextPlacement === 'left') {
+      top = triggerRect.top + (triggerRect.height / 2) - (popoverHeight / 2);
+      left = triggerRect.left - popoverWidth - gap;
+    } else if (nextPlacement === 'right') {
+      top = triggerRect.top + (triggerRect.height / 2) - (popoverHeight / 2);
+      left = triggerRect.right + gap;
+    } else {
+      top = triggerRect.bottom + gap;
+      left = triggerRect.left + (triggerRect.width / 2) - (popoverWidth / 2);
+    }
+
+    top = Math.max(edgePadding, Math.min(top, viewportHeight - popoverHeight - edgePadding));
+    left = Math.max(edgePadding, Math.min(left, viewportWidth - popoverWidth - edgePadding));
+
+    setPlacement(nextPlacement);
+    setCoords({ top, left });
+  }, []);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const rafId = window.requestAnimationFrame(() => updatePopoverPosition());
+    const reposition = () => updatePopoverPosition();
+    window.addEventListener('resize', reposition);
+    window.addEventListener('scroll', reposition, true);
+    return () => {
+      window.cancelAnimationFrame(rafId);
+      window.removeEventListener('resize', reposition);
+      window.removeEventListener('scroll', reposition, true);
+    };
+  }, [isOpen, updatePopoverPosition]);
+
+  return (
+    <div
+      className="inline-flex"
+      onMouseEnter={() => setIsOpen(true)}
+      onMouseLeave={() => setIsOpen(false)}
+      onFocusCapture={() => setIsOpen(true)}
+      onBlurCapture={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
+          setIsOpen(false);
+        }
+      }}
+    >
+      <button
+        ref={buttonRef}
+        type="button"
+        onClick={onClick}
+        aria-describedby={isOpen ? `${label}-popover` : undefined}
+        className={`px-3 py-1 rounded-full text-xs font-medium border transition-all ${
+          selected ? selectedClassName : unselectedClassName
+        }`}
+      >
+        {label}
+      </button>
+      {isOpen && ReactDOM.createPortal(
+        <div
+          id={`${label}-popover`}
+          ref={popoverRef}
+          role="tooltip"
+          data-placement={placement}
+          style={{ top: `${coords.top}px`, left: `${coords.left}px` }}
+          className="fixed z-50 w-[min(22rem,calc(100vw-16px))] rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs leading-relaxed text-slate-700 dark:text-slate-200 shadow-xl whitespace-normal break-words"
+        >
+          {popoverText}
+        </div>,
+        document.body
+      )}
+    </div>
+  );
+};
+
 const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBack }) => {
   const allowCustomQueryString = String(import.meta.env.VITE_ALLOW_CUSTOM_QUERY_STRING ?? 'false').toLowerCase() === 'true';
   const { isAdmin, isWorkspaceAdmin } = useAuth();
-  const canManageFilters = isAdmin || isWorkspaceAdmin;
+  const canManageAllFilters = isAdmin || isWorkspaceAdmin;
+  const canCreateFilters = true;
   const [filters, setFilters] = useState<Filter[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [viewMode, setViewMode] = useState<ViewMode>('list');
@@ -101,9 +242,12 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [entityType, setEntityType] = useState('defect');
+  const [entityType, setEntityType] = useState('backlog_items');
+  const [availableFields, setAvailableFields] = useState<OctaneFieldDto[]>([]);
+  const [availableFieldsLoading, setAvailableFieldsLoading] = useState(false);
   const [creationMode, setCreationMode] = useState<FilterCreationMode | null>(allowCustomQueryString ? null : 'manual');
   const [selectedFields, setSelectedFields] = useState<string[]>(defaultFields);
+  const [fieldSearch, setFieldSearch] = useState('');
   const [criteria, setCriteria] = useState<FilterCriteriaClause[]>([emptyCriterion()]);
   const [filterQueryString, setFilterQueryString] = useState('');
   const [queryStringApplied, setQueryStringApplied] = useState(false);
@@ -130,10 +274,22 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workspaceId]);
 
+  useEffect(() => {
+    if (!workspaceId || !entityType) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setAvailableFieldsLoading(true);
+    setAvailableFields([]);
+    fetchFilterableFields(workspaceId, entityType)
+      .then(setAvailableFields)
+      .catch(() => setAvailableFields([]))
+      .finally(() => setAvailableFieldsLoading(false));
+  }, [workspaceId, entityType]);
+
   const resetForm = () => {
-    setTitle(''); setDescription(''); setEntityType('defect');
+    setTitle(''); setDescription(''); setEntityType('backlog_items');
     setCreationMode(allowCustomQueryString ? null : 'manual');
     setSelectedFields(defaultFields);
+    setFieldSearch('');
     setCriteria([emptyCriterion()]);
     setFilterQueryString('');
     setQueryStringApplied(false);
@@ -141,12 +297,15 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
   };
 
   const populateFormFromFilter = (f: Filter) => {
-    setTitle(f.title); setDescription(f.description || ''); setEntityType(f.entityType);
+    setTitle(f.title); setDescription(f.description || ''); setEntityType(normalizeEntityType(f.entityType));
     setCreationMode('manual');
+    setFieldSearch('');
     try { setSelectedFields(JSON.parse(f.fields)); } catch { setSelectedFields(defaultFields); }
     try {
       const parsed: FilterCriteriaClause[] = JSON.parse(f.criteria);
-      setCriteria(parsed.length > 0 ? parsed : [emptyCriterion()]);
+      // Backfill logicalOperator for criteria saved before AND/OR support was added
+      const normalised = parsed.map(c => ({ ...c, logicalOperator: c.logicalOperator ?? 'AND' }));
+      setCriteria(normalised.length > 0 ? normalised : [emptyCriterion()]);
     } catch { setCriteria([emptyCriterion()]); }
     setFilterQueryString('');
     setQueryStringApplied(false);
@@ -159,7 +318,7 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
       const cloned = await cloneFilter(workspaceId, f.id);
       setEditingFilter(null);
       setTitle(cloned.title); setDescription(cloned.description || '');
-      setEntityType(cloned.entityType); setSelectedFields(cloned.fields);
+      setEntityType(normalizeEntityType(cloned.entityType)); setSelectedFields(cloned.fields);
       setCriteria(cloned.criteria.length > 0 ? cloned.criteria : [emptyCriterion()]);
       const canUseQueryString = allowCustomQueryString && !!cloned.filterQueryString;
       setFilterQueryString(canUseQueryString ? (cloned.filterQueryString || '') : '');
@@ -220,23 +379,32 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
   const toggleField = (field: string) => {
     setSelectedFields(prev => prev.includes(field) ? prev.filter(f => f !== field) : [...prev, field]);
   };
+  const addField = (field: string) => {
+    setSelectedFields(prev => prev.includes(field) ? prev : [...prev, field]);
+  };
 
   const updateCriterion = (index: number, updates: Partial<FilterCriteriaClause>) => {
     setCriteria(prev => prev.map((c, i) => i === index ? { ...c, ...updates } : c));
   };
 
-  const updateCriterionValue = (ci: number, vi: number, val: string) => {
-    setCriteria(prev => prev.map((c, i) => {
-      if (i !== ci) return c;
-      const newValues = [...c.values]; newValues[vi] = val; return { ...c, values: newValues };
-    }));
-  };
-
   const isQueryStringMode = allowCustomQueryString && creationMode === 'queryString';
+  const dynamicFieldOptions = [
+    ...availableFields.map(field => ({ name: field.name, label: field.label || field.name, fromMetadata: true })),
+    ...selectedFields
+      .filter(field => !CUSTOM_PSEUDO_FIELDS.includes(field))
+      .filter(field => !availableFields.some(option => option.name === field))
+      .map(field => ({ name: field, label: field, fromMetadata: false })),
+  ];
+  const selectableFieldOptions = dynamicFieldOptions.filter(field => !selectedFields.includes(field.name));
+  const filteredFieldOptions = selectableFieldOptions.filter(field =>
+    field.label.toLowerCase().includes(fieldSearch.toLowerCase()) ||
+    field.name.toLowerCase().includes(fieldSearch.toLowerCase())
+  );
+  const selectedNonCustomFields = selectedFields.filter(field => !CUSTOM_PSEUDO_FIELDS.includes(field));
 
   const isFormValid = title.trim() !== '' && creationMode !== null && selectedFields.length > 0
     && criteria.length > 0
-    && criteria.every(c => c.field.trim() !== '' && c.values.length > 0 && c.values.every(v => v.trim() !== ''))
+    && criteria.every(c => c.field.trim() !== '' && c.values.length > 0 && c.values.some(v => v.trim() !== ''))
     && (!isQueryStringMode || (filterQueryString.trim() !== '' && queryStringApplied));
 
   const handleSave = async (e: React.FormEvent) => {
@@ -244,7 +412,11 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
     if (!isFormValid) return;
     setIsSaving(true);
     try {
-      const cleanedCriteria = criteria.map(c => ({ ...c, values: c.values.map(v => v.trim()) }));
+      // Filter out empty values; keep IDs as-is (they may look like "123456789" or "phase.defect.new")
+      const cleanedCriteria = criteria.map(c => ({
+        ...c,
+        values: c.values.map(v => v.trim()).filter(v => v !== '')
+      }));
       const normalizedFilterQueryString = isQueryStringMode ? filterQueryString.trim() : '';
       if (viewMode === 'edit' && editingFilter) {
         const payload: FilterUpdatePayload = {
@@ -303,6 +475,27 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
     try { return JSON.parse(fieldsJson); } catch { return []; }
   };
 
+  const canEditFilter = (filter: Filter): boolean => {
+    if (typeof filter.editable === 'boolean') {
+      return filter.editable;
+    }
+    return canManageAllFilters;
+  };
+
+  const isAdminManagedFilter = (filter: Filter): boolean => {
+    if (typeof filter.adminManaged === 'boolean') {
+      return filter.adminManaged;
+    }
+    return !filter.ownerEmail;
+  };
+
+  const creatorLabel = (filter: Filter): string => {
+    if (filter.ownerEmail && filter.ownerEmail.trim() !== '') {
+      return filter.ownerEmail;
+    }
+    return 'Admin';
+  };
+
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh]">
@@ -315,7 +508,7 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
   }
 
   /* ---- Create / Edit form ---- */
-  if ((viewMode === 'create' || viewMode === 'edit') && canManageFilters) {
+  if (viewMode === 'create' || viewMode === 'edit') {
     return (
       <div className="max-w-3xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
         <div className="mb-6 flex items-center gap-3 animate-fade-in">
@@ -333,7 +526,7 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden animate-slide-up">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm animate-slide-up">
           <div className="p-6">
             <form onSubmit={handleSave} className="space-y-6">
 
@@ -365,7 +558,7 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
                   className={inputClass}
                 >
                   {ENTITY_TYPES.map(t => (
-                    <option key={t} value={t}>{t.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}</option>
+                    <option key={t.value} value={t.value}>{t.label}</option>
                   ))}
                 </select>
               </div>
@@ -484,93 +677,116 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
                   <div className="space-y-2">
                     <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">{allowCustomQueryString ? 'Step 2: Choose Fields to Fetch' : 'Fields to Fetch'}</label>
                     <div className="flex flex-wrap gap-2">
-                      <button
-                        type="button"
+                      <FieldBadgeWithPopover
+                        label={AI_SUMMARY_FIELD}
+                        selected={selectedFields.includes(AI_SUMMARY_FIELD)}
                         onClick={() => toggleField(AI_SUMMARY_FIELD)}
-                        className={`px-3 py-1 rounded-full text-xs font-medium border transition-all ${
-                          selectedFields.includes(AI_SUMMARY_FIELD)
-                            ? 'bg-violet-100 dark:bg-violet-500/20 text-violet-700 dark:text-violet-300 border-violet-200 dark:border-violet-500/30 scale-105'
-                            : 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-600 hover:border-violet-300 dark:hover:border-violet-600 hover:text-violet-600 dark:hover:text-violet-400'
-                        }`}
-                      >
-                        {AI_SUMMARY_FIELD}
-                      </button>
-                      {COMMON_FIELDS.map(field => (
-                        <button
-                          key={field} type="button"
-                          onClick={() => toggleField(field)}
-                          className={`px-3 py-1 rounded-full text-xs font-medium border transition-all ${
-                            selectedFields.includes(field)
-                              ? 'bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-500/30 scale-105'
-                              : 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-600 hover:border-indigo-300 dark:hover:border-indigo-600 hover:text-indigo-600 dark:hover:text-indigo-400'
-                          }`}
-                        >
-                          {field}
-                        </button>
-                      ))}
+                        selectedClassName="bg-violet-100 dark:bg-violet-500/20 text-violet-700 dark:text-violet-300 border-violet-200 dark:border-violet-500/30 scale-105"
+                        unselectedClassName="bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-600 hover:border-violet-300 dark:hover:border-violet-600 hover:text-violet-600 dark:hover:text-violet-400"
+                        popoverText="An AI summary of the current progress in the ticket and potential next items"
+                      />
+                      <FieldBadgeWithPopover
+                        label={`🚦 ${TRIAGE_SLA_FIELD}`}
+                        selected={selectedFields.includes(TRIAGE_SLA_FIELD)}
+                        onClick={() => toggleField(TRIAGE_SLA_FIELD)}
+                        selectedClassName="bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-500/30 scale-105"
+                        unselectedClassName="bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-600 hover:border-amber-300 dark:hover:border-amber-600 hover:text-amber-600 dark:hover:text-amber-400"
+                        popoverText="A traffic light for SLA compliance of Customer tickets. Make sure that you adjust your filter to only show tickets that need the Triage SLA to be applied."
+                      />
                     </div>
+                    <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-800/40 p-3 space-y-2">
+                      <div className="relative">
+                        <Search className="h-3.5 w-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                        <input
+                          type="text"
+                          value={fieldSearch}
+                          onChange={e => setFieldSearch(e.target.value)}
+                          placeholder="Search fields and click to add…"
+                          className={`${inputClass} pl-8 pr-9`}
+                        />
+                        {fieldSearch.trim() !== '' && (
+                          <button
+                            type="button"
+                            onClick={() => setFieldSearch('')}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-md text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/60 transition-colors"
+                            aria-label="Clear field search"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                      </div>
+                      {fieldSearch.trim() !== '' && (
+                        <div className="max-h-40 overflow-y-auto flex flex-wrap gap-1.5">
+                          {filteredFieldOptions.length === 0 ? (
+                            <p className="text-xs text-slate-400 dark:text-slate-500">No matching fields.</p>
+                          ) : (
+                            filteredFieldOptions.slice(0, 60).map(field => (
+                              <button
+                                key={field.name}
+                                type="button"
+                                title={field.label === field.name ? field.name : `${field.label} (${field.name})`}
+                                onClick={() => addField(field.name)}
+                                className="px-2.5 py-1 rounded-full text-xs font-medium border bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-600 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                              >
+                                {field.label}
+                                {!field.fromMetadata && (
+                                  <span className="ml-1 text-[10px] align-middle opacity-70">(saved)</span>
+                                )}
+                              </button>
+                            ))
+                          )}
+                        </div>
+                      )}
+                      {selectedNonCustomFields.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5">
+                          {selectedNonCustomFields.map(fieldName => {
+                            const fieldMeta = dynamicFieldOptions.find(option => option.name === fieldName);
+                            const label = fieldMeta?.label || fieldName;
+                            const isSavedOnly = fieldMeta?.fromMetadata === false;
+                            return (
+                              <button
+                                key={fieldName}
+                                type="button"
+                                onClick={() => toggleField(fieldName)}
+                                className="px-2.5 py-1 rounded-full text-xs font-medium border bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-500/30 hover:bg-indigo-200 dark:hover:bg-indigo-500/30 transition-colors"
+                                title="Click to remove"
+                              >
+                                {label}
+                                {isSavedOnly && <span className="ml-1 text-[10px] align-middle opacity-70">(saved)</span>}
+                                <span className="ml-1.5">×</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                    {availableFieldsLoading && (
+                      <p className="text-xs text-slate-400 dark:text-slate-500">Loading fields from Octane…</p>
+                    )}
                   </div>
 
                   <div className="space-y-2">
                     <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Filter Criteria</label>
+                    <p className="text-xs text-slate-400 dark:text-slate-500">
+                      Pick fields from the dropdown — values are automatically loaded from your Octane workspace.
+                    </p>
                     <div className="space-y-3">
                       {criteria.map((criterion, ci) => (
-                        <div key={ci} className="border border-slate-200 dark:border-slate-700 rounded-xl p-4 bg-slate-50/70 dark:bg-slate-800/40">
-                          <div className="flex items-center justify-between mb-3">
-                            <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide">
-                              {ci === 0 ? 'Where' : 'And'}
-                            </span>
-                            {criteria.length > 1 && (
-                              <button type="button" onClick={() => setCriteria(prev => prev.filter((_, i) => i !== ci))}
-                                className="text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 transition-colors cursor-pointer">
-                                <Trash2 className="h-4 w-4" />
-                              </button>
-                            )}
-                          </div>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
-                            <input
-                              type="text" value={criterion.field}
-                              onChange={e => updateCriterion(ci, { field: e.target.value })}
-                              className={inputClass} placeholder="Field name"
-                            />
-                            <select
-                              value={criterion.operator}
-                              onChange={e => updateCriterion(ci, { operator: e.target.value })}
-                              className={inputClass}
-                            >
-                              {OPERATORS.map(op => <option key={op.value} value={op.value}>{op.label}</option>)}
-                            </select>
-                          </div>
-                          <div className="space-y-2">
-                            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Values</span>
-                            {criterion.values.map((val, vi) => (
-                              <div key={vi} className="flex items-center gap-2">
-                                <input
-                                  type="text" value={val}
-                                  onChange={e => updateCriterionValue(ci, vi, e.target.value)}
-                                  className={inputClass} placeholder="Value or Octane ID"
-                                />
-                                {criterion.values.length > 1 && (
-                                  <button type="button"
-                                    onClick={() => setCriteria(prev => prev.map((c, i) => i !== ci ? c : { ...c, values: c.values.filter((_, x) => x !== vi) }))}
-                                    className="text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 transition-colors flex-shrink-0 cursor-pointer">
-                                    <Trash2 className="h-3.5 w-3.5" />
-                                  </button>
-                                )}
-                              </div>
-                            ))}
-                            <button type="button"
-                              onClick={() => setCriteria(prev => prev.map((c, i) => i !== ci ? c : { ...c, values: [...c.values, ''] }))}
-                              className="text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 font-medium transition-colors cursor-pointer">
-                              + Add value
-                            </button>
-                          </div>
-                        </div>
+                        <SmartFilterRow
+                          key={ci}
+                          clause={criterion}
+                          index={ci}
+                          entityType={entityType}
+                          workspaceId={workspaceId}
+                          onChange={updates => updateCriterion(ci, updates)}
+                          onRemove={() => setCriteria(prev => prev.filter((_, i) => i !== ci))}
+                          canRemove={criteria.length > 1}
+                        />
                       ))}
                       <button type="button" onClick={() => setCriteria(prev => [...prev, emptyCriterion()])}
                         className="flex items-center gap-1.5 text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 font-medium transition-colors cursor-pointer">
                         <Plus className="h-4 w-4" />
-                        Add Criterion
+                        Add Filter Row
                       </button>
                     </div>
                   </div>
@@ -614,7 +830,7 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
             <p className="text-slate-400 dark:text-slate-500 text-sm mt-0.5">Pre-built queries for your subscriptions</p>
           </div>
         </div>
-        {canManageFilters && (
+        {canCreateFilters && (
           <button
             onClick={handleCreateNew}
             className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 dark:bg-indigo-500 dark:hover:bg-indigo-400 text-white text-sm font-semibold rounded-xl shadow-sm shadow-indigo-500/20 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:focus:ring-offset-slate-950 transition-all cursor-pointer"
@@ -631,7 +847,7 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
             <SlidersHorizontal className="h-7 w-7 text-slate-300 dark:text-slate-600" />
           </div>
           <p className="text-slate-500 dark:text-slate-400 text-sm mb-1 font-medium">No filter templates yet</p>
-          {canManageFilters && (
+          {canCreateFilters && (
             <>
               <p className="text-slate-400 dark:text-slate-500 text-xs mb-6">Create your first filter template to get started.</p>
               <button onClick={handleCreateNew}
@@ -662,11 +878,25 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
                       <div className="flex items-center gap-2 flex-wrap mb-1">
                         <h3 className="font-semibold text-slate-900 dark:text-white text-sm">{f.title}</h3>
                         <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-500/20">
-                          {f.entityType}
+                          {toEntityTypeLabel(f.entityType)}
                         </span>
+                        {isAdminManagedFilter(f) ? (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
+                            Admin template
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide bg-violet-100 dark:bg-violet-500/20 text-violet-700 dark:text-violet-300 border border-violet-200 dark:border-violet-500/30">
+                            Private template
+                          </span>
+                        )}
                       </div>
                       {f.description && (
                         <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 mb-2">{f.description}</p>
+                      )}
+                      {canManageAllFilters && (
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 mb-2">
+                          Created by: <span className="font-medium text-slate-600 dark:text-slate-300">{creatorLabel(f)}</span>
+                        </p>
                       )}
                       <div className="mt-1.5 flex flex-wrap gap-1">
                         {fieldsList.slice(0, 8).map(field => (
@@ -684,10 +914,14 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
                         <div className="mt-2 text-xs text-slate-400 dark:text-slate-500">
                           {criteriaList.map((c, i) => (
                             <span key={i}>
+                              {i > 0 && (
+                                <span className="text-indigo-400 dark:text-indigo-500 mx-1 font-medium uppercase">
+                                  {c.logicalOperator ?? 'AND'}
+                                </span>
+                              )}
                               <span className="font-medium text-slate-500 dark:text-slate-400">{c.field}</span>{' '}
-                              <span className="text-slate-400 dark:text-slate-500">{c.operator.toLowerCase()}</span>{' '}
+                              <span className="text-slate-400 dark:text-slate-500">{c.operator.toLowerCase().replace('_', ' ')}</span>{' '}
                               [{c.values.join(', ')}]
-                              {i < criteriaList.length - 1 ? <span className="text-indigo-400 dark:text-indigo-500 mx-1 font-medium">AND</span> : ''}
                             </span>
                           ))}
                         </div>
@@ -695,7 +929,7 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
                     </div>
 
                     <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
-                      {canManageFilters && (
+                      {canEditFilter(f) && (
                         <>
                           <button onClick={() => handleEdit(f)}
                             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/60 hover:border-indigo-200 dark:hover:border-indigo-700 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors cursor-pointer">
@@ -777,12 +1011,18 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
                                 className={`px-4 py-2.5 text-left font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider whitespace-nowrap ${
                                   col === AI_SUMMARY_FIELD || col === 'name' || col === 'description'
                                     ? 'min-w-[220px]'
+                                    : col === TRIAGE_SLA_FIELD
+                                    ? 'min-w-[140px]'
                                     : col === 'id'
                                     ? 'min-w-[60px]'
                                     : 'min-w-[90px]'
                                 }`}
                               >
-                                {col === AI_SUMMARY_FIELD ? '✨ AI Summary' : col.replace(/_/g, ' ')}
+                                {col === AI_SUMMARY_FIELD
+                                  ? '✨ AI Summary'
+                                  : col === TRIAGE_SLA_FIELD
+                                  ? '🚦 Triage SLA'
+                                  : col.replace(/_/g, ' ')}
                               </th>
                             ))}
                           </tr>

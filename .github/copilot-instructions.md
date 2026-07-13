@@ -8,7 +8,8 @@
 - At the end of every change, suggest me a git commit message for that change
 - Whenever implementing a code change, look in the `TODO.md` file for any relevant TODOs and try to implement those as well. If you implement a TODO, mark it as done in the TODO.md file. Do not implement TODOs that are not relevant to the code change you are making. If you are not sure whether a TODO is relevant, skip it and move on. If the TODO.md file is missing, proceed with the code change without it.
 - Whenever doing a code change, follow these steps:
-    1. Analyze whether both backend and frontend changes are needed.
-    2. If both are needed, implement backend changes first, then frontend changes.
-    3. If only one is needed, implement that one.
+    1. Read product-architecture-flowchart.mmd & README.md to understand the flow of the code and how it is structured.
+    2. Analyze whether both backend and frontend changes are needed.
+    3. If both are needed, implement backend changes first, then frontend changes.
+    4. If only one is needed, implement that one.
 - When making code changes, preserve existing comments in the code. If you change code that has a comment, update the comment to reflect the new behavior. Delete comments only if they are factually inaccurate after your change.

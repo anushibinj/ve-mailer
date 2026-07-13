@@ -1,11 +1,16 @@
 package com.anushibinj.veemailer.service;
 
 import com.anushibinj.veemailer.dto.WorkspaceCreateRequestDto;
+import com.anushibinj.veemailer.dto.WorkspaceConnectionTestRequestDto;
+import com.anushibinj.veemailer.dto.WorkspaceConnectionTestResponseDto;
 import com.anushibinj.veemailer.dto.WorkspaceResponseDto;
 import com.anushibinj.veemailer.dto.WorkspaceUpdateRequestDto;
 import com.anushibinj.veemailer.model.Workspace;
 import com.anushibinj.veemailer.model.WorkspaceStatus;
 import com.anushibinj.veemailer.repository.WorkspaceRepository;
+import com.hpe.adm.nga.sdk.Octane;
+import com.hpe.adm.nga.sdk.entities.OctaneCollection;
+import com.hpe.adm.nga.sdk.model.EntityModel;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -19,14 +24,20 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 
 @ExtendWith(MockitoExtension.class)
 class WorkspaceServiceTest {
 
     @Mock
     private WorkspaceRepository workspaceRepository;
+
+    @Mock
+    private OctaneCacheService octaneCacheService;
 
     @InjectMocks
     private WorkspaceService workspaceService;
@@ -158,5 +169,87 @@ class WorkspaceServiceTest {
         workspaceService.delete(id);
 
         verify(workspaceRepository).deleteById(id);
+    }
+
+    @Test
+    void testConnection_Success_ReturnsHasDataTrue() {
+        UUID workspaceRecordId = UUID.randomUUID();
+        Workspace workspace = buildWorkspace(workspaceRecordId);
+        when(workspaceRepository.findById(workspaceRecordId)).thenReturn(Optional.of(workspace));
+
+        Octane octane = mock(Octane.class, RETURNS_DEEP_STUBS);
+        @SuppressWarnings("unchecked")
+        OctaneCollection<EntityModel> resultCollection = (OctaneCollection<EntityModel>) mock(OctaneCollection.class);
+
+        when(octaneCacheService.getOctaneClient(
+                eq("https://ve.example.com"),
+                eq("cid-1"),
+                eq("real-secret"),
+                eq(4001),
+                eq(5015)))
+                .thenReturn(octane);
+
+        when(octane.entityList("stories")
+                .get()
+                .addFields("id")
+                .limit(1)
+                .execute())
+                .thenReturn(resultCollection);
+
+        when(resultCollection.isEmpty()).thenReturn(false);
+
+        WorkspaceConnectionTestRequestDto request = new WorkspaceConnectionTestRequestDto(
+                workspaceRecordId,
+                "4001",
+                "5015",
+                "cid-1",
+                WorkspaceService.CLIENT_KEY_PLACEHOLDER,
+                "https://ve.example.com"
+        );
+
+        WorkspaceConnectionTestResponseDto response = workspaceService.testConnection(request);
+
+        assertThat(response.isSuccess()).isTrue();
+        assertThat(response.isHasData()).isTrue();
+        assertThat(response.getWorkspaceId()).isEqualTo("5015");
+    }
+
+    @Test
+    void testConnection_NoStories_ReturnsSuccessWithWarning() {
+        Octane octane = mock(Octane.class, RETURNS_DEEP_STUBS);
+        @SuppressWarnings("unchecked")
+        OctaneCollection<EntityModel> resultCollection = (OctaneCollection<EntityModel>) mock(OctaneCollection.class);
+
+        when(octaneCacheService.getOctaneClient(
+                eq("https://ve.example.com"),
+                eq("cid-1"),
+                eq("new-secret"),
+                eq(4001),
+                eq(5015)))
+                .thenReturn(octane);
+
+        when(octane.entityList("stories")
+                .get()
+                .addFields("id")
+                .limit(1)
+                .execute())
+                .thenReturn(resultCollection);
+
+        when(resultCollection.isEmpty()).thenReturn(true);
+
+        WorkspaceConnectionTestRequestDto request = new WorkspaceConnectionTestRequestDto(
+                null,
+                "4001",
+                "5015",
+                "cid-1",
+                "new-secret",
+                "https://ve.example.com"
+        );
+
+        WorkspaceConnectionTestResponseDto response = workspaceService.testConnection(request);
+
+        assertThat(response.isSuccess()).isTrue();
+        assertThat(response.isHasData()).isFalse();
+        assertThat(response.getMessage()).contains("no data");
     }
 }

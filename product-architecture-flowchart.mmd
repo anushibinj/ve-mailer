@@ -44,9 +44,11 @@ flowchart TD
         subgraph BusinessModule["Business Module"]
             WCtrl[Workspace Controller]
             FCtrl[Filter Controller]
+            FAuth[Filter Access Guard<br/>shared admin + private owner]
             FParse[Parse Query String Endpoint]
             FExport[Filter Query String Export Endpoint]
             SCtrl[Subscription Controller]
+            SAuth[Subscription Filter Privacy Guard]
             NPCtrl[Notification Preferences Controller]
             AIPCtrl[AI Preferences Controller]
             MACtrl[Mail Analytics Controller]
@@ -55,16 +57,19 @@ flowchart TD
             FS[Filter Service]
             RGCtrl[Recipient Group Controller]
             SS[Subscription Service]
+            WSS[Workspace Service]
             WAS[Workspace Admin Service]
+            WCPS[Workspace Connectivity Polling Service]
             RGS[Recipient Group Service]
             NPS[Notification Preferences Service]
             APS[AI Preferences Service]
             DMS[Dynamic Mail Sender Service]
             DAIS[Dynamic AI Client Service]
-            OTP[OTP Service]
+            OTP[OTP Service<br/>Invite link uses app.frontend.url]
             PS[Polling Service]
             NS[Notification Service]
             AIS[AI Summary Service]
+            TSP[Triage SLA Policy]
             TCS[Ticket Comment Service]
             MAS[Mail Analytics Service]
             MAUS[Mail Audit Service]
@@ -127,6 +132,7 @@ flowchart TD
     WD --> AI
     WD --> RGV
     FB --> AI
+    FB --> TSP
     AI --> WCtrl
     AI --> FCtrl
     AI --> FParse
@@ -161,12 +167,20 @@ flowchart TD
 
     %% Business flows
     FCtrl --> FS
+    FCtrl --> FAuth
+    FAuth --> FS
     FParse --> FS
     FExport --> FS
     FCtrl --> WAS
     WCtrl --> WAS
+    WCtrl --> WSS
+    WSS --> WR
+    WSS --> VE
+    WCPS --> WSS
     WAS --> WAR
     SCtrl --> SS
+    SS --> SAuth
+    SAuth --> FR
     NPCtrl --> NPS
     AIPCtrl --> APS
     NPS --> NPR
@@ -178,8 +192,10 @@ flowchart TD
     OTP --> DMS
     OTP --> SMTP
     FS --> VE
+    FS --> TSP
     PS --> FS
     PS --> NS
+    NS --> TSP
     NS --> AIS
     AIS --> DAIS
     DAIS --> APR

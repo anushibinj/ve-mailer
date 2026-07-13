@@ -28,6 +28,7 @@ A full-stack application that lets users subscribe to email digest notifications
     - [Backend — `application.properties`](#backend--applicationproperties)
     - [Backend — `application-dev.properties`](#backend--application-devproperties)
     - [AI Summary Configuration (Optional)](#ai-summary-configuration-optional)
+    - [Triage SLA Custom Field](#triage-sla-custom-field)
     - [Frontend — Environment Variables](#frontend--environment-variables)
       - [`VITE_ALLOW_CUSTOM_QUERY_STRING` — query-string filter workflow toggle](#vite_allow_custom_query_string--query-string-filter-workflow-toggle)
       - [`VITE_FOOTER_HTML` — custom footer](#vite_footer_html--custom-footer)
@@ -58,6 +59,7 @@ Key capabilities:
 - Receive **email digests** on a custom schedule — daily or weekly (Mondays), at one or more specific hours you choose
 - Create **Filter Templates** — structured query definitions (entity type, fields, criteria) that are stored as reusable templates and dynamically compiled into Octane SDK queries
 - **Execute filters on demand** — preview matching results from ValueEdge directly in the UI before subscribing
+- Add **custom pseudo-fields** such as **✨ AI Summary** and **Triage SLA** to enrich preview/email output without changing Octane metadata
 
 ---
 
@@ -120,6 +122,7 @@ ve-mailer/
 │   │   │   ├── GeneralSettingsController.java      # Admin general settings (GET/PUT) — ADMIN only
 │   │   │   ├── MailAnalyticsController.java        # Admin mail analytics (summary, charts, history) — ADMIN only
 │   │   │   ├── NotificationPreferencesController.java # Admin SMTP config (GET/PUT)
+│   │   │   ├── OctaneMetadataController.java # Easy Filter Builder metadata (GET fields, GET field-values)
 │   │   │   ├── RecipientGroupController.java       # Recipient group CRUD + member management (workspace-scoped)
 │   │   │   ├── SubscriptionController.java
 │   │   │   ├── UserManagementController.java       # Admin user listing — ADMIN only
@@ -159,7 +162,7 @@ ve-mailer/
 │   │   │   ├── Workspace.java
 │   │   │   ├── WorkspaceAdminMapping.java   # Maps users to workspaces they administer
 │   │   │   ├── Filter.java                 # title, description, entityType, fields (JSON), criteria (JSON)
-│   │   │   ├── FilterCriteriaClause.java   # POJO: field, operator, negate, values[]
+│   │   │   ├── FilterCriteriaClause.java   # POJO: field, operator, values[], logicalOperator (AND|OR)
 │   │   │   ├── EmailSubscriber.java
 │   │   │   ├── OtpRequest.java
 │   │   │   ├── ActionType.java       # SUBSCRIBE | UPDATE | UNSUBSCRIBE | SIGNUP_VERIFICATION | PASSWORD_RESET
@@ -264,15 +267,16 @@ Filter
   id (UUID PK)
   title
   description
-  entityType      -- Octane entity type (e.g. "defect", "story")
+  entityType      -- Octane filter scope (e.g. "backlog_items", "epic", "feature")
   fields          -- JSON array of field names to fetch (TEXT column)
   criteria        -- JSON array of FilterCriteriaClause objects (TEXT column)
 
   FilterCriteriaClause (embedded in criteria JSON):
     field         -- Octane field name
-    operator      -- EQUAL_TO | IN
-    negate        -- boolean (wraps clause in NOT)
+    operator      -- IN | NOT_IN
     values[]      -- list of match values or Octane IDs
+    logicalOperator -- AND | OR (join with previous clause)
+    referenceValues -- nullable boolean; true = query as field EQ {id IN ...}
 
 EmailSubscriber
   id (UUID PK)
@@ -408,6 +412,7 @@ All workspace endpoints require authentication. Mutation endpoints (POST/PUT/DEL
 | `POST`   | `/workspaces`             | ADMIN         | Create a workspace (defaults to DRAFT status)                      |
 | `PUT`    | `/workspaces/{id}`        | ADMIN         | Update a workspace (including status)                              |
 | `DELETE` | `/workspaces/{id}`        | ADMIN         | Delete a workspace                                                 |
+| `POST`   | `/workspaces/test-connection` | ADMIN / WORKSPACE_ADMIN | Validate workspace connectivity via Octane SDK by reading `stories` with `limit=1`; returns success-with-warning when connection works but no data is returned |
 
 **Workspace Status Lifecycle:**
 
@@ -417,18 +422,36 @@ All workspace endpoints require authentication. Mutation endpoints (POST/PUT/DEL
 | `DRAFT`    | ❌               | ✅                | ✅                   |
 | `DISABLED` | ❌               | ❌ (management only) | ❌              |
 
+**Workspace Connectivity Status (dashboard colors):**
+
+- `ONLINE` (green): connection probe succeeded
+- `OFFLINE` (red): workspace became unreachable / token invalid / SDK request failed
+- `UNKNOWN` (neutral): no probe result recorded yet
+
+Connectivity status is persisted per workspace and refreshed:
+1. whenever workspace credentials/details are created or updated,
+2. hourly via a scheduled background job, and
+3. immediately when filter execution/preview or metadata fetch encounters connectivity errors.
+
 ### Filters
 
-Filter template read endpoints are open to all authenticated users. Create/update/query-string parsing requires `ADMIN` or `WORKSPACE_ADMIN` access.
+Filter templates are visibility-scoped:
+- **Admin-created templates** are shared and visible to everyone in the workspace (`ownerEmail = null`).
+- **Member-created templates** are private to their owner (`ownerEmail = member email`).
+- Members can create/manage only their own private templates; admins/workspace admins can manage all templates.
 
 | Method | Path                                           | Role required | Description                                     |
 |--------|------------------------------------------------|:-------------:|-------------------------------------------------|
-| `GET`  | `/workspaces/{id}/filters`                     | Any           | List filter templates for a workspace           |
-| `POST` | `/workspaces/{id}/filters`                     | ADMIN / WORKSPACE_ADMIN | Create a filter template                        |
-| `PUT`  | `/workspaces/{id}/filters/{filterId}`          | ADMIN / WORKSPACE_ADMIN | Update a filter template                        |
-| `POST` | `/workspaces/{id}/filters/parse-query-string`  | ADMIN / WORKSPACE_ADMIN | Validate and parse `fields=...&query=...` into structured criteria |
-| `GET`  | `/workspaces/{id}/filters/{filterId}/query-string` | ADMIN / WORKSPACE_ADMIN | Export an existing filter as copyable string |
-| `POST` | `/workspaces/{id}/filters/{filterId}/execute`  | Any           | Execute a filter against Octane and return entities |
+| `GET`  | `/workspaces/{id}/filters`                     | Any           | List accessible templates (shared admin + own private) |
+| `POST` | `/workspaces/{id}/filters`                     | Any           | Create template (members create private; admins create shared) |
+| `PUT`  | `/workspaces/{id}/filters/{filterId}`          | Any (owner/admin) | Update owned private template or any template as admin |
+| `POST` | `/workspaces/{id}/filters/parse-query-string`  | Any           | Validate and parse `fields=...&query=...` into structured criteria |
+| `GET`  | `/workspaces/{id}/filters/{filterId}/query-string` | Any (accessible filter) | Export an accessible filter as copyable string |
+| `POST` | `/workspaces/{id}/filters/{filterId}/execute`  | Any (accessible filter) | Execute an accessible filter against Octane and return entities |
+
+`GET /filters` responses also include:
+- `editable`: whether the current user can edit/delete the filter
+- `adminManaged`: whether the filter is an admin-created shared template
 
 **FilterCriteriaClause** (element of the `criteria` array):
 
@@ -436,11 +459,14 @@ Filter template read endpoints are open to all authenticated users. Create/updat
 {
   "field": "defect_type",
   "operator": "IN",
-  "values": ["Escaped"]
+  "values": ["Escaped"],
+  "logicalOperator": "AND"
 }
 ```
 
-Supported operators: `IN`, `NOT_IN`.
+- `operator`: `IN` or `NOT_IN`
+- `logicalOperator`: `AND` (default) or `OR` — controls how this clause is joined to the previous one. Ignored for the first clause.
+- `referenceValues`: optional; when `true`, criteria are emitted as reference-ID clauses like `code_review_owner_udf EQ {id IN 8666}`
 
 **Query-string format:** `fields=id,name&query=name EQ ^*Case360*^`
 
@@ -449,11 +475,54 @@ Supported operators: `IN`, `NOT_IN`.
 - `query` can include `||` OR groups when all OR-joined expressions target the same field
 - Accepted operators in query-string mode: `EQ`, `NEQ`, `IN`, `NOT_IN` (mapped internally to `IN`/`NOT_IN`)
 - Values can be wrapped with `^...^` and multiple values are comma-separated inside the wrapper
-- Cross-filter values like `owner EQ {id EQ 8666}` and `phase EQ {id EQ ^...^}` are supported
+- Reference-ID clauses are supported, e.g. `owner EQ {id IN 8666}` and `phase EQ {id IN phase.defect.new,phase.defect.in_progress}`
+
+### Octane Metadata (Easy Filter Builder)
+
+These endpoints expose Octane metadata to power the visual, non-technical Easy Filter Builder UI. Both are accessible to any authenticated user.
+
+| Method | Path                                                       | Description                                                      |
+|--------|------------------------------------------------------------|------------------------------------------------------------------|
+| `GET`  | `/workspaces/{id}/octane/fields?entityType=defect`         | Filterable fields with labels and type info (drives field dropdown) |
+| `GET`  | `/workspaces/{id}/octane/field-values?fieldName=phase&entityType=defect&search=new&ids=phase.defect.new,phase.defect.in_progress` | Selectable values for a reference field (supports optional server-side search and exact ID resolution) |
+
+**OctaneFieldDto** (field metadata):
+```json
+{
+  "name": "phase",
+  "label": "Phase",
+  "fieldType": "reference",
+  "reference": true,
+  "multiReference": false,
+  "targetEntityType": "phase",
+  "targetLogicalName": null
+}
+```
+
+**OctaneFieldValueDto** (value option for reference fields):
+```json
+{ "id": "phase.defect.new", "name": "New" }
+```
+
+The backend automatically maps the `targetEntityType` to the correct Octane API collection:
+
+| Target entity type | Octane API | Notes |
+|---|---|---|
+| `list_node` | `list_nodes?query="list_root={logical_name EQ '...'}"` | Severity, Priority, Defect type, etc. |
+| `phase` | `phases` | Phase lifecycle states |
+| `workspace_user` | `workspace_users` | Team members (full_name displayed) |
+| `release` | `releases` | |
+| `sprint` | `sprints` | |
+| `product_area` | `product_areas` | |
+| `team` | `teams` | |
 
 ### Subscriptions
 
 All subscription endpoints require authentication. Users may only update/delete their own subscriptions (ownership enforced server-side). The on-demand `run` endpoint requires the `ADMIN` role.
+
+Private filter subscriptions are enforced server-side:
+- A private filter can only be subscribed by its owner.
+- Group subscriptions can only use admin-shared filters.
 
 **Subscription visibility:** `ADMIN` users see all subscriptions for the workspace; `MEMBER` users see only their own subscriptions. The frontend hides the "Recipient Email" column and labels the section "My Subscriptions" for `MEMBER` users.
 
@@ -537,7 +606,7 @@ Superadmins can list all users and onboard new users without requiring self-sign
 **User onboarding flow:**
 1. Admin submits name + email via the Admin Panel → Users page.
 2. Backend creates an account with a random temporary password and `mustSetPassword = true`.
-3. An invite email containing a 6-digit OTP is sent to the user.
+3. An invite email containing a 6-digit OTP and a direct VE Mailer GUI link is sent to the user.
 4. The user navigates to `/accept-invite`, enters their email and the OTP, and chooses a new password.
 5. On success, the user is automatically logged in and `mustSetPassword` is cleared.
 
@@ -651,6 +720,7 @@ app.auth.jwt.refresh-token-expiration-ms=604800000
 
 # CORS — comma-separated list of allowed origins
 app.cors.allowed-origins=http://localhost:5173,http://localhost:80,http://localhost
+app.frontend.url=http://localhost:5173
 
 # Admin Bootstrap (created on first startup)
 app.bootstrap.admin.email=admin@company.com
@@ -701,6 +771,20 @@ Fields configurable through the Admin Control Panel:
 Prompts are stored in `backend/src/main/resources/prompts/` and can be customized without code changes:
 - `ai-summary-system-prompt.md` — defines summarization behavior and tone
 - `ai-summary-user-prompt.md` — template with placeholders for ticket data
+
+---
+
+### Triage SLA Custom Field
+
+`Triage SLA` is a custom pseudo-field available in the filter builder and email output.
+
+- Selecting `Triage SLA` auto-fetches `creation_time` from ValueEdge.
+- Output format is `<traffic-light> <N> day(s) old`, for example: `🟡 3 days old`.
+- Default age bands are configured in `backend/src/main/java/com/anushibinj/veemailer/service/TriageSlaPolicy.java`:
+  - `7+` days → `🔴`
+  - `3-4` days → `🟡`
+  - `0-2` days → `🟢`
+- When selected, preview/email results are sorted by age in descending order so oldest untriaged tickets appear first.
 
 ---
 
@@ -877,11 +961,46 @@ User                    Frontend               Backend
 
 ### Filter Templates
 
-Filter templates replace the old hardcoded query approach. Filters are still stored as structured data, and the UI can now import/export a compact string form (`fields=...&query=...`) that the backend validates and converts into structured clauses.
+Filter templates are the core building block. Each filter is stored as structured data (entity type, fields, criteria) and can be created via:
 
-1. **Entity type** — the Octane entity to query (e.g. `defect`, `story`)
+1. **Easy Filter Builder** (recommended) — a visual, non-technical UI where:
+   - Fields are selected from a searchable dropdown populated live from Octane's `/metadata/fields` API
+   - The **Fields to Fetch** picker is a searchable tag/badge flow backed by live metadata for the selected entity type (instead of a static frontend list), while keeping custom pseudo-fields like **✨ AI Summary** and **Triage SLA**
+   - Values for reference fields (phase, owner, severity, etc.) are selected from a searchable multi-select populated from the corresponding Octane entity list
+   - Conditions can be joined with **AND** or **OR** using a per-row connector dropdown
+
+2. **Query-string import** (power users, optional) — paste a compact `fields=...&query=...` string that the backend validates and converts into structured clauses
+
+A filter has:
+
+1. **Entity type** — filter scope selected in UI:
+   - `backlog_items` → `subtype IN defect,story,quality_story`
+   - `epic` → `subtype EQ epic`
+   - `feature` → `subtype EQ feature`
 2. **Fields** — which fields to return in the result set (e.g. `["id", "name", "phase", "owner"]`)
-3. **Criteria** — an array of clauses that are AND-joined to build the Octane SDK query
+3. **Criteria** — an array of clauses that are AND/OR-joined to build the Octane SDK query
+4. **Ownership (`ownerEmail`)**:
+   - `null` for admin-created shared templates
+   - user email for private member templates
+
+UI visibility cues:
+- In user view, shared templates are marked **Admin template** and user-owned ones are marked **Private template**.
+- In admin/workspace-admin view, each filter also shows **Created by** (`ownerEmail` when private, otherwise `Admin`).
+
+#### Easy Filter Builder — How the metadata APIs work
+
+When the filter form opens, the `SmartFilterRow` component calls:
+- `GET /octane/fields?entityType=defect` → returns all filterable fields with human-readable labels, field types, and reference target info
+- When editing an existing reference clause, selected IDs are resolved with `GET /octane/field-values?...&ids=<comma-separated-ids>` so saved IDs always map to display names even if they are outside the default list window
+- When the user opens a reference dropdown, the UI fetches the initial value window with `GET /octane/field-values?...&search=*`
+
+The `OctaneMetadataService` handles the mapping:
+- `list_node` targets → queries `list_nodes?query="list_root={logical_name EQ '...'}"` (e.g. for severity, priority)
+- `phase` targets → queries `phases` scoped by entity type (deduplicated fallback if scope fails)
+- `workspace_user` targets → queries `workspace_users` (team members)
+- `release`/`sprint`/`team`/`product_area` → queries the respective entity list
+
+The value picker first filters the currently loaded list in the browser. If a typed term has no local matches, it automatically calls `field-values` with `search=<term>` so Octane can search beyond the initial result window (for example, owner lists larger than 1000 users).
 
 #### Filter Examples
 

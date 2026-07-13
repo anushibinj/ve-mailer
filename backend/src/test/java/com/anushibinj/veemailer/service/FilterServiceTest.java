@@ -7,6 +7,8 @@ import com.anushibinj.veemailer.dto.ParsedFilterQueryResponse;
 import com.anushibinj.veemailer.model.FilterCriteriaClause;
 import com.anushibinj.veemailer.service.extractor.FieldExtractorRegistry;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.hpe.adm.nga.sdk.model.EntityModel;
+import com.hpe.adm.nga.sdk.model.StringFieldModel;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -14,6 +16,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -33,6 +36,7 @@ class FilterServiceTest {
     @Mock private GeneralSettingsService generalSettingsService;
     @Mock private AiSummaryService aiSummaryService;
     @Mock private FieldExtractorRegistry fieldExtractorRegistry;
+    @Mock private WorkspaceService workspaceService;
 
     private FilterService filterService;
 
@@ -41,7 +45,7 @@ class FilterServiceTest {
         filterService = new FilterService(
                 filterRepository, workspaceRepository, emailSubscriberRepository,
                 octaneCacheService, new ObjectMapper(), generalSettingsService,
-                aiSummaryService, fieldExtractorRegistry);
+                aiSummaryService, fieldExtractorRegistry, workspaceService);
     }
 
     @Test
@@ -99,6 +103,43 @@ class FilterServiceTest {
     }
 
     @Test
+    void testComputeEffectiveFetchFields_TriageSlaAddsCreationTimeAndRemovesPseudoField() {
+        List<String> result = filterService.computeEffectiveFetchFields(
+                List.of(TriageSlaPolicy.TRIAGE_SLA_FIELD, "phase"));
+        assertFalse(result.contains(TriageSlaPolicy.TRIAGE_SLA_FIELD),
+                "Triage SLA pseudo-field must be stripped from effective fetch fields");
+        assertTrue(result.contains(TriageSlaPolicy.CREATION_TIME_FIELD),
+                "creation_time must be fetched when Triage SLA is enabled");
+    }
+
+    @Test
+    void testSortByTriageSlaAgeIfEnabled_SortsDescendingByDaysOld() {
+        EntityModel newest = new EntityModel(Set.of(
+                new StringFieldModel("id", "1"),
+                new StringFieldModel("creation_time", "2099-01-01T00:00:00Z")
+        ));
+        EntityModel middle = new EntityModel(Set.of(
+                new StringFieldModel("id", "2"),
+                new StringFieldModel("creation_time", "2026-07-10T00:00:00Z")
+        ));
+        EntityModel oldest = new EntityModel(Set.of(
+                new StringFieldModel("id", "3"),
+                new StringFieldModel("creation_time", "2026-07-01T00:00:00Z")
+        ));
+
+        List<EntityModel> sorted = filterService.sortByTriageSlaAgeIfEnabled(
+                List.of(newest, middle, oldest),
+                List.of("id", TriageSlaPolicy.TRIAGE_SLA_FIELD));
+
+        assertEquals("3", ((StringFieldModel) sorted.get(0).getValue("id")).getValue(),
+                "oldest ticket must come first");
+        assertEquals("2", ((StringFieldModel) sorted.get(1).getValue("id")).getValue(),
+                "middle-aged ticket must come second");
+        assertEquals("1", ((StringFieldModel) sorted.get(2).getValue("id")).getValue(),
+                "newest ticket must come last");
+    }
+
+    @Test
     void testComputeEffectiveFetchFields_DoesNotMutateInput() {
         // The input list must not be modified.
         List<String> input = new ArrayList<>(List.of("phase", "owner"));
@@ -139,11 +180,13 @@ class FilterServiceTest {
         assertEquals("owner", parsed.getCriteria().get(0).getField());
         assertEquals("IN", parsed.getCriteria().get(0).getOperator());
         assertEquals(List.of("8666"), parsed.getCriteria().get(0).getValues());
+        assertEquals(Boolean.TRUE, parsed.getCriteria().get(0).getReferenceValues());
 
         assertEquals("phase", parsed.getCriteria().get(1).getField());
         assertEquals("IN", parsed.getCriteria().get(1).getOperator());
         assertEquals(List.of("pgxw2gll8xe6du9y1jx87596z", "dk9y4yv0r3w6dcy1r8ny94xv8"),
                 parsed.getCriteria().get(1).getValues());
+        assertEquals(Boolean.TRUE, parsed.getCriteria().get(1).getReferenceValues());
     }
 
     @Test
@@ -170,7 +213,20 @@ class FilterServiceTest {
                         FilterCriteriaClause.builder().field("phase").operator("NOT_IN")
                                 .values(List.of("phase.defect.closed", "phase.defect.rejected")).build()
                 ));
-        assertEquals("fields=id,name&query=name EQ ^*Case360*^ AND phase NOT_IN ^phase.defect.closed,phase.defect.rejected^",
+        assertEquals("fields=id,name&query=name EQ ^*Case360*^ AND phase NEQ {id IN phase.defect.closed,phase.defect.rejected}",
                 output);
+    }
+
+    @Test
+    void testBuildFilterQueryString_SerializesReferenceCriteriaAsIdExpressions() {
+        String output = filterService.buildFilterQueryString(
+                List.of("id", "name"),
+                List.of(FilterCriteriaClause.builder()
+                        .field("code_review_owner_udf")
+                        .operator("IN")
+                        .values(List.of("8666"))
+                        .referenceValues(true)
+                        .build()));
+        assertEquals("fields=id,name&query=code_review_owner_udf EQ {id IN 8666}", output);
     }
 }

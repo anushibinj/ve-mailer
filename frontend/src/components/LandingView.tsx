@@ -48,6 +48,31 @@ const LandingView: React.FC<LandingViewProps> = ({ onSelectWorkspace }) => {
     loadWorkspaces();
   }, []);
 
+  const connectivityBadge = (workspace: Workspace) => {
+    if (workspace.connectivityStatus === 'ONLINE') {
+      return (
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-green-50 dark:bg-green-500/10 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-500/25 flex-shrink-0">
+          <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
+          Online
+        </span>
+      );
+    }
+    if (workspace.connectivityStatus === 'OFFLINE') {
+      return (
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-500/25 flex-shrink-0">
+          <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
+          Unreachable
+        </span>
+      );
+    }
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 dark:bg-slate-700/60 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-600 flex-shrink-0">
+        <span className="h-1.5 w-1.5 rounded-full bg-slate-400" />
+        Unknown
+      </span>
+    );
+  };
+
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh]">
@@ -125,6 +150,7 @@ const LandingView: React.FC<LandingViewProps> = ({ onSelectWorkspace }) => {
                       <p className="font-semibold text-slate-900 dark:text-white text-sm truncate group-hover:text-indigo-700 dark:group-hover:text-indigo-400 transition-colors">
                         {workspace.title}
                       </p>
+                      {connectivityBadge(workspace)}
                       {workspace.status === 'DRAFT' && (
                         <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-500/25 flex-shrink-0">
                           Draft

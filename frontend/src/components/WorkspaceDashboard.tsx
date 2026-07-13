@@ -82,15 +82,15 @@ const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({ workspaceId, on
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const promises: [Promise<Subscription[]>, Promise<Filter[]>, Promise<WorkspaceAdmin | null>] = [
+    const promises: [Promise<Subscription[]>, Promise<Filter[]>, Promise<WorkspaceAdmin>] = [
         fetchSubscriptionsByWorkspace(workspaceId),
         fetchFilters(workspaceId),
-        canManage ? adminFetchWorkspace(workspaceId) : Promise.resolve(null),
+      adminFetchWorkspace(workspaceId),
       ];
       const [subsData, filtersData, wsData] = await Promise.all(promises);
       setSubscriptions(subsData);
       setFilters(filtersData);
-      if (wsData) setWorkspaceData(wsData);
+    setWorkspaceData(wsData);
     } catch {
       toast.error('Failed to load dashboard data.');
     } finally {
@@ -138,7 +138,27 @@ const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({ workspaceId, on
             <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
               {workspaceData?.title ?? 'Dashboard'}
             </h1>
-            <p className="text-slate-400 dark:text-slate-500 text-sm mt-0.5">Manage your email subscriptions</p>
+            <div className="flex items-center gap-2 mt-0.5">
+              <p className="text-slate-400 dark:text-slate-500 text-sm">Manage your email subscriptions</p>
+              {workspaceData?.connectivityStatus === 'ONLINE' && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-green-50 dark:bg-green-500/10 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-500/25">
+                  <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
+                  Online
+                </span>
+              )}
+              {workspaceData?.connectivityStatus === 'OFFLINE' && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-500/25">
+                  <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
+                  Unreachable
+                </span>
+              )}
+              {workspaceData?.connectivityStatus === 'UNKNOWN' && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 dark:bg-slate-700/60 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-600">
+                  <span className="h-1.5 w-1.5 rounded-full bg-slate-400" />
+                  Unknown
+                </span>
+              )}
+            </div>
           </div>
         </div>
 

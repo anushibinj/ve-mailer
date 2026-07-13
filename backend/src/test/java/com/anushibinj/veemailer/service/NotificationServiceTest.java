@@ -216,6 +216,20 @@ class NotificationServiceTest {
     }
 
     @Test
+    void testBuildHtmlTable_TriageSlaHeaderAndValueRendered() {
+        EntityModel entity = new EntityModel(Set.of(
+                new StringFieldModel("creation_time", "2024-01-01T00:00:00Z")
+        ));
+
+        String html = notificationService.buildHtmlTable(
+                List.of(entity), List.of(TriageSlaPolicy.TRIAGE_SLA_FIELD), 25, false, null);
+
+        assertTrue(html.contains("Triage SLA"), "Header should include Triage SLA");
+        assertTrue(html.contains("days old"), "Cell should include age text");
+        assertTrue(html.contains("\uD83D\uDD34"), "Old ticket should render red traffic light");
+    }
+
+    @Test
     void testBuildHtmlTable_CellValuesRendered() {
         EntityModel entity = new EntityModel(Set.of(
                 new StringFieldModel("name", "Fix login bug"),

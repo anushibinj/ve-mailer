@@ -6,6 +6,8 @@ import com.anushibinj.veemailer.dto.SubscriptionUpdateDto;
 import com.anushibinj.veemailer.dto.UserSummaryDto;
 import com.anushibinj.veemailer.dto.WorkspaceAdminAssignRequestDto;
 import com.anushibinj.veemailer.dto.WorkspaceAdminResponseDto;
+import com.anushibinj.veemailer.dto.WorkspaceConnectionTestRequestDto;
+import com.anushibinj.veemailer.dto.WorkspaceConnectionTestResponseDto;
 import com.anushibinj.veemailer.dto.WorkspaceCreateRequestDto;
 import com.anushibinj.veemailer.dto.WorkspaceResponseDto;
 import com.anushibinj.veemailer.dto.WorkspaceUpdateRequestDto;
@@ -113,6 +115,18 @@ public class WorkspaceController {
     public ResponseEntity<Void> deleteWorkspace(@PathVariable UUID id) {
         workspaceService.delete(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/test-connection")
+    @PreAuthorize("hasAnyRole('ADMIN', 'WORKSPACE_ADMIN')")
+    public ResponseEntity<WorkspaceConnectionTestResponseDto> testWorkspaceConnection(
+            @RequestBody @Valid WorkspaceConnectionTestRequestDto request,
+            Authentication authentication) {
+        if (request.getWorkspaceRecordId() != null
+                && !workspaceAdminService.canManageWorkspace(authentication, request.getWorkspaceRecordId())) {
+            throw new AccessDeniedException("You are not authorized to test this workspace connection");
+        }
+        return ResponseEntity.ok(workspaceService.testConnection(request));
     }
 
     // --- Users list (accessible to ADMIN and workspace's WORKSPACE_ADMIN) ---
@@ -294,4 +308,3 @@ public class WorkspaceController {
         return ResponseEntity.noContent().build();
     }
 }
-

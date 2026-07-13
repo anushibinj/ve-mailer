@@ -1,6 +1,7 @@
 import api from '../api';
 
 export type WorkspaceStatus = 'ENABLED' | 'DRAFT' | 'DISABLED';
+export type WorkspaceConnectivityStatus = 'UNKNOWN' | 'ONLINE' | 'OFFLINE';
 
 export interface Workspace {
   id: string;
@@ -9,6 +10,9 @@ export interface Workspace {
   workspaceId: string;
   rootUrl: string;
   status: WorkspaceStatus;
+  connectivityStatus: WorkspaceConnectivityStatus;
+  connectivityCheckedAt?: string | null;
+  connectivityMessage?: string | null;
 }
 
 // Admin workspace type — includes clientId, masked clientKey, and a config flag
@@ -22,6 +26,9 @@ export interface WorkspaceAdmin {
   clientKeyConfigured: boolean;
   rootUrl: string;
   status: WorkspaceStatus;
+  connectivityStatus: WorkspaceConnectivityStatus;
+  connectivityCheckedAt?: string | null;
+  connectivityMessage?: string | null;
 }
 
 export interface WorkspaceCreatePayload {
@@ -45,10 +52,30 @@ export interface WorkspaceUpdatePayload {
   status: WorkspaceStatus;
 }
 
+export interface WorkspaceConnectionTestPayload {
+  workspaceRecordId?: string;
+  sharedSpaceId: string;
+  workspaceId: string;
+  clientId: string;
+  clientKey?: string;
+  rootUrl: string;
+}
+
+export interface WorkspaceConnectionTestResponse {
+  success: boolean;
+  hasData: boolean;
+  workspaceId: string;
+  message: string;
+}
+
 export interface FilterCriteriaClause {
   field: string;
   operator: string;
   values: string[];
+  /** How this clause is joined to the previous one: "AND" (default) or "OR". Ignored for the first clause. */
+  logicalOperator?: string;
+  /** True when values represent reference IDs and should be queried as field EQ {id IN ...}. */
+  referenceValues?: boolean;
 }
 
 export interface Filter {
@@ -58,6 +85,9 @@ export interface Filter {
   entityType: string;
   fields: string;   // JSON string from backend
   criteria: string;  // JSON string from backend
+  ownerEmail?: string | null;
+  editable?: boolean;
+  adminManaged?: boolean;
 }
 
 export interface FilterCreatePayload {
@@ -157,6 +187,13 @@ export const adminDeleteWorkspace = async (id: string): Promise<void> => {
   await api.delete(`/api/v1/workspaces/${id}`);
 };
 
+export const adminTestWorkspaceConnection = async (
+  payload: WorkspaceConnectionTestPayload
+): Promise<WorkspaceConnectionTestResponse> => {
+  const response = await api.post('/api/v1/workspaces/test-connection', payload);
+  return response.data;
+};
+
 // --- Filters (workspace-scoped) ---
 
 export const fetchFilters = async (workspaceId: string): Promise<Filter[]> => {
@@ -211,6 +248,69 @@ export const getFilterQueryString = async (workspaceId: string, filterId: string
 
 export const deleteFilter = async (workspaceId: string, filterId: string): Promise<void> => {
   await api.delete(`/api/v1/workspaces/${workspaceId}/filters/${filterId}`);
+};
+
+// --- Octane Metadata (Easy Filter Builder) ---
+
+/** Describes a filterable Octane field. */
+export interface OctaneFieldDto {
+  /** Octane API field name, e.g. "phase", "owner", "severity" */
+  name: string;
+  /** Human-readable label shown in the UI, e.g. "Phase", "Owner", "Severity" */
+  label: string;
+  /** Octane field type: "string" | "memo" | "integer" | "float" | "boolean" | "date_time" | "reference" */
+  fieldType: string;
+  /** True when this is a reference field pointing to another entity */
+  reference: boolean;
+  /** True when multiple values can be selected */
+  multiReference: boolean;
+  /** For reference fields: the Octane entity type of the target (e.g. "list_node", "workspace_user") */
+  targetEntityType?: string;
+  /** For list_node targets: the logical name used to scope the list (e.g. "list_node.severity") */
+  targetLogicalName?: string;
+}
+
+/** A selectable value for a reference field (id = what is stored; name = what is shown). */
+export interface OctaneFieldValueDto {
+  id: string;
+  name: string;
+}
+
+/**
+ * Returns filterable fields for the given Octane entity type, with human-readable labels.
+ * Used to populate the "Field" dropdown in the Easy Filter Builder.
+ */
+export const fetchFilterableFields = async (
+  workspaceId: string,
+  entityType: string
+): Promise<OctaneFieldDto[]> => {
+  const response = await api.get(`/api/v1/workspaces/${workspaceId}/octane/fields`, {
+    params: { entityType },
+  });
+  return response.data;
+};
+
+/**
+ * Returns the selectable values for a reference field so the UI can show a
+ * searchable dropdown (e.g. phase names, user names, severity options).
+ */
+export const fetchFieldValues = async (
+  workspaceId: string,
+  fieldName: string,
+  entityType: string,
+  search?: string,
+  ids?: string[]
+): Promise<OctaneFieldValueDto[]> => {
+  const normalizedIds = ids?.map(id => id.trim()).filter(Boolean);
+  const response = await api.get(`/api/v1/workspaces/${workspaceId}/octane/field-values`, {
+    params: {
+      fieldName,
+      entityType,
+      ...(search ? { search } : {}),
+      ...(normalizedIds && normalizedIds.length > 0 ? { ids: normalizedIds.join(',') } : {}),
+    },
+  });
+  return response.data;
 };
 
 // --- Subscriptions ---

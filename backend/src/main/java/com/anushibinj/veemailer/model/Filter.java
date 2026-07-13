@@ -11,6 +11,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -50,4 +51,19 @@ public class Filter {
     /** JSON array of FilterCriteriaClause objects */
     @Column(columnDefinition = "TEXT")
     private String criteria;
+
+    /**
+     * Null for admin-created shared templates.
+     * Non-null for user-private templates owned by the given email address.
+     */
+    @Column(name = "owner_email")
+    private String ownerEmail;
+
+    /** Computed per request; true when current user can edit/delete this filter. */
+    @Transient
+    private Boolean editable;
+
+    /** Computed per request; true when this is an admin-created shared template. */
+    @Transient
+    private Boolean adminManaged;
 }

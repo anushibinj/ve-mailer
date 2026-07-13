@@ -5,7 +5,6 @@ import com.anushibinj.veemailer.dto.ParsedFilterQueryResponse;
 import com.anushibinj.veemailer.dto.PreviewResponse;
 import com.anushibinj.veemailer.model.Filter;
 import com.anushibinj.veemailer.model.Workspace;
-import com.anushibinj.veemailer.repository.FilterRepository;
 import com.anushibinj.veemailer.service.AppUserDetailsService;
 import com.anushibinj.veemailer.service.FilterService;
 import com.anushibinj.veemailer.service.JwtService;
@@ -17,6 +16,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.Arrays;
@@ -25,6 +25,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import static org.hamcrest.Matchers.hasSize;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
@@ -41,9 +42,6 @@ class FilterControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
-
-    @MockBean
-    private FilterRepository filterRepository;
 
     @MockBean
     private FilterService filterService;
@@ -63,6 +61,7 @@ class FilterControllerTest {
     void setUp() {
         // Stub workspace admin permission check so mutation endpoints pass authorization
         when(workspaceAdminService.canManageWorkspaceTemplates(any(), any())).thenReturn(true);
+        when(filterService.getFilterInWorkspace(any(), any())).thenReturn(buildTestFilter());
     }
 
     private Filter buildTestFilter() {
@@ -85,7 +84,7 @@ class FilterControllerTest {
     void testGetFilters() throws Exception {
         Filter f = buildTestFilter();
 
-        when(filterRepository.findByWorkspace_Id(WORKSPACE_ID)).thenReturn(Arrays.asList(f));
+        when(filterService.getAccessibleFilters(eq(WORKSPACE_ID), any(), anyBoolean())).thenReturn(Arrays.asList(f));
 
         mockMvc.perform(get("/api/v1/workspaces/{workspaceId}/filters", WORKSPACE_ID)
                 .contentType(MediaType.APPLICATION_JSON))
@@ -99,7 +98,7 @@ class FilterControllerTest {
     void testCreateFilter() throws Exception {
         Filter saved = buildTestFilter();
 
-        when(filterService.createFilter(any())).thenReturn(saved);
+        when(filterService.createFilter(any(), any())).thenReturn(saved);
 
         String body = """
                 {
@@ -128,7 +127,7 @@ class FilterControllerTest {
     void testCreateFilter_withoutWorkspaceIdInBody_usesPathVariable() throws Exception {
         Filter saved = buildTestFilter();
 
-        when(filterService.createFilter(any())).thenReturn(saved);
+        when(filterService.createFilter(any(), any())).thenReturn(saved);
 
         // Body intentionally omits workspaceId — mirrors what the frontend sends
         String body = """
@@ -149,6 +148,7 @@ class FilterControllerTest {
     }
 
     @Test
+    @WithMockUser(username = "admin@test.com", roles = "ADMIN")
     void testUpdateFilter() throws Exception {
         Filter updated = buildTestFilter();
         updated.setTitle("Updated Title");
@@ -230,6 +230,7 @@ class FilterControllerTest {
     }
 
     @Test
+    @WithMockUser(username = "admin@test.com", roles = "ADMIN")
     void testDeleteFilter_returnsNoContent() throws Exception {
         UUID filterId = UUID.randomUUID();
 
