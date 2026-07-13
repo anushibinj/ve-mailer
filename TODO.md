@@ -13,7 +13,7 @@
 - [x] The e-mail subject should be "[ve-mailer] filter_title"
 - [x] Add a new property in frontend called VITE_FOOTER_HTML that accepts a HTML element (a div) that can be set as the app's footer
 - [ ] Lazy load every component in the frontend
-- [ ] Add an option to "Test connection" the ticketing service endpoint with a basic auth call or test call. Need to figure out which test call works best. Perhaps fetch some workspace related metadata to check if validation passes.
+- [ ] Add an option to "Test connection" the ticketing service endpoint with a basic auth call or test call. I found out one REST call that gets the workspace metadata. If the octane SDK client has the same item, I would prefer it be called. The endpoint is "https://ot-internal.saas.microfocus.com/api/shared_spaces/4001/workspaces?fields=name". Validate by making sure that the response code is 200 and the "data.id" field in the response JSON body matches the given input workspace ID.
 - [x] Allow unlimited tickets to come in the e-mail report. Currently there is a property to limit it to an integer. There should be an option to set it to -1 or something so that it doesn't add a limit to the query.
 - [ ] The e-mail body should have a link to ve-mailer frontend pointing to the workspace. People should be able to directly go and view their workspace subscriptions from their e-mail.
 - [x] Allow multiple super admins and multiple workspace admins. Super admins only create workspaces (not configure params/secrets). Workspace admins have to configure secrets, filters and other values for the workspace as per their need. This means that there should be an "Enabled" mode for the workspace to mark a workspace as available to the public only after it is fully ready for use.
