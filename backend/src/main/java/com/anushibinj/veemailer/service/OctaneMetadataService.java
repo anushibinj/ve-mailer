@@ -45,6 +45,7 @@ public class OctaneMetadataService {
 
     private final OctaneCacheService octaneCacheService;
     private final WorkspaceRepository workspaceRepository;
+    private final WorkspaceService workspaceService;
 
     // ------------------------------------------------------------------ //
     //  Public API                                                          //
@@ -79,6 +80,8 @@ public class OctaneMetadataService {
                 rawFields = octane.metadata().fields("work_item", entityType).execute();
             }
         } catch (Exception e) {
+            workspaceService.markWorkspaceOffline(workspaceId,
+                    "Workspace became unreachable while loading filter metadata: " + summarizeError(e));
             log.error("Failed to fetch field metadata for entity type '{}': {}", entityType, e.getMessage());
             throw new RuntimeException("Failed to fetch field metadata from Octane", e);
         }
@@ -100,6 +103,7 @@ public class OctaneMetadataService {
             result.add(toDto(fm));
         }
         result.sort(Comparator.comparing(OctaneFieldDto::getLabel, String.CASE_INSENSITIVE_ORDER));
+        workspaceService.markWorkspaceOnline(workspaceId, !result.isEmpty());
         return result;
     }
 
@@ -129,8 +133,12 @@ public class OctaneMetadataService {
         String logicalName = typeData.getTargets()[0].logicalName();
 
         try {
-            return fetchValuesForTarget(octane, targetType, logicalName, entityType);
+            List<OctaneFieldValueDto> values = fetchValuesForTarget(octane, targetType, logicalName, entityType);
+            workspaceService.markWorkspaceOnline(workspaceId, !values.isEmpty());
+            return values;
         } catch (Exception e) {
+            workspaceService.markWorkspaceOffline(workspaceId,
+                    "Workspace became unreachable while loading field values: " + summarizeError(e));
             log.warn("Could not fetch values for field '{}' (target: {}): {}", fieldName, targetType, e.getMessage());
             return List.of();
         }
@@ -399,5 +407,13 @@ public class OctaneMetadataService {
                 workspace.getClientKey(),
                 Integer.parseInt(workspace.getSharedSpaceId()),
                 Integer.parseInt(workspace.getWorkspaceId()));
+    }
+
+    private String summarizeError(Exception e) {
+        String message = e.getMessage();
+        if (message == null || message.isBlank()) {
+            return "Unknown error";
+        }
+        return message.length() > 500 ? message.substring(0, 500) : message;
     }
 }

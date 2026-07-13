@@ -57,6 +57,7 @@ flowchart TD
             SS[Subscription Service]
             WSS[Workspace Service]
             WAS[Workspace Admin Service]
+            WCPS[Workspace Connectivity Polling Service]
             RGS[Recipient Group Service]
             NPS[Notification Preferences Service]
             APS[AI Preferences Service]
@@ -171,6 +172,7 @@ flowchart TD
     WCtrl --> WSS
     WSS --> WR
     WSS --> VE
+    WCPS --> WSS
     WAS --> WAR
     SCtrl --> SS
     NPCtrl --> NPS

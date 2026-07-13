@@ -71,6 +71,7 @@ public class FilterService {
     private final GeneralSettingsService generalSettingsService;
     private final AiSummaryService aiSummaryService;
     private final FieldExtractorRegistry fieldExtractorRegistry;
+    private final WorkspaceService workspaceService;
 
     /**
      * Persist a new filter template associated with a workspace.
@@ -265,9 +266,14 @@ public class FilterService {
             }
             OctaneCollection<EntityModel> result = getEntities.execute();
             List<EntityModel> entities = result.stream().toList();
+            workspaceService.markWorkspaceOnline(workspaceId, !entities.isEmpty());
             return sortByTriageSlaAgeIfEnabled(entities, fields);
         } catch (JsonProcessingException e) {
             throw new RuntimeException("Failed to deserialize filter data", e);
+        } catch (RuntimeException e) {
+            workspaceService.markWorkspaceOffline(workspaceId,
+                    "Workspace became unreachable during filter execution: " + summarizeError(e));
+            throw e;
         }
     }
 
@@ -314,6 +320,7 @@ public class FilterService {
 
             OctaneCollection<EntityModel> result = getEntities.execute();
             List<EntityModel> entities = sortByTriageSlaAgeIfEnabled(result.stream().toList(), fields);
+            workspaceService.markWorkspaceOnline(workspaceId, !entities.isEmpty());
 
             // AI Summary generation — matches the real email-send flow exactly.
             boolean aiSummaryEnabled = fields.contains(AiSummaryService.AI_SUMMARY_FIELD);
@@ -357,10 +364,21 @@ public class FilterService {
                     .records(records)
                     .aiSummaryGenerated(aiSummaryEnabled)
                     .build();
-
         } catch (JsonProcessingException e) {
             throw new RuntimeException("Failed to deserialize filter data", e);
+        } catch (RuntimeException e) {
+            workspaceService.markWorkspaceOffline(workspaceId,
+                    "Workspace became unreachable during filter preview: " + summarizeError(e));
+            throw e;
         }
+    }
+
+    private String summarizeError(Exception e) {
+        String message = e.getMessage();
+        if (message == null || message.isBlank()) {
+            return "Unknown error";
+        }
+        return message.length() > 500 ? message.substring(0, 500) : message;
     }
 
     /**

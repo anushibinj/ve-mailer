@@ -36,6 +36,7 @@ class FilterServiceTest {
     @Mock private GeneralSettingsService generalSettingsService;
     @Mock private AiSummaryService aiSummaryService;
     @Mock private FieldExtractorRegistry fieldExtractorRegistry;
+    @Mock private WorkspaceService workspaceService;
 
     private FilterService filterService;
 
@@ -44,7 +45,7 @@ class FilterServiceTest {
         filterService = new FilterService(
                 filterRepository, workspaceRepository, emailSubscriberRepository,
                 octaneCacheService, new ObjectMapper(), generalSettingsService,
-                aiSummaryService, fieldExtractorRegistry);
+                aiSummaryService, fieldExtractorRegistry, workspaceService);
     }
 
     @Test

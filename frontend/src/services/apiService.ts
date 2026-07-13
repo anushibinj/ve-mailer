@@ -1,6 +1,7 @@
 import api from '../api';
 
 export type WorkspaceStatus = 'ENABLED' | 'DRAFT' | 'DISABLED';
+export type WorkspaceConnectivityStatus = 'UNKNOWN' | 'ONLINE' | 'OFFLINE';
 
 export interface Workspace {
   id: string;
@@ -9,6 +10,9 @@ export interface Workspace {
   workspaceId: string;
   rootUrl: string;
   status: WorkspaceStatus;
+  connectivityStatus: WorkspaceConnectivityStatus;
+  connectivityCheckedAt?: string | null;
+  connectivityMessage?: string | null;
 }
 
 // Admin workspace type — includes clientId, masked clientKey, and a config flag
@@ -22,6 +26,9 @@ export interface WorkspaceAdmin {
   clientKeyConfigured: boolean;
   rootUrl: string;
   status: WorkspaceStatus;
+  connectivityStatus: WorkspaceConnectivityStatus;
+  connectivityCheckedAt?: string | null;
+  connectivityMessage?: string | null;
 }
 
 export interface WorkspaceCreatePayload {

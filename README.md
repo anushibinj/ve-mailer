@@ -422,6 +422,17 @@ All workspace endpoints require authentication. Mutation endpoints (POST/PUT/DEL
 | `DRAFT`    | ❌               | ✅                | ✅                   |
 | `DISABLED` | ❌               | ❌ (management only) | ❌              |
 
+**Workspace Connectivity Status (dashboard colors):**
+
+- `ONLINE` (green): connection probe succeeded
+- `OFFLINE` (red): workspace became unreachable / token invalid / SDK request failed
+- `UNKNOWN` (neutral): no probe result recorded yet
+
+Connectivity status is persisted per workspace and refreshed:
+1. whenever workspace credentials/details are created or updated,
+2. hourly via a scheduled background job, and
+3. immediately when filter execution/preview or metadata fetch encounters connectivity errors.
+
 ### Filters
 
 Filter template read endpoints are open to all authenticated users. Create/update/query-string parsing requires `ADMIN` or `WORKSPACE_ADMIN` access.

@@ -14,6 +14,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.UUID;
+import java.time.Instant;
 
 @Entity
 @Table(name = "workspaces")
@@ -39,4 +40,11 @@ public class Workspace {
     @Enumerated(EnumType.STRING)
     @Builder.Default
     private WorkspaceStatus status = WorkspaceStatus.DRAFT;
+
+    @Enumerated(EnumType.STRING)
+    @Builder.Default
+    private WorkspaceConnectivityStatus connectivityStatus = WorkspaceConnectivityStatus.UNKNOWN;
+
+    private Instant connectivityCheckedAt;
+    private String connectivityMessage;
 }

@@ -5,6 +5,7 @@ import com.anushibinj.veemailer.dto.WorkspaceConnectionTestRequestDto;
 import com.anushibinj.veemailer.dto.WorkspaceConnectionTestResponseDto;
 import com.anushibinj.veemailer.dto.WorkspaceResponseDto;
 import com.anushibinj.veemailer.dto.WorkspaceUpdateRequestDto;
+import com.anushibinj.veemailer.model.WorkspaceConnectivityStatus;
 import com.anushibinj.veemailer.model.Workspace;
 import com.anushibinj.veemailer.model.WorkspaceStatus;
 import com.anushibinj.veemailer.repository.WorkspaceRepository;
@@ -17,6 +18,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.UUID;
+import java.time.Instant;
 import java.util.stream.Collectors;
 
 @Service
@@ -90,7 +92,8 @@ public class WorkspaceService {
                 .rootUrl(request.getRootUrl())
                 .status(status)
                 .build();
-        return toResponseDto(workspaceRepository.save(workspace));
+        Workspace saved = workspaceRepository.save(workspace);
+        return toResponseDto(refreshConnectivityForWorkspace(saved));
     }
 
     public WorkspaceResponseDto update(UUID id, WorkspaceUpdateRequestDto request) {
@@ -110,7 +113,8 @@ public class WorkspaceService {
             workspace.setClientKey(newKey);
         }
 
-        return toResponseDto(workspaceRepository.save(workspace));
+        Workspace saved = workspaceRepository.save(workspace);
+        return toResponseDto(refreshConnectivityForWorkspace(saved));
     }
 
     /**
@@ -134,7 +138,8 @@ public class WorkspaceService {
         }
 
         // title and status are intentionally NOT updated
-        return toResponseDto(workspaceRepository.save(workspace));
+        Workspace saved = workspaceRepository.save(workspace);
+        return toResponseDto(refreshConnectivityForWorkspace(saved));
     }
 
     public void delete(UUID id) {
@@ -151,6 +156,77 @@ public class WorkspaceService {
         String rootUrl = request.getRootUrl().trim();
         String clientKey = resolveClientKey(request.getClientKey(), request.getWorkspaceRecordId());
 
+        try {
+            ProbeResult probeResult = probeStories(rootUrl, sharedSpaceId, workspaceId, clientId, clientKey);
+            if (request.getWorkspaceRecordId() != null) {
+                updateConnectivityStatus(
+                        request.getWorkspaceRecordId(),
+                        WorkspaceConnectivityStatus.ONLINE,
+                        probeResult.message()
+                );
+            }
+            return WorkspaceConnectionTestResponseDto.builder()
+                    .success(true)
+                    .hasData(probeResult.hasData())
+                    .workspaceId(workspaceId)
+                    .message(probeResult.message())
+                    .build();
+        } catch (IllegalArgumentException ex) {
+            if (request.getWorkspaceRecordId() != null) {
+                updateConnectivityStatus(
+                        request.getWorkspaceRecordId(),
+                        WorkspaceConnectivityStatus.OFFLINE,
+                        summarizeError(ex)
+                );
+            }
+            throw ex;
+        }
+    }
+
+    public void refreshConnectivityForAllWorkspaces() {
+        List<Workspace> workspaces = workspaceRepository.findAll();
+        for (Workspace workspace : workspaces) {
+            refreshConnectivityForWorkspace(workspace);
+        }
+    }
+
+    public void markWorkspaceOffline(UUID workspaceId, String message) {
+        updateConnectivityStatus(workspaceId, WorkspaceConnectivityStatus.OFFLINE, message);
+    }
+
+    public void markWorkspaceOnline(UUID workspaceId, boolean hasData) {
+        String message = hasData
+                ? "Connection successful"
+                : "Connection successful, but no data was returned from the server.";
+        updateConnectivityStatus(workspaceId, WorkspaceConnectivityStatus.ONLINE, message);
+    }
+
+    private Workspace refreshConnectivityForWorkspace(Workspace workspace) {
+        try {
+            ProbeResult result = probeStories(
+                    workspace.getRootUrl(),
+                    workspace.getSharedSpaceId(),
+                    workspace.getWorkspaceId(),
+                    workspace.getClientId(),
+                    workspace.getClientKey()
+            );
+            workspace.setConnectivityStatus(WorkspaceConnectivityStatus.ONLINE);
+            workspace.setConnectivityCheckedAt(Instant.now());
+            workspace.setConnectivityMessage(result.message());
+        } catch (IllegalArgumentException ex) {
+            workspace.setConnectivityStatus(WorkspaceConnectivityStatus.OFFLINE);
+            workspace.setConnectivityCheckedAt(Instant.now());
+            workspace.setConnectivityMessage(summarizeError(ex));
+        }
+        return workspaceRepository.save(workspace);
+    }
+
+    private ProbeResult probeStories(
+            String rootUrl,
+            String sharedSpaceId,
+            String workspaceId,
+            String clientId,
+            String clientKey) {
         int parsedSharedSpaceId = parseId(sharedSpaceId, "Shared Space ID");
         int parsedWorkspaceId = parseId(workspaceId, "Workspace ID");
 
@@ -171,7 +247,7 @@ public class WorkspaceService {
                     .execute();
         } catch (RuntimeException ex) {
             log.error(
-                    "Connection test failed while fetching stories via SDK [rootUrl={}, sharedSpaceId={}, workspaceId={}, clientId={}]: {}",
+                    "Connection probe failed while fetching stories via SDK [rootUrl={}, sharedSpaceId={}, workspaceId={}, clientId={}]: {}",
                     rootUrl, sharedSpaceId, workspaceId, clientId, ex.getMessage(), ex);
             String details = ex.getMessage() == null || ex.getMessage().isBlank()
                     ? "Please check server URL and credentials."
@@ -180,21 +256,27 @@ public class WorkspaceService {
         }
 
         if (stories == null || stories.isEmpty()) {
-            log.warn("Connection test passed but no stories were returned [workspaceId={}]", workspaceId);
-            return WorkspaceConnectionTestResponseDto.builder()
-                    .success(true)
-                    .hasData(false)
-                    .workspaceId(workspaceId)
-                    .message("Connection successful, but no data was returned from the server.")
-                    .build();
+            log.warn("Connection probe passed but no stories were returned [workspaceId={}]", workspaceId);
+            return new ProbeResult(false, "Connection successful, but no data was returned from the server.");
         }
+        return new ProbeResult(true, "Connection successful");
+    }
 
-        return WorkspaceConnectionTestResponseDto.builder()
-                .success(true)
-                .hasData(true)
-                .workspaceId(workspaceId)
-                .message("Connection successful")
-                .build();
+    private void updateConnectivityStatus(UUID workspaceId, WorkspaceConnectivityStatus status, String message) {
+        Workspace workspace = workspaceRepository.findById(workspaceId)
+                .orElseThrow(() -> new IllegalArgumentException("Workspace not found: " + workspaceId));
+        workspace.setConnectivityStatus(status);
+        workspace.setConnectivityCheckedAt(Instant.now());
+        workspace.setConnectivityMessage(message);
+        workspaceRepository.save(workspace);
+    }
+
+    private String summarizeError(Exception ex) {
+        String message = ex.getMessage();
+        if (message == null || message.isBlank()) {
+            return "Connection failed.";
+        }
+        return message.length() > 500 ? message.substring(0, 500) : message;
     }
 
     private String resolveClientKey(String providedClientKey, UUID workspaceRecordId) {
@@ -238,6 +320,12 @@ public class WorkspaceService {
                 .clientKeyConfigured(workspace.getClientKey() != null && !workspace.getClientKey().isBlank())
                 .rootUrl(workspace.getRootUrl())
                 .status(workspace.getStatus())
+                .connectivityStatus(workspace.getConnectivityStatus())
+                .connectivityCheckedAt(workspace.getConnectivityCheckedAt())
+                .connectivityMessage(workspace.getConnectivityMessage())
                 .build();
+    }
+
+    private record ProbeResult(boolean hasData, String message) {
     }
 }
