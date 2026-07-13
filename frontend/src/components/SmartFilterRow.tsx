@@ -131,11 +131,12 @@ interface ValuePickerProps {
   loading: boolean;
   searching: boolean;
   onChange: (ids: string[]) => void;
+  onOpen: () => void;
   onSearchMiss: (term: string) => void;
   inputClass: string;
 }
 
-const ValuePicker: React.FC<ValuePickerProps> = ({ values, selected, loading, searching, onChange, onSearchMiss, inputClass }) => {
+const ValuePicker: React.FC<ValuePickerProps> = ({ values, selected, loading, searching, onChange, onOpen, onSearchMiss, inputClass }) => {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const ref = useRef<HTMLDivElement>(null);
@@ -191,7 +192,16 @@ const ValuePicker: React.FC<ValuePickerProps> = ({ values, selected, loading, se
     <div className="relative" ref={ref}>
       <button
         type="button"
-        onClick={() => { setOpen(o => !o); setSearch(''); }}
+        onClick={() => {
+          setOpen(prev => {
+            const next = !prev;
+            if (next) {
+              onOpen();
+            }
+            return next;
+          });
+          setSearch('');
+        }}
         className={`${inputClass} flex items-center justify-between gap-2 text-left min-h-[42px]`}
       >
         <div className="flex flex-wrap gap-1 flex-1 min-w-0">
@@ -316,6 +326,8 @@ export const SmartFilterRow: React.FC<SmartFilterRowProps> = ({
   const [logicalOpen, setLogicalOpen] = useState(false);
   const logicalRef = useRef<HTMLDivElement>(null);
   const lastSearchKeyRef = useRef('');
+  const didLoadDefaultValuesRef = useRef(false);
+  const previousFieldRef = useRef('');
 
   const inputClass =
     'w-full px-3.5 py-2.5 border border-slate-200 dark:border-slate-600 rounded-xl text-sm ' +
@@ -343,17 +355,48 @@ export const SmartFilterRow: React.FC<SmartFilterRowProps> = ({
       setFieldValues([]);
       setValueSearchLoading(false);
       lastSearchKeyRef.current = '';
+      didLoadDefaultValuesRef.current = false;
+      previousFieldRef.current = '';
       return;
     }
+    const fieldChanged = previousFieldRef.current !== clause.field;
+    if (fieldChanged) {
+      setFieldValues([]);
+      setValueSearchLoading(false);
+      lastSearchKeyRef.current = '';
+      didLoadDefaultValuesRef.current = false;
+      previousFieldRef.current = clause.field;
+    }
+
+    const selectedIds = clause.values.map(v => v.trim()).filter(Boolean);
+    if (selectedIds.length === 0) {
+      setValuesLoading(false);
+      return;
+    }
+
+    const knownIds = new Set(fieldValues.map(v => v.id));
+    const missingIds = selectedIds.filter(id => !knownIds.has(id));
+    if (missingIds.length === 0) {
+      setValuesLoading(false);
+      return;
+    }
+
     setValuesLoading(true);
-    setFieldValues([]);
-    setValueSearchLoading(false);
-    lastSearchKeyRef.current = '';
-    fetchFieldValues(workspaceId, clause.field, entityType)
-      .then(setFieldValues)
-      .catch(() => setFieldValues([]))
+    fetchFieldValues(workspaceId, clause.field, entityType, undefined, missingIds)
+      .then(remoteValues => {
+        if (remoteValues.length === 0) {
+          return;
+        }
+        setFieldValues(current => {
+          const merged = new Map(current.map(v => [v.id, v]));
+          remoteValues.forEach(v => merged.set(v.id, v));
+          return Array.from(merged.values()).sort((a, b) =>
+            a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
+          );
+        });
+      })
       .finally(() => setValuesLoading(false));
-  }, [clause.field, selectedFieldMeta?.reference, workspaceId, entityType]);
+  }, [clause.field, clause.values, fieldValues, selectedFieldMeta?.reference, workspaceId, entityType]);
 
   // Close logical operator dropdown on outside click
   useEffect(() => {
@@ -407,6 +450,35 @@ export const SmartFilterRow: React.FC<SmartFilterRowProps> = ({
         });
       })
       .finally(() => setValueSearchLoading(false));
+  };
+
+  const handleValuePickerOpen = () => {
+    if (!workspaceId || !entityType || !clause.field || !selectedFieldMeta?.reference) {
+      return;
+    }
+    if (didLoadDefaultValuesRef.current || valuesLoading) {
+      return;
+    }
+
+    didLoadDefaultValuesRef.current = true;
+    setValuesLoading(true);
+    fetchFieldValues(workspaceId, clause.field, entityType, '*')
+      .then(remoteValues => {
+        setFieldValues(current => {
+          if (current.length === 0) {
+            return remoteValues;
+          }
+          const merged = new Map(current.map(v => [v.id, v]));
+          remoteValues.forEach(v => merged.set(v.id, v));
+          return Array.from(merged.values()).sort((a, b) =>
+            a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
+          );
+        });
+      })
+      .catch(() => {
+        // keep pre-resolved selected values even if default list fetch fails
+      })
+      .finally(() => setValuesLoading(false));
   };
 
   const isReference = selectedFieldMeta?.reference ?? false;
@@ -483,6 +555,7 @@ export const SmartFilterRow: React.FC<SmartFilterRowProps> = ({
               loading={valuesLoading}
               searching={valueSearchLoading}
               onChange={ids => onChange({ values: ids, referenceValues: true })}
+              onOpen={handleValuePickerOpen}
               onSearchMiss={handleSearchMiss}
               inputClass={inputClass}
             />

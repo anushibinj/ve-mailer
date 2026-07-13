@@ -484,7 +484,7 @@ These endpoints expose Octane metadata to power the visual, non-technical Easy F
 | Method | Path                                                       | Description                                                      |
 |--------|------------------------------------------------------------|------------------------------------------------------------------|
 | `GET`  | `/workspaces/{id}/octane/fields?entityType=defect`         | Filterable fields with labels and type info (drives field dropdown) |
-| `GET`  | `/workspaces/{id}/octane/field-values?fieldName=phase&entityType=defect&search=new` | Selectable values for a reference field (supports optional server-side search) |
+| `GET`  | `/workspaces/{id}/octane/field-values?fieldName=phase&entityType=defect&search=new&ids=phase.defect.new,phase.defect.in_progress` | Selectable values for a reference field (supports optional server-side search and exact ID resolution) |
 
 **OctaneFieldDto** (field metadata):
 ```json
@@ -991,7 +991,8 @@ UI visibility cues:
 
 When the filter form opens, the `SmartFilterRow` component calls:
 - `GET /octane/fields?entityType=defect` → returns all filterable fields with human-readable labels, field types, and reference target info
-- When a reference field is selected → `GET /octane/field-values?fieldName=phase&entityType=defect` → returns `[{id, name}]` pairs for the dropdown
+- When editing an existing reference clause, selected IDs are resolved with `GET /octane/field-values?...&ids=<comma-separated-ids>` so saved IDs always map to display names even if they are outside the default list window
+- When the user opens a reference dropdown, the UI fetches the initial value window with `GET /octane/field-values?...&search=*`
 
 The `OctaneMetadataService` handles the mapping:
 - `list_node` targets → queries `list_nodes?query="list_root={logical_name EQ '...'}"` (e.g. for severity, priority)

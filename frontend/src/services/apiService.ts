@@ -296,10 +296,17 @@ export const fetchFieldValues = async (
   workspaceId: string,
   fieldName: string,
   entityType: string,
-  search?: string
+  search?: string,
+  ids?: string[]
 ): Promise<OctaneFieldValueDto[]> => {
+  const normalizedIds = ids?.map(id => id.trim()).filter(Boolean);
   const response = await api.get(`/api/v1/workspaces/${workspaceId}/octane/field-values`, {
-    params: { fieldName, entityType, ...(search ? { search } : {}) },
+    params: {
+      fieldName,
+      entityType,
+      ...(search ? { search } : {}),
+      ...(normalizedIds && normalizedIds.length > 0 ? { ids: normalizedIds.join(',') } : {}),
+    },
   });
   return response.data;
 };

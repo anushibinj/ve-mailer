@@ -46,7 +46,7 @@ class OctaneMetadataControllerTest {
     @Test
     void testGetFieldValues_withSearchParam_delegatesSearchToService() throws Exception {
         UUID workspaceId = UUID.randomUUID();
-        when(octaneMetadataService.getFieldValues(eq(workspaceId), eq("owner"), eq("defect"), eq("john")))
+        when(octaneMetadataService.getFieldValues(eq(workspaceId), eq("owner"), eq("defect"), eq("john"), eq(null)))
                 .thenReturn(List.of(OctaneFieldValueDto.builder().id("123").name("John Smith").build()));
 
         mockMvc.perform(get("/api/v1/workspaces/{workspaceId}/octane/field-values", workspaceId)
@@ -58,6 +58,24 @@ class OctaneMetadataControllerTest {
                 .andExpect(jsonPath("$[0].id").value("123"))
                 .andExpect(jsonPath("$[0].name").value("John Smith"));
 
-        verify(octaneMetadataService).getFieldValues(workspaceId, "owner", "defect", "john");
+        verify(octaneMetadataService).getFieldValues(workspaceId, "owner", "defect", "john", null);
+    }
+
+    @Test
+    void testGetFieldValues_withIdsParam_delegatesIdsToService() throws Exception {
+        UUID workspaceId = UUID.randomUUID();
+        when(octaneMetadataService.getFieldValues(eq(workspaceId), eq("owner"), eq("defect"), eq(null), eq("8666,1234")))
+                .thenReturn(List.of(OctaneFieldValueDto.builder().id("8666").name("Anu Shibin Joseph Raj").build()));
+
+        mockMvc.perform(get("/api/v1/workspaces/{workspaceId}/octane/field-values", workspaceId)
+                        .param("fieldName", "owner")
+                        .param("entityType", "defect")
+                        .param("ids", "8666,1234")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value("8666"))
+                .andExpect(jsonPath("$[0].name").value("Anu Shibin Joseph Raj"));
+
+        verify(octaneMetadataService).getFieldValues(workspaceId, "owner", "defect", null, "8666,1234");
     }
 }
