@@ -115,19 +115,21 @@ const FieldBadgeWithPopover: React.FC<FieldBadgeWithPopoverProps> = ({
   unselectedClassName,
   popoverText,
 }) => {
-  const wrapperRef = useRef<HTMLDivElement | null>(null);
+  const buttonRef = useRef<HTMLButtonElement | null>(null);
   const popoverRef = useRef<HTMLDivElement | null>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [placement, setPlacement] = useState<PopoverPlacement>('top');
   const [coords, setCoords] = useState({ top: 0, left: 0 });
 
   const updatePopoverPosition = useCallback(() => {
-    const wrapperEl = wrapperRef.current;
-    if (!wrapperEl) return;
+    const buttonEl = buttonRef.current;
+    const popoverEl = popoverRef.current;
+    if (!buttonEl || !popoverEl) return;
 
-    const triggerRect = wrapperEl.getBoundingClientRect();
-    const popoverWidth = popoverRef.current?.offsetWidth ?? 280;
-    const popoverHeight = popoverRef.current?.offsetHeight ?? 96;
+    const triggerRect = buttonEl.getBoundingClientRect();
+    const popoverRect = popoverEl.getBoundingClientRect();
+    const popoverWidth = popoverRect.width;
+    const popoverHeight = popoverRect.height;
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
     const gap = 10;
@@ -173,11 +175,12 @@ const FieldBadgeWithPopover: React.FC<FieldBadgeWithPopoverProps> = ({
 
   useEffect(() => {
     if (!isOpen) return;
-    updatePopoverPosition();
+    const rafId = window.requestAnimationFrame(() => updatePopoverPosition());
     const reposition = () => updatePopoverPosition();
     window.addEventListener('resize', reposition);
     window.addEventListener('scroll', reposition, true);
     return () => {
+      window.cancelAnimationFrame(rafId);
       window.removeEventListener('resize', reposition);
       window.removeEventListener('scroll', reposition, true);
     };
@@ -185,7 +188,6 @@ const FieldBadgeWithPopover: React.FC<FieldBadgeWithPopoverProps> = ({
 
   return (
     <div
-      ref={wrapperRef}
       className="inline-flex"
       onMouseEnter={() => setIsOpen(true)}
       onMouseLeave={() => setIsOpen(false)}
@@ -197,6 +199,7 @@ const FieldBadgeWithPopover: React.FC<FieldBadgeWithPopoverProps> = ({
       }}
     >
       <button
+        ref={buttonRef}
         type="button"
         onClick={onClick}
         aria-describedby={isOpen ? `${label}-popover` : undefined}
@@ -213,7 +216,7 @@ const FieldBadgeWithPopover: React.FC<FieldBadgeWithPopoverProps> = ({
           role="tooltip"
           data-placement={placement}
           style={{ top: `${coords.top}px`, left: `${coords.left}px` }}
-          className="fixed z-50 max-w-xs sm:max-w-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs leading-relaxed text-slate-700 dark:text-slate-200 shadow-xl whitespace-normal break-words"
+          className="fixed z-50 w-[min(22rem,calc(100vw-16px))] rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs leading-relaxed text-slate-700 dark:text-slate-200 shadow-xl whitespace-normal break-words"
         >
           {popoverText}
         </div>
