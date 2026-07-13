@@ -26,7 +26,7 @@
 - [x] As an workspace admin, I should be able to subscribe and unsubscribe people from filters.
 - [x] As an user, I should receive mails from ve-mailer even if I never signed up to the application.
 - [x] As a workspace admin, I should see an "Edit workspace" button when I open a workspace dashboard view
-- [ ] As an user/workspace admin/super admin, I should be able to enable/disable an existing filter subscription that I have access to. This is in addition to the existing unsubscribe feature. Disabled filter subscriptions should be visually shown differently in the frontend.
+- [x] As an user/workspace admin/super admin, I should be able to enable/disable an existing filter subscription that I have access to. This is in addition to the existing unsubscribe feature. Disabled filter subscriptions should be visually shown differently in the frontend.
 - [ ] As a non-admin user, I shouldn't be able to edit any property of a group subscription that I am part of. I should be able to see the group subscription. Instead of the "Edit" button, I should see "View" to see the filter details like frequency, etc. But I shouldn't be able to unsubscribe, change frequence, disable the filter, etc. Only the workspace admin or the super admin should be able to make these changes.
 - [ ] As an user, I should be able to subscribe to "Me" based filters like "New-phase tickets on my name" or "Code Review tickets on my name" etc.
 - [x] Make the fields part of the filter builder dynamic instead of the static list being used now. The functionality of the existing custom fields like "AI Summary", etc should remain as is.
