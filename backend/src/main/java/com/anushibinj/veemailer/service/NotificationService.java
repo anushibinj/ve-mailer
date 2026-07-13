@@ -290,7 +290,9 @@ public class NotificationService {
                       .append("</td>");
                 }
                 for (String field : fields) {
-                    String cellValue = extractFieldValue(field, entity.getValue(field));
+                    String cellValue = TriageSlaPolicy.TRIAGE_SLA_FIELD.equals(field)
+                            ? TriageSlaPolicy.toDisplayLabel(entity)
+                            : extractFieldValue(field, entity.getValue(field));
                     sb.append("<td style=\"padding:8px;\">" );
                     if (linkContext != null && HYPERLINK_FIELDS.contains(field)) {
                         // Hyperlink-eligible field: render as anchor to the VE ticket page.
@@ -376,6 +378,7 @@ public class NotificationService {
     /** Converts an Octane field name like "story_points" → "Story Points". */
     private String humanise(String fieldName) {
         if (fieldName == null || fieldName.isEmpty()) return fieldName;
+        if (TriageSlaPolicy.TRIAGE_SLA_FIELD.equals(fieldName)) return TriageSlaPolicy.TRIAGE_SLA_FIELD;
         return java.util.Arrays.stream(fieldName.split("_"))
                 .map(w -> w.isEmpty() ? w : Character.toUpperCase(w.charAt(0)) + w.substring(1))
                 .collect(Collectors.joining(" "));

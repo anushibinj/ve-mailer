@@ -7,6 +7,8 @@ import com.anushibinj.veemailer.dto.ParsedFilterQueryResponse;
 import com.anushibinj.veemailer.model.FilterCriteriaClause;
 import com.anushibinj.veemailer.service.extractor.FieldExtractorRegistry;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.hpe.adm.nga.sdk.model.EntityModel;
+import com.hpe.adm.nga.sdk.model.StringFieldModel;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -14,6 +16,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -96,6 +99,43 @@ class FilterServiceTest {
         assertFalse(result.contains("description"), "description must not be added when AI Summary is not enabled");
         // id is still always added
         assertTrue(result.contains("id"), "id must still be present");
+    }
+
+    @Test
+    void testComputeEffectiveFetchFields_TriageSlaAddsCreationTimeAndRemovesPseudoField() {
+        List<String> result = filterService.computeEffectiveFetchFields(
+                List.of(TriageSlaPolicy.TRIAGE_SLA_FIELD, "phase"));
+        assertFalse(result.contains(TriageSlaPolicy.TRIAGE_SLA_FIELD),
+                "Triage SLA pseudo-field must be stripped from effective fetch fields");
+        assertTrue(result.contains(TriageSlaPolicy.CREATION_TIME_FIELD),
+                "creation_time must be fetched when Triage SLA is enabled");
+    }
+
+    @Test
+    void testSortByTriageSlaAgeIfEnabled_SortsDescendingByDaysOld() {
+        EntityModel newest = new EntityModel(Set.of(
+                new StringFieldModel("id", "1"),
+                new StringFieldModel("creation_time", "2099-01-01T00:00:00Z")
+        ));
+        EntityModel middle = new EntityModel(Set.of(
+                new StringFieldModel("id", "2"),
+                new StringFieldModel("creation_time", "2026-07-10T00:00:00Z")
+        ));
+        EntityModel oldest = new EntityModel(Set.of(
+                new StringFieldModel("id", "3"),
+                new StringFieldModel("creation_time", "2026-07-01T00:00:00Z")
+        ));
+
+        List<EntityModel> sorted = filterService.sortByTriageSlaAgeIfEnabled(
+                List.of(newest, middle, oldest),
+                List.of("id", TriageSlaPolicy.TRIAGE_SLA_FIELD));
+
+        assertEquals("3", ((StringFieldModel) sorted.get(0).getValue("id")).getValue(),
+                "oldest ticket must come first");
+        assertEquals("2", ((StringFieldModel) sorted.get(1).getValue("id")).getValue(),
+                "middle-aged ticket must come second");
+        assertEquals("1", ((StringFieldModel) sorted.get(2).getValue("id")).getValue(),
+                "newest ticket must come last");
     }
 
     @Test

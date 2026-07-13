@@ -16,6 +16,8 @@ import java.util.Map;
  * (e.g. {@code "phase" → "Rejected"}, {@code "owner" → "Jane Smith"}).
  * When AI Summary is requested, the summary text is stored under the
  * {@code "✨ AI Summary"} key inside each record.
+ * When Triage SLA is requested, each record includes a computed
+ * {@code "Triage SLA"} value (for example {@code "🟡 3 days old"}).
  */
 @Data
 @NoArgsConstructor

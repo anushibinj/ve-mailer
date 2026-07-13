@@ -28,6 +28,7 @@ A full-stack application that lets users subscribe to email digest notifications
     - [Backend — `application.properties`](#backend--applicationproperties)
     - [Backend — `application-dev.properties`](#backend--application-devproperties)
     - [AI Summary Configuration (Optional)](#ai-summary-configuration-optional)
+    - [Triage SLA Custom Field](#triage-sla-custom-field)
     - [Frontend — Environment Variables](#frontend--environment-variables)
       - [`VITE_ALLOW_CUSTOM_QUERY_STRING` — query-string filter workflow toggle](#vite_allow_custom_query_string--query-string-filter-workflow-toggle)
       - [`VITE_FOOTER_HTML` — custom footer](#vite_footer_html--custom-footer)
@@ -58,6 +59,7 @@ Key capabilities:
 - Receive **email digests** on a custom schedule — daily or weekly (Mondays), at one or more specific hours you choose
 - Create **Filter Templates** — structured query definitions (entity type, fields, criteria) that are stored as reusable templates and dynamically compiled into Octane SDK queries
 - **Execute filters on demand** — preview matching results from ValueEdge directly in the UI before subscribing
+- Add **custom pseudo-fields** such as **✨ AI Summary** and **Triage SLA** to enrich preview/email output without changing Octane metadata
 
 ---
 
@@ -745,6 +747,20 @@ Fields configurable through the Admin Control Panel:
 Prompts are stored in `backend/src/main/resources/prompts/` and can be customized without code changes:
 - `ai-summary-system-prompt.md` — defines summarization behavior and tone
 - `ai-summary-user-prompt.md` — template with placeholders for ticket data
+
+---
+
+### Triage SLA Custom Field
+
+`Triage SLA` is a custom pseudo-field available in the filter builder and email output.
+
+- Selecting `Triage SLA` auto-fetches `creation_time` from ValueEdge.
+- Output format is `<traffic-light> <N> day(s) old`, for example: `🟡 3 days old`.
+- Default age bands are configured in `backend/src/main/java/com/anushibinj/veemailer/service/TriageSlaPolicy.java`:
+  - `7+` days → `🔴`
+  - `3-4` days → `🟡`
+  - `0-2` days → `🟢`
+- When selected, preview/email results are sorted by age in descending order so oldest untriaged tickets appear first.
 
 ---
 

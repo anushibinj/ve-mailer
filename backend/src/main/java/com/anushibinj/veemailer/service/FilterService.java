@@ -240,7 +240,7 @@ public class FilterService {
             List<FilterCriteriaClause> clauses = objectMapper.readValue(filter.getCriteria(), new TypeReference<>() {});
 
             // Compute the effective fields to fetch — strips pseudo-fields, adds silent
-            // dependencies (AI Summary → name+description, always → id).
+            // dependencies (AI Summary → name+description, Triage SLA → creation_time, always → id).
             List<String> effectiveFetchFields = computeEffectiveFetchFields(fields);
 
             Octane octaneClient = octaneCacheService.getOctaneClient(
@@ -264,8 +264,8 @@ public class FilterService {
                 getEntities = getEntities.limit(effectiveLimit);
             }
             OctaneCollection<EntityModel> result = getEntities.execute();
-
-            return result.stream().toList();
+            List<EntityModel> entities = result.stream().toList();
+            return sortByTriageSlaAgeIfEnabled(entities, fields);
         } catch (JsonProcessingException e) {
             throw new RuntimeException("Failed to deserialize filter data", e);
         }
@@ -313,7 +313,7 @@ public class FilterService {
                     .limit(effectivePreviewLimit);
 
             OctaneCollection<EntityModel> result = getEntities.execute();
-            List<EntityModel> entities = result.stream().toList();
+            List<EntityModel> entities = sortByTriageSlaAgeIfEnabled(result.stream().toList(), fields);
 
             // AI Summary generation — matches the real email-send flow exactly.
             boolean aiSummaryEnabled = fields.contains(AiSummaryService.AI_SUMMARY_FIELD);
@@ -341,7 +341,11 @@ public class FilterService {
                 EntityModel entity = entities.get(i);
                 Map<String, String> record = new LinkedHashMap<>();
                 for (String field : displayFields) {
-                    record.put(field, extractFieldValue(field, entity.getValue(field)));
+                    if (TriageSlaPolicy.TRIAGE_SLA_FIELD.equals(field)) {
+                        record.put(field, TriageSlaPolicy.toDisplayLabel(entity));
+                    } else {
+                        record.put(field, extractFieldValue(field, entity.getValue(field)));
+                    }
                 }
                 if (aiSummaryEnabled && aiSummaries != null) {
                     record.put(AiSummaryService.AI_SUMMARY_FIELD, aiSummaries[i]);
@@ -366,6 +370,7 @@ public class FilterService {
      * <p>Differences from the raw user-selected list:
      * <ol>
      *   <li>The AI Summary pseudo-field is stripped — it is never a real Octane field.</li>
+     *   <li>The Triage SLA pseudo-field is stripped and mapped to {@code creation_time}.</li>
      *   <li>When AI Summary is enabled, {@code name} and {@code description} are added as
      *       silent internal dependencies for AI generation, even if not chosen for display.</li>
      *   <li>{@code id} is always added for ticket hyperlink generation, regardless of whether
@@ -377,6 +382,7 @@ public class FilterService {
     List<String> computeEffectiveFetchFields(List<String> fields) {
         List<String> effectiveFetchFields = fields.stream()
                 .filter(f -> !AiSummaryService.AI_SUMMARY_FIELD.equals(f))
+                .filter(f -> !TriageSlaPolicy.TRIAGE_SLA_FIELD.equals(f))
                 .collect(Collectors.toList());
         if (fields.contains(AiSummaryService.AI_SUMMARY_FIELD)) {
             // name and description are fetched silently for AI generation
@@ -387,11 +393,26 @@ public class FilterService {
                 }
             }
         }
+        if (fields.contains(TriageSlaPolicy.TRIAGE_SLA_FIELD)
+                && !effectiveFetchFields.contains(TriageSlaPolicy.CREATION_TIME_FIELD)) {
+            effectiveFetchFields.add(TriageSlaPolicy.CREATION_TIME_FIELD);
+        }
         // id is always fetched for ticket hyperlink generation (id and global_id_udf fields).
         if (!effectiveFetchFields.contains("id")) {
             effectiveFetchFields.add("id");
         }
         return effectiveFetchFields;
+    }
+
+    List<EntityModel> sortByTriageSlaAgeIfEnabled(List<EntityModel> entities, List<String> selectedFields) {
+        if (!selectedFields.contains(TriageSlaPolicy.TRIAGE_SLA_FIELD)) {
+            return entities;
+        }
+        return entities.stream()
+                .sorted((a, b) -> Integer.compare(
+                        TriageSlaPolicy.daysSinceCreationOrDefault(b, -1),
+                        TriageSlaPolicy.daysSinceCreationOrDefault(a, -1)))
+                .toList();
     }
 
     /**

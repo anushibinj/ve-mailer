@@ -34,6 +34,7 @@ const ENTITY_TYPES = [
   { value: 'feature', label: 'Features' },
 ];
 const AI_SUMMARY_FIELD = '✨ AI Summary';
+const TRIAGE_SLA_FIELD = 'Triage SLA';
 
 const COMMON_FIELDS = [
   'id', 'global_id_udf', 'name', 'description', 'comments', 'phase', 'owner',
@@ -506,6 +507,17 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
                       >
                         {AI_SUMMARY_FIELD}
                       </button>
+                      <button
+                        type="button"
+                        onClick={() => toggleField(TRIAGE_SLA_FIELD)}
+                        className={`px-3 py-1 rounded-full text-xs font-medium border transition-all ${
+                          selectedFields.includes(TRIAGE_SLA_FIELD)
+                            ? 'bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-500/30 scale-105'
+                            : 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-600 hover:border-amber-300 dark:hover:border-amber-600 hover:text-amber-600 dark:hover:text-amber-400'
+                        }`}
+                      >
+                        {TRIAGE_SLA_FIELD}
+                      </button>
                       {COMMON_FIELDS.map(field => (
                         <button
                           key={field} type="button"
@@ -754,12 +766,18 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
                                 className={`px-4 py-2.5 text-left font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider whitespace-nowrap ${
                                   col === AI_SUMMARY_FIELD || col === 'name' || col === 'description'
                                     ? 'min-w-[220px]'
+                                    : col === TRIAGE_SLA_FIELD
+                                    ? 'min-w-[140px]'
                                     : col === 'id'
                                     ? 'min-w-[60px]'
                                     : 'min-w-[90px]'
                                 }`}
                               >
-                                {col === AI_SUMMARY_FIELD ? '✨ AI Summary' : col.replace(/_/g, ' ')}
+                                {col === AI_SUMMARY_FIELD
+                                  ? '✨ AI Summary'
+                                  : col === TRIAGE_SLA_FIELD
+                                  ? 'Triage SLA'
+                                  : col.replace(/_/g, ' ')}
                               </th>
                             ))}
                           </tr>

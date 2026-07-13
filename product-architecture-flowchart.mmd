@@ -65,6 +65,7 @@ flowchart TD
             PS[Polling Service]
             NS[Notification Service]
             AIS[AI Summary Service]
+            TSP[Triage SLA Policy]
             TCS[Ticket Comment Service]
             MAS[Mail Analytics Service]
             MAUS[Mail Audit Service]
@@ -127,6 +128,7 @@ flowchart TD
     WD --> AI
     WD --> RGV
     FB --> AI
+    FB --> TSP
     AI --> WCtrl
     AI --> FCtrl
     AI --> FParse
@@ -178,8 +180,10 @@ flowchart TD
     OTP --> DMS
     OTP --> SMTP
     FS --> VE
+    FS --> TSP
     PS --> FS
     PS --> NS
+    NS --> TSP
     NS --> AIS
     AIS --> DAIS
     DAIS --> APR
