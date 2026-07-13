@@ -484,7 +484,7 @@ These endpoints expose Octane metadata to power the visual, non-technical Easy F
 | Method | Path                                                       | Description                                                      |
 |--------|------------------------------------------------------------|------------------------------------------------------------------|
 | `GET`  | `/workspaces/{id}/octane/fields?entityType=defect`         | Filterable fields with labels and type info (drives field dropdown) |
-| `GET`  | `/workspaces/{id}/octane/field-values?fieldName=phase&entityType=defect` | Selectable values for a reference field (drives value picker) |
+| `GET`  | `/workspaces/{id}/octane/field-values?fieldName=phase&entityType=defect&search=new` | Selectable values for a reference field (supports optional server-side search) |
 
 **OctaneFieldDto** (field metadata):
 ```json
@@ -998,6 +998,8 @@ The `OctaneMetadataService` handles the mapping:
 - `phase` targets → queries `phases` scoped by entity type (deduplicated fallback if scope fails)
 - `workspace_user` targets → queries `workspace_users` (team members)
 - `release`/`sprint`/`team`/`product_area` → queries the respective entity list
+
+The value picker first filters the currently loaded list in the browser. If a typed term has no local matches, it automatically calls `field-values` with `search=<term>` so Octane can search beyond the initial result window (for example, owner lists larger than 1000 users).
 
 #### Filter Examples
 

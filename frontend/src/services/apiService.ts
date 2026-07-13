@@ -295,10 +295,11 @@ export const fetchFilterableFields = async (
 export const fetchFieldValues = async (
   workspaceId: string,
   fieldName: string,
-  entityType: string
+  entityType: string,
+  search?: string
 ): Promise<OctaneFieldValueDto[]> => {
   const response = await api.get(`/api/v1/workspaces/${workspaceId}/octane/field-values`, {
-    params: { fieldName, entityType },
+    params: { fieldName, entityType, ...(search ? { search } : {}) },
   });
   return response.data;
 };

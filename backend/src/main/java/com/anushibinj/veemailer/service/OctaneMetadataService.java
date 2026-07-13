@@ -116,8 +116,14 @@ public class OctaneMetadataService {
      * @param entityType  Octane entity subtype used to scope phases
      */
     public List<OctaneFieldValueDto> getFieldValues(UUID workspaceId, String fieldName, String entityType) {
+        return getFieldValues(workspaceId, fieldName, entityType, null);
+    }
+
+    public List<OctaneFieldValueDto> getFieldValues(
+            UUID workspaceId, String fieldName, String entityType, String searchQuery) {
         Workspace workspace = loadWorkspace(workspaceId);
         Octane octane = buildOctaneClient(workspace);
+        String normalizedSearch = normalizeSearch(searchQuery);
 
         FieldMetadata fieldMeta = findFieldMetadata(octane, entityType, fieldName);
         if (fieldMeta == null || fieldMeta.getFieldType() != FieldMetadata.FieldType.Reference) {
@@ -133,7 +139,8 @@ public class OctaneMetadataService {
         String logicalName = typeData.getTargets()[0].logicalName();
 
         try {
-            List<OctaneFieldValueDto> values = fetchValuesForTarget(octane, targetType, logicalName, entityType);
+            List<OctaneFieldValueDto> values = fetchValuesForTarget(
+                    octane, targetType, logicalName, entityType, normalizedSearch);
             workspaceService.markWorkspaceOnline(workspaceId, !values.isEmpty());
             return values;
         } catch (Exception e) {
@@ -149,17 +156,17 @@ public class OctaneMetadataService {
     // ------------------------------------------------------------------ //
 
     private List<OctaneFieldValueDto> fetchValuesForTarget(
-            Octane octane, String targetType, String logicalName, String entityType) {
+            Octane octane, String targetType, String logicalName, String entityType, String searchQuery) {
         return switch (targetType) {
-            case "list_node"      -> fetchListNodeValues(octane, logicalName);
-            case "phase"          -> fetchPhaseValues(octane, entityType);
-            case "workspace_user" -> fetchUserValues(octane);
-            case "release"        -> fetchNamedEntityValues(octane, "releases");
-            case "sprint"         -> fetchNamedEntityValues(octane, "sprints");
-            case "product_area"   -> fetchNamedEntityValues(octane, "product_areas");
-            case "team"           -> fetchNamedEntityValues(octane, "teams");
-            case "milestone"      -> fetchNamedEntityValues(octane, "milestones");
-            case "application_module" -> fetchNamedEntityValues(octane, "application_modules");
+            case "list_node"      -> fetchListNodeValues(octane, logicalName, searchQuery);
+            case "phase"          -> fetchPhaseValues(octane, entityType, searchQuery);
+            case "workspace_user" -> fetchUserValues(octane, searchQuery);
+            case "release"        -> fetchNamedEntityValues(octane, "releases", searchQuery);
+            case "sprint"         -> fetchNamedEntityValues(octane, "sprints", searchQuery);
+            case "product_area"   -> fetchNamedEntityValues(octane, "product_areas", searchQuery);
+            case "team"           -> fetchNamedEntityValues(octane, "teams", searchQuery);
+            case "milestone"      -> fetchNamedEntityValues(octane, "milestones", searchQuery);
+            case "application_module" -> fetchNamedEntityValues(octane, "application_modules", searchQuery);
             default -> {
                 log.debug("No value-fetch strategy for reference target type '{}' — returning empty list", targetType);
                 yield List.of();
@@ -168,12 +175,16 @@ public class OctaneMetadataService {
     }
 
     /** Fetches list nodes whose list_root has the given logical_name (severity, priority, …). */
-    private List<OctaneFieldValueDto> fetchListNodeValues(Octane octane, String logicalName) {
+    private List<OctaneFieldValueDto> fetchListNodeValues(Octane octane, String logicalName, String searchQuery) {
+        Query.QueryBuilder filter = Query.statement(
+                "list_root", QueryMethod.EqualTo, Query.statement("logical_name", QueryMethod.EqualTo, logicalName));
+        if (hasText(searchQuery)) {
+            filter = filter.and(Query.statement("name", QueryMethod.In, wildcard(searchQuery)));
+        }
         OctaneCollection<EntityModel> nodes = octane.entityList("list_nodes")
                 .get()
                 .addFields("id", "name", "logical_name")
-                .query(Query.statement("list_root", QueryMethod.EqualTo,
-                        Query.statement("logical_name", QueryMethod.EqualTo, logicalName)).build())
+                .query(filter.build())
                 .execute();
         // Deduplicate by name — Octane may return inherited/archived entries with identical display names
         return toDeduplicatedValueDtos(nodes, "name");
@@ -185,17 +196,21 @@ public class OctaneMetadataService {
      * duplicates — e.g. "Aborted" once per subtype that has an Aborted phase.
      * Falls back to name-deduplication when entity-type filtering is not supported.
      */
-    private List<OctaneFieldValueDto> fetchPhaseValues(Octane octane, String entityType) {
+    private List<OctaneFieldValueDto> fetchPhaseValues(Octane octane, String entityType, String searchQuery) {
         if (ENTITY_TYPE_BACKLOG_ITEMS.equals(entityType)) {
-            return fetchBacklogPhaseValues(octane);
+            return fetchBacklogPhaseValues(octane, searchQuery);
         }
         if (!"work_item".equals(entityType)) {
             // Scope to the specific subtype so we don't show defect/story/feature phases mixed together
             try {
+                Query.QueryBuilder scopedQuery = Query.statement("entity", QueryMethod.EqualTo, entityType);
+                if (hasText(searchQuery)) {
+                    scopedQuery = scopedQuery.and(Query.statement("name", QueryMethod.In, wildcard(searchQuery)));
+                }
                 OctaneCollection<EntityModel> phases = octane.entityList("phases")
                         .get()
                         .addFields("id", "name")
-                        .query(Query.statement("entity", QueryMethod.EqualTo, entityType).build())
+                        .query(scopedQuery.build())
                         .execute();
                 if (phases != null && !phases.isEmpty()) {
                     return toSortedValueDtos(phases, "name");
@@ -205,22 +220,29 @@ public class OctaneMetadataService {
             }
         }
         // Fallback: fetch all phases but deduplicate by name so the user sees each phase name once
-        OctaneCollection<EntityModel> allPhases = octane.entityList("phases")
+        var getPhases = octane.entityList("phases")
                 .get()
-                .addFields("id", "name")
-                .execute();
+                .addFields("id", "name");
+        if (hasText(searchQuery)) {
+            getPhases = getPhases.query(Query.statement("name", QueryMethod.In, wildcard(searchQuery)).build());
+        }
+        OctaneCollection<EntityModel> allPhases = getPhases.execute();
         return toDeduplicatedValueDtos(allPhases, "name");
     }
 
-    private List<OctaneFieldValueDto> fetchBacklogPhaseValues(Octane octane) {
+    private List<OctaneFieldValueDto> fetchBacklogPhaseValues(Octane octane, String searchQuery) {
         List<OctaneFieldValueDto> result = new ArrayList<>();
         java.util.Set<String> seenIds = new java.util.LinkedHashSet<>();
         for (String subtype : BACKLOG_SUBTYPES) {
             try {
+                Query.QueryBuilder scopedQuery = Query.statement("entity", QueryMethod.EqualTo, subtype);
+                if (hasText(searchQuery)) {
+                    scopedQuery = scopedQuery.and(Query.statement("name", QueryMethod.In, wildcard(searchQuery)));
+                }
                 OctaneCollection<EntityModel> phases = octane.entityList("phases")
                         .get()
                         .addFields("id", "name")
-                        .query(Query.statement("entity", QueryMethod.EqualTo, subtype).build())
+                        .query(scopedQuery.build())
                         .execute();
                 for (EntityModel entity : phases) {
                     String id = extractString(entity, "id");
@@ -238,10 +260,13 @@ public class OctaneMetadataService {
             }
         }
         if (result.isEmpty()) {
-            OctaneCollection<EntityModel> allPhases = octane.entityList("phases")
+            var getPhases = octane.entityList("phases")
                     .get()
-                    .addFields("id", "name")
-                    .execute();
+                    .addFields("id", "name");
+            if (hasText(searchQuery)) {
+                getPhases = getPhases.query(Query.statement("name", QueryMethod.In, wildcard(searchQuery)).build());
+            }
+            OctaneCollection<EntityModel> allPhases = getPhases.execute();
             return toDeduplicatedValueDtos(allPhases, "name");
         }
         result.sort(Comparator.comparing(OctaneFieldValueDto::getName, String.CASE_INSENSITIVE_ORDER));
@@ -249,11 +274,17 @@ public class OctaneMetadataService {
     }
 
     /** Fetches workspace users and uses full_name (falling back to email) as the display value. */
-    private List<OctaneFieldValueDto> fetchUserValues(Octane octane) {
-        OctaneCollection<EntityModel> users = octane.entityList("workspace_users")
+    private List<OctaneFieldValueDto> fetchUserValues(Octane octane, String searchQuery) {
+        var getUsers = octane.entityList("workspace_users")
                 .get()
-                .addFields("id", "full_name", "email", "name")
-                .execute();
+                .addFields("id", "full_name", "email", "name");
+        if (hasText(searchQuery)) {
+            Query.QueryBuilder searchBuilder = Query.statement("full_name", QueryMethod.In, wildcard(searchQuery))
+                    .or(Query.statement("email", QueryMethod.In, wildcard(searchQuery)))
+                    .or(Query.statement("name", QueryMethod.In, wildcard(searchQuery)));
+            getUsers = getUsers.query(searchBuilder.build());
+        }
+        OctaneCollection<EntityModel> users = getUsers.execute();
 
         List<OctaneFieldValueDto> result = new ArrayList<>();
         for (EntityModel entity : users) {
@@ -269,12 +300,15 @@ public class OctaneMetadataService {
     }
 
     /** Generic helper for entities that have `id` and `name` fields (releases, teams, …). */
-    private List<OctaneFieldValueDto> fetchNamedEntityValues(Octane octane, String entityListName) {
+    private List<OctaneFieldValueDto> fetchNamedEntityValues(Octane octane, String entityListName, String searchQuery) {
         try {
-            OctaneCollection<EntityModel> entities = octane.entityList(entityListName)
+            var getEntities = octane.entityList(entityListName)
                     .get()
-                    .addFields("id", "name")
-                    .execute();
+                    .addFields("id", "name");
+            if (hasText(searchQuery)) {
+                getEntities = getEntities.query(Query.statement("name", QueryMethod.In, wildcard(searchQuery)).build());
+            }
+            OctaneCollection<EntityModel> entities = getEntities.execute();
             return toSortedValueDtos(entities, "name");
         } catch (Exception e) {
             log.warn("Could not fetch values from entity list '{}': {}", entityListName, e.getMessage());
@@ -415,5 +449,21 @@ public class OctaneMetadataService {
             return "Unknown error";
         }
         return message.length() > 500 ? message.substring(0, 500) : message;
+    }
+
+    private String normalizeSearch(String searchQuery) {
+        if (searchQuery == null) {
+            return null;
+        }
+        String trimmed = searchQuery.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.isBlank();
+    }
+
+    private String wildcard(String searchQuery) {
+        return "*" + searchQuery.trim() + "*";
     }
 }

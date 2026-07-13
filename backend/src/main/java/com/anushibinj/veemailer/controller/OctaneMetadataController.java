@@ -61,8 +61,9 @@ public class OctaneMetadataController {
     public ResponseEntity<List<OctaneFieldValueDto>> getFieldValues(
             @PathVariable UUID workspaceId,
             @RequestParam String fieldName,
-            @RequestParam(defaultValue = "work_item") String entityType) {
-        List<OctaneFieldValueDto> values = octaneMetadataService.getFieldValues(workspaceId, fieldName, entityType);
+            @RequestParam(defaultValue = "work_item") String entityType,
+            @RequestParam(required = false) String search) {
+        List<OctaneFieldValueDto> values = octaneMetadataService.getFieldValues(workspaceId, fieldName, entityType, search);
         return ResponseEntity.ok(values);
     }
 }

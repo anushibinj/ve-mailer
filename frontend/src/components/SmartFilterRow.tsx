@@ -129,14 +129,17 @@ interface ValuePickerProps {
   values: OctaneFieldValueDto[];
   selected: string[];  // selected IDs
   loading: boolean;
+  searching: boolean;
   onChange: (ids: string[]) => void;
+  onSearchMiss: (term: string) => void;
   inputClass: string;
 }
 
-const ValuePicker: React.FC<ValuePickerProps> = ({ values, selected, loading, onChange, inputClass }) => {
+const ValuePicker: React.FC<ValuePickerProps> = ({ values, selected, loading, searching, onChange, onSearchMiss, inputClass }) => {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const ref = useRef<HTMLDivElement>(null);
+  const requestedTermRef = useRef('');
 
   const filtered = values.filter(v =>
     v.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -157,6 +160,20 @@ const ValuePicker: React.FC<ValuePickerProps> = ({ values, selected, loading, on
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, []);
+
+  useEffect(() => {
+    const normalized = search.trim();
+    if (!open || loading || normalized.length < 2 || filtered.length > 0) return;
+    if (requestedTermRef.current === normalized.toLowerCase()) return;
+    requestedTermRef.current = normalized.toLowerCase();
+    onSearchMiss(normalized);
+  }, [search, open, loading, filtered.length, onSearchMiss]);
+
+  useEffect(() => {
+    if (search.trim().length === 0) {
+      requestedTermRef.current = '';
+    }
+  }, [search]);
 
   return (
     <div className="relative" ref={ref}>
@@ -208,7 +225,9 @@ const ValuePicker: React.FC<ValuePickerProps> = ({ values, selected, loading, on
           </div>
           <div className="overflow-y-auto">
             {filtered.length === 0 ? (
-              <p className="p-3 text-sm text-slate-400 text-center">No values found</p>
+              <p className="p-3 text-sm text-slate-400 text-center">
+                {searching ? 'Searching in Octane…' : 'No values found'}
+              </p>
             ) : (
               filtered.map(v => {
                 const isSelected = selected.includes(v.id);
@@ -281,8 +300,10 @@ export const SmartFilterRow: React.FC<SmartFilterRowProps> = ({
   const [fieldsLoading, setFieldsLoading] = useState(false);
   const [fieldValues, setFieldValues] = useState<OctaneFieldValueDto[]>([]);
   const [valuesLoading, setValuesLoading] = useState(false);
+  const [valueSearchLoading, setValueSearchLoading] = useState(false);
   const [logicalOpen, setLogicalOpen] = useState(false);
   const logicalRef = useRef<HTMLDivElement>(null);
+  const lastSearchKeyRef = useRef('');
 
   const inputClass =
     'w-full px-3.5 py-2.5 border border-slate-200 dark:border-slate-600 rounded-xl text-sm ' +
@@ -308,10 +329,14 @@ export const SmartFilterRow: React.FC<SmartFilterRowProps> = ({
     if (!selectedFieldMeta?.reference || !workspaceId || !entityType) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setFieldValues([]);
+      setValueSearchLoading(false);
+      lastSearchKeyRef.current = '';
       return;
     }
     setValuesLoading(true);
     setFieldValues([]);
+    setValueSearchLoading(false);
+    lastSearchKeyRef.current = '';
     fetchFieldValues(workspaceId, clause.field, entityType)
       .then(setFieldValues)
       .catch(() => setFieldValues([]))
@@ -339,6 +364,37 @@ export const SmartFilterRow: React.FC<SmartFilterRowProps> = ({
 
   const handleTextValueChange = (val: string) => {
     onChange({ values: val ? [val] : [], referenceValues: false });
+  };
+
+  const handleSearchMiss = (term: string) => {
+    const normalized = term.trim();
+    if (!normalized || !workspaceId || !entityType || !clause.field || !selectedFieldMeta?.reference) {
+      return;
+    }
+
+    const searchKey = `${clause.field}:${normalized.toLowerCase()}`;
+    if (lastSearchKeyRef.current === searchKey) {
+      return;
+    }
+    lastSearchKeyRef.current = searchKey;
+    setValueSearchLoading(true);
+    fetchFieldValues(workspaceId, clause.field, entityType, normalized)
+      .then(remoteValues => {
+        if (remoteValues.length === 0) {
+          return;
+        }
+        setFieldValues(current => {
+          if (current.length === 0) {
+            return remoteValues;
+          }
+          const merged = new Map(current.map(v => [v.id, v]));
+          remoteValues.forEach(v => merged.set(v.id, v));
+          return Array.from(merged.values()).sort((a, b) =>
+            a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
+          );
+        });
+      })
+      .finally(() => setValueSearchLoading(false));
   };
 
   const isReference = selectedFieldMeta?.reference ?? false;
@@ -413,7 +469,9 @@ export const SmartFilterRow: React.FC<SmartFilterRowProps> = ({
               values={fieldValues}
               selected={clause.values}
               loading={valuesLoading}
+              searching={valueSearchLoading}
               onChange={ids => onChange({ values: ids, referenceValues: true })}
+              onSearchMiss={handleSearchMiss}
               inputClass={inputClass}
             />
           ) : isNumeric ? (
