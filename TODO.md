@@ -37,3 +37,4 @@
 - [ ] Instead of sending a OTP based e-mail onboarding, send a magic link to the users that they can click and onboard directly.
 - [x] As an user, I should be able to create, manage and subscribe to my own filters, which stay private to me. I should be able to see admin-created filters but I should not be able to edit them (although I can preview the filter results)
 - [ ] Add hyperlinks to global_id_udf to redirect to https://rdapps.otxlab.net/value-edge-api/forwardTo?id={global_id_udf}
+- [ ] Cache workspace metadata like fields, field values, etc in the spring boot backend. They rarely - if ever, change the values. So, cache them with a TTL of 3 hours in a HashMap. Make sure you cache it per workspace. And lazy fetch the stale ones. That is, only when someone is looking for the workspace metadata, check the TTL and fetch if needed. No need for any poll-based refreshing here.
