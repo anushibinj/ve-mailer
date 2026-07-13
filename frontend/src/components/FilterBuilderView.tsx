@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import ReactDOM from 'react-dom';
 import {
   fetchFilters,
+  fetchFilterableFields,
   createFilter,
   updateFilter,
   previewFilter,
@@ -13,7 +14,8 @@ import {
   type FilterCriteriaClause,
   type FilterCreatePayload,
   type FilterUpdatePayload,
-  type PreviewResponse
+  type PreviewResponse,
+  type OctaneFieldDto
 } from '../services/apiService';
 import { useAuth } from '../hooks/useAuth';
 import { Loader2, ArrowLeft, Plus, Trash2, Eye, Pencil, Copy, ChevronDown, ChevronUp, SlidersHorizontal } from 'lucide-react';
@@ -36,13 +38,7 @@ const ENTITY_TYPES = [
 ];
 const AI_SUMMARY_FIELD = '✨ AI Summary';
 const TRIAGE_SLA_FIELD = 'Triage SLA';
-
-const COMMON_FIELDS = [
-  'id', 'global_id_udf', 'name', 'description', 'comments', 'phase', 'owner',
-  'product_udf', 'customer_udf', 'defect_type', 'severity',
-  'priority', 'release', 'team', 'sprint', 'creation_time',
-  'last_modified', 'detected_by', 'story_points', 'subtype'
-];
+const CUSTOM_PSEUDO_FIELDS = [AI_SUMMARY_FIELD, TRIAGE_SLA_FIELD];
 
 const emptyCriterion = (): FilterCriteriaClause => ({ field: '', operator: 'IN', values: [], logicalOperator: 'AND' });
 const defaultFields = ['id', 'name', 'phase', 'owner'];
@@ -246,6 +242,8 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [entityType, setEntityType] = useState('backlog_items');
+  const [availableFields, setAvailableFields] = useState<OctaneFieldDto[]>([]);
+  const [availableFieldsLoading, setAvailableFieldsLoading] = useState(false);
   const [creationMode, setCreationMode] = useState<FilterCreationMode | null>(allowCustomQueryString ? null : 'manual');
   const [selectedFields, setSelectedFields] = useState<string[]>(defaultFields);
   const [criteria, setCriteria] = useState<FilterCriteriaClause[]>([emptyCriterion()]);
@@ -273,6 +271,17 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
     loadFilters();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workspaceId]);
+
+  useEffect(() => {
+    if (!workspaceId || !entityType) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setAvailableFieldsLoading(true);
+    setAvailableFields([]);
+    fetchFilterableFields(workspaceId, entityType)
+      .then(setAvailableFields)
+      .catch(() => setAvailableFields([]))
+      .finally(() => setAvailableFieldsLoading(false));
+  }, [workspaceId, entityType]);
 
   const resetForm = () => {
     setTitle(''); setDescription(''); setEntityType('backlog_items');
@@ -372,6 +381,13 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
   };
 
   const isQueryStringMode = allowCustomQueryString && creationMode === 'queryString';
+  const dynamicFieldOptions = [
+    ...availableFields.map(field => ({ name: field.name, label: field.label || field.name, fromMetadata: true })),
+    ...selectedFields
+      .filter(field => !CUSTOM_PSEUDO_FIELDS.includes(field))
+      .filter(field => !availableFields.some(option => option.name === field))
+      .map(field => ({ name: field, label: field, fromMetadata: false })),
+  ];
 
   const isFormValid = title.trim() !== '' && creationMode !== null && selectedFields.length > 0
     && criteria.length > 0
@@ -643,20 +659,28 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
                         unselectedClassName="bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-600 hover:border-amber-300 dark:hover:border-amber-600 hover:text-amber-600 dark:hover:text-amber-400"
                         popoverText="A traffic light for SLA compliance of Customer tickets. Make sure that you adjust your filter to only show tickets that need the Triage SLA to be applied."
                       />
-                      {COMMON_FIELDS.map(field => (
+                      {dynamicFieldOptions.map(field => (
                         <button
-                          key={field} type="button"
-                          onClick={() => toggleField(field)}
+                          key={field.name}
+                          type="button"
+                          title={field.label === field.name ? field.name : `${field.label} (${field.name})`}
+                          onClick={() => toggleField(field.name)}
                           className={`px-3 py-1 rounded-full text-xs font-medium border transition-all ${
-                            selectedFields.includes(field)
+                            selectedFields.includes(field.name)
                               ? 'bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-500/30 scale-105'
                               : 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-600 hover:border-indigo-300 dark:hover:border-indigo-600 hover:text-indigo-600 dark:hover:text-indigo-400'
                           }`}
                         >
-                          {field}
+                          {field.label}
+                          {!field.fromMetadata && (
+                            <span className="ml-1 text-[10px] align-middle opacity-70">(saved)</span>
+                          )}
                         </button>
                       ))}
                     </div>
+                    {availableFieldsLoading && (
+                      <p className="text-xs text-slate-400 dark:text-slate-500">Loading fields from Octane…</p>
+                    )}
                   </div>
 
                   <div className="space-y-2">
