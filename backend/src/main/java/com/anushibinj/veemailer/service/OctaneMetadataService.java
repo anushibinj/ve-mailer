@@ -18,6 +18,9 @@ import com.anushibinj.veemailer.dto.OctaneFieldDto;
 import com.anushibinj.veemailer.dto.OctaneFieldValueDto;
 import com.anushibinj.veemailer.model.Workspace;
 import com.anushibinj.veemailer.repository.WorkspaceRepository;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hpe.adm.nga.sdk.Octane;
 import com.hpe.adm.nga.sdk.entities.OctaneCollection;
 import com.hpe.adm.nga.sdk.metadata.FieldMetadata;
@@ -52,6 +55,7 @@ public class OctaneMetadataService {
     private final OctaneCacheService octaneCacheService;
     private final WorkspaceRepository workspaceRepository;
     private final WorkspaceService workspaceService;
+    private final ObjectMapper objectMapper;
     @Value("${veemailer.octane.ui-bundle-field-names:product_udf}")
     private String uiBundleFieldNamesCsv;
 
@@ -333,10 +337,56 @@ public class OctaneMetadataService {
         if (rawValue == null) {
             return result;
         }
+        if (rawValue instanceof CharSequence textValue) {
+            String json = textValue.toString().trim();
+            if (json.isEmpty()) {
+                return result;
+            }
+            try {
+                JsonNode root = objectMapper.readTree(json);
+                if (root.isArray()) {
+                    for (JsonNode node : root) {
+                        addEntityModelFromJsonNode(result, node);
+                    }
+                } else if (root.isObject()) {
+                    JsonNode dataNode = root.get("data");
+                    if (dataNode != null && dataNode.isArray()) {
+                        for (JsonNode node : dataNode) {
+                            addEntityModelFromJsonNode(result, node);
+                        }
+                    } else {
+                        addEntityModelFromJsonNode(result, root);
+                    }
+                }
+                return result;
+            } catch (JsonProcessingException e) {
+                log.warn("Failed to parse Octane ui_bundle list_nodes payload: {}", e.getMessage());
+                return result;
+            }
+        }
+        if (rawValue instanceof JsonNode node) {
+            if (node.isArray()) {
+                for (JsonNode item : node) {
+                    addEntityModelFromJsonNode(result, item);
+                }
+            } else if (node.isObject()) {
+                JsonNode dataNode = node.get("data");
+                if (dataNode != null && dataNode.isArray()) {
+                    for (JsonNode item : dataNode) {
+                        addEntityModelFromJsonNode(result, item);
+                    }
+                } else {
+                    addEntityModelFromJsonNode(result, node);
+                }
+            }
+            return result;
+        }
         if (rawValue instanceof OctaneCollection<?> collection) {
             for (Object item : collection) {
                 if (item instanceof EntityModel entity) {
                     result.add(entity);
+                } else if (item instanceof java.util.Map<?, ?> map) {
+                    addEntityModelFromMap(result, map);
                 }
             }
             return result;
@@ -345,6 +395,10 @@ public class OctaneMetadataService {
             for (Object item : iterable) {
                 if (item instanceof EntityModel entity) {
                     result.add(entity);
+                } else if (item instanceof java.util.Map<?, ?> map) {
+                    addEntityModelFromMap(result, map);
+                } else if (item instanceof JsonNode node) {
+                    addEntityModelFromJsonNode(result, node);
                 }
             }
             return result;
@@ -355,10 +409,50 @@ public class OctaneMetadataService {
                 Object item = java.lang.reflect.Array.get(rawValue, i);
                 if (item instanceof EntityModel entity) {
                     result.add(entity);
+                } else if (item instanceof java.util.Map<?, ?> map) {
+                    addEntityModelFromMap(result, map);
+                } else if (item instanceof JsonNode node) {
+                    addEntityModelFromJsonNode(result, node);
                 }
             }
+            return result;
+        }
+        if (rawValue instanceof java.util.Map<?, ?> map) {
+            addEntityModelFromMap(result, map);
         }
         return result;
+    }
+
+    private void addEntityModelFromJsonNode(List<EntityModel> result, JsonNode node) {
+        if (node == null || !node.isObject()) {
+            return;
+        }
+        java.util.Map<String, Object> values = objectMapper.convertValue(node, java.util.Map.class);
+        addEntityModelFromMap(result, values);
+    }
+
+    private void addEntityModelFromMap(List<EntityModel> result, java.util.Map<?, ?> values) {
+        if (values == null || values.isEmpty()) {
+            return;
+        }
+
+        EntityModel entity = new EntityModel();
+        putStringValue(entity, "id", values.get("id"));
+        putStringValue(entity, "name", values.get("name"));
+        putStringValue(entity, "logical_name", values.get("logical_name"));
+        putStringValue(entity, "index", values.get("index"));
+        putStringValue(entity, "activity_level", values.get("activity_level"));
+        result.add(entity);
+    }
+
+    private void putStringValue(EntityModel entity, String fieldName, Object value) {
+        if (value == null) {
+            return;
+        }
+        String text = String.valueOf(value);
+        if (!text.isBlank()) {
+            entity.setValue(new StringFieldModel(fieldName, text));
+        }
     }
 
     private boolean shouldFetchListNodesFromUiBundle(String fieldName) {
