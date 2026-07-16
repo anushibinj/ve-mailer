@@ -252,6 +252,7 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
   const [filterQueryString, setFilterQueryString] = useState('');
   const [queryStringApplied, setQueryStringApplied] = useState(false);
   const [isApplyingQueryString, setIsApplyingQueryString] = useState(false);
+  const [draggedField, setDraggedField] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [filterToDelete, setFilterToDelete] = useState<Filter | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -382,6 +383,29 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
   const addField = (field: string) => {
     setSelectedFields(prev => prev.includes(field) ? prev : [...prev, field]);
   };
+  const moveField = (sourceField: string, targetField: string) => {
+    if (!sourceField || !targetField || sourceField === targetField) return;
+    setSelectedFields(prev => {
+      const sourceIndex = prev.indexOf(sourceField);
+      const targetIndex = prev.indexOf(targetField);
+      if (sourceIndex < 0 || targetIndex < 0) return prev;
+      const next = [...prev];
+      const [moved] = next.splice(sourceIndex, 1);
+      next.splice(targetIndex, 0, moved);
+      return next;
+    });
+  };
+  const moveFieldToEnd = (sourceField: string) => {
+    if (!sourceField) return;
+    setSelectedFields(prev => {
+      const sourceIndex = prev.indexOf(sourceField);
+      if (sourceIndex < 0 || sourceIndex === prev.length - 1) return prev;
+      const next = [...prev];
+      const [moved] = next.splice(sourceIndex, 1);
+      next.push(moved);
+      return next;
+    });
+  };
 
   const updateCriterion = (index: number, updates: Partial<FilterCriteriaClause>) => {
     setCriteria(prev => prev.map((c, i) => i === index ? { ...c, ...updates } : c));
@@ -400,7 +424,12 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
     field.label.toLowerCase().includes(fieldSearch.toLowerCase()) ||
     field.name.toLowerCase().includes(fieldSearch.toLowerCase())
   );
-  const selectedNonCustomFields = selectedFields.filter(field => !CUSTOM_PSEUDO_FIELDS.includes(field));
+
+  const getSelectedFieldLabel = (fieldName: string): string => {
+    if (fieldName === TRIAGE_SLA_FIELD) return `🚦 ${TRIAGE_SLA_FIELD}`;
+    const fieldMeta = dynamicFieldOptions.find(option => option.name === fieldName);
+    return fieldMeta?.label || fieldName;
+  };
 
   const isFormValid = title.trim() !== '' && creationMode !== null && selectedFields.length > 0
     && criteria.length > 0
@@ -646,11 +675,41 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
                         <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-2">
                           Generated Fields
                         </p>
-                        <div className="flex flex-wrap gap-1.5">
+                        <p className="text-[11px] text-slate-400 dark:text-slate-500 mb-2">
+                          Drag chips to set the final column order for preview and email output.
+                        </p>
+                        <div
+                          className="flex flex-wrap gap-1.5 min-h-8"
+                          onDragOver={e => e.preventDefault()}
+                          onDrop={e => {
+                            e.preventDefault();
+                            const sourceField = draggedField ?? e.dataTransfer.getData('text/plain');
+                            moveFieldToEnd(sourceField);
+                            setDraggedField(null);
+                          }}
+                        >
                           {selectedFields.map(field => (
-                            <span key={field} className="inline-block px-2 py-0.5 rounded-md bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 text-xs border border-slate-200 dark:border-slate-700">
-                              {field}
-                            </span>
+                            <div
+                              key={field}
+                              draggable
+                              onDragStart={e => {
+                                setDraggedField(field);
+                                e.dataTransfer.effectAllowed = 'move';
+                                e.dataTransfer.setData('text/plain', field);
+                              }}
+                              onDragEnd={() => setDraggedField(null)}
+                              onDragOver={e => e.preventDefault()}
+                              onDrop={e => {
+                                e.preventDefault();
+                                const sourceField = draggedField ?? e.dataTransfer.getData('text/plain');
+                                moveField(sourceField, field);
+                                setDraggedField(null);
+                              }}
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 text-xs border border-slate-200 dark:border-slate-700 cursor-move"
+                            >
+                              <span className="text-slate-400 dark:text-slate-500">⋮⋮</span>
+                              <span>{getSelectedFieldLabel(field)}</span>
+                            </div>
                           ))}
                         </div>
                       </div>
@@ -737,26 +796,59 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
                           )}
                         </div>
                       )}
-                      {selectedNonCustomFields.length > 0 && (
-                        <div className="flex flex-wrap gap-1.5">
-                          {selectedNonCustomFields.map(fieldName => {
-                            const fieldMeta = dynamicFieldOptions.find(option => option.name === fieldName);
-                            const label = fieldMeta?.label || fieldName;
-                            const isSavedOnly = fieldMeta?.fromMetadata === false;
-                            return (
-                              <button
-                                key={fieldName}
-                                type="button"
-                                onClick={() => toggleField(fieldName)}
-                                className="px-2.5 py-1 rounded-full text-xs font-medium border bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-500/30 hover:bg-indigo-200 dark:hover:bg-indigo-500/30 transition-colors"
-                                title="Click to remove"
-                              >
-                                {label}
-                                {isSavedOnly && <span className="ml-1 text-[10px] align-middle opacity-70">(saved)</span>}
-                                <span className="ml-1.5">×</span>
-                              </button>
-                            );
-                          })}
+                      {selectedFields.length > 0 && (
+                        <div className="space-y-1.5">
+                          <p className="text-[11px] text-slate-400 dark:text-slate-500">
+                            Selected column order (drag chips to reorder)
+                          </p>
+                          <div
+                            className="flex flex-wrap gap-1.5 min-h-8"
+                            onDragOver={e => e.preventDefault()}
+                            onDrop={e => {
+                              e.preventDefault();
+                              const sourceField = draggedField ?? e.dataTransfer.getData('text/plain');
+                              moveFieldToEnd(sourceField);
+                              setDraggedField(null);
+                            }}
+                          >
+                            {selectedFields.map(fieldName => {
+                              const fieldMeta = dynamicFieldOptions.find(option => option.name === fieldName);
+                              const isSavedOnly = fieldMeta?.fromMetadata === false;
+                              return (
+                                <div
+                                  key={fieldName}
+                                  draggable
+                                  onDragStart={e => {
+                                    setDraggedField(fieldName);
+                                    e.dataTransfer.effectAllowed = 'move';
+                                    e.dataTransfer.setData('text/plain', fieldName);
+                                  }}
+                                  onDragEnd={() => setDraggedField(null)}
+                                  onDragOver={e => e.preventDefault()}
+                                  onDrop={e => {
+                                    e.preventDefault();
+                                    const sourceField = draggedField ?? e.dataTransfer.getData('text/plain');
+                                    moveField(sourceField, fieldName);
+                                    setDraggedField(null);
+                                  }}
+                                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-500/30 cursor-move"
+                                >
+                                  <span className="text-indigo-400 dark:text-indigo-300">⋮⋮</span>
+                                  <span>{getSelectedFieldLabel(fieldName)}</span>
+                                  {isSavedOnly && <span className="text-[10px] align-middle opacity-70">(saved)</span>}
+                                  <button
+                                    type="button"
+                                    onClick={() => toggleField(fieldName)}
+                                    className="ml-1 text-indigo-600 dark:text-indigo-300 hover:text-indigo-800 dark:hover:text-indigo-100 transition-colors"
+                                    title="Remove field"
+                                    aria-label={`Remove ${fieldName}`}
+                                  >
+                                    ×
+                                  </button>
+                                </div>
+                              );
+                            })}
+                          </div>
                         </div>
                       )}
                     </div>

@@ -23,6 +23,7 @@ import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -68,15 +69,9 @@ public class NotificationService {
                                             String filterTitle) {
         // Check if AI Summary is enabled and generate summaries
         boolean aiSummaryEnabled = fields.contains(AiSummaryService.AI_SUMMARY_FIELD);
-        List<String> displayFields = fields;
         String[] aiSummaries = null;
 
         if (aiSummaryEnabled) {
-            // Remove AI Summary pseudo-field from the Octane field list for display ordering
-            displayFields = fields.stream()
-                    .filter(f -> !AiSummaryService.AI_SUMMARY_FIELD.equals(f))
-                    .collect(Collectors.toList());
-
             // Generate AI summaries for each ticket
             aiSummaries = new String[results.size()];
             for (int i = 0; i < results.size(); i++) {
@@ -94,7 +89,7 @@ public class NotificationService {
                 workspace.getRootUrl(),
                 workspace.getSharedSpaceId(),
                 workspace.getWorkspaceId());
-        String htmlBody = buildHtmlTable(results, displayFields, limit, aiSummaryEnabled, aiSummaries, linkContext, filterTitle);
+        String htmlBody = buildHtmlTable(results, fields, limit, aiSummaryEnabled, aiSummaries, linkContext, filterTitle);
         String subject = buildMailSubject(filterTitle, results.size());
         // Each subscriber is handled independently so one failure cannot affect the others.
         for (EmailSubscriber subscriber : subscribers) {
@@ -233,6 +228,11 @@ public class NotificationService {
     String buildHtmlTable(List<EntityModel> results, List<String> fields, int limit,
                           boolean aiSummaryEnabled, String[] aiSummaries,
                           TicketLinkContext linkContext, String filterTitle) {
+        List<String> orderedFields = new ArrayList<>(fields);
+        if (aiSummaryEnabled && !orderedFields.contains(AiSummaryService.AI_SUMMARY_FIELD)) {
+            orderedFields.add(0, AiSummaryService.AI_SUMMARY_FIELD);
+        }
+
         StringBuilder sb = new StringBuilder();
         sb.append("<html><body style=\"font-family:Arial,sans-serif;font-size:14px;\">");
 
@@ -264,12 +264,9 @@ public class NotificationService {
 
             // Header row
             sb.append("<thead><tr style=\"background-color:#f2f2f2;\">");
-            if (aiSummaryEnabled) {
-                sb.append("<th style=\"text-align:left;padding:8px;\">AI Summary</th>");
-            }
-            for (String field : fields) {
+            for (String field : orderedFields) {
                 sb.append("<th style=\"text-align:left;padding:8px;\">")
-                  .append(escapeHtml(humanise(field)))
+                  .append(escapeHtml(AiSummaryService.AI_SUMMARY_FIELD.equals(field) ? "AI Summary" : humanise(field)))
                   .append("</th>");
             }
             sb.append("</tr></thead>");
@@ -280,16 +277,17 @@ public class NotificationService {
                 EntityModel entity = results.get(i);
                 String rowBg = (i % 2 == 0) ? "#ffffff" : "#f9f9f9";
                 sb.append("<tr style=\"background-color:").append(rowBg).append(";\">");
-                if (aiSummaryEnabled) {
-                    String summary = (aiSummaries != null && i < aiSummaries.length)
-                            ? aiSummaries[i] : "AI summary unavailable.";
-                    // AI summary is rendered as sanitized HTML — not escaped — so anchor tags,
-                    // emphasis, and other email-safe formatting display correctly.
-                    sb.append("<td style=\"padding:8px;\">")
-                      .append(sanitizeAiHtml(summary))
-                      .append("</td>");
-                }
-                for (String field : fields) {
+                for (String field : orderedFields) {
+                    if (AiSummaryService.AI_SUMMARY_FIELD.equals(field)) {
+                        String summary = (aiSummaries != null && i < aiSummaries.length)
+                                ? aiSummaries[i] : "AI summary unavailable.";
+                        // AI summary is rendered as sanitized HTML — not escaped — so anchor tags,
+                        // emphasis, and other email-safe formatting display correctly.
+                        sb.append("<td style=\"padding:8px;\">")
+                          .append(sanitizeAiHtml(summary))
+                          .append("</td>");
+                        continue;
+                    }
                     String cellValue = TriageSlaPolicy.TRIAGE_SLA_FIELD.equals(field)
                             ? TriageSlaPolicy.toDisplayLabel(entity)
                             : extractFieldValue(field, entity.getValue(field));

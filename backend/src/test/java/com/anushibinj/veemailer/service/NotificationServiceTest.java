@@ -345,6 +345,30 @@ class NotificationServiceTest {
     }
 
     @Test
+    void testBuildHtmlTable_AiSummaryRespectsSelectedColumnOrder() {
+        EntityModel entity = new EntityModel(Set.of(
+                new StringFieldModel("id", "1001"),
+                new StringFieldModel("phase", "In Progress")
+        ));
+        String[] summaries = {"Summary in the middle column"};
+
+        String html = notificationService.buildHtmlTable(
+                List.of(entity),
+                List.of("id", AiSummaryService.AI_SUMMARY_FIELD, "phase"),
+                25,
+                true,
+                summaries
+        );
+
+        int idHeaderIndex = html.indexOf("<th style=\"text-align:left;padding:8px;\">Id</th>");
+        int aiHeaderIndex = html.indexOf("<th style=\"text-align:left;padding:8px;\">AI Summary</th>");
+        int phaseHeaderIndex = html.indexOf("<th style=\"text-align:left;padding:8px;\">Phase</th>");
+        assertTrue(idHeaderIndex >= 0, "Id header must be present");
+        assertTrue(aiHeaderIndex > idHeaderIndex, "AI Summary header must appear after Id");
+        assertTrue(phaseHeaderIndex > aiHeaderIndex, "Phase header must appear after AI Summary");
+    }
+
+    @Test
     void testBuildHtmlTable_AiSummaryDisabled_NoSummaryColumn() {
         EntityModel entity = new EntityModel(Set.of(
                 new StringFieldModel("name", "My Feature")
