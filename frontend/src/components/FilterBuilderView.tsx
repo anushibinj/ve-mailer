@@ -701,6 +701,7 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
                               onDragOver={e => e.preventDefault()}
                               onDrop={e => {
                                 e.preventDefault();
+                                e.stopPropagation();
                                 const sourceField = draggedField ?? e.dataTransfer.getData('text/plain');
                                 moveField(sourceField, field);
                                 setDraggedField(null);
@@ -827,6 +828,7 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
                                   onDragOver={e => e.preventDefault()}
                                   onDrop={e => {
                                     e.preventDefault();
+                                    e.stopPropagation();
                                     const sourceField = draggedField ?? e.dataTransfer.getData('text/plain');
                                     moveField(sourceField, fieldName);
                                     setDraggedField(null);
