@@ -79,7 +79,8 @@ Key capabilities:
                                    └──────────┘      └───────────────┘  └───────────────┘
 ```
 
-The backend is stateless between requests. An in-memory cache (`OctaneCacheService`) keeps authenticated Octane sessions alive across polling cycles.
+The backend is stateless between requests. An in-memory cache (`OctaneCacheService`) keeps authenticated Octane sessions alive across polling cycles.  
+All Octane SDK requests include header `hpeclienttype=HPE_MQM_UI` to simulate Octane frontend behavior.
 
 ---
 
