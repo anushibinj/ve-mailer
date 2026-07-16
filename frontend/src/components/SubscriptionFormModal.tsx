@@ -8,6 +8,7 @@ import {
   type Schedule,
   type UserSummary,
   type RecipientGroup,
+  type SubscriptionCreatePayload,
 } from '../services/apiService';
 import { formatHourLabel } from '../services/scheduleUtils';
 import { useAuth } from '../hooks/useAuth';
@@ -29,9 +30,26 @@ const selectClass =
   'focus:outline-none focus:border-indigo-500 dark:focus:border-indigo-400 ' +
   'focus:ring-2 focus:ring-indigo-500/15 dark:focus:ring-indigo-400/15 transition-all appearance-none';
 
+const TRIAGE_SLA_FIELD = 'Triage SLA';
+const TRIAGE_SLA_OPTIONS = [
+  { value: 'GREEN', label: 'Green (default)' },
+  { value: 'YELLOW', label: 'Yellow' },
+  { value: 'RED', label: 'Red' },
+] as const;
+
 /** Returns the display label for a user: "Name (email)" */
 function userLabel(u: UserSummary) {
   return `${u.name} (${u.email})`;
+}
+
+function filterHasTriageSla(filter?: Filter): boolean {
+  if (!filter?.fields) return false;
+  try {
+    const parsed = JSON.parse(filter.fields);
+    return Array.isArray(parsed) && parsed.includes(TRIAGE_SLA_FIELD);
+  } catch {
+    return false;
+  }
 }
 
 const SubscriptionFormModal: React.FC<SubscriptionFormModalProps> = ({
@@ -47,6 +65,7 @@ const SubscriptionFormModal: React.FC<SubscriptionFormModalProps> = ({
   const [scheduleType, setScheduleType] = useState<'DAILY' | 'WEEKLY'>('DAILY');
   const [scheduledHours, setScheduledHours] = useState<number[]>([]);
   const [hourToAdd, setHourToAdd] = useState<number>(9);
+  const [triageSlaThreshold, setTriageSlaThreshold] = useState<'GREEN' | 'YELLOW' | 'RED'>('GREEN');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // --- recipient combobox state (admin-only, individual mode) ---
@@ -62,6 +81,9 @@ const SubscriptionFormModal: React.FC<SubscriptionFormModalProps> = ({
   const [groups, setGroups] = useState<RecipientGroup[]>([]);
   const [groupsLoading, setGroupsLoading] = useState(false);
   const [selectedGroupId, setSelectedGroupId] = useState('');
+
+  const selectedFilterMeta = filters.find(filter => filter.id === selectedFilter);
+  const triageEnabled = filterHasTriageSla(selectedFilterMeta);
 
   // Fetch users once when modal opens (only for admins, individual mode)
   useEffect(() => {
@@ -124,6 +146,7 @@ const SubscriptionFormModal: React.FC<SubscriptionFormModalProps> = ({
     setScheduleType('DAILY');
     setScheduledHours([]);
     setHourToAdd(9);
+    setTriageSlaThreshold('GREEN');
     setSelectedRecipient(null);
     setQuery('');
     setDropdownOpen(false);
@@ -162,18 +185,21 @@ const SubscriptionFormModal: React.FC<SubscriptionFormModalProps> = ({
 
       if (mode === 'group' && selectedGroupId) {
         // Create a single group subscription row — members are expanded at send time
-        const result = await createGroupSubscription(workspaceId, selectedGroupId, {
+        const payload: SubscriptionCreatePayload = {
           filterId: selectedFilter,
           schedule,
-        });
+          ...(triageEnabled ? { triageSlaThreshold } : {}),
+        };
+        const result = await createGroupSubscription(workspaceId, selectedGroupId, payload);
         const groupName = result.groupName ?? groups.find(g => g.id === selectedGroupId)?.name ?? 'group';
         const count = result.groupMemberCount ?? 0;
         toast.success(`Group "${groupName}" subscribed (${count} member${count !== 1 ? 's' : ''} will be notified)!`);
       } else {
         // Individual subscription
-        const payload: { filterId: string; schedule: Schedule; recipientEmail?: string } = {
+        const payload: SubscriptionCreatePayload = {
           filterId: selectedFilter,
           schedule,
+          ...(triageEnabled ? { triageSlaThreshold } : {}),
         };
         // Send recipientEmail only when admin explicitly picked someone other than themselves
         if (canManage && selectedRecipient && selectedRecipient.email.toLowerCase() !== user?.email?.toLowerCase()) {
@@ -398,13 +424,37 @@ const SubscriptionFormModal: React.FC<SubscriptionFormModalProps> = ({
               <label htmlFor="sub-filter" className="block text-sm font-medium text-slate-700 dark:text-slate-300">Filter Template</label>
               <select
                 id="sub-filter" required value={selectedFilter}
-                onChange={e => setSelectedFilter(e.target.value)}
+                onChange={e => {
+                  setSelectedFilter(e.target.value);
+                  setTriageSlaThreshold('GREEN');
+                }}
                 className={selectClass}
               >
                 <option value="" disabled>Select a filter…</option>
                 {filters.map(f => <option key={f.id} value={f.id}>{f.title}</option>)}
               </select>
             </div>
+
+            {triageEnabled && (
+              <div className="space-y-1.5">
+              <label htmlFor="sub-triage-threshold" className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+                Triage SLA threshold
+              </label>
+              <select
+                id="sub-triage-threshold"
+                value={triageSlaThreshold}
+                onChange={e => setTriageSlaThreshold(e.target.value as 'GREEN' | 'YELLOW' | 'RED')}
+                className={selectClass}
+              >
+                {TRIAGE_SLA_OPTIONS.map(option => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+              <p className="text-xs text-slate-400 dark:text-slate-500">
+                Choose the minimum Triage SLA color that should trigger this subscription.
+              </p>
+              </div>
+            )}
 
             <div className="space-y-1.5">
               <label htmlFor="sub-schedule-type" className="block text-sm font-medium text-slate-700 dark:text-slate-300">Schedule</label>

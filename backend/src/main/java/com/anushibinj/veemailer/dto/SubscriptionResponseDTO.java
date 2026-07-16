@@ -1,6 +1,7 @@
 package com.anushibinj.veemailer.dto;
 
 import com.anushibinj.veemailer.model.Status;
+import com.anushibinj.veemailer.model.TriageSlaThreshold;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -18,6 +19,7 @@ public class SubscriptionResponseDTO {
     private UUID filterId;
     private String filterTitle;
     private ScheduleDto schedule;
+    private TriageSlaThreshold triageSlaThreshold;
     /** Non-null when this is a group subscription (recipientEmail will be null). */
     private UUID groupId;
     private String groupName;

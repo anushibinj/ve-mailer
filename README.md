@@ -284,6 +284,7 @@ EmailSubscriber
   id (UUID PK)
   recipientEmail
   scheduleType    -- DAILY | WEEKLY
+  triageSlaThreshold -- GREEN | YELLOW | RED (used when the filter includes Triage SLA)
   frequency       -- HOURLY | DAILY | WEEKLY (legacy, nullable — kept for backward compat)
   status          -- PENDING | ACTIVE
   workspace_id    -- FK → Workspace
@@ -533,9 +534,9 @@ Private filter subscriptions are enforced server-side:
 | Method   | Path                                                      | Role required | Description                                              |
 |----------|-----------------------------------------------------------|:-------------:|----------------------------------------------------------|
 | `GET`    | `/workspaces/{id}/subscriptions`                          | Any           | ADMIN: all subscriptions; MEMBER: own subscriptions only |
-| `POST`   | `/workspaces/{id}/subscriptions`                          | Any           | Subscribe to a filter template                           |
+| `POST`   | `/workspaces/{id}/subscriptions`                          | Any           | Subscribe to a filter template (adds Triage SLA threshold when applicable) |
 | `POST`   | `/workspaces/{id}/subscriptions/bulk-group`               | ADMIN/WS_ADMIN | Bulk-subscribe all members of a recipient group        |
-| `PUT`    | `/workspaces/{id}/subscriptions/{subId}`                  | Any (own)     | Update subscription schedule                             |
+| `PUT`    | `/workspaces/{id}/subscriptions/{subId}`                  | Any (own)     | Update subscription schedule and threshold              |
 | `DELETE` | `/workspaces/{id}/subscriptions/{subId}`                  | Any (own)     | Unsubscribe                                              |
 | `POST`   | `/workspaces/{id}/subscriptions/{subId}/run`              | ADMIN         | Immediately send a notification email                    |
 
@@ -790,6 +791,10 @@ Prompts are stored in `backend/src/main/resources/prompts/` and can be customize
   - `3-4` days → `🟡`
   - `0-2` days → `🟢`
 - When selected, preview/email results are sorted by age in descending order so oldest untriaged tickets appear first.
+- When subscribing to a filter that includes `Triage SLA`, the subscription form asks for a threshold.
+  - `Green` (default): send all triaged tickets
+  - `Yellow`: send yellow and red tickets only
+  - `Red`: send red tickets only
 
 ---
 

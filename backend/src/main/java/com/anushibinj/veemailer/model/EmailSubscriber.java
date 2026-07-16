@@ -74,5 +74,9 @@ public class EmailSubscriber {
     private List<Integer> scheduledHours;
 
     @Enumerated(EnumType.STRING)
+    @Column(name = "triage_sla_threshold")
+    private TriageSlaThreshold triageSlaThreshold;
+
+    @Enumerated(EnumType.STRING)
     private Status status;
 }

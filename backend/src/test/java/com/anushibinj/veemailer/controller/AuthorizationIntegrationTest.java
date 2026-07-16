@@ -194,8 +194,9 @@ class AuthorizationIntegrationTest {
                 .filterId(FILTER_ID)
                 .filterTitle("Test Filter")
                 .schedule(ScheduleDto.builder().type(ScheduleType.DAILY).hours(List.of(9)).build())
+                .triageSlaThreshold(com.anushibinj.veemailer.model.TriageSlaThreshold.GREEN)
                 .build();
-        when(subscriptionService.createSubscription(anyString(), any(UUID.class), any(UUID.class), any()))
+        when(subscriptionService.createSubscription(anyString(), any(UUID.class), any(UUID.class), any(), any()))
                 .thenReturn(dto);
 
         String body = """
@@ -217,8 +218,9 @@ class AuthorizationIntegrationTest {
                 .filterId(FILTER_ID)
                 .filterTitle("Test Filter")
                 .schedule(ScheduleDto.builder().type(ScheduleType.DAILY).hours(List.of(10)).build())
+                .triageSlaThreshold(com.anushibinj.veemailer.model.TriageSlaThreshold.GREEN)
                 .build();
-        when(subscriptionService.updateSubscription(anyString(), any(UUID.class), any(UUID.class), any()))
+        when(subscriptionService.updateSubscription(anyString(), any(UUID.class), any(UUID.class), any(), any()))
                 .thenReturn(dto);
 
         String body = """

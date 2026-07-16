@@ -6,6 +6,7 @@ import com.anushibinj.veemailer.model.EmailSubscriber;
 import com.anushibinj.veemailer.model.Filter;
 import com.anushibinj.veemailer.model.ScheduleType;
 import com.anushibinj.veemailer.model.Status;
+import com.anushibinj.veemailer.model.TriageSlaThreshold;
 import com.anushibinj.veemailer.model.Workspace;
 import com.anushibinj.veemailer.repository.EmailSubscriberRepository;
 import com.anushibinj.veemailer.repository.FilterRepository;
@@ -103,6 +104,7 @@ class SubscriptionServiceTest {
         assertEquals("user@test.com", result.getRecipientEmail());
         assertEquals("All Bugs", result.getFilterTitle());
         assertEquals(ScheduleType.DAILY, result.getSchedule().getType());
+        assertEquals(TriageSlaThreshold.GREEN, result.getTriageSlaThreshold());
     }
 
     @Test
@@ -127,8 +129,25 @@ class SubscriptionServiceTest {
         verify(emailSubscriberRepository, times(1)).save(captor.capture());
         assertEquals(ScheduleType.DAILY, captor.getValue().getScheduleType());
         assertEquals(List.of(9, 15), captor.getValue().getScheduledHours());
+        assertEquals(TriageSlaThreshold.GREEN, captor.getValue().getTriageSlaThreshold());
         assertNull(captor.getValue().getFrequency());
         assertEquals(Status.ACTIVE, captor.getValue().getStatus());
+    }
+
+    @Test
+    void testCreateSubscription_WithThreshold_SavesThreshold() {
+        when(workspaceRepository.findById(workspaceId)).thenReturn(Optional.of(workspace));
+        when(filterRepository.findById(filterId)).thenReturn(Optional.of(filter));
+        when(emailSubscriberRepository.findByRecipientEmailAndWorkspaceIdAndFilterId(
+                "user@test.com", workspaceId, filterId)).thenReturn(Optional.empty());
+        when(emailSubscriberRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        subscriptionService.createSubscription(
+                "user@test.com", workspaceId, filterId, dailySchedule, TriageSlaThreshold.RED);
+
+        ArgumentCaptor<EmailSubscriber> captor = ArgumentCaptor.forClass(EmailSubscriber.class);
+        verify(emailSubscriberRepository, times(1)).save(captor.capture());
+        assertEquals(TriageSlaThreshold.RED, captor.getValue().getTriageSlaThreshold());
     }
 
     @Test
@@ -187,6 +206,7 @@ class SubscriptionServiceTest {
         existing.setFilter(filter);
         existing.setScheduleType(ScheduleType.DAILY);
         existing.setScheduledHours(List.of(9));
+        existing.setTriageSlaThreshold(TriageSlaThreshold.RED);
         when(emailSubscriberRepository.findById(subscriptionId)).thenReturn(Optional.of(existing));
         when(emailSubscriberRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
@@ -198,6 +218,7 @@ class SubscriptionServiceTest {
         verify(emailSubscriberRepository).save(captor.capture());
         assertEquals(ScheduleType.WEEKLY, captor.getValue().getScheduleType());
         assertEquals(List.of(10), captor.getValue().getScheduledHours());
+        assertEquals(TriageSlaThreshold.RED, captor.getValue().getTriageSlaThreshold());
     }
 
     @Test
@@ -298,6 +319,7 @@ class SubscriptionServiceTest {
         assertEquals("All Bugs", results.get(0).getFilterTitle());
         assertEquals(ScheduleType.DAILY, results.get(0).getSchedule().getType());
         assertEquals(List.of(9, 15), results.get(0).getSchedule().getHours());
+        assertEquals(TriageSlaThreshold.GREEN, results.get(0).getTriageSlaThreshold());
         assertEquals(Status.ACTIVE, results.get(0).getStatus());
     }
 
@@ -339,6 +361,7 @@ class SubscriptionServiceTest {
         assertEquals(1, results.size());
         assertEquals(ScheduleType.DAILY, results.get(0).getSchedule().getType());
         assertEquals(List.of(0), results.get(0).getSchedule().getHours());
+        assertEquals(TriageSlaThreshold.GREEN, results.get(0).getTriageSlaThreshold());
     }
 
     @Test

@@ -3,6 +3,7 @@ package com.anushibinj.veemailer.service;
 import com.hpe.adm.nga.sdk.model.DateFieldModel;
 import com.hpe.adm.nga.sdk.model.EntityModel;
 import com.hpe.adm.nga.sdk.model.FieldModel;
+import com.anushibinj.veemailer.model.TriageSlaThreshold;
 
 import java.time.Clock;
 import java.time.Duration;
@@ -50,6 +51,23 @@ public final class TriageSlaPolicy {
 
     public static int daysSinceCreationOrDefault(EntityModel entity, int fallback) {
         return daysSinceCreation(entity).orElse(fallback);
+    }
+
+    public static boolean meetsThreshold(EntityModel entity, TriageSlaThreshold threshold) {
+        TriageSlaThreshold effective = threshold == null ? TriageSlaThreshold.GREEN : threshold;
+        if (effective == TriageSlaThreshold.GREEN) {
+            return true;
+        }
+        java.util.OptionalInt daysOld = daysSinceCreation(entity);
+        if (daysOld.isEmpty()) {
+            return false;
+        }
+        int days = daysOld.getAsInt();
+        return switch (effective) {
+            case YELLOW -> days >= 3;
+            case RED -> days >= 7;
+            default -> true;
+        };
     }
 
     private static java.util.OptionalInt daysSinceCreation(EntityModel entity) {

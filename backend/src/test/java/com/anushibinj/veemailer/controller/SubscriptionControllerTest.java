@@ -78,6 +78,7 @@ class SubscriptionControllerTest {
                 filterId,
                 ScheduleDto.builder().type(ScheduleType.DAILY).hours(List.of(9, 15)).build(),
                 null,
+                null,
                 null);
 
         SubscriptionResponseDTO dto = SubscriptionResponseDTO.builder()
@@ -88,7 +89,7 @@ class SubscriptionControllerTest {
                 .schedule(ScheduleDto.builder().type(ScheduleType.DAILY).hours(List.of(9, 15)).build())
                 .build();
 
-        when(subscriptionService.createSubscription(eq("user@test.com"), eq(workspaceId), any(), any()))
+        when(subscriptionService.createSubscription(eq("user@test.com"), eq(workspaceId), any(), any(), any()))
                 .thenReturn(dto);
 
         mockMvc.perform(post("/api/v1/workspaces/" + workspaceId + "/subscriptions")
@@ -102,12 +103,13 @@ class SubscriptionControllerTest {
     @Test
     @WithMockUser(username = "user@test.com")
     void testCreateSubscription_InvalidSchedule_Returns400() throws Exception {
-        when(subscriptionService.createSubscription(any(), any(), any(), any()))
+        when(subscriptionService.createSubscription(any(), any(), any(), any(), any()))
                 .thenThrow(new IllegalArgumentException("Schedule hours must not be empty"));
 
         SubscriptionCreateDto request = new SubscriptionCreateDto(
                 filterId,
                 ScheduleDto.builder().type(ScheduleType.DAILY).hours(List.of()).build(),
+                null,
                 null,
                 null);
 
@@ -121,7 +123,8 @@ class SubscriptionControllerTest {
     @WithMockUser(username = "user@test.com")
     void testUpdateSubscription_ReturnsOk() throws Exception {
         SubscriptionUpdateDto request = new SubscriptionUpdateDto(
-                ScheduleDto.builder().type(ScheduleType.WEEKLY).hours(List.of(10)).build());
+                ScheduleDto.builder().type(ScheduleType.WEEKLY).hours(List.of(10)).build(),
+                null);
 
         SubscriptionResponseDTO dto = SubscriptionResponseDTO.builder()
                 .id(subscriptionId)
@@ -131,7 +134,7 @@ class SubscriptionControllerTest {
                 .schedule(ScheduleDto.builder().type(ScheduleType.WEEKLY).hours(List.of(10)).build())
                 .build();
 
-        when(subscriptionService.updateSubscription(eq("user@test.com"), eq(subscriptionId), eq(workspaceId), any()))
+        when(subscriptionService.updateSubscription(eq("user@test.com"), eq(subscriptionId), eq(workspaceId), any(), any()))
                 .thenReturn(dto);
 
         mockMvc.perform(put("/api/v1/workspaces/" + workspaceId + "/subscriptions/" + subscriptionId)
@@ -160,4 +163,3 @@ class SubscriptionControllerTest {
                 .andExpect(status().isBadRequest());
     }
 }
-

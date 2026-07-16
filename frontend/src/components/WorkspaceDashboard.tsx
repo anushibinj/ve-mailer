@@ -224,6 +224,7 @@ const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({ workspaceId, on
           isOpen={true}
           subscription={editingSubscription}
           workspaceId={workspaceId}
+          filters={filters}
           onClose={() => setEditingSubscription(null)}
           onSuccess={() => { setEditingSubscription(null); loadData(); }}
         />

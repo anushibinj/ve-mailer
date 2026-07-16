@@ -5,6 +5,7 @@ import {
   toggleSubscription,
   type Subscription,
   type Schedule,
+  type Filter,
 } from '../services/apiService';
 import { formatHourLabel } from '../services/scheduleUtils';
 import { useAuth } from '../hooks/useAuth';
@@ -14,6 +15,7 @@ import toast from 'react-hot-toast';
 interface EditSubscriptionModalProps {
   subscription: Subscription;
   workspaceId: string;
+  filters: Filter[];
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
@@ -27,8 +29,25 @@ const selectClass =
   'focus:outline-none focus:border-indigo-500 dark:focus:border-indigo-400 ' +
   'focus:ring-2 focus:ring-indigo-500/15 dark:focus:ring-indigo-400/15 transition-all appearance-none';
 
+const TRIAGE_SLA_FIELD = 'Triage SLA';
+const TRIAGE_SLA_OPTIONS = [
+  { value: 'GREEN', label: 'Green (default)' },
+  { value: 'YELLOW', label: 'Yellow' },
+  { value: 'RED', label: 'Red' },
+] as const;
+
+function filterHasTriageSla(filter?: Filter): boolean {
+  if (!filter?.fields) return false;
+  try {
+    const parsed = JSON.parse(filter.fields);
+    return Array.isArray(parsed) && parsed.includes(TRIAGE_SLA_FIELD);
+  } catch {
+    return false;
+  }
+}
+
 const EditSubscriptionModal: React.FC<EditSubscriptionModalProps> = ({
-  subscription, workspaceId, isOpen, onClose, onSuccess,
+  subscription, workspaceId, filters, isOpen, onClose, onSuccess,
 }) => {
   const { user } = useAuth();
   const isGroupSubscription = Boolean(subscription.groupId);
@@ -39,10 +58,15 @@ const EditSubscriptionModal: React.FC<EditSubscriptionModalProps> = ({
   const [scheduleType, setScheduleType] = useState<'DAILY' | 'WEEKLY'>(subscription.schedule.type);
   const [scheduledHours, setScheduledHours] = useState<number[]>([...subscription.schedule.hours]);
   const [hourToAdd, setHourToAdd] = useState<number>(subscription.schedule.hours[0] ?? 9);
+  const [triageSlaThreshold, setTriageSlaThreshold] = useState<'GREEN' | 'YELLOW' | 'RED'>(
+    subscription.triageSlaThreshold ?? 'GREEN'
+  );
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isToggling, setIsToggling] = useState(false);
   const isDisabled = subscription.status === 'DISABLED';
+  const selectedFilterMeta = filters.find(filter => filter.id === subscription.filterId);
+  const triageEnabled = filterHasTriageSla(selectedFilterMeta);
 
   if (!isOpen) return null;
 
@@ -51,6 +75,7 @@ const EditSubscriptionModal: React.FC<EditSubscriptionModalProps> = ({
     setScheduleType(subscription.schedule.type);
     setScheduledHours([...subscription.schedule.hours]);
     setHourToAdd(subscription.schedule.hours[0] ?? 9);
+    setTriageSlaThreshold(subscription.triageSlaThreshold ?? 'GREEN');
     onClose();
   };
 
@@ -59,7 +84,10 @@ const EditSubscriptionModal: React.FC<EditSubscriptionModalProps> = ({
     setIsSaving(true);
     try {
       const schedule: Schedule = { type: scheduleType, hours: scheduledHours };
-      await updateSubscription(workspaceId, subscription.id, { schedule });
+      await updateSubscription(workspaceId, subscription.id, {
+        schedule,
+        ...(triageEnabled ? { triageSlaThreshold } : {}),
+      });
       toast.success('Subscription updated!');
       handleClose(); onSuccess();
     } catch (err: unknown) {
@@ -194,6 +222,23 @@ const EditSubscriptionModal: React.FC<EditSubscriptionModalProps> = ({
                   </div>
                 )}
               </div>
+
+              {triageEnabled && (
+                <div className="space-y-1.5">
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+                    Triage SLA threshold
+                  </label>
+                  <select
+                    value={triageSlaThreshold}
+                    onChange={e => setTriageSlaThreshold(e.target.value as 'GREEN' | 'YELLOW' | 'RED')}
+                    className={selectClass}
+                  >
+                    {TRIAGE_SLA_OPTIONS.map(option => (
+                      <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               <div className="flex items-center justify-between pt-1">
                 <div className="flex items-center gap-2">

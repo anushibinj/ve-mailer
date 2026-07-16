@@ -9,6 +9,8 @@ import lombok.NoArgsConstructor;
 
 import java.util.UUID;
 
+import com.anushibinj.veemailer.model.TriageSlaThreshold;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -34,4 +36,10 @@ public class SubscriptionCreateDto {
      * EmailSubscriber row is created per group member.
      */
     private UUID groupId;
+
+    /**
+     * Optional threshold for Triage SLA subscriptions.
+     * Defaults to GREEN when omitted.
+     */
+    private TriageSlaThreshold triageSlaThreshold;
 }

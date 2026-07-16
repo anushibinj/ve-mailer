@@ -134,6 +134,7 @@ export interface Subscription {
   filterId: string;
   filterTitle: string;
   schedule: Schedule;
+  triageSlaThreshold: 'GREEN' | 'YELLOW' | 'RED';
   /** Non-null when this is a group subscription. */
   groupId?: string | null;
   groupName?: string | null;
@@ -145,12 +146,14 @@ export interface Subscription {
 export interface SubscriptionCreatePayload {
   filterId: string;
   schedule: Schedule;
+  triageSlaThreshold?: 'GREEN' | 'YELLOW' | 'RED';
   /** Admins and workspace admins may pass this to subscribe another user. */
   recipientEmail?: string;
 }
 
 export interface SubscriptionUpdatePayload {
   schedule: Schedule;
+  triageSlaThreshold?: 'GREEN' | 'YELLOW' | 'RED';
 }
 
 // --- Workspaces ---

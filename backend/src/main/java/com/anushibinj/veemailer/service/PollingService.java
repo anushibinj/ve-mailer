@@ -3,6 +3,7 @@ package com.anushibinj.veemailer.service;
 import com.anushibinj.veemailer.model.EmailSubscriber;
 import com.anushibinj.veemailer.model.ScheduleType;
 import com.anushibinj.veemailer.model.Status;
+import com.anushibinj.veemailer.model.TriageSlaThreshold;
 import com.anushibinj.veemailer.model.WorkspaceStatus;
 import com.anushibinj.veemailer.repository.EmailSubscriberRepository;
 import com.hpe.adm.nga.sdk.model.EntityModel;
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Service;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -59,17 +61,21 @@ public class PollingService {
      * Used by the on-demand "Run" action triggered from the UI.
      */
     public void runNow(EmailSubscriber subscriber) {
-        sendNotifications(subscriber, List.of(subscriber));
+        sendNotificationsForGroup(List.of(subscriber));
     }
 
     private void processSubscriberList(List<EmailSubscriber> subscribers) {
-        if (subscribers.isEmpty()) return;
+        if (subscribers.isEmpty()) {
+            return;
+        }
 
         // Filter out subscribers belonging to DISABLED workspaces
         List<EmailSubscriber> activeSubscribers = subscribers.stream()
                 .filter(sub -> sub.getWorkspace().getStatus() != WorkspaceStatus.DISABLED)
                 .collect(Collectors.toList());
-        if (activeSubscribers.isEmpty()) return;
+        if (activeSubscribers.isEmpty()) {
+            return;
+        }
 
         // Group by Workspace ID and Filter ID to batch notifications (one filter query per batch)
         Map<UUID, Map<UUID, List<EmailSubscriber>>> grouped = activeSubscribers.stream()
@@ -80,29 +86,64 @@ public class PollingService {
 
         for (Map.Entry<UUID, Map<UUID, List<EmailSubscriber>>> workspaceEntry : grouped.entrySet()) {
             for (Map.Entry<UUID, List<EmailSubscriber>> filterEntry : workspaceEntry.getValue().entrySet()) {
-                List<EmailSubscriber> targetSubscribers = filterEntry.getValue();
-                if (targetSubscribers.isEmpty()) continue;
-
-                EmailSubscriber representative = targetSubscribers.get(0);
-                sendNotifications(representative, targetSubscribers);
+                sendNotificationsForGroup(filterEntry.getValue());
             }
         }
     }
 
-    private void sendNotifications(EmailSubscriber representative, List<EmailSubscriber> recipients) {
+    private void sendNotificationsForGroup(List<EmailSubscriber> recipients) {
+        if (recipients == null || recipients.isEmpty()) {
+            return;
+        }
+
+        EmailSubscriber representative = recipients.get(0);
         try {
-            UUID filterId    = representative.getFilter().getId();
+            UUID filterId = representative.getFilter().getId();
             UUID workspaceId = representative.getWorkspace().getId();
 
-            List<String>      fields     = filterService.getFilterFields(filterId);
-            List<EntityModel> results    = filterService.executeFilter(filterId, workspaceId);
-            int               limit      = filterService.getQueryLimit();
-            String            filterTitle = representative.getFilter().getTitle();
+            List<String> fields = filterService.getFilterFields(filterId);
+            List<EntityModel> results = filterService.executeFilter(filterId, workspaceId);
+            int limit = filterService.getQueryLimit();
+            String filterTitle = representative.getFilter().getTitle();
 
-            notificationService.processAndSendNotifications(recipients, results, fields, limit, representative.getWorkspace(), filterTitle);
+            if (!fields.contains(TriageSlaPolicy.TRIAGE_SLA_FIELD)) {
+                notificationService.processAndSendNotifications(
+                        recipients, results, fields, limit, representative.getWorkspace(), filterTitle);
+                return;
+            }
+
+            Map<TriageSlaThreshold, List<EmailSubscriber>> byThreshold = recipients.stream()
+                    .collect(Collectors.groupingBy(
+                            sub -> resolveThreshold(sub.getTriageSlaThreshold()),
+                            LinkedHashMap::new,
+                            Collectors.toList()));
+
+            for (Map.Entry<TriageSlaThreshold, List<EmailSubscriber>> entry : byThreshold.entrySet()) {
+                TriageSlaThreshold threshold = entry.getKey();
+                List<EntityModel> filteredResults = filterResultsByThreshold(results, threshold);
+                if (threshold != TriageSlaThreshold.GREEN && filteredResults.isEmpty()) {
+                    continue;
+                }
+                notificationService.processAndSendNotifications(
+                        entry.getValue(), filteredResults, fields, limit, representative.getWorkspace(), filterTitle);
+            }
         } catch (Exception e) {
             log.error("Failed to fetch or send notifications for filter {} / workspace {}",
                     representative.getFilter().getId(), representative.getWorkspace().getId(), e);
         }
+    }
+
+    private List<EntityModel> filterResultsByThreshold(List<EntityModel> results, TriageSlaThreshold threshold) {
+        TriageSlaThreshold effectiveThreshold = resolveThreshold(threshold);
+        if (effectiveThreshold == TriageSlaThreshold.GREEN) {
+            return results;
+        }
+        return results.stream()
+                .filter(entity -> TriageSlaPolicy.meetsThreshold(entity, effectiveThreshold))
+                .collect(Collectors.toList());
+    }
+
+    private TriageSlaThreshold resolveThreshold(TriageSlaThreshold threshold) {
+        return threshold == null ? TriageSlaThreshold.GREEN : threshold;
     }
 }

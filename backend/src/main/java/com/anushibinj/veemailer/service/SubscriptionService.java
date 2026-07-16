@@ -7,6 +7,7 @@ import com.anushibinj.veemailer.model.Filter;
 import com.anushibinj.veemailer.model.RecipientGroup;
 import com.anushibinj.veemailer.model.ScheduleType;
 import com.anushibinj.veemailer.model.Status;
+import com.anushibinj.veemailer.model.TriageSlaThreshold;
 import com.anushibinj.veemailer.model.Workspace;
 import com.anushibinj.veemailer.model.WorkspaceStatus;
 import com.anushibinj.veemailer.repository.EmailSubscriberRepository;
@@ -41,6 +42,11 @@ public class SubscriptionService {
      * The email is derived exclusively from the JWT security context — never from the request payload.
      */
     public SubscriptionResponseDTO createSubscription(String email, UUID workspaceId, UUID filterId, ScheduleDto schedule) {
+        return createSubscription(email, workspaceId, filterId, schedule, null);
+    }
+
+    public SubscriptionResponseDTO createSubscription(
+            String email, UUID workspaceId, UUID filterId, ScheduleDto schedule, TriageSlaThreshold triageSlaThreshold) {
         validateSchedule(schedule);
 
         Workspace workspace = workspaceRepository.findById(workspaceId)
@@ -59,6 +65,7 @@ public class SubscriptionService {
         subscriber.setWorkspace(workspace);
         subscriber.setFilter(filter);
         applySchedule(subscriber, schedule);
+        subscriber.setTriageSlaThreshold(resolveTriageSlaThreshold(triageSlaThreshold));
         subscriber.setStatus(Status.ACTIVE);
 
         return toResponseDto(emailSubscriberRepository.save(subscriber));
@@ -78,6 +85,22 @@ public class SubscriptionService {
         enforceWorkspace(workspaceId, subscriber);
 
         applySchedule(subscriber, schedule);
+        subscriber.setTriageSlaThreshold(resolveTriageSlaThreshold(null, subscriber.getTriageSlaThreshold()));
+        return toResponseDto(emailSubscriberRepository.save(subscriber));
+    }
+
+    public SubscriptionResponseDTO updateSubscription(
+            String email, UUID subscriptionId, UUID workspaceId, ScheduleDto schedule, TriageSlaThreshold triageSlaThreshold) {
+        validateSchedule(schedule);
+
+        EmailSubscriber subscriber = emailSubscriberRepository.findById(subscriptionId)
+                .orElseThrow(() -> new IllegalArgumentException("Subscription not found"));
+
+        enforceOwnership(email, subscriber);
+        enforceWorkspace(workspaceId, subscriber);
+
+        applySchedule(subscriber, schedule);
+        subscriber.setTriageSlaThreshold(resolveTriageSlaThreshold(triageSlaThreshold, subscriber.getTriageSlaThreshold()));
         return toResponseDto(emailSubscriberRepository.save(subscriber));
     }
 
@@ -94,6 +117,21 @@ public class SubscriptionService {
         enforceWorkspace(workspaceId, subscriber);
 
         applySchedule(subscriber, schedule);
+        subscriber.setTriageSlaThreshold(resolveTriageSlaThreshold(null, subscriber.getTriageSlaThreshold()));
+        return toResponseDto(emailSubscriberRepository.save(subscriber));
+    }
+
+    public SubscriptionResponseDTO updateSubscriptionByAdmin(
+            UUID subscriptionId, UUID workspaceId, ScheduleDto schedule, TriageSlaThreshold triageSlaThreshold) {
+        validateSchedule(schedule);
+
+        EmailSubscriber subscriber = emailSubscriberRepository.findById(subscriptionId)
+                .orElseThrow(() -> new IllegalArgumentException("Subscription not found"));
+
+        enforceWorkspace(workspaceId, subscriber);
+
+        applySchedule(subscriber, schedule);
+        subscriber.setTriageSlaThreshold(resolveTriageSlaThreshold(triageSlaThreshold, subscriber.getTriageSlaThreshold()));
         return toResponseDto(emailSubscriberRepository.save(subscriber));
     }
 
@@ -137,6 +175,11 @@ public class SubscriptionService {
      * group members automatically affects who gets notified without touching this row.
      */
     public SubscriptionResponseDTO createGroupSubscription(UUID workspaceId, UUID groupId, UUID filterId, ScheduleDto schedule) {
+        return createGroupSubscription(workspaceId, groupId, filterId, schedule, null);
+    }
+
+    public SubscriptionResponseDTO createGroupSubscription(
+            UUID workspaceId, UUID groupId, UUID filterId, ScheduleDto schedule, TriageSlaThreshold triageSlaThreshold) {
         validateSchedule(schedule);
 
         RecipientGroup group = recipientGroupRepository.findByIdAndWorkspaceId(groupId, workspaceId)
@@ -161,6 +204,7 @@ public class SubscriptionService {
         subscriber.setWorkspace(workspace);
         subscriber.setFilter(filter);
         applySchedule(subscriber, schedule);
+        subscriber.setTriageSlaThreshold(resolveTriageSlaThreshold(triageSlaThreshold));
         subscriber.setStatus(Status.ACTIVE);
 
         return toResponseDto(emailSubscriberRepository.save(subscriber));
@@ -275,6 +319,7 @@ public class SubscriptionService {
                 .filterId(sub.getFilter().getId())
                 .filterTitle(sub.getFilter().getTitle())
                 .schedule(buildScheduleDto(sub))
+                .triageSlaThreshold(resolveTriageSlaThreshold(sub.getTriageSlaThreshold()))
                 .groupId(sub.getGroup() != null ? sub.getGroup().getId() : null)
                 .groupName(sub.getGroup() != null ? sub.getGroup().getName() : null)
                 .groupMemberCount(sub.getGroup() != null ? sub.getGroup().getMemberEmails().size() : null)
@@ -304,5 +349,20 @@ public class SubscriptionService {
         if (!filter.getOwnerEmail().equalsIgnoreCase(recipientEmail)) {
             throw new AccessDeniedException("You are not authorized to subscribe to this private filter");
         }
+    }
+
+    private TriageSlaThreshold resolveTriageSlaThreshold(TriageSlaThreshold triageSlaThreshold) {
+        return resolveTriageSlaThreshold(triageSlaThreshold, null);
+    }
+
+    private TriageSlaThreshold resolveTriageSlaThreshold(
+            TriageSlaThreshold triageSlaThreshold, TriageSlaThreshold currentValue) {
+        if (triageSlaThreshold != null) {
+            return triageSlaThreshold;
+        }
+        if (currentValue != null) {
+            return currentValue;
+        }
+        return TriageSlaThreshold.GREEN;
     }
 }

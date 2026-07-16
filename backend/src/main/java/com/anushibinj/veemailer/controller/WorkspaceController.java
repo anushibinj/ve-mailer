@@ -15,6 +15,7 @@ import com.anushibinj.veemailer.service.SubscriptionService;
 import com.anushibinj.veemailer.service.UserQueryService;
 import com.anushibinj.veemailer.service.WorkspaceAdminService;
 import com.anushibinj.veemailer.service.WorkspaceService;
+import com.anushibinj.veemailer.model.TriageSlaThreshold;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -181,7 +182,7 @@ public class WorkspaceController {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(subscriptionService.createSubscription(
                         targetEmail, workspaceId,
-                        request.getFilterId(), request.getSchedule()));
+                        request.getFilterId(), request.getSchedule(), request.getTriageSlaThreshold()));
     }
 
     /**
@@ -203,7 +204,8 @@ public class WorkspaceController {
             throw new IllegalArgumentException("groupId is required for group subscriptions");
         }
         SubscriptionResponseDTO created = subscriptionService.createGroupSubscription(
-                workspaceId, request.getGroupId(), request.getFilterId(), request.getSchedule());
+                workspaceId, request.getGroupId(), request.getFilterId(), request.getSchedule(),
+                request.getTriageSlaThreshold());
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
@@ -218,11 +220,12 @@ public class WorkspaceController {
         // Admins and workspace admins may update any subscription in their workspace.
         if (workspaceAdminService.canViewWorkspaceSubscriptions(authentication, workspaceId)) {
             return ResponseEntity.ok(subscriptionService.updateSubscriptionByAdmin(
-                    subscriptionId, workspaceId, request.getSchedule()));
+                    subscriptionId, workspaceId, request.getSchedule(), request.getTriageSlaThreshold()));
         }
 
         return ResponseEntity.ok(subscriptionService.updateSubscription(
-                userDetails.getUsername(), subscriptionId, workspaceId, request.getSchedule()));
+                userDetails.getUsername(), subscriptionId, workspaceId, request.getSchedule(),
+                request.getTriageSlaThreshold()));
     }
 
     @DeleteMapping("/{workspaceId}/subscriptions/{subscriptionId}")

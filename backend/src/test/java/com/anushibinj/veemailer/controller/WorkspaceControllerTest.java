@@ -227,6 +227,7 @@ class WorkspaceControllerTest {
                         .type(ScheduleType.DAILY)
                         .hours(List.of(9, 15))
                         .build())
+                .triageSlaThreshold(com.anushibinj.veemailer.model.TriageSlaThreshold.GREEN)
                 .build();
 
         when(subscriptionService.getActiveSubscriptionsForWorkspace(any(UUID.class)))
@@ -259,6 +260,7 @@ class WorkspaceControllerTest {
                         .type(ScheduleType.DAILY)
                         .hours(List.of(9))
                         .build())
+                .triageSlaThreshold(com.anushibinj.veemailer.model.TriageSlaThreshold.GREEN)
                 .build();
 
         when(subscriptionService.getActiveSubscriptionsForUser(anyString(), any(UUID.class)))
@@ -287,6 +289,7 @@ class WorkspaceControllerTest {
                         .type(ScheduleType.DAILY)
                         .hours(List.of(9))
                         .build())
+                .triageSlaThreshold(com.anushibinj.veemailer.model.TriageSlaThreshold.GREEN)
                 .status(Status.DISABLED)
                 .build();
 

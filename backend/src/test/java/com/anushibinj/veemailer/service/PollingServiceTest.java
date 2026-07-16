@@ -4,9 +4,11 @@ import com.anushibinj.veemailer.model.EmailSubscriber;
 import com.anushibinj.veemailer.model.Filter;
 import com.anushibinj.veemailer.model.ScheduleType;
 import com.anushibinj.veemailer.model.Status;
+import com.anushibinj.veemailer.model.TriageSlaThreshold;
 import com.anushibinj.veemailer.model.Workspace;
 import com.anushibinj.veemailer.repository.EmailSubscriberRepository;
 import com.hpe.adm.nga.sdk.model.EntityModel;
+import com.hpe.adm.nga.sdk.model.StringFieldModel;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -14,10 +16,13 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.Duration;
 import java.time.DayOfWeek;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import org.mockito.ArgumentCaptor;
 
@@ -213,6 +218,38 @@ class PollingServiceTest {
         verify(filterService).getFilterFields(filter1.getId());
         verify(filterService).executeFilter(filter1.getId(), workspace1.getId());
         verify(notificationService).processAndSendNotifications(List.of(subscriber), results, fields, 25, workspace1, filter1.getTitle());
+    }
+
+    @Test
+    void testRunNow_TriageThreshold_FiltersToMatchingResults() {
+        EmailSubscriber subscriber = new EmailSubscriber();
+        subscriber.setWorkspace(workspace1);
+        subscriber.setFilter(filter1);
+        subscriber.setTriageSlaThreshold(TriageSlaThreshold.RED);
+
+        EntityModel greenTicket = new EntityModel(Set.of(
+                new StringFieldModel("id", "1001"),
+                new StringFieldModel("creation_time", Instant.now().minus(Duration.ofDays(1)).toString())
+        ));
+        EntityModel redTicket = new EntityModel(Set.of(
+                new StringFieldModel("id", "1002"),
+                new StringFieldModel("creation_time", Instant.now().minus(Duration.ofDays(8)).toString())
+        ));
+
+        when(filterService.getFilterFields(filter1.getId()))
+                .thenReturn(List.of("name", TriageSlaPolicy.TRIAGE_SLA_FIELD));
+        when(filterService.executeFilter(filter1.getId(), workspace1.getId()))
+                .thenReturn(List.of(greenTicket, redTicket));
+        when(filterService.getQueryLimit()).thenReturn(25);
+
+        ArgumentCaptor<List<EntityModel>> resultsCaptor = ArgumentCaptor.forClass(List.class);
+
+        pollingService.runNow(subscriber);
+
+        verify(notificationService).processAndSendNotifications(
+                anyList(), resultsCaptor.capture(), anyList(), anyInt(), any(), any());
+        assertEquals(1, resultsCaptor.getValue().size());
+        assertEquals("1002", resultsCaptor.getValue().get(0).getValue("id").getValue());
     }
 
     @Test
