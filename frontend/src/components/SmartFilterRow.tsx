@@ -472,7 +472,7 @@ export const SmartFilterRow: React.FC<SmartFilterRowProps> = ({
 
     didLoadDefaultValuesRef.current = true;
     setValuesLoading(true);
-    fetchFieldValues(workspaceId, clause.field, entityType, '*')
+    fetchFieldValues(workspaceId, clause.field, entityType)
       .then(remoteValues => {
         setFieldValues(current => {
           if (current.length === 0) {

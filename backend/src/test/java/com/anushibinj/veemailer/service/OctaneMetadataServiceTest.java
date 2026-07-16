@@ -16,6 +16,7 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 @ExtendWith(MockitoExtension.class)
 class OctaneMetadataServiceTest {
@@ -82,5 +83,15 @@ class OctaneMetadataServiceTest {
         assertEquals(2, result.size());
         assertEquals("Gamma Product", result.get(0).getValue("name").getValue());
         assertEquals("Delta Product", result.get(1).getValue("name").getValue());
+    }
+
+    @Test
+    void normalizeSearch_TreatsWildcardAsEmpty() throws Exception {
+        Method method = OctaneMetadataService.class.getDeclaredMethod("normalizeSearch", String.class);
+        method.setAccessible(true);
+
+        assertNull(method.invoke(service, "*"));
+        assertNull(method.invoke(service, "   "));
+        assertEquals("blue widgets", method.invoke(service, "  blue widgets  "));
     }
 }

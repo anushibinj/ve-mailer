@@ -817,7 +817,10 @@ public class OctaneMetadataService {
             return null;
         }
         String trimmed = searchQuery.trim();
-        return trimmed.isEmpty() ? null : trimmed;
+        if (trimmed.isEmpty() || "*".equals(trimmed)) {
+            return null;
+        }
+        return trimmed;
     }
 
     private boolean hasText(String value) {
