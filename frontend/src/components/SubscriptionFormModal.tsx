@@ -32,9 +32,9 @@ const selectClass =
 
 const TRIAGE_SLA_FIELD = 'Triage SLA';
 const TRIAGE_SLA_OPTIONS = [
-  { value: 'GREEN', label: 'Green (default)' },
-  { value: 'YELLOW', label: 'Yellow' },
-  { value: 'RED', label: 'Red' },
+  { value: 'GREEN', label: '🟢 Green' },
+  { value: 'YELLOW', label: '🟡 Yellow' },
+  { value: 'RED', label: '🔴 Red' },
 ] as const;
 
 /** Returns the display label for a user: "Name (email)" */
@@ -437,22 +437,32 @@ const SubscriptionFormModal: React.FC<SubscriptionFormModalProps> = ({
 
             {triageEnabled && (
               <div className="space-y-1.5">
-              <label htmlFor="sub-triage-threshold" className="block text-sm font-medium text-slate-700 dark:text-slate-300">
-                Triage SLA threshold
-              </label>
-              <select
-                id="sub-triage-threshold"
-                value={triageSlaThreshold}
-                onChange={e => setTriageSlaThreshold(e.target.value as 'GREEN' | 'YELLOW' | 'RED')}
-                className={selectClass}
-              >
-                {TRIAGE_SLA_OPTIONS.map(option => (
-                  <option key={option.value} value={option.value}>{option.label}</option>
-                ))}
-              </select>
-              <p className="text-xs text-slate-400 dark:text-slate-500">
-                Choose the minimum Triage SLA color that should trigger this subscription.
-              </p>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+                  Triage SLA threshold
+                </label>
+                <div
+                  role="group"
+                  aria-label="Triage SLA threshold"
+                  className="flex rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden"
+                >
+                  {TRIAGE_SLA_OPTIONS.map(option => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => setTriageSlaThreshold(option.value)}
+                      className={`flex-1 px-3 py-2 text-sm font-semibold transition-colors cursor-pointer ${
+                        triageSlaThreshold === option.value
+                          ? 'bg-indigo-600 text-white'
+                          : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs text-slate-400 dark:text-slate-500">
+                  Choose the minimum Triage SLA color that should trigger this subscription (default: 🟢 Green).
+                </p>
               </div>
             )}
 
