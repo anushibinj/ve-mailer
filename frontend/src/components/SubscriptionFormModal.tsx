@@ -32,9 +32,9 @@ const selectClass =
 
 const TRIAGE_SLA_FIELD = 'Triage SLA';
 const TRIAGE_SLA_OPTIONS = [
-  { value: 'GREEN', label: '🟢 Green' },
-  { value: 'YELLOW', label: '🟡 Yellow' },
-  { value: 'RED', label: '🔴 Red' },
+  { value: 'GREEN', label: '🟢 Green (0-2 days old)' },
+  { value: 'YELLOW', label: '🟡 Yellow (3 days old)' },
+  { value: 'RED', label: '🔴 Red (4+ days old)' },
 ] as const;
 
 /** Returns the display label for a user: "Name (email)" */

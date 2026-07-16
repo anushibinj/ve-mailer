@@ -23,10 +23,10 @@ public final class TriageSlaPolicy {
     private static final Clock UTC_CLOCK = Clock.systemUTC();
 
     private static final List<SlaBand> SLA_BANDS = List.of(
-            // 7+ days: red
-            new SlaBand(7, Integer.MAX_VALUE, "\uD83D\uDD34"),
-            // 3-4 days: yellow
-            new SlaBand(3, 4, "\uD83D\uDFE1"),
+            // 4+ days: red
+            new SlaBand(4, Integer.MAX_VALUE, "\uD83D\uDD34"),
+            // 3 days: yellow
+            new SlaBand(3, 3, "\uD83D\uDFE1"),
             // 0-2 days: green
             new SlaBand(0, 2, "\uD83D\uDFE2")
     );
@@ -65,7 +65,7 @@ public final class TriageSlaPolicy {
         int days = daysOld.getAsInt();
         return switch (effective) {
             case YELLOW -> days >= 3;
-            case RED -> days >= 7;
+            case RED -> days >= 4;
             default -> true;
         };
     }

@@ -14,11 +14,10 @@ class TriageSlaPolicyTest {
     @Test
     void toDisplayLabel_YellowRange() {
         assertEquals("\uD83D\uDFE1 3 days old", TriageSlaPolicy.toDisplayLabel(3));
-        assertEquals("\uD83D\uDFE1 4 days old", TriageSlaPolicy.toDisplayLabel(4));
     }
 
     @Test
     void toDisplayLabel_RedRange() {
-        assertEquals("\uD83D\uDD34 7 days old", TriageSlaPolicy.toDisplayLabel(7));
+        assertEquals("\uD83D\uDD34 4 days old", TriageSlaPolicy.toDisplayLabel(4));
     }
 }

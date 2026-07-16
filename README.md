@@ -787,14 +787,14 @@ Prompts are stored in `backend/src/main/resources/prompts/` and can be customize
 - Selecting `Triage SLA` auto-fetches `creation_time` from ValueEdge.
 - Output format is `<traffic-light> <N> day(s) old`, for example: `🟡 3 days old`.
 - Default age bands are configured in `backend/src/main/java/com/anushibinj/veemailer/service/TriageSlaPolicy.java`:
-  - `7+` days → `🔴`
-  - `3-4` days → `🟡`
+  - `4+` days → `🔴`
+  - `3` days → `🟡`
   - `0-2` days → `🟢`
 - When selected, preview/email results are sorted by age in descending order so oldest untriaged tickets appear first.
 - When subscribing to a filter that includes `Triage SLA`, the subscription form asks for a threshold.
   - `Green` (default): send all triaged tickets
-  - `Yellow`: send yellow and red tickets only
-  - `Red`: send red tickets only
+  - `Yellow`: send 3-day-old and older tickets
+  - `Red`: send 4+-day-old tickets only
 
 ---
 
