@@ -30,6 +30,7 @@ public class Workspace {
     private UUID id;
 
     private String title;
+    private String workspaceShortcode;
     private String sharedSpaceId;
     private String workspaceId;
 

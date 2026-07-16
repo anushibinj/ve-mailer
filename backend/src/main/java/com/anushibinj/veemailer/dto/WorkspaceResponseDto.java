@@ -17,6 +17,7 @@ import java.time.Instant;
 public class WorkspaceResponseDto {
     private UUID id;
     private String title;
+    private String workspaceShortcode;
     private String sharedSpaceId;
     private String workspaceId;
     private String clientId;

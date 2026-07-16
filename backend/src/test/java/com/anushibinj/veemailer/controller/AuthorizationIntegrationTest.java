@@ -83,6 +83,7 @@ class AuthorizationIntegrationTest {
         WorkspaceResponseDto dto = WorkspaceResponseDto.builder()
                 .id(WORKSPACE_ID)
                 .title("WS")
+                .workspaceShortcode("77BD")
                 .sharedSpaceId("s1")
                 .workspaceId("w1")
                 .clientId("c1")
@@ -102,7 +103,7 @@ class AuthorizationIntegrationTest {
     void member_cannotCreateWorkspace() throws Exception {
         mockMvc.perform(post("/api/v1/workspaces")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"title\":\"x\",\"sharedSpaceId\":\"s\",\"workspaceId\":\"w\",\"clientId\":\"c\",\"clientKey\":\"k\",\"rootUrl\":\"https://ve.example.com\"}"))
+                        .content("{\"title\":\"x\",\"workspaceShortcode\":\"77BD\",\"sharedSpaceId\":\"s\",\"workspaceId\":\"w\",\"clientId\":\"c\",\"clientKey\":\"k\",\"rootUrl\":\"https://ve.example.com\"}"))
                 .andExpect(status().isForbidden());
     }
 
@@ -111,7 +112,7 @@ class AuthorizationIntegrationTest {
     void member_cannotUpdateWorkspace() throws Exception {
         mockMvc.perform(put("/api/v1/workspaces/{id}", WORKSPACE_ID)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"title\":\"x\",\"sharedSpaceId\":\"s\",\"workspaceId\":\"w\",\"clientId\":\"c\",\"clientKey\":\"(unchanged)\",\"rootUrl\":\"https://ve.example.com\",\"status\":\"ENABLED\"}"))
+                        .content("{\"title\":\"x\",\"workspaceShortcode\":\"77BD\",\"sharedSpaceId\":\"s\",\"workspaceId\":\"w\",\"clientId\":\"c\",\"clientKey\":\"(unchanged)\",\"rootUrl\":\"https://ve.example.com\",\"status\":\"ENABLED\"}"))
                 .andExpect(status().isForbidden());
     }
 
@@ -271,13 +272,13 @@ class AuthorizationIntegrationTest {
     @WithMockUser(username = "admin@test.com", roles = "ADMIN")
     void admin_canCreateWorkspace() throws Exception {
         WorkspaceResponseDto dto = WorkspaceResponseDto.builder()
-                .id(WORKSPACE_ID).title("x").sharedSpaceId("s").workspaceId("w")
+                .id(WORKSPACE_ID).title("x").workspaceShortcode("77BD").sharedSpaceId("s").workspaceId("w")
                 .clientId("c").clientKey("(unchanged)").clientKeyConfigured(true).build();
         when(workspaceService.create(any())).thenReturn(dto);
 
         mockMvc.perform(post("/api/v1/workspaces")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"title\":\"x\",\"sharedSpaceId\":\"s\",\"workspaceId\":\"w\",\"clientId\":\"c\",\"clientKey\":\"k\",\"rootUrl\":\"https://ve.example.com\"}"))
+                        .content("{\"title\":\"x\",\"workspaceShortcode\":\"77BD\",\"sharedSpaceId\":\"s\",\"workspaceId\":\"w\",\"clientId\":\"c\",\"clientKey\":\"k\",\"rootUrl\":\"https://ve.example.com\"}"))
                 .andExpect(status().isCreated());
     }
 

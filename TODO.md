@@ -43,5 +43,5 @@
 - [ ] Reorder columns in the mail and frontend output
 - [ ] Triage mails should have a threshold when the mail should be sent (green/yellow/red)
 - [ ] Append the header hpeclienttype=HPE_MQM_UI to every request made to octane. Write a comment that this is done to simulate the octane frontend behavior
-- [ ] Add a new field in the workspace configuration called "Workspace shortcode" to store the shortcode of the workspace like "77BD". This will be used later in other areas. Just implement the CRUD operations for this and allow existing people who can edit the workspace to edit this as well. These are super admins and workspace admins.
+- [x] Add a new field in the workspace configuration called "Workspace shortcode" to store the shortcode of the workspace like "77BD". This will be used later in other areas. Just implement the CRUD operations for this and allow existing people who can edit the workspace to edit this as well. These are super admins and workspace admins.
 - [ ] Add a workspace-admin-onboarding flow where the super admin just creates the title of the workspace in draft mode and sends a notification (e-mail/DM) to the workspace admin to configure the rest of the data

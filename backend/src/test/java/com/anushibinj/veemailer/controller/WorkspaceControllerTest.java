@@ -85,6 +85,7 @@ class WorkspaceControllerTest {
         WorkspaceResponseDto dto = WorkspaceResponseDto.builder()
                 .id(id)
                 .title("Test Workspace")
+                .workspaceShortcode("77BD")
                 .sharedSpaceId("space-1")
                 .workspaceId("work-1")
                 .clientId("my-client-id")
@@ -101,6 +102,7 @@ class WorkspaceControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)))
                 .andExpect(jsonPath("$[0].title").value("Test Workspace"))
+                .andExpect(jsonPath("$[0].workspaceShortcode").value("77BD"))
                 .andExpect(jsonPath("$[0].sharedSpaceId").value("space-1"))
                 .andExpect(jsonPath("$[0].clientId").value("my-client-id"))
                 .andExpect(jsonPath("$[0].clientKey").value("(unchanged)"))
@@ -111,10 +113,11 @@ class WorkspaceControllerTest {
     void testCreateWorkspace_ReturnsCreated() throws Exception {
         UUID id = UUID.randomUUID();
         WorkspaceCreateRequestDto request =
-                new WorkspaceCreateRequestDto("New WS", "sp-1", "ws-1", "cid-1", "secret-key", "https://ve.example.com", null);
+                new WorkspaceCreateRequestDto("New WS", "77BD", "sp-1", "ws-1", "cid-1", "secret-key", "https://ve.example.com", null);
         WorkspaceResponseDto dto = WorkspaceResponseDto.builder()
                 .id(id)
                 .title("New WS")
+                .workspaceShortcode("77BD")
                 .sharedSpaceId("sp-1")
                 .workspaceId("ws-1")
                 .clientId("cid-1")
@@ -131,6 +134,7 @@ class WorkspaceControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.title").value("New WS"))
+                .andExpect(jsonPath("$.workspaceShortcode").value("77BD"))
                 .andExpect(jsonPath("$.clientKey").value("(unchanged)"))
                 .andExpect(jsonPath("$.clientKeyConfigured").value(true));
     }
@@ -141,6 +145,7 @@ class WorkspaceControllerTest {
         WorkspaceResponseDto dto = WorkspaceResponseDto.builder()
                 .id(id)
                 .title("Updated WS")
+                .workspaceShortcode("77BD")
                 .sharedSpaceId("sp-1")
                 .workspaceId("ws-1")
                 .clientId("cid-1")
@@ -152,7 +157,7 @@ class WorkspaceControllerTest {
 
         when(workspaceService.update(any(), any())).thenReturn(dto);
 
-        String body = "{\"title\":\"Updated WS\",\"sharedSpaceId\":\"sp-1\","
+        String body = "{\"title\":\"Updated WS\",\"workspaceShortcode\":\"77BD\",\"sharedSpaceId\":\"sp-1\","
                 + "\"workspaceId\":\"ws-1\",\"clientId\":\"cid-1\",\"clientKey\":\"(unchanged)\","
                 + "\"rootUrl\":\"https://ve.example.com\",\"status\":\"ENABLED\"}";
 
@@ -161,6 +166,7 @@ class WorkspaceControllerTest {
                         .content(body))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.title").value("Updated WS"))
+                .andExpect(jsonPath("$.workspaceShortcode").value("77BD"))
                 .andExpect(jsonPath("$.clientKey").value("(unchanged)"));
     }
 

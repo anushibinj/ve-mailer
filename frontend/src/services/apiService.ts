@@ -6,6 +6,7 @@ export type WorkspaceConnectivityStatus = 'UNKNOWN' | 'ONLINE' | 'OFFLINE';
 export interface Workspace {
   id: string;
   title: string;
+  workspaceShortcode: string;
   sharedSpaceId: string;
   workspaceId: string;
   rootUrl: string;
@@ -19,6 +20,7 @@ export interface Workspace {
 export interface WorkspaceAdmin {
   id: string;
   title: string;
+  workspaceShortcode: string;
   sharedSpaceId: string;
   workspaceId: string;
   clientId: string;
@@ -33,6 +35,7 @@ export interface WorkspaceAdmin {
 
 export interface WorkspaceCreatePayload {
   title: string;
+  workspaceShortcode: string;
   sharedSpaceId: string;
   workspaceId: string;
   clientId: string;
@@ -43,6 +46,7 @@ export interface WorkspaceCreatePayload {
 
 export interface WorkspaceUpdatePayload {
   title: string;
+  workspaceShortcode: string;
   sharedSpaceId: string;
   workspaceId: string;
   clientId: string;

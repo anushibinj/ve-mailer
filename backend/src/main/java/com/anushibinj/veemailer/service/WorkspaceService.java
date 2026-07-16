@@ -85,6 +85,7 @@ public class WorkspaceService {
         WorkspaceStatus status = request.getStatus() != null ? request.getStatus() : WorkspaceStatus.DRAFT;
         Workspace workspace = Workspace.builder()
                 .title(request.getTitle())
+                .workspaceShortcode(request.getWorkspaceShortcode())
                 .sharedSpaceId(request.getSharedSpaceId())
                 .workspaceId(request.getWorkspaceId())
                 .clientId(request.getClientId())
@@ -101,6 +102,7 @@ public class WorkspaceService {
                 .orElseThrow(() -> new IllegalArgumentException("Workspace not found: " + id));
 
         workspace.setTitle(request.getTitle());
+        workspace.setWorkspaceShortcode(request.getWorkspaceShortcode());
         workspace.setSharedSpaceId(request.getSharedSpaceId());
         workspace.setWorkspaceId(request.getWorkspaceId());
         workspace.setClientId(request.getClientId());
@@ -119,7 +121,7 @@ public class WorkspaceService {
 
     /**
      * Restricted update for WORKSPACE_ADMIN — can only edit: rootUrl, sharedSpaceId,
-     * workspaceId, clientId, clientKey. Cannot change title or status.
+     * workspaceId, workspaceShortcode, clientId, clientKey. Cannot change title or status.
      */
     public WorkspaceResponseDto updateAsWorkspaceAdmin(UUID id, WorkspaceUpdateRequestDto request) {
         Workspace workspace = workspaceRepository.findById(id)
@@ -127,6 +129,7 @@ public class WorkspaceService {
 
         // WORKSPACE_ADMIN can only update these fields
         workspace.setRootUrl(request.getRootUrl());
+        workspace.setWorkspaceShortcode(request.getWorkspaceShortcode());
         workspace.setSharedSpaceId(request.getSharedSpaceId());
         workspace.setWorkspaceId(request.getWorkspaceId());
         workspace.setClientId(request.getClientId());
@@ -313,6 +316,7 @@ public class WorkspaceService {
         return WorkspaceResponseDto.builder()
                 .id(workspace.getId())
                 .title(workspace.getTitle())
+                .workspaceShortcode(workspace.getWorkspaceShortcode())
                 .sharedSpaceId(workspace.getSharedSpaceId())
                 .workspaceId(workspace.getWorkspaceId())
                 .clientId(workspace.getClientId())

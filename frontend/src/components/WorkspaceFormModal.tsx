@@ -20,6 +20,7 @@ interface WorkspaceFormModalProps {
 
 interface FormValues {
   title: string;
+  workspaceShortcode: string;
   sharedSpaceId: string;
   workspaceId: string;
   clientId: string;
@@ -30,6 +31,7 @@ interface FormValues {
 
 interface FormErrors {
   title?: string;
+  workspaceShortcode?: string;
   sharedSpaceId?: string;
   workspaceId?: string;
   clientId?: string;
@@ -61,7 +63,7 @@ const WorkspaceFormModal: React.FC<WorkspaceFormModalProps> = ({
   const isRestrictedEdit = isEditing && !isAdmin;
 
   const [values, setValues] = useState<FormValues>({
-    title: '', sharedSpaceId: '', workspaceId: '', clientId: '', clientKey: '', rootUrl: '', status: 'DRAFT',
+    title: '', workspaceShortcode: '', sharedSpaceId: '', workspaceId: '', clientId: '', clientKey: '', rootUrl: '', status: 'DRAFT',
   });
   const [errors, setErrors] = useState<FormErrors>({});
   const [showKey, setShowKey] = useState(false);
@@ -74,6 +76,7 @@ const WorkspaceFormModal: React.FC<WorkspaceFormModalProps> = ({
         // eslint-disable-next-line react-hooks/set-state-in-effect
         setValues({
           title: workspace.title,
+          workspaceShortcode: workspace.workspaceShortcode,
           sharedSpaceId: workspace.sharedSpaceId,
           workspaceId: workspace.workspaceId,
           clientId: workspace.clientId,
@@ -82,7 +85,7 @@ const WorkspaceFormModal: React.FC<WorkspaceFormModalProps> = ({
           status: workspace.status,
         });
       } else {
-        setValues({ title: '', sharedSpaceId: '', workspaceId: '', clientId: '', clientKey: '', rootUrl: '', status: 'DRAFT' });
+        setValues({ title: '', workspaceShortcode: '', sharedSpaceId: '', workspaceId: '', clientId: '', clientKey: '', rootUrl: '', status: 'DRAFT' });
       }
       setErrors({});
       setShowKey(false);
@@ -92,6 +95,7 @@ const WorkspaceFormModal: React.FC<WorkspaceFormModalProps> = ({
   const validate = (): boolean => {
     const errs: FormErrors = {};
     if (!values.title.trim()) errs.title = 'Title is required';
+    if (!values.workspaceShortcode.trim()) errs.workspaceShortcode = 'Workspace shortcode is required';
     if (!values.sharedSpaceId.trim()) errs.sharedSpaceId = 'Shared Space ID is required';
     if (!values.workspaceId.trim()) errs.workspaceId = 'Workspace ID is required';
     if (!values.clientId.trim()) errs.clientId = 'Client ID is required';
@@ -168,6 +172,7 @@ const WorkspaceFormModal: React.FC<WorkspaceFormModalProps> = ({
       if (isEditing && workspace) {
         const payload: WorkspaceUpdatePayload = {
           title: values.title.trim(), sharedSpaceId: values.sharedSpaceId.trim(),
+          workspaceShortcode: values.workspaceShortcode.trim(),
           workspaceId: values.workspaceId.trim(), clientId: values.clientId.trim(),
           clientKey: values.clientKey.trim() || CLIENT_KEY_PLACEHOLDER, rootUrl: values.rootUrl.trim(),
           status: values.status,
@@ -177,6 +182,7 @@ const WorkspaceFormModal: React.FC<WorkspaceFormModalProps> = ({
       } else {
         const payload: WorkspaceCreatePayload = {
           title: values.title.trim(), sharedSpaceId: values.sharedSpaceId.trim(),
+          workspaceShortcode: values.workspaceShortcode.trim(),
           workspaceId: values.workspaceId.trim(), clientId: values.clientId.trim(),
           clientKey: values.clientKey.trim(), rootUrl: values.rootUrl.trim(),
           status: values.status,
@@ -272,6 +278,20 @@ const WorkspaceFormModal: React.FC<WorkspaceFormModalProps> = ({
             <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
               Draft workspaces are only visible to admins. Disabled workspaces are hidden from all views.
             </p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+              Workspace Shortcode <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={values.workspaceShortcode}
+              onChange={handleChange('workspaceShortcode')}
+              placeholder="e.g. 77BD"
+              className={fieldInputClass(!!errors.workspaceShortcode)}
+            />
+            {errors.workspaceShortcode && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.workspaceShortcode}</p>}
           </div>
 
           {/* Root URL field */}

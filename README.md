@@ -257,6 +257,7 @@ ve-mailer/
 Workspace
   id (UUID PK)
   title
+  workspaceShortcode -- Business shortcode for the workspace (e.g. "77BD")
   sharedSpaceId   -- ValueEdge shared space
   workspaceId     -- ValueEdge workspace
   clientId        -- API client ID for this workspace
@@ -402,7 +403,7 @@ All endpoints are prefixed with `/api/v1` for business APIs, `/api/auth` for aut
 
 ### Workspaces
 
-All workspace endpoints require authentication. Mutation endpoints (POST/PUT/DELETE) require the `ADMIN` role.
+All workspace endpoints require authentication. `POST` and `DELETE` require `ADMIN`; `PUT` is allowed for both `ADMIN` and `WORKSPACE_ADMIN` (with workspace-admin field restrictions enforced in backend service).
 
 | Method   | Path                      | Role required | Description                                                        |
 |----------|---------------------------|:-------------:|--------------------------------------------------------------------|
@@ -410,7 +411,7 @@ All workspace endpoints require authentication. Mutation endpoints (POST/PUT/DEL
 | `GET`    | `/workspaces/all`         | ADMIN         | List ALL workspaces including DISABLED (management view)           |
 | `GET`    | `/workspaces/{id}`        | Any           | Get workspace details                                              |
 | `POST`   | `/workspaces`             | ADMIN         | Create a workspace (defaults to DRAFT status)                      |
-| `PUT`    | `/workspaces/{id}`        | ADMIN         | Update a workspace (including status)                              |
+| `PUT`    | `/workspaces/{id}`        | ADMIN / WORKSPACE_ADMIN | Update a workspace (`WORKSPACE_ADMIN` can update connection fields + workspace shortcode; cannot change title/status) |
 | `DELETE` | `/workspaces/{id}`        | ADMIN         | Delete a workspace                                                 |
 | `POST`   | `/workspaces/test-connection` | ADMIN / WORKSPACE_ADMIN | Validate workspace connectivity via Octane SDK by reading `stories` with `limit=1`; returns success-with-warning when connection works but no data is returned |
 

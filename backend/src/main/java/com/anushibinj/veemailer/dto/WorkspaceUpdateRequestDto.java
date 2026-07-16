@@ -15,6 +15,9 @@ public class WorkspaceUpdateRequestDto {
     @NotBlank(message = "Title is required")
     private String title;
 
+    @NotBlank(message = "Workspace shortcode is required")
+    private String workspaceShortcode;
+
     @NotBlank(message = "Shared Space ID is required")
     private String sharedSpaceId;
 

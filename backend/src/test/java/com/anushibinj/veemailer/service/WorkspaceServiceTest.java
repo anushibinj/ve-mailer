@@ -46,6 +46,7 @@ class WorkspaceServiceTest {
         Workspace ws = new Workspace();
         ws.setId(id);
         ws.setTitle("My WS");
+        ws.setWorkspaceShortcode("77BD");
         ws.setSharedSpaceId("sp-1");
         ws.setWorkspaceId("ws-1");
         ws.setClientId("cid-1");
@@ -82,7 +83,7 @@ class WorkspaceServiceTest {
         when(workspaceRepository.existsByWorkspaceId("ws-1")).thenReturn(true);
 
         WorkspaceCreateRequestDto req =
-                new WorkspaceCreateRequestDto("T", "sp", "ws-1", "cid", "key", "https://ve.example.com", null);
+                new WorkspaceCreateRequestDto("T", "77BD", "sp", "ws-1", "cid", "key", "https://ve.example.com", null);
 
         assertThatThrownBy(() -> workspaceService.create(req))
                 .isInstanceOf(IllegalArgumentException.class)
@@ -96,12 +97,13 @@ class WorkspaceServiceTest {
         when(workspaceRepository.save(any())).thenReturn(saved);
 
         WorkspaceCreateRequestDto req =
-                new WorkspaceCreateRequestDto("My WS", "sp-1", "ws-1", "cid-1", "real-secret", "https://ve.example.com", null);
+                new WorkspaceCreateRequestDto("My WS", "77BD", "sp-1", "ws-1", "cid-1", "real-secret", "https://ve.example.com", null);
 
         WorkspaceResponseDto result = workspaceService.create(req);
 
         assertThat(result.getClientKey()).isEqualTo(WorkspaceService.CLIENT_KEY_PLACEHOLDER);
         assertThat(result.isClientKeyConfigured()).isTrue();
+        assertThat(result.getWorkspaceShortcode()).isEqualTo("77BD");
     }
 
     @Test
@@ -112,7 +114,7 @@ class WorkspaceServiceTest {
         when(workspaceRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         WorkspaceUpdateRequestDto req =
-                new WorkspaceUpdateRequestDto("Updated", "sp-1", "ws-1", "cid-1",
+                new WorkspaceUpdateRequestDto("Updated", "77BD", "sp-1", "ws-1", "cid-1",
                         WorkspaceService.CLIENT_KEY_PLACEHOLDER, "https://ve.example.com", WorkspaceStatus.ENABLED);
 
         workspaceService.update(id, req);
@@ -129,7 +131,7 @@ class WorkspaceServiceTest {
         when(workspaceRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         WorkspaceUpdateRequestDto req =
-                new WorkspaceUpdateRequestDto("Updated", "sp-1", "ws-1", "cid-1", "new-secret", "https://ve.example.com", WorkspaceStatus.ENABLED);
+                new WorkspaceUpdateRequestDto("Updated", "77BD", "sp-1", "ws-1", "cid-1", "new-secret", "https://ve.example.com", WorkspaceStatus.ENABLED);
 
         workspaceService.update(id, req);
 
@@ -144,7 +146,7 @@ class WorkspaceServiceTest {
         when(workspaceRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         WorkspaceUpdateRequestDto req =
-                new WorkspaceUpdateRequestDto("Updated", "sp-1", "ws-1", "cid-1", null, "https://ve.example.com", WorkspaceStatus.ENABLED);
+                new WorkspaceUpdateRequestDto("Updated", "77BD", "sp-1", "ws-1", "cid-1", null, "https://ve.example.com", WorkspaceStatus.ENABLED);
 
         workspaceService.update(id, req);
 
