@@ -240,6 +240,7 @@ public class WorkspaceService {
 
         final OctaneCollection<EntityModel> stories;
         try {
+            OctaneQueryLogger.log(log, "/stories", "-", List.of("id"));
             stories = octane.entityList("stories")
                     .get()
                     .addFields("id")

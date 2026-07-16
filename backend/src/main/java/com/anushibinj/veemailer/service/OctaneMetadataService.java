@@ -67,9 +67,16 @@ public class OctaneMetadataService {
         Collection<FieldMetadata> rawFields;
         try {
             if ("work_item".equals(entityType)) {
+                OctaneQueryLogger.log(log, "/metadata/fields", "-", List.of("work_item"));
                 rawFields = octane.metadata().fields("work_item").execute();
             } else if (ENTITY_TYPE_BACKLOG_ITEMS.equals(entityType)) {
                 // Backlog Items combines defect, story, and quality_story fields.
+                OctaneQueryLogger.log(log, "/metadata/fields", "-", List.of(
+                        "work_item",
+                        BACKLOG_SUBTYPES.get(0),
+                        BACKLOG_SUBTYPES.get(1),
+                        BACKLOG_SUBTYPES.get(2))
+                );
                 rawFields = octane.metadata().fields(
                         "work_item",
                         BACKLOG_SUBTYPES.get(0),
@@ -78,6 +85,7 @@ public class OctaneMetadataService {
                 ).execute();
             } else {
                 // Include both common work_item fields and subtype-specific ones
+                OctaneQueryLogger.log(log, "/metadata/fields", "-", List.of("work_item", entityType));
                 rawFields = octane.metadata().fields("work_item", entityType).execute();
             }
         } catch (Exception e) {
@@ -196,6 +204,7 @@ public class OctaneMetadataService {
         } else if (hasText(searchQuery)) {
             filter = filter.and(Query.statement("name", QueryMethod.EqualTo, wildcard(searchQuery)));
         }
+        OctaneQueryLogger.log(log, "/list_nodes", filter.build(), List.of("id", "name", "logical_name"));
         OctaneCollection<EntityModel> nodes = octane.entityList("list_nodes")
                 .get()
                 .addFields("id", "name", "logical_name")
@@ -225,6 +234,7 @@ public class OctaneMetadataService {
                 } else if (hasText(searchQuery)) {
                     scopedQuery = scopedQuery.and(Query.statement("name", QueryMethod.EqualTo, wildcard(searchQuery)));
                 }
+                OctaneQueryLogger.log(log, "/phases", scopedQuery.build(), List.of("id", "name"));
                 OctaneCollection<EntityModel> phases = octane.entityList("phases")
                         .get()
                         .addFields("id", "name")
@@ -246,6 +256,12 @@ public class OctaneMetadataService {
         } else if (hasText(searchQuery)) {
             getPhases = getPhases.query(Query.statement("name", QueryMethod.EqualTo, wildcard(searchQuery)).build());
         }
+        Query phaseQuery = !requestedIds.isEmpty()
+                ? Query.statement("id", QueryMethod.In, toArray(requestedIds)).build()
+                : (hasText(searchQuery)
+                    ? Query.statement("name", QueryMethod.EqualTo, wildcard(searchQuery)).build()
+                    : null);
+        OctaneQueryLogger.log(log, "/phases", phaseQuery, List.of("id", "name"));
         OctaneCollection<EntityModel> allPhases = getPhases.execute();
         return toDeduplicatedValueDtos(allPhases, "name");
     }
@@ -262,6 +278,7 @@ public class OctaneMetadataService {
                 } else if (hasText(searchQuery)) {
                     scopedQuery = scopedQuery.and(Query.statement("name", QueryMethod.EqualTo, wildcard(searchQuery)));
                 }
+                OctaneQueryLogger.log(log, "/phases", scopedQuery.build(), List.of("id", "name"));
                 OctaneCollection<EntityModel> phases = octane.entityList("phases")
                         .get()
                         .addFields("id", "name")
@@ -291,6 +308,12 @@ public class OctaneMetadataService {
             } else if (hasText(searchQuery)) {
                 getPhases = getPhases.query(Query.statement("name", QueryMethod.EqualTo, wildcard(searchQuery)).build());
             }
+            Query fallbackPhaseQuery = !requestedIds.isEmpty()
+                    ? Query.statement("id", QueryMethod.In, toArray(requestedIds)).build()
+                    : (hasText(searchQuery)
+                        ? Query.statement("name", QueryMethod.EqualTo, wildcard(searchQuery)).build()
+                        : null);
+            OctaneQueryLogger.log(log, "/phases", fallbackPhaseQuery, List.of("id", "name"));
             OctaneCollection<EntityModel> allPhases = getPhases.execute();
             return toDeduplicatedValueDtos(allPhases, "name");
         }
@@ -303,8 +326,10 @@ public class OctaneMetadataService {
         var getUsers = octane.entityList("workspace_users")
                 .get()
                 .addFields("id", "full_name", "email", "name");
+        Query usersQuery = null;
         if (!requestedIds.isEmpty()) {
-            getUsers = getUsers.query(Query.statement("id", QueryMethod.In, toArray(requestedIds)).build());
+            usersQuery = Query.statement("id", QueryMethod.In, toArray(requestedIds)).build();
+            getUsers = getUsers.query(usersQuery);
         } else if (hasText(searchQuery)) {
             Query.QueryBuilder searchBuilder = Query.statement("full_name", QueryMethod.EqualTo, wildcard(searchQuery))
                     .or(Query.statement("email", QueryMethod.EqualTo, wildcard(searchQuery)))
@@ -312,8 +337,10 @@ public class OctaneMetadataService {
             if (isNumeric(searchQuery)) {
                 searchBuilder = searchBuilder.or(Query.statement("id", QueryMethod.EqualTo, searchQuery.trim()));
             }
-            getUsers = getUsers.query(searchBuilder.build());
+            usersQuery = searchBuilder.build();
+            getUsers = getUsers.query(usersQuery);
         }
+        OctaneQueryLogger.log(log, "/workspace_users", usersQuery, List.of("id", "full_name", "email", "name"));
         OctaneCollection<EntityModel> users = getUsers.execute();
 
         List<OctaneFieldValueDto> result = new ArrayList<>();
@@ -341,6 +368,12 @@ public class OctaneMetadataService {
             } else if (hasText(searchQuery)) {
                 getEntities = getEntities.query(Query.statement("name", QueryMethod.EqualTo, wildcard(searchQuery)).build());
             }
+            Query namedEntityQuery = !requestedIds.isEmpty()
+                    ? Query.statement("id", QueryMethod.In, toArray(requestedIds)).build()
+                    : (hasText(searchQuery)
+                        ? Query.statement("name", QueryMethod.EqualTo, wildcard(searchQuery)).build()
+                        : null);
+            OctaneQueryLogger.log(log, "/" + entityListName, namedEntityQuery, List.of("id", "name"));
             OctaneCollection<EntityModel> entities = getEntities.execute();
             return toSortedValueDtos(entities, "name");
         } catch (Exception e) {
@@ -409,8 +442,15 @@ public class OctaneMetadataService {
         Collection<FieldMetadata> fields;
         try {
             if ("work_item".equals(entityType)) {
+                OctaneQueryLogger.log(log, "/metadata/fields", "-", List.of("work_item"));
                 fields = octane.metadata().fields("work_item").execute();
             } else if (ENTITY_TYPE_BACKLOG_ITEMS.equals(entityType)) {
+                OctaneQueryLogger.log(log, "/metadata/fields", "-", List.of(
+                        "work_item",
+                        BACKLOG_SUBTYPES.get(0),
+                        BACKLOG_SUBTYPES.get(1),
+                        BACKLOG_SUBTYPES.get(2))
+                );
                 fields = octane.metadata().fields(
                         "work_item",
                         BACKLOG_SUBTYPES.get(0),
@@ -418,6 +458,7 @@ public class OctaneMetadataService {
                         BACKLOG_SUBTYPES.get(2)
                 ).execute();
             } else {
+                OctaneQueryLogger.log(log, "/metadata/fields", "-", List.of("work_item", entityType));
                 fields = octane.metadata().fields("work_item", entityType).execute();
             }
         } catch (Exception e) {

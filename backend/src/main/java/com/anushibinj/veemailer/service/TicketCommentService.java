@@ -65,6 +65,7 @@ public class TicketCommentService {
             Query query = Query.statement("owner_work_item", QueryMethod.EqualTo,
                     Query.statement("id", QueryMethod.EqualTo, ticketId)).build();
 
+            OctaneQueryLogger.log(log, "/comments", query, COMMENT_FIELDS);
             OctaneCollection<EntityModel> result = octaneClient
                     .entityList("comments")
                     .get()

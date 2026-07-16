@@ -277,6 +277,7 @@ public class FilterService {
             Query query = buildQuery(filter.getEntityType(), clauses, referenceFieldNames);
 
             int effectiveLimit = generalSettingsService.getQueryLimit();
+            OctaneQueryLogger.log(log, "/work_items", query, effectiveFetchFields);
             GetEntities getEntities = octaneClient
                     .entityList("work_items")
                     .get()
@@ -333,6 +334,7 @@ public class FilterService {
             Set<String> referenceFieldNames = resolveReferenceFieldNames(octaneClient, filter.getEntityType());
             Query query = buildQuery(filter.getEntityType(), clauses, referenceFieldNames);
 
+            OctaneQueryLogger.log(log, "/work_items", query, effectiveFetchFields);
             GetEntities getEntities = octaneClient
                     .entityList("work_items")
                     .get()
@@ -605,8 +607,15 @@ public class FilterService {
         try {
             Collection<FieldMetadata> metadata;
             if ("work_item".equals(entityType)) {
+                OctaneQueryLogger.log(log, "/metadata/fields", "-", List.of("work_item"));
                 metadata = octaneClient.metadata().fields("work_item").execute();
             } else if (ENTITY_TYPE_BACKLOG_ITEMS.equals(entityType)) {
+                OctaneQueryLogger.log(log, "/metadata/fields", "-", List.of(
+                        "work_item",
+                        BACKLOG_SUBTYPES.get(0),
+                        BACKLOG_SUBTYPES.get(1),
+                        BACKLOG_SUBTYPES.get(2))
+                );
                 metadata = octaneClient.metadata().fields(
                         "work_item",
                         BACKLOG_SUBTYPES.get(0),
@@ -614,6 +623,7 @@ public class FilterService {
                         BACKLOG_SUBTYPES.get(2)
                 ).execute();
             } else {
+                OctaneQueryLogger.log(log, "/metadata/fields", "-", List.of("work_item", entityType));
                 metadata = octaneClient.metadata().fields("work_item", entityType).execute();
             }
             if (metadata == null) {
