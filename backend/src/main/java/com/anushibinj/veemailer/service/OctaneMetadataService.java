@@ -1,12 +1,17 @@
 package com.anushibinj.veemailer.service;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import com.anushibinj.veemailer.dto.OctaneFieldDto;
@@ -47,6 +52,8 @@ public class OctaneMetadataService {
     private final OctaneCacheService octaneCacheService;
     private final WorkspaceRepository workspaceRepository;
     private final WorkspaceService workspaceService;
+    @Value("${veemailer.octane.ui-bundle-field-names:product_udf}")
+    private String uiBundleFieldNamesCsv;
 
     // ------------------------------------------------------------------ //
     //  Public API                                                          //
@@ -155,7 +162,15 @@ public class OctaneMetadataService {
 
         try {
             List<OctaneFieldValueDto> values = fetchValuesForTarget(
-                    octane, targetType, logicalName, entityType, normalizedSearch, requestedIds);
+                    octane,
+                    targetType,
+                    logicalName,
+                    fieldName,
+                    workspace.getWorkspaceShortcode(),
+                    entityType,
+                    normalizedSearch,
+                    requestedIds
+            );
             workspaceService.markWorkspaceOnline(workspaceId, !values.isEmpty());
             return values;
         } catch (Exception e) {
@@ -174,11 +189,20 @@ public class OctaneMetadataService {
             Octane octane,
             String targetType,
             String logicalName,
+            String fieldName,
+            String workspaceShortcode,
             String entityType,
             String searchQuery,
             List<String> requestedIds) {
         return switch (targetType) {
-            case "list_node"      -> fetchListNodeValues(octane, logicalName, searchQuery, requestedIds);
+            case "list_node"      -> fetchListNodeValues(
+                    octane,
+                    logicalName,
+                    fieldName,
+                    workspaceShortcode,
+                    searchQuery,
+                    requestedIds
+            );
             case "phase"          -> fetchPhaseValues(octane, entityType, searchQuery, requestedIds);
             case "workspace_user" -> fetchUserValues(octane, searchQuery, requestedIds);
             case "release"        -> fetchNamedEntityValues(octane, "releases", searchQuery, requestedIds);
@@ -196,7 +220,25 @@ public class OctaneMetadataService {
 
     /** Fetches list nodes whose list_root has the given logical_name (severity, priority, …). */
     private List<OctaneFieldValueDto> fetchListNodeValues(
-            Octane octane, String logicalName, String searchQuery, List<String> requestedIds) {
+            Octane octane,
+            String logicalName,
+            String fieldName,
+            String workspaceShortcode,
+            String searchQuery,
+            List<String> requestedIds) {
+        if (shouldFetchListNodesFromUiBundle(fieldName) && hasText(workspaceShortcode)) {
+            List<OctaneFieldValueDto> uiBundleValues = fetchListNodeValuesFromUiBundle(
+                    octane,
+                    fieldName,
+                    workspaceShortcode,
+                    searchQuery,
+                    requestedIds
+            );
+            if (uiBundleValues != null) {
+                return uiBundleValues;
+            }
+        }
+
         Query.QueryBuilder filter = Query.statement(
                 "list_root", QueryMethod.EqualTo, Query.statement("logical_name", QueryMethod.EqualTo, logicalName));
         if (!requestedIds.isEmpty()) {
@@ -212,6 +254,157 @@ public class OctaneMetadataService {
                 .execute();
         // Deduplicate by name — Octane may return inherited/archived entries with identical display names
         return toDeduplicatedValueDtos(nodes, "name");
+    }
+
+    /**
+     * Fetches list nodes from Octane's /list_nodes/ui_bundle endpoint for configured fields.
+     * This is required for certain custom list-backed fields where the standard list_nodes API
+     * does not return the full value set.
+     *
+     * @return filtered values, or null if no matching ui_bundle section is found
+     */
+    private List<OctaneFieldValueDto> fetchListNodeValuesFromUiBundle(
+            Octane octane,
+            String fieldName,
+            String workspaceShortcode,
+            String searchQuery,
+            List<String> requestedIds) {
+        Set<String> candidateBundleNames = buildUiBundleNames(fieldName, workspaceShortcode);
+        if (candidateBundleNames.isEmpty()) {
+            return null;
+        }
+
+        OctaneQueryLogger.log(log, "/list_nodes/ui_bundle", "-", List.of("id", "name", "list_nodes"));
+        OctaneCollection<EntityModel> bundles = octane.entityList("list_nodes/ui_bundle")
+                .get()
+                .addFields("id", "name", "list_nodes")
+                .execute();
+
+        for (EntityModel bundle : bundles) {
+            String bundleName = extractString(bundle, "name").toLowerCase(Locale.ROOT);
+            if (!candidateBundleNames.contains(bundleName)) {
+                continue;
+            }
+            return toUiBundleValueDtos(bundle, searchQuery, requestedIds);
+        }
+        return null;
+    }
+
+    private List<OctaneFieldValueDto> toUiBundleValueDtos(
+            EntityModel bundle,
+            String searchQuery,
+            List<String> requestedIds) {
+        FieldModel<?> listNodesField = bundle.getValue("list_nodes");
+        if (listNodesField == null || !listNodesField.hasValue() || listNodesField.getValue() == null) {
+            return List.of();
+        }
+
+        List<EntityModel> listNodes = extractEntityModels(listNodesField.getValue());
+        if (listNodes.isEmpty()) {
+            return List.of();
+        }
+
+        Set<String> requestedIdSet = requestedIds.stream().collect(Collectors.toSet());
+        String normalizedSearch = hasText(searchQuery) ? searchQuery.toLowerCase(Locale.ROOT) : null;
+
+        List<OctaneFieldValueDto> result = new ArrayList<>();
+        for (EntityModel node : listNodes) {
+            String id = extractString(node, "id");
+            String name = extractString(node, "name");
+            if (id.isEmpty() || name.isEmpty()) {
+                continue;
+            }
+            if (!requestedIdSet.isEmpty() && !requestedIdSet.contains(id)) {
+                continue;
+            }
+            if (requestedIdSet.isEmpty() && normalizedSearch != null
+                    && !name.toLowerCase(Locale.ROOT).contains(normalizedSearch)) {
+                continue;
+            }
+            result.add(OctaneFieldValueDto.builder().id(id).name(name).build());
+        }
+
+        result.sort(Comparator.comparing(OctaneFieldValueDto::getName, String.CASE_INSENSITIVE_ORDER));
+        return result;
+    }
+
+    private List<EntityModel> extractEntityModels(Object rawValue) {
+        List<EntityModel> result = new ArrayList<>();
+        if (rawValue == null) {
+            return result;
+        }
+        if (rawValue instanceof OctaneCollection<?> collection) {
+            for (Object item : collection) {
+                if (item instanceof EntityModel entity) {
+                    result.add(entity);
+                }
+            }
+            return result;
+        }
+        if (rawValue instanceof Iterable<?> iterable) {
+            for (Object item : iterable) {
+                if (item instanceof EntityModel entity) {
+                    result.add(entity);
+                }
+            }
+            return result;
+        }
+        if (rawValue.getClass().isArray()) {
+            int length = java.lang.reflect.Array.getLength(rawValue);
+            for (int i = 0; i < length; i++) {
+                Object item = java.lang.reflect.Array.get(rawValue, i);
+                if (item instanceof EntityModel entity) {
+                    result.add(entity);
+                }
+            }
+        }
+        return result;
+    }
+
+    private boolean shouldFetchListNodesFromUiBundle(String fieldName) {
+        if (!hasText(fieldName) || !hasText(uiBundleFieldNamesCsv)) {
+            return false;
+        }
+        String normalizedField = fieldName.trim().toLowerCase(Locale.ROOT);
+        return Arrays.stream(uiBundleFieldNamesCsv.split(","))
+                .map(String::trim)
+                .map(s -> s.toLowerCase(Locale.ROOT))
+                .anyMatch(normalizedField::equals);
+    }
+
+    private Set<String> buildUiBundleNames(String fieldName, String workspaceShortcode) {
+        if (!hasText(fieldName) || !hasText(workspaceShortcode)) {
+            return Set.of();
+        }
+        String normalizedField = fieldName.trim().toLowerCase(Locale.ROOT);
+        String normalizedShortcode = workspaceShortcode.trim().toLowerCase(Locale.ROOT);
+        String withoutUdf = normalizedField.endsWith("_udf")
+                ? normalizedField.substring(0, normalizedField.length() - 4)
+                : normalizedField;
+
+        Set<String> suffixes = new LinkedHashSet<>();
+        suffixes.add(normalizedField);
+        suffixes.add(withoutUdf);
+        suffixes.add(toPlural(withoutUdf));
+
+        return suffixes.stream()
+                .filter(this::hasText)
+                .map(suffix -> normalizedShortcode + "_" + suffix)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+    }
+
+    private String toPlural(String value) {
+        if (!hasText(value)) {
+            return value;
+        }
+        String lower = value.toLowerCase(Locale.ROOT);
+        if (lower.endsWith("s")) {
+            return lower;
+        }
+        if (lower.endsWith("y") && lower.length() > 1) {
+            return lower.substring(0, lower.length() - 1) + "ies";
+        }
+        return lower + "s";
     }
 
     /**

@@ -487,6 +487,8 @@ These endpoints expose Octane metadata to power the visual, non-technical Easy F
 | `GET`  | `/workspaces/{id}/octane/fields?entityType=defect`         | Filterable fields with labels and type info (drives field dropdown) |
 | `GET`  | `/workspaces/{id}/octane/field-values?fieldName=phase&entityType=defect&search=new&ids=phase.defect.new,phase.defect.in_progress` | Selectable values for a reference field (supports optional server-side search and exact ID resolution) |
 
+For fields listed in `veemailer.octane.ui-bundle-field-names`, value resolution uses Octane `/list_nodes/ui_bundle` and selects the bundle named `{workspaceShortcode}_<field-derived-suffix>` (for example, `77BD_products`).
+
 **OctaneFieldDto** (field metadata):
 ```json
 {
@@ -711,6 +713,7 @@ spring.jpa.show-sql=true
 spring.flyway.enabled=true
 
 spring.application.name=veemailer
+veemailer.octane.ui-bundle-field-names=product_udf
 
 # Authentication
 app.auth.allowed-domains=company.com,int-company.com
