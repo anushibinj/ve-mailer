@@ -40,3 +40,5 @@
 - [ ] Cache workspace metadata like fields, field values, etc in the spring boot backend. They rarely - if ever, change the values. So, cache them with a TTL of 3 hours in a HashMap. Make sure you cache it per workspace. And lazy fetch the stale ones. That is, only when someone is looking for the workspace metadata, check the TTL and fetch if needed. No need for any poll-based refreshing here.
 - [x] When finding possible values for a field (I was testing with the "owner" field), by default, Octane returns only the first 1000 items. So, when I search in the input box, it is searching within those top 1000 items only (even if there are around 6000 users who can be owners in the system). Make it so that I can search through all of them. I would suggest you trigger a search to the octane client only if the current list search has no responses. But you decide what strategy is the best for reliability.
 - [ ] BUG: The product_udf field is not listing all the products in the system
+- [ ] Reorder columns in the mail and frontend output
+- [ ] Triage mails should have a threshold when the mail should be sent (green/yellow/red)
