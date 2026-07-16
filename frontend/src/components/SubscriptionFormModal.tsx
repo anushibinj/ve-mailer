@@ -32,9 +32,9 @@ const selectClass =
 
 const TRIAGE_SLA_FIELD = 'Triage SLA';
 const TRIAGE_SLA_OPTIONS = [
-  { value: 'GREEN', label: '🟢 Green (0-2 days old)' },
-  { value: 'YELLOW', label: '🟡 Yellow (3 days old)' },
-  { value: 'RED', label: '🔴 Red (4+ days old)' },
+  { value: 'GREEN', title: '🟢 Green', timeline: '(0-2 days old)' },
+  { value: 'YELLOW', title: '🟡 Yellow', timeline: '(3 days old)' },
+  { value: 'RED', title: '🔴 Red', timeline: '(4+ days old)' },
 ] as const;
 
 /** Returns the display label for a user: "Name (email)" */
@@ -450,13 +450,14 @@ const SubscriptionFormModal: React.FC<SubscriptionFormModalProps> = ({
                       key={option.value}
                       type="button"
                       onClick={() => setTriageSlaThreshold(option.value)}
-                      className={`flex-1 px-3 py-2 text-sm font-semibold transition-colors cursor-pointer ${
+                      className={`flex-1 px-3 py-2 text-sm font-semibold text-center leading-tight transition-colors cursor-pointer ${
                         triageSlaThreshold === option.value
                           ? 'bg-indigo-600 text-white'
                           : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'
                       }`}
                     >
-                      {option.label}
+                      <span className="block">{option.title}</span>
+                      <span className="block">{option.timeline}</span>
                     </button>
                   ))}
                 </div>
