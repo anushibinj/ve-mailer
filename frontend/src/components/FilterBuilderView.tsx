@@ -736,24 +736,6 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
                 <>
                   <div className="space-y-2">
                     <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">{allowCustomQueryString ? 'Step 2: Choose Fields to Fetch' : 'Fields to Fetch'}</label>
-                    <div className="flex flex-wrap gap-2">
-                      <FieldBadgeWithPopover
-                        label={AI_SUMMARY_FIELD}
-                        selected={selectedFields.includes(AI_SUMMARY_FIELD)}
-                        onClick={() => toggleField(AI_SUMMARY_FIELD)}
-                        selectedClassName="bg-violet-100 dark:bg-violet-500/20 text-violet-700 dark:text-violet-300 border-violet-200 dark:border-violet-500/30 scale-105"
-                        unselectedClassName="bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-600 hover:border-violet-300 dark:hover:border-violet-600 hover:text-violet-600 dark:hover:text-violet-400"
-                        popoverText="An AI summary of the current progress in the ticket and potential next items"
-                      />
-                      <FieldBadgeWithPopover
-                        label={`🚦 ${TRIAGE_SLA_FIELD}`}
-                        selected={selectedFields.includes(TRIAGE_SLA_FIELD)}
-                        onClick={() => toggleField(TRIAGE_SLA_FIELD)}
-                        selectedClassName="bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-500/30 scale-105"
-                        unselectedClassName="bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-600 hover:border-amber-300 dark:hover:border-amber-600 hover:text-amber-600 dark:hover:text-amber-400"
-                        popoverText="A traffic light for SLA compliance of Customer tickets. Make sure that you adjust your filter to only show tickets that need the Triage SLA to be applied."
-                      />
-                    </div>
                     <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-800/40 p-3 space-y-2">
                       <div className="relative">
                         <Search className="h-3.5 w-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -797,62 +779,92 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
                           )}
                         </div>
                       )}
-                      {selectedFields.length > 0 && (
-                        <div className="space-y-1.5">
-                          <p className="text-[11px] text-slate-400 dark:text-slate-500">
-                            Selected column order (drag chips to reorder)
-                          </p>
-                          <div
-                            className="flex flex-wrap gap-1.5 min-h-8"
-                            onDragOver={e => e.preventDefault()}
-                            onDrop={e => {
-                              e.preventDefault();
-                              const sourceField = draggedField ?? e.dataTransfer.getData('text/plain');
-                              moveFieldToEnd(sourceField);
-                              setDraggedField(null);
-                            }}
-                          >
-                            {selectedFields.map(fieldName => {
-                              const fieldMeta = dynamicFieldOptions.find(option => option.name === fieldName);
-                              const isSavedOnly = fieldMeta?.fromMetadata === false;
-                              return (
-                                <div
-                                  key={fieldName}
-                                  draggable
-                                  onDragStart={e => {
-                                    setDraggedField(fieldName);
-                                    e.dataTransfer.effectAllowed = 'move';
-                                    e.dataTransfer.setData('text/plain', fieldName);
-                                  }}
-                                  onDragEnd={() => setDraggedField(null)}
-                                  onDragOver={e => e.preventDefault()}
-                                  onDrop={e => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    const sourceField = draggedField ?? e.dataTransfer.getData('text/plain');
-                                    moveField(sourceField, fieldName);
-                                    setDraggedField(null);
-                                  }}
-                                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-500/30 cursor-move"
-                                >
-                                  <span className="text-indigo-400 dark:text-indigo-300">⋮⋮</span>
-                                  <span>{getSelectedFieldLabel(fieldName)}</span>
-                                  {isSavedOnly && <span className="text-[10px] align-middle opacity-70">(saved)</span>}
-                                  <button
-                                    type="button"
-                                    onClick={() => toggleField(fieldName)}
-                                    className="ml-1 text-indigo-600 dark:text-indigo-300 hover:text-indigo-800 dark:hover:text-indigo-100 transition-colors"
-                                    title="Remove field"
-                                    aria-label={`Remove ${fieldName}`}
-                                  >
-                                    ×
-                                  </button>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      )}
+                      <div
+                        className="flex flex-wrap gap-2 min-h-10 pt-1"
+                        onDragOver={e => e.preventDefault()}
+                        onDrop={e => {
+                          e.preventDefault();
+                          const sourceField = draggedField ?? e.dataTransfer.getData('text/plain');
+                          moveFieldToEnd(sourceField);
+                          setDraggedField(null);
+                        }}
+                      >
+                        {!selectedFields.includes(AI_SUMMARY_FIELD) && (
+                          <FieldBadgeWithPopover
+                            label={AI_SUMMARY_FIELD}
+                            selected={false}
+                            onClick={() => toggleField(AI_SUMMARY_FIELD)}
+                            selectedClassName="bg-slate-200 dark:bg-slate-600/70 text-slate-700 dark:text-slate-100 border-slate-300 dark:border-slate-500"
+                            unselectedClassName="bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-600 hover:border-violet-300 dark:hover:border-violet-600 hover:text-violet-600 dark:hover:text-violet-400"
+                            popoverText="An AI summary of the current progress in the ticket and potential next items"
+                          />
+                        )}
+                        {!selectedFields.includes(TRIAGE_SLA_FIELD) && (
+                          <FieldBadgeWithPopover
+                            label={`🚦 ${TRIAGE_SLA_FIELD}`}
+                            selected={false}
+                            onClick={() => toggleField(TRIAGE_SLA_FIELD)}
+                            selectedClassName="bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-500/40"
+                            unselectedClassName="bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-600 hover:border-amber-300 dark:hover:border-amber-600 hover:text-amber-600 dark:hover:text-amber-400"
+                            popoverText="A traffic light for SLA compliance of Customer tickets. Make sure that you adjust your filter to only show tickets that need the Triage SLA to be applied."
+                          />
+                        )}
+                        {selectedFields.map(fieldName => {
+                          const fieldMeta = dynamicFieldOptions.find(option => option.name === fieldName);
+                          const isSavedOnly = fieldMeta?.fromMetadata === false;
+                          const isAiSummary = fieldName === AI_SUMMARY_FIELD;
+                          const isTriageSla = fieldName === TRIAGE_SLA_FIELD;
+                          const selectedChipClass = isAiSummary
+                            ? 'bg-slate-200 dark:bg-slate-600/70 text-slate-700 dark:text-slate-100 border-slate-300 dark:border-slate-500'
+                            : isTriageSla
+                            ? 'bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-500/40'
+                            : 'bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-500/30';
+                          const handleClass = isAiSummary
+                            ? 'text-slate-400 dark:text-slate-300'
+                            : isTriageSla
+                            ? 'text-amber-500 dark:text-amber-300'
+                            : 'text-indigo-400 dark:text-indigo-300';
+                          const removeClass = isAiSummary
+                            ? 'text-slate-600 dark:text-slate-200 hover:text-slate-800 dark:hover:text-white'
+                            : isTriageSla
+                            ? 'text-amber-600 dark:text-amber-300 hover:text-amber-800 dark:hover:text-amber-100'
+                            : 'text-indigo-600 dark:text-indigo-300 hover:text-indigo-800 dark:hover:text-indigo-100';
+                          return (
+                            <div
+                              key={fieldName}
+                              draggable
+                              onDragStart={e => {
+                                setDraggedField(fieldName);
+                                e.dataTransfer.effectAllowed = 'move';
+                                e.dataTransfer.setData('text/plain', fieldName);
+                              }}
+                              onDragEnd={() => setDraggedField(null)}
+                              onDragOver={e => e.preventDefault()}
+                              onDrop={e => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                const sourceField = draggedField ?? e.dataTransfer.getData('text/plain');
+                                moveField(sourceField, fieldName);
+                                setDraggedField(null);
+                              }}
+                              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border cursor-move ${selectedChipClass}`}
+                            >
+                              <span className={handleClass}>⋮⋮</span>
+                              <span>{getSelectedFieldLabel(fieldName)}</span>
+                              {isSavedOnly && <span className="text-[10px] align-middle opacity-70">(saved)</span>}
+                              <button
+                                type="button"
+                                onClick={() => toggleField(fieldName)}
+                                className={`ml-1 transition-colors ${removeClass}`}
+                                title="Remove field"
+                                aria-label={`Remove ${fieldName}`}
+                              >
+                                ×
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                     {availableFieldsLoading && (
                       <p className="text-xs text-slate-400 dark:text-slate-500">Loading fields from Octane…</p>

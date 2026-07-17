@@ -977,6 +977,7 @@ Filter templates are the core building block. Each filter is stored as structure
    - Fields are selected from a searchable dropdown populated live from Octane's `/metadata/fields` API
    - The **Fields to Fetch** picker is a searchable tag/badge flow backed by live metadata for the selected entity type (instead of a static frontend list), while keeping custom pseudo-fields like **✨ AI Summary** and **Triage SLA**
    - Selected field chips are drag-reorderable, and that exact order is reused in both preview output and email table columns
+   - Special pseudo-fields (✨ AI Summary, 🚦 Triage SLA) are shown in the same field-selection panel for a single, unified picker experience
    - Values for reference fields (phase, owner, severity, etc.) are selected from a searchable multi-select populated from the corresponding Octane entity list
    - Conditions can be joined with **AND** or **OR** using a per-row connector dropdown
 
