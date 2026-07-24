@@ -171,7 +171,7 @@ const LandingView: React.FC<LandingViewProps> = ({ onSelectWorkspace }) => {
             <p className="text-slate-400 dark:text-slate-500 text-xs mt-1">Contact your admin to get access.</p>
           </div>
         ) : (
-          <div className={viewMode === 'grid' ? 'grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3' : 'space-y-3'}>
+          <div className={viewMode === 'grid' ? 'grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3' : 'space-y-3 w-full max-w-5xl mx-auto'}>
             {workspaces.map((workspace, idx) => {
               const gradient = ICON_GRADIENTS[idx % ICON_GRADIENTS.length];
               const shadow = ICON_SHADOWS[idx % ICON_SHADOWS.length];
@@ -182,7 +182,9 @@ const LandingView: React.FC<LandingViewProps> = ({ onSelectWorkspace }) => {
                   onClick={() => onSelectWorkspace(workspace.id)}
                   style={{ animationDelay: `${idx * 60}ms` }}
                   className={`group animate-slide-up bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-lg dark:hover:shadow-slate-900/60 hover:border-indigo-200 dark:hover:border-indigo-700/50 transition-all duration-200 text-left p-5 flex items-center gap-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-950 cursor-pointer ${
-                    viewMode === 'grid' ? 'hover:-translate-y-0.5' : ''
+                    viewMode === 'grid'
+                      ? 'hover:-translate-y-0.5'
+                      : 'w-full px-6 py-5 bg-gradient-to-r from-white to-indigo-50/30 dark:from-slate-900 dark:to-indigo-950/20'
                   }`}
                 >
                   <div className={`h-12 w-12 rounded-xl bg-gradient-to-br ${gradient} flex items-center justify-center flex-shrink-0 shadow-lg ${shadow} group-hover:scale-110 group-hover:shadow-xl transition-all duration-300`}>
@@ -204,6 +206,11 @@ const LandingView: React.FC<LandingViewProps> = ({ onSelectWorkspace }) => {
                       Open workspace
                     </p>
                   </div>
+                  {viewMode === 'list' && (
+                    <span className="hidden sm:inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/30">
+                      Open
+                    </span>
+                  )}
                   <ChevronRight className="h-4 w-4 text-slate-300 dark:text-slate-600 group-hover:text-indigo-500 dark:group-hover:text-indigo-400 group-hover:translate-x-1 transition-all flex-shrink-0" />
                 </button>
               );
