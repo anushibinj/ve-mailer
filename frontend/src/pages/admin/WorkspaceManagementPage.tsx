@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { Suspense, lazy, useEffect, useState, useCallback } from 'react';
 import { Plus, Pencil, Trash2, Loader2, KeyRound, CheckCircle, XCircle, Shield, Plug } from 'lucide-react';
 import toast from 'react-hot-toast';
 import type { WorkspaceAdmin } from '../../services/apiService';
@@ -8,10 +8,12 @@ import {
   adminTestWorkspaceConnection,
   fetchWorkspaces,
 } from '../../services/apiService';
-import WorkspaceFormModal from '../../components/WorkspaceFormModal';
-import WorkspaceAdminManager from './WorkspaceAdminManager';
 import ConfirmDialog from '../../components/ConfirmDialog';
 import { useAuth } from '../../hooks/useAuth';
+import LoadingPlaceholder from '../../components/LoadingPlaceholder';
+
+const WorkspaceFormModal = lazy(() => import('../../components/WorkspaceFormModal'));
+const WorkspaceAdminManager = lazy(() => import('./WorkspaceAdminManager'));
 
 const WorkspaceManagementPage: React.FC = () => {
   const { isAdmin } = useAuth();
@@ -300,22 +302,26 @@ const WorkspaceManagementPage: React.FC = () => {
       )}
 
       {/* Create / Edit Modal */}
-      <WorkspaceFormModal
-        isOpen={formOpen}
-        workspace={editTarget}
-        onClose={() => {
-          setFormOpen(false);
-          setEditTarget(null);
-        }}
-        onSuccess={handleFormSuccess}
-      />
+      <Suspense fallback={<LoadingPlaceholder message="Loading workspace editor..." />}>
+        <WorkspaceFormModal
+          isOpen={formOpen}
+          workspace={editTarget}
+          onClose={() => {
+            setFormOpen(false);
+            setEditTarget(null);
+          }}
+          onSuccess={handleFormSuccess}
+        />
+      </Suspense>
 
       {/* Workspace Admin Manager (shown below table when ADMIN clicks "Admins") */}
       {isAdmin && adminManageTarget && (
-        <WorkspaceAdminManager
-          workspaceId={adminManageTarget.id}
-          workspaceTitle={adminManageTarget.title}
-        />
+        <Suspense fallback={<LoadingPlaceholder message="Loading workspace admins..." />}>
+          <WorkspaceAdminManager
+            workspaceId={adminManageTarget.id}
+            workspaceTitle={adminManageTarget.title}
+          />
+        </Suspense>
       )}
 
       {/* Delete Confirmation */}

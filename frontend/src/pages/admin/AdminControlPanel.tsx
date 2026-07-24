@@ -1,13 +1,15 @@
-import { useState } from 'react';
-import NotificationPreferencesPage from './NotificationPreferencesPage';
-import AiPreferencesPage from './AiPreferencesPage';
-import WorkspaceManagementPage from './WorkspaceManagementPage';
-import MailAnalyticsPage from './MailAnalyticsPage';
-import UsersPage from './UsersPage';
-import GeneralSettingsPage from './GeneralSettingsPage';
-import RecipientGroupsPage from './RecipientGroupsPage';
+import { Suspense, lazy, useState } from 'react';
 import { Settings, Layers, Bell, Sparkles, BarChart2, Users, UsersRound } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
+import LoadingPlaceholder from '../../components/LoadingPlaceholder';
+
+const NotificationPreferencesPage = lazy(() => import('./NotificationPreferencesPage'));
+const AiPreferencesPage = lazy(() => import('./AiPreferencesPage'));
+const WorkspaceManagementPage = lazy(() => import('./WorkspaceManagementPage'));
+const MailAnalyticsPage = lazy(() => import('./MailAnalyticsPage'));
+const UsersPage = lazy(() => import('./UsersPage'));
+const GeneralSettingsPage = lazy(() => import('./GeneralSettingsPage'));
+const RecipientGroupsPage = lazy(() => import('./RecipientGroupsPage'));
 
 type AdminTab = 'notification-preferences' | 'ai-preferences' | 'workspaces' | 'mail-analytics' | 'users' | 'general' | 'recipient-groups';
 
@@ -26,6 +28,15 @@ export default function AdminControlPanel() {
   const tabs = isAdmin ? allTabs : allTabs.filter(t => !t.adminOnly);
   const [activeTab, setActiveTab] = useState<AdminTab>(tabs[0]?.key ?? 'workspaces');
   const active = tabs.find(t => t.key === activeTab);
+  const tabLoadingMessage: Record<AdminTab, string> = {
+    'notification-preferences': 'Loading settings...',
+    'ai-preferences': 'Loading AI settings...',
+    'workspaces': 'Loading dashboard...',
+    'mail-analytics': 'Loading analytics...',
+    'users': 'Loading users...',
+    'general': 'Loading settings...',
+    'recipient-groups': 'Loading groups...',
+  };
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -79,13 +90,15 @@ export default function AdminControlPanel() {
             </div>
           )}
 
-          {activeTab === 'notification-preferences' && <NotificationPreferencesPage />}
-          {activeTab === 'ai-preferences' && <AiPreferencesPage />}
-          {activeTab === 'workspaces' && <WorkspaceManagementPage />}
-          {activeTab === 'mail-analytics' && <MailAnalyticsPage />}
-          {activeTab === 'users' && <UsersPage />}
-          {activeTab === 'general' && <GeneralSettingsPage />}
-          {activeTab === 'recipient-groups' && <RecipientGroupsPage />}
+          <Suspense fallback={<LoadingPlaceholder message={tabLoadingMessage[activeTab]} />}>
+            {activeTab === 'notification-preferences' && <NotificationPreferencesPage />}
+            {activeTab === 'ai-preferences' && <AiPreferencesPage />}
+            {activeTab === 'workspaces' && <WorkspaceManagementPage />}
+            {activeTab === 'mail-analytics' && <MailAnalyticsPage />}
+            {activeTab === 'users' && <UsersPage />}
+            {activeTab === 'general' && <GeneralSettingsPage />}
+            {activeTab === 'recipient-groups' && <RecipientGroupsPage />}
+          </Suspense>
         </div>
       </div>
     </div>

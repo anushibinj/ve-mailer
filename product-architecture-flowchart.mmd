@@ -23,6 +23,7 @@ flowchart TD
         AI[Axios Interceptors]
         FFG[Frontend Feature Flags<br/>VITE_ALLOW_CUSTOM_QUERY_STRING]
         GF[Global Footer<br/>build date via /api/about]
+        LZ[React Lazy + Suspense<br/>route/tab/modal code splitting]
     end
 
     subgraph Backend["Backend (Spring Boot)"]
@@ -138,6 +139,10 @@ flowchart TD
     WD --> RGV
     FB --> AI
     FB --> TSP
+    LZ --> LV
+    LZ --> WD
+    LZ --> FB
+    LZ --> ACP
     AI --> WCtrl
     AI --> FCtrl
     AI --> FParse

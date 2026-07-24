@@ -1,22 +1,24 @@
-import React, { useState } from 'react';
+import React, { Suspense, lazy, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Link, useNavigate } from 'react-router-dom';
-import LandingView from './components/LandingView';
-import WorkspaceDashboard from './components/WorkspaceDashboard';
-import FilterBuilderView from './components/FilterBuilderView';
-import RecipientGroupsView from './components/RecipientGroupsView';
 import ProtectedRoute from './components/ProtectedRoute';
-import LoginPage from './pages/LoginPage';
-import SignupPage from './pages/SignupPage';
-import VerifySignupPage from './pages/VerifySignupPage';
-import ForgotPasswordPage from './pages/ForgotPasswordPage';
-import ResetPasswordPage from './pages/ResetPasswordPage';
-import AdminControlPanel from './pages/admin/AdminControlPanel';
-import AcceptInvitePage from './pages/AcceptInvitePage';
-import AppFooter from './components/AppFooter';
+import LoadingPlaceholder from './components/LoadingPlaceholder';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 import { Toaster } from 'react-hot-toast';
 import { Mail, LayoutDashboard, LogOut, ShieldCheck, Sun, Moon } from 'lucide-react';
+
+const LandingView = lazy(() => import('./components/LandingView'));
+const WorkspaceDashboard = lazy(() => import('./components/WorkspaceDashboard'));
+const FilterBuilderView = lazy(() => import('./components/FilterBuilderView'));
+const RecipientGroupsView = lazy(() => import('./components/RecipientGroupsView'));
+const LoginPage = lazy(() => import('./pages/LoginPage'));
+const SignupPage = lazy(() => import('./pages/SignupPage'));
+const VerifySignupPage = lazy(() => import('./pages/VerifySignupPage'));
+const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'));
+const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'));
+const AcceptInvitePage = lazy(() => import('./pages/AcceptInvitePage'));
+const AdminControlPanel = lazy(() => import('./pages/admin/AdminControlPanel'));
+const AppFooter = lazy(() => import('./components/AppFooter'));
 
 function ThemeToggle() {
   const { isDark, toggleTheme } = useTheme();
@@ -139,27 +141,35 @@ export function AppContent() {
       <AppHeader onLogoClick={() => { setCurrentView('landing'); setSelectedWorkspaceId(null); }} />
 
       {currentView === 'landing' && (
-        <LandingView onSelectWorkspace={handleSelectWorkspace} />
+        <Suspense fallback={<LoadingPlaceholder message="Loading dashboard..." />}>
+          <LandingView onSelectWorkspace={handleSelectWorkspace} />
+        </Suspense>
       )}
       {currentView === 'workspace' && selectedWorkspaceId && (
-        <WorkspaceDashboard
-          workspaceId={selectedWorkspaceId}
-          onBack={handleBackToLanding}
-          onOpenFilterBuilder={handleOpenFilterBuilder}
-          onOpenGroupManager={handleOpenGroupManager}
-        />
+        <Suspense fallback={<LoadingPlaceholder message="Loading workspace..." />}>
+          <WorkspaceDashboard
+            workspaceId={selectedWorkspaceId}
+            onBack={handleBackToLanding}
+            onOpenFilterBuilder={handleOpenFilterBuilder}
+            onOpenGroupManager={handleOpenGroupManager}
+          />
+        </Suspense>
       )}
       {currentView === 'filters' && selectedWorkspaceId && (
-        <FilterBuilderView
-          workspaceId={selectedWorkspaceId}
-          onBack={handleBackToWorkspace}
-        />
+        <Suspense fallback={<LoadingPlaceholder message="Loading filters..." />}>
+          <FilterBuilderView
+            workspaceId={selectedWorkspaceId}
+            onBack={handleBackToWorkspace}
+          />
+        </Suspense>
       )}
       {currentView === 'groups' && selectedWorkspaceId && (
-        <RecipientGroupsView
-          workspaceId={selectedWorkspaceId}
-          onBack={handleBackToWorkspace}
-        />
+        <Suspense fallback={<LoadingPlaceholder message="Loading groups..." />}>
+          <RecipientGroupsView
+            workspaceId={selectedWorkspaceId}
+            onBack={handleBackToWorkspace}
+          />
+        </Suspense>
       )}
     </div>
   );
@@ -182,12 +192,12 @@ function App() {
           <div className="flex h-screen flex-col overflow-hidden">
             <div className="flex-1 overflow-y-auto">
               <Routes>
-                <Route path="/login"           element={<LoginPage />} />
-                <Route path="/signup"          element={<SignupPage />} />
-                <Route path="/verify-signup"   element={<VerifySignupPage />} />
-                <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-                <Route path="/reset-password"  element={<ResetPasswordPage />} />
-                <Route path="/accept-invite"   element={<AcceptInvitePage />} />
+                <Route path="/login"           element={<Suspense fallback={<LoadingPlaceholder message="Loading login..." />}><LoginPage /></Suspense>} />
+                <Route path="/signup"          element={<Suspense fallback={<LoadingPlaceholder message="Loading signup..." />}><SignupPage /></Suspense>} />
+                <Route path="/verify-signup"   element={<Suspense fallback={<LoadingPlaceholder message="Loading verification..." />}><VerifySignupPage /></Suspense>} />
+                <Route path="/forgot-password" element={<Suspense fallback={<LoadingPlaceholder message="Loading password recovery..." />}><ForgotPasswordPage /></Suspense>} />
+                <Route path="/reset-password"  element={<Suspense fallback={<LoadingPlaceholder message="Loading password reset..." />}><ResetPasswordPage /></Suspense>} />
+                <Route path="/accept-invite"   element={<Suspense fallback={<LoadingPlaceholder message="Loading invite..." />}><AcceptInvitePage /></Suspense>} />
 
                 <Route
                   path="/"
@@ -204,7 +214,9 @@ function App() {
                     <ProtectedRoute requiredRoles={['ADMIN', 'WORKSPACE_ADMIN']}>
                       <div className="min-h-full bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-50 font-sans">
                         <AdminLayout>
-                          <AdminControlPanel />
+                          <Suspense fallback={<LoadingPlaceholder message="Loading settings..." />}>
+                            <AdminControlPanel />
+                          </Suspense>
                         </AdminLayout>
                       </div>
                     </ProtectedRoute>
@@ -214,7 +226,9 @@ function App() {
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </div>
-            <AppFooter />
+            <Suspense fallback={<LoadingPlaceholder message="Loading footer..." />}>
+              <AppFooter />
+            </Suspense>
           </div>
         </AuthProvider>
       </ThemeProvider>

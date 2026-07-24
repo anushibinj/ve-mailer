@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useState } from 'react';
 import {
   fetchSubscriptionsByWorkspace,
   fetchFilters,
@@ -14,9 +14,11 @@ import { formatHourLabel } from '../services/scheduleUtils';
 import { useAuth } from '../hooks/useAuth';
 import { Loader2, ArrowLeft, SlidersHorizontal, Pencil, Eye, Play, Plus, Bell, Mail, Settings2, Users, PowerOff, Power } from 'lucide-react';
 import toast from 'react-hot-toast';
-import EditSubscriptionModal from './EditSubscriptionModal';
-import SubscriptionFormModal from './SubscriptionFormModal';
-import WorkspaceFormModal from './WorkspaceFormModal';
+import LoadingPlaceholder from './LoadingPlaceholder';
+
+const EditSubscriptionModal = lazy(() => import('./EditSubscriptionModal'));
+const SubscriptionFormModal = lazy(() => import('./SubscriptionFormModal'));
+const WorkspaceFormModal = lazy(() => import('./WorkspaceFormModal'));
 
 interface WorkspaceDashboardProps {
   workspaceId: string;
@@ -199,36 +201,42 @@ const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({ workspaceId, on
       </div>
 
       {canManage && (
-        <WorkspaceFormModal
-          isOpen={isEditWorkspaceOpen}
-          workspace={workspaceData}
-          onClose={() => setIsEditWorkspaceOpen(false)}
-          onSuccess={(saved) => {
-            setWorkspaceData(saved);
-            setIsEditWorkspaceOpen(false);
-          }}
-        />
+        <Suspense fallback={<LoadingPlaceholder message="Loading workspace editor..." />}>
+          <WorkspaceFormModal
+            isOpen={isEditWorkspaceOpen}
+            workspace={workspaceData}
+            onClose={() => setIsEditWorkspaceOpen(false)}
+            onSuccess={(saved) => {
+              setWorkspaceData(saved);
+              setIsEditWorkspaceOpen(false);
+            }}
+          />
+        </Suspense>
       )}
 
-      <SubscriptionFormModal
-        isOpen={isCreateModalOpen}
-        workspaceId={workspaceId}
-        filters={filters}
-        canManage={canManage}
-        onClose={() => setIsCreateModalOpen(false)}
-        onSuccess={() => { setIsCreateModalOpen(false); loadData(); }}
-      />
-
-      {editingSubscription && (
-        <EditSubscriptionModal
-          isOpen={true}
-          subscription={editingSubscription}
+      <Suspense fallback={<LoadingPlaceholder message="Loading subscription form..." />}>
+        <SubscriptionFormModal
+          isOpen={isCreateModalOpen}
           workspaceId={workspaceId}
           filters={filters}
-          readOnly={!canManage && !!editingSubscription.groupId}
-          onClose={() => setEditingSubscription(null)}
-          onSuccess={() => { setEditingSubscription(null); loadData(); }}
+          canManage={canManage}
+          onClose={() => setIsCreateModalOpen(false)}
+          onSuccess={() => { setIsCreateModalOpen(false); loadData(); }}
         />
+      </Suspense>
+
+      {editingSubscription && (
+        <Suspense fallback={<LoadingPlaceholder message="Loading subscription details..." />}>
+          <EditSubscriptionModal
+            isOpen={true}
+            subscription={editingSubscription}
+            workspaceId={workspaceId}
+            filters={filters}
+            readOnly={!canManage && !!editingSubscription.groupId}
+            onClose={() => setEditingSubscription(null)}
+            onSuccess={() => { setEditingSubscription(null); loadData(); }}
+          />
+        </Suspense>
       )}
 
       {/* Subscriptions table card */}

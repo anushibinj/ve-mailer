@@ -56,6 +56,7 @@ Key capabilities:
 
 - Browse registered **Workspaces** and their active subscriptions
 - Switch the workspace dashboard between **grid** and **list** views (persisted in browser localStorage)
+- Lazy-load page-level and large feature components with React `lazy()` + `Suspense` for route/tab-level code splitting
 - Subscribe, update, or unsubscribe via a simple **OTP-verified** flow
 - Receive **email digests** on a custom schedule — daily or weekly (Mondays), at one or more specific hours you choose
 - Create **Filter Templates** — structured query definitions (entity type, fields, criteria) that are stored as reusable templates and dynamically compiled into Octane SDK queries
@@ -224,6 +225,7 @@ ve-mailer/
     │   │   ├── LandingView.tsx       # Workspace picker (grid/list toggle persisted per browser) + Filter Templates link
     │   │   ├── FilterBuilderView.tsx # Create / browse filter templates
     │   │   ├── ProtectedRoute.tsx    # Auth guard with role-based access
+    │   │   ├── LoadingPlaceholder.tsx # Shared Suspense fallback (spinner + contextual loading text)
     │   │   ├── RecipientGroupsView.tsx # Workspace-scoped recipient group management (admin/workspace admin)
     │   │   └── WorkspaceDashboard.tsx # Subscription management + filter execution
     │   ├── hooks/
