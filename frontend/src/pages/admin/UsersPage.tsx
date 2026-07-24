@@ -1,9 +1,11 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
-import { Loader2, Search, ChevronUp, ChevronDown, ChevronsUpDown, Users, UserPlus, X, AlertCircle } from 'lucide-react';
+import { Loader2, Search, ChevronUp, ChevronDown, ChevronsUpDown, Users, UserPlus, X, AlertCircle, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import type { ApiErrorResponse } from '../../types/auth';
 import type { UserSummary } from '../../services/apiService';
-import { adminGetUsers, adminOnboardUser } from '../../services/apiService';
+import { adminDeleteUser, adminGetUsers, adminOnboardUser } from '../../services/apiService';
+import ConfirmDialog from '../../components/ConfirmDialog';
+import { useAuth } from '../../hooks/useAuth';
 
 type SortKey = 'name' | 'email' | 'subscribedFilterCount';
 type SortDir = 'asc' | 'desc';
@@ -27,6 +29,9 @@ function SortIcon({ active, dir }: { active: boolean; dir: SortDir }) {
 }
 
 export default function UsersPage() {
+  const { user: currentUser } = useAuth();
+  const isSuperAdmin = (currentUser?.roles?.includes('ADMIN') ?? false)
+    || (currentUser?.roles?.includes('ROLE_ADMIN') ?? false);
   const [users, setUsers] = useState<UserSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -39,6 +44,8 @@ export default function UsersPage() {
   const [onboardEmail, setOnboardEmail] = useState('');
   const [isOnboarding, setIsOnboarding] = useState(false);
   const [onboardError, setOnboardError] = useState('');
+  const [userToDelete, setUserToDelete] = useState<UserSummary | null>(null);
+  const [isDeletingUser, setIsDeletingUser] = useState(false);
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -82,6 +89,22 @@ export default function UsersPage() {
       setOnboardError(axiosError.response?.data?.message || 'Failed to onboard user.');
     } finally {
       setIsOnboarding(false);
+    }
+  };
+
+  const handleDeleteUser = async () => {
+    if (!userToDelete) return;
+    setIsDeletingUser(true);
+    try {
+      const response = await adminDeleteUser(userToDelete.id);
+      setUsers(prev => prev.filter(u => u.id !== userToDelete.id));
+      toast.success(response.message || `Deleted ${userToDelete.email}`);
+      setUserToDelete(null);
+    } catch (err: unknown) {
+      const axiosError = err as { response?: { data?: ApiErrorResponse } };
+      toast.error(axiosError.response?.data?.message || 'Failed to delete user.');
+    } finally {
+      setIsDeletingUser(false);
     }
   };
 
@@ -246,6 +269,11 @@ export default function UsersPage() {
                   >
                     Subscriptions <SortIcon active={sortKey === 'subscribedFilterCount'} dir={sortDir} />
                   </th>
+                  {isSuperAdmin && (
+                    <th scope="col" className="px-5 py-3 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap">
+                      Actions
+                    </th>
+                  )}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
@@ -288,6 +316,20 @@ export default function UsersPage() {
                         {user.subscribedFilterCount}
                       </span>
                     </td>
+                    {isSuperAdmin && (
+                      <td className="px-5 py-3.5 text-right">
+                        <button
+                          type="button"
+                          onClick={() => setUserToDelete(user)}
+                          disabled={isDeletingUser || user.email === currentUser?.email}
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-rose-200 text-rose-600 hover:bg-rose-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          title={user.email === currentUser?.email ? 'You cannot delete your own account' : `Delete ${user.email}`}
+                        >
+                          {isDeletingUser && userToDelete?.id === user.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                          Delete
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
@@ -295,6 +337,19 @@ export default function UsersPage() {
           </div>
         </div>
       )}
+      <ConfirmDialog
+        isOpen={!!userToDelete}
+        title="Delete user permanently?"
+        message={userToDelete
+          ? `This will permanently remove ${userToDelete.email} from the system. This action cannot be undone.`
+          : ''}
+        confirmLabel="Delete User"
+        cancelLabel="Cancel"
+        onConfirm={handleDeleteUser}
+        onCancel={() => { if (!isDeletingUser) setUserToDelete(null); }}
+        isLoading={isDeletingUser}
+        variant="danger"
+      />
     </div>
   );
 }

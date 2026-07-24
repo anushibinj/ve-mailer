@@ -3,7 +3,11 @@ package com.anushibinj.veemailer.service;
 import com.anushibinj.veemailer.dto.*;
 import com.anushibinj.veemailer.model.*;
 import com.anushibinj.veemailer.repository.AppUserRepository;
+import com.anushibinj.veemailer.repository.EmailSubscriberRepository;
+import com.anushibinj.veemailer.repository.InviteMagicLinkRepository;
+import com.anushibinj.veemailer.repository.OtpRequestRepository;
 import com.anushibinj.veemailer.repository.RoleRepository;
+import com.anushibinj.veemailer.repository.WorkspaceAdminRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -50,6 +54,18 @@ class AuthServiceTest {
 
     @Mock
     private AuthenticationManager authenticationManager;
+
+    @Mock
+    private WorkspaceAdminRepository workspaceAdminRepository;
+
+    @Mock
+    private EmailSubscriberRepository emailSubscriberRepository;
+
+    @Mock
+    private OtpRequestRepository otpRequestRepository;
+
+    @Mock
+    private InviteMagicLinkRepository inviteMagicLinkRepository;
 
     @InjectMocks
     private AuthService authService;
@@ -407,5 +423,49 @@ class AuthServiceTest {
         assertNotNull(result);
         assertEquals("access-token", result.getAccessToken());
         verify(refreshTokenService).revokeAllUserTokens(pendingUser);
+    }
+
+    @Test
+    void deleteUserBySuperAdmin_Success_CleansRelatedData() {
+        AppUser target = AppUser.builder()
+                .id(UUID.randomUUID())
+                .name("Delete Me")
+                .email("delete.me@company.com")
+                .passwordHash("hash")
+                .enabled(true)
+                .mustSetPassword(false)
+                .roles(Set.of(memberRole))
+                .build();
+
+        when(appUserRepository.findById(target.getId())).thenReturn(Optional.of(target));
+
+        String result = authService.deleteUserBySuperAdmin("admin@company.com", target.getId());
+
+        assertTrue(result.contains("deleted successfully"));
+        verify(refreshTokenService).deleteAllUserTokens(target.getId());
+        verify(workspaceAdminRepository).deleteByUser_Id(target.getId());
+        verify(emailSubscriberRepository).deleteByRecipientEmail("delete.me@company.com");
+        verify(otpRequestRepository).deleteByEmail("delete.me@company.com");
+        verify(inviteMagicLinkRepository).deleteByEmail("delete.me@company.com");
+        verify(appUserRepository).deleteUserRoleMappings(target.getId());
+        verify(appUserRepository).delete(target);
+    }
+
+    @Test
+    void deleteUserBySuperAdmin_RejectsSelfDelete() {
+        AppUser target = AppUser.builder()
+                .id(UUID.randomUUID())
+                .name("Admin")
+                .email("admin@company.com")
+                .passwordHash("hash")
+                .enabled(true)
+                .roles(Set.of(memberRole))
+                .build();
+        when(appUserRepository.findById(target.getId())).thenReturn(Optional.of(target));
+
+        IllegalArgumentException ex = assertThrows(
+                IllegalArgumentException.class,
+                () -> authService.deleteUserBySuperAdmin("admin@company.com", target.getId()));
+        assertTrue(ex.getMessage().contains("cannot delete your own"));
     }
 }

@@ -620,6 +620,7 @@ Superadmins can list all users and onboard new users without requiring self-sign
 |--------|-------------------|:-------------:|--------------------------------------------------------------------|
 | `GET`  | `/admin/users`    | ADMIN         | List all users with role and subscription counts                   |
 | `POST` | `/admin/users`    | ADMIN         | Onboard a new user (creates account + sends invite magic link to email) |
+| `DELETE` | `/admin/users/{userId}` | ADMIN   | Permanently delete a user account (self-delete is blocked)         |
 
 **Onboard user request body:** `{ "name": "Jane Smith", "email": "jane@company.com" }`
 

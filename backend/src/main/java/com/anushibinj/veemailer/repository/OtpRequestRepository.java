@@ -13,5 +13,7 @@ public interface OtpRequestRepository extends JpaRepository<OtpRequest, UUID> {
 
     Optional<OtpRequest> findByEmail(String email);
 
+    void deleteByEmail(String email);
+
     void deleteByExpiresAtBefore(LocalDateTime now);
 }

@@ -59,4 +59,9 @@ public class RefreshTokenService {
     public void revokeAllUserTokens(AppUser user) {
         refreshTokenRepository.revokeAllByUser(user);
     }
+
+    @Transactional
+    public void deleteAllUserTokens(UUID userId) {
+        refreshTokenRepository.deleteByUser_Id(userId);
+    }
 }

@@ -19,6 +19,8 @@ public interface InviteMagicLinkRepository extends JpaRepository<InviteMagicLink
 
     Optional<InviteMagicLink> findByTokenHash(String tokenHash);
 
+    void deleteByEmail(String email);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select i from InviteMagicLink i where i.tokenHash = :tokenHash")
     Optional<InviteMagicLink> findByTokenHashForUpdate(@Param("tokenHash") String tokenHash);

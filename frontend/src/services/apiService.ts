@@ -559,6 +559,11 @@ export const adminOnboardUser = async (name: string, email: string): Promise<{ m
   return response.data;
 };
 
+export const adminDeleteUser = async (userId: string): Promise<{ success: boolean; message: string }> => {
+  const response = await api.delete(`/api/admin/users/${userId}`);
+  return response.data;
+};
+
 // --- Admin General Settings ---
 
 export interface GeneralSettings {

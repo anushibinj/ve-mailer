@@ -21,4 +21,6 @@ public interface WorkspaceAdminRepository extends JpaRepository<WorkspaceAdminMa
     List<WorkspaceAdminMapping> findByUser_Email(String email);
 
     void deleteByWorkspace_IdAndUser_Id(UUID workspaceId, UUID userId);
+
+    void deleteByUser_Id(UUID userId);
 }

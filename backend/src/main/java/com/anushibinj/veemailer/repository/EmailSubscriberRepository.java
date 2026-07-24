@@ -30,6 +30,8 @@ public interface EmailSubscriberRepository extends JpaRepository<EmailSubscriber
 
     List<EmailSubscriber> findByRecipientEmail(String email);
 
+    void deleteByRecipientEmail(String email);
+
     // Using FETCH JOIN to eagerly load Filter and avoid N+1 issues when getting filterTitle
     @Query("SELECT e FROM EmailSubscriber e JOIN FETCH e.filter WHERE e.workspace.id = :workspaceId AND e.status = :status")
     List<EmailSubscriber> findByWorkspaceIdAndStatus(@Param("workspaceId") UUID workspaceId, @Param("status") Status status);

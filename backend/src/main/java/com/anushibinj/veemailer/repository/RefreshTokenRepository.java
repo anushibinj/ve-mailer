@@ -19,5 +19,8 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshToken, UUID
     @Query("UPDATE RefreshToken r SET r.revoked = true WHERE r.user = :user AND r.revoked = false")
     void revokeAllByUser(AppUser user);
 
+    @Modifying
+    void deleteByUser_Id(UUID userId);
+
     long countByUserAndRevokedFalse(AppUser user);
 }

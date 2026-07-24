@@ -3,7 +3,11 @@ package com.anushibinj.veemailer.service;
 import com.anushibinj.veemailer.dto.*;
 import com.anushibinj.veemailer.model.*;
 import com.anushibinj.veemailer.repository.AppUserRepository;
+import com.anushibinj.veemailer.repository.EmailSubscriberRepository;
+import com.anushibinj.veemailer.repository.InviteMagicLinkRepository;
+import com.anushibinj.veemailer.repository.OtpRequestRepository;
 import com.anushibinj.veemailer.repository.RoleRepository;
+import com.anushibinj.veemailer.repository.WorkspaceAdminRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -30,6 +34,10 @@ public class AuthService {
     private final JwtService jwtService;
     private final RefreshTokenService refreshTokenService;
     private final AuthenticationManager authenticationManager;
+    private final WorkspaceAdminRepository workspaceAdminRepository;
+    private final EmailSubscriberRepository emailSubscriberRepository;
+    private final OtpRequestRepository otpRequestRepository;
+    private final InviteMagicLinkRepository inviteMagicLinkRepository;
 
     @Value("${app.auth.allowed-domains}")
     private String allowedDomains;
@@ -319,6 +327,29 @@ public class AuthService {
                     .message("This invite link is invalid.")
                     .build();
         };
+    }
+
+    @Transactional
+    public String deleteUserBySuperAdmin(String currentSuperAdminEmail, java.util.UUID userId) {
+        AppUser user = appUserRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found."));
+
+        String currentEmail = normalizeEmail(currentSuperAdminEmail);
+        if (currentEmail != null && currentEmail.equalsIgnoreCase(user.getEmail())) {
+            throw new IllegalArgumentException("You cannot delete your own super admin account.");
+        }
+
+        // Cleanup child records and email-keyed invite/verification artifacts first,
+        // then remove role mappings and the user row to preserve referential integrity.
+        refreshTokenService.deleteAllUserTokens(user.getId());
+        workspaceAdminRepository.deleteByUser_Id(user.getId());
+        emailSubscriberRepository.deleteByRecipientEmail(user.getEmail());
+        otpRequestRepository.deleteByEmail(user.getEmail());
+        inviteMagicLinkRepository.deleteByEmail(user.getEmail());
+        appUserRepository.deleteUserRoleMappings(user.getId());
+        appUserRepository.delete(user);
+
+        return "User " + user.getEmail() + " deleted successfully.";
     }
 
     public AuthResponseDto.UserProfileDto getCurrentUser(String email) {
