@@ -12,6 +12,22 @@ export default defineConfig(({ mode }: ConfigEnv) => {
     define: {
       "import.meta.env.VITE_BUILD_TIME": JSON.stringify(new Date().toISOString()),
     },
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (!id.includes("node_modules")) return undefined;
+            if (id.includes("react-dom") || id.includes("\\react\\") || id.includes("/react/")) return "react-vendor";
+            if (id.includes("react-router")) return "router-vendor";
+            if (id.includes("recharts")) return "charts-vendor";
+            if (id.includes("axios")) return "http-vendor";
+            if (id.includes("react-hot-toast")) return "toast-vendor";
+            if (id.includes("lucide-react")) return "icons-vendor";
+            return undefined;
+          },
+        },
+      },
+    },
     test: {
       environment: "jsdom",
       setupFiles: ["./src/test/setup.ts"],
