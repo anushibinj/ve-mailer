@@ -15,5 +15,6 @@ import java.util.List;
 public class ParsedFilterQueryResponse {
     private List<String> fields;
     private List<FilterCriteriaClause> criteria;
+    private String orderBy;
     private String filterQueryString;
 }

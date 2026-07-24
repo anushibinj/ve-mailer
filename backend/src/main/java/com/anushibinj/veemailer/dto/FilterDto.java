@@ -31,6 +31,9 @@ public class FilterDto {
 
     private List<FilterCriteriaClause> criteria;
 
+    /** Optional field name for ascending result ordering. */
+    private String orderBy;
+
     /**
      * Optional compact form of filter definition:
      * fields=id,name&query=name EQ ^*Case360*^

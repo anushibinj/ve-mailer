@@ -89,6 +89,7 @@ export interface Filter {
   entityType: string;
   fields: string;   // JSON string from backend
   criteria: string;  // JSON string from backend
+  orderBy?: string | null;
   ownerEmail?: string | null;
   editable?: boolean;
   adminManaged?: boolean;
@@ -100,6 +101,7 @@ export interface FilterCreatePayload {
   entityType: string;
   fields: string[];
   criteria: FilterCriteriaClause[];
+  orderBy?: string;
   filterQueryString?: string;
 }
 
@@ -109,6 +111,7 @@ export interface FilterUpdatePayload {
   entityType: string;
   fields: string[];
   criteria: FilterCriteriaClause[];
+  orderBy?: string;
   filterQueryString?: string;
 }
 
@@ -119,6 +122,7 @@ export interface ParseFilterQueryStringPayload {
 export interface ParsedFilterQueryResponse {
   fields: string[];
   criteria: FilterCriteriaClause[];
+  orderBy?: string | null;
   filterQueryString: string;
 }
 

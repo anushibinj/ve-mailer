@@ -52,6 +52,10 @@ public class Filter {
     @Column(columnDefinition = "TEXT")
     private String criteria;
 
+    /** Optional Octane field name used to sort query results (ascending). */
+    @Column(name = "order_by")
+    private String orderBy;
+
     /**
      * Null for admin-created shared templates.
      * Non-null for user-private templates owned by the given email address.

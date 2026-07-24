@@ -129,7 +129,8 @@ class FilterServiceTest {
 
         List<EntityModel> sorted = filterService.sortByTriageSlaAgeIfEnabled(
                 List.of(newest, middle, oldest),
-                List.of("id", TriageSlaPolicy.TRIAGE_SLA_FIELD));
+                List.of("id", TriageSlaPolicy.TRIAGE_SLA_FIELD),
+                null);
 
         assertEquals("3", ((StringFieldModel) sorted.get(0).getValue("id")).getValue(),
                 "oldest ticket must come first");
@@ -228,5 +229,14 @@ class FilterServiceTest {
                         .referenceValues(true)
                         .build()));
         assertEquals("fields=id,name&query=code_review_owner_udf EQ {id IN 8666}", output);
+    }
+
+    @Test
+    void testParseFilterQueryString_ParsesOrderBy() {
+        ParsedFilterQueryResponse parsed = filterService.parseFilterQueryString(
+                "fields=id,name&query=name EQ ^*Case360*^&order_by=creation_time");
+        assertEquals("creation_time", parsed.getOrderBy());
+        assertEquals("fields=id,name&query=name EQ ^*Case360*^&order_by=creation_time",
+                parsed.getFilterQueryString());
     }
 }

@@ -1,0 +1,3 @@
+ALTER TABLE filters
+    ADD COLUMN IF NOT EXISTS order_by VARCHAR(255);
+

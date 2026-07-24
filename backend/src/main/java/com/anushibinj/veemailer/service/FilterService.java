@@ -100,6 +100,7 @@ public class FilterService {
                     .entityType(resolvedDto.getEntityType())
                     .fields(fieldsJson)
                     .criteria(criteriaJson)
+                    .orderBy(normalizeOrderBy(resolvedDto.getOrderBy()))
                     .ownerEmail(normalizeEmail(ownerEmail))
                     .build();
 
@@ -130,6 +131,7 @@ public class FilterService {
         Map<String, String> params = parseFilterQueryParams(normalizedInput);
         String fieldsRaw = params.get("fields");
         String queryRaw = params.get("query");
+        String orderByRaw = params.get("order_by");
 
         if (fieldsRaw == null || fieldsRaw.isBlank()) {
             throw new IllegalArgumentException("Invalid filter query string: missing fields parameter");
@@ -148,11 +150,13 @@ public class FilterService {
         }
 
         List<FilterCriteriaClause> parsedCriteria = parseCriteriaExpression(queryRaw);
-        String normalized = buildFilterQueryString(parsedFields, parsedCriteria);
+        String orderBy = normalizeOrderBy(orderByRaw);
+        String normalized = buildFilterQueryString(parsedFields, parsedCriteria, Set.of(), orderBy);
 
         return ParsedFilterQueryResponse.builder()
                 .fields(parsedFields)
                 .criteria(parsedCriteria)
+                .orderBy(orderBy)
                 .filterQueryString(normalized)
                 .build();
     }
@@ -165,7 +169,7 @@ public class FilterService {
             List<FilterCriteriaClause> criteria = objectMapper.readValue(filter.getCriteria(), new TypeReference<>() {});
             Workspace workspace = filter.getWorkspace();
             Set<String> referenceFieldNames = resolveReferenceFieldNames(workspace, filter.getEntityType());
-            return buildFilterQueryString(fields, criteria, referenceFieldNames);
+            return buildFilterQueryString(fields, criteria, referenceFieldNames, normalizeOrderBy(filter.getOrderBy()));
         } catch (JsonProcessingException e) {
             throw new RuntimeException("Failed to deserialize filter data", e);
         }
@@ -203,7 +207,12 @@ public class FilterService {
                     .entityType(filter.getEntityType())
                     .fields(fields)
                     .criteria(criteria)
-                    .filterQueryString(buildFilterQueryString(fields, criteria, referenceFieldNames))
+                    .orderBy(normalizeOrderBy(filter.getOrderBy()))
+                    .filterQueryString(buildFilterQueryString(
+                            fields,
+                            criteria,
+                            referenceFieldNames,
+                            normalizeOrderBy(filter.getOrderBy())))
                     .build();
         } catch (JsonProcessingException e) {
             throw new RuntimeException("Failed to deserialize filter data", e);
@@ -226,6 +235,7 @@ public class FilterService {
             filter.setEntityType(resolvedDto.getEntityType());
             filter.setFields(fieldsJson);
             filter.setCriteria(criteriaJson);
+            filter.setOrderBy(normalizeOrderBy(resolvedDto.getOrderBy()));
 
             return filterRepository.save(filter);
         } catch (JsonProcessingException e) {
@@ -261,10 +271,14 @@ public class FilterService {
         try {
             List<String> fields = objectMapper.readValue(filter.getFields(), new TypeReference<>() {});
             List<FilterCriteriaClause> clauses = objectMapper.readValue(filter.getCriteria(), new TypeReference<>() {});
+            String orderByField = normalizeOrderBy(filter.getOrderBy());
 
             // Compute the effective fields to fetch — strips pseudo-fields, adds silent
             // dependencies (AI Summary → name+description, Triage SLA → creation_time, always → id).
             List<String> effectiveFetchFields = computeEffectiveFetchFields(fields);
+            if (orderByField != null && !effectiveFetchFields.contains(orderByField)) {
+                effectiveFetchFields.add(orderByField);
+            }
 
             Octane octaneClient = octaneCacheService.getOctaneClient(
                     workspace.getRootUrl(),
@@ -283,6 +297,9 @@ public class FilterService {
                     .get()
                     .query(query)
                     .addFields(effectiveFetchFields.toArray(new String[0]));
+            if (orderByField != null) {
+                getEntities = getEntities.addOrderBy(orderByField, true);
+            }
             // Apply LIMIT only when a positive integer is configured; -1 means unlimited.
             if (effectiveLimit > 0) {
                 getEntities = getEntities.limit(effectiveLimit);
@@ -290,7 +307,7 @@ public class FilterService {
             OctaneCollection<EntityModel> result = getEntities.execute();
             List<EntityModel> entities = result.stream().toList();
             workspaceService.markWorkspaceOnline(workspaceId, !entities.isEmpty());
-            return sortByTriageSlaAgeIfEnabled(entities, fields);
+            return sortByTriageSlaAgeIfEnabled(entities, fields, orderByField);
         } catch (JsonProcessingException e) {
             throw new RuntimeException("Failed to deserialize filter data", e);
         } catch (RuntimeException e) {
@@ -322,7 +339,11 @@ public class FilterService {
         try {
             List<String> fields = objectMapper.readValue(filter.getFields(), new TypeReference<>() {});
             List<FilterCriteriaClause> clauses = objectMapper.readValue(filter.getCriteria(), new TypeReference<>() {});
+            String orderByField = normalizeOrderBy(filter.getOrderBy());
             List<String> effectiveFetchFields = computeEffectiveFetchFields(fields);
+            if (orderByField != null && !effectiveFetchFields.contains(orderByField)) {
+                effectiveFetchFields.add(orderByField);
+            }
 
             Octane octaneClient = octaneCacheService.getOctaneClient(
                     workspace.getRootUrl(),
@@ -339,11 +360,14 @@ public class FilterService {
                     .entityList("work_items")
                     .get()
                     .query(query)
-                    .addFields(effectiveFetchFields.toArray(new String[0]))
-                    .limit(effectivePreviewLimit);
+                    .addFields(effectiveFetchFields.toArray(new String[0]));
+            if (orderByField != null) {
+                getEntities = getEntities.addOrderBy(orderByField, true);
+            }
+            getEntities = getEntities.limit(effectivePreviewLimit);
 
             OctaneCollection<EntityModel> result = getEntities.execute();
-            List<EntityModel> entities = sortByTriageSlaAgeIfEnabled(result.stream().toList(), fields);
+            List<EntityModel> entities = sortByTriageSlaAgeIfEnabled(result.stream().toList(), fields, orderByField);
             workspaceService.markWorkspaceOnline(workspaceId, !entities.isEmpty());
 
             // AI Summary generation — matches the real email-send flow exactly.
@@ -446,8 +470,8 @@ public class FilterService {
         return effectiveFetchFields;
     }
 
-    List<EntityModel> sortByTriageSlaAgeIfEnabled(List<EntityModel> entities, List<String> selectedFields) {
-        if (!selectedFields.contains(TriageSlaPolicy.TRIAGE_SLA_FIELD)) {
+    List<EntityModel> sortByTriageSlaAgeIfEnabled(List<EntityModel> entities, List<String> selectedFields, String orderByField) {
+        if (orderByField != null || !selectedFields.contains(TriageSlaPolicy.TRIAGE_SLA_FIELD)) {
             return entities;
         }
         return entities.stream()
@@ -650,6 +674,7 @@ public class FilterService {
                     .entityType(dto.getEntityType())
                     .fields(parsed.getFields())
                     .criteria(parsed.getCriteria())
+                    .orderBy(parsed.getOrderBy())
                     .filterQueryString(parsed.getFilterQueryString())
                     .build();
         }
@@ -663,6 +688,7 @@ public class FilterService {
         for (FilterCriteriaClause clause : dto.getCriteria()) {
             validateClause(clause);
         }
+        dto.setOrderBy(normalizeOrderBy(dto.getOrderBy()));
         return dto;
     }
 
@@ -958,11 +984,14 @@ public class FilterService {
     }
 
     String buildFilterQueryString(List<String> fields, List<FilterCriteriaClause> criteria) {
-        return buildFilterQueryString(fields, criteria, Set.of());
+        return buildFilterQueryString(fields, criteria, Set.of(), null);
     }
 
     private String buildFilterQueryString(
-            List<String> fields, List<FilterCriteriaClause> criteria, Set<String> referenceFieldNames) {
+            List<String> fields,
+            List<FilterCriteriaClause> criteria,
+            Set<String> referenceFieldNames,
+            String orderBy) {
         if (fields == null || fields.isEmpty()) {
             throw new IllegalArgumentException("fields must not be empty");
         }
@@ -983,7 +1012,10 @@ public class FilterService {
                 .map(clause -> serializeClause(clause, referenceFieldNames))
                 .collect(Collectors.joining(" AND "));
 
-        return "fields=" + fieldsPart + "&query=" + queryPart;
+        String normalizedOrderBy = normalizeOrderBy(orderBy);
+        return normalizedOrderBy == null
+                ? "fields=" + fieldsPart + "&query=" + queryPart
+                : "fields=" + fieldsPart + "&query=" + queryPart + "&order_by=" + normalizedOrderBy;
     }
 
     private String serializeClause(FilterCriteriaClause clause, Set<String> referenceFieldNames) {
@@ -1039,12 +1071,20 @@ public class FilterService {
             }
             String key = decodeQueryComponent(pair.substring(0, separator)).trim().toLowerCase();
             String value = decodeQueryComponent(pair.substring(separator + 1)).trim();
-            if (!"fields".equals(key) && !"query".equals(key)) {
+            if (!"fields".equals(key) && !"query".equals(key) && !"order_by".equals(key)) {
                 throw new IllegalArgumentException("Unsupported filter query parameter: " + key);
             }
             params.put(key, value);
         }
         return params;
+    }
+
+    private String normalizeOrderBy(String orderBy) {
+        if (orderBy == null) {
+            return null;
+        }
+        String normalized = orderBy.trim();
+        return normalized.isEmpty() ? null : normalized;
     }
 
     private String decodeQueryComponent(String value) {

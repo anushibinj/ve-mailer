@@ -162,7 +162,7 @@ ve-mailer/
 │   │   │   ├── MailAuditLog.java            # Mail delivery audit record entity
 │   │   │   ├── Workspace.java
 │   │   │   ├── WorkspaceAdminMapping.java   # Maps users to workspaces they administer
-│   │   │   ├── Filter.java                 # title, description, entityType, fields (JSON), criteria (JSON)
+│   │   │   ├── Filter.java                 # title, description, entityType, fields (JSON), criteria (JSON), orderBy
 │   │   │   ├── FilterCriteriaClause.java   # POJO: field, operator, values[], logicalOperator (AND|OR)
 │   │   │   ├── EmailSubscriber.java
 │   │   │   ├── OtpRequest.java
@@ -272,6 +272,7 @@ Filter
   entityType      -- Octane filter scope (e.g. "backlog_items", "epic", "feature")
   fields          -- JSON array of field names to fetch (TEXT column)
   criteria        -- JSON array of FilterCriteriaClause objects (TEXT column)
+  orderBy         -- optional field used for ascending query sorting
 
   FilterCriteriaClause (embedded in criteria JSON):
     field         -- Octane field name
@@ -471,10 +472,11 @@ Filter templates are visibility-scoped:
 - `logicalOperator`: `AND` (default) or `OR` — controls how this clause is joined to the previous one. Ignored for the first clause.
 - `referenceValues`: optional; when `true`, criteria are emitted as reference-ID clauses like `code_review_owner_udf EQ {id IN 8666}`
 
-**Query-string format:** `fields=id,name&query=name EQ ^*Case360*^`
+**Query-string format:** `fields=id,name&query=name EQ ^*Case360*^&order_by=creation_time`
 
 - `fields` is a comma-separated list of output fields
 - `query` supports one or more clauses joined by `AND` or `;`
+- `order_by` is optional and applies ascending ordering on the given field
 - `query` can include `||` OR groups when all OR-joined expressions target the same field
 - Accepted operators in query-string mode: `EQ`, `NEQ`, `IN`, `NOT_IN` (mapped internally to `IN`/`NOT_IN`)
 - Values can be wrapped with `^...^` and multiple values are comma-separated inside the wrapper
@@ -978,6 +980,7 @@ Filter templates are the core building block. Each filter is stored as structure
    - The **Fields to Fetch** picker is a searchable tag/badge flow backed by live metadata for the selected entity type (instead of a static frontend list), while keeping custom pseudo-fields like **✨ AI Summary** and **Triage SLA**
    - Selected field chips are drag-reorderable, and that exact order is reused in both preview output and email table columns
    - Special pseudo-fields (✨ AI Summary, 🚦 Triage SLA) are shown in the same field-selection panel for a single, unified picker experience
+   - An **Order by** selector appears immediately after **Fields to Fetch**, using the same metadata-driven field options
    - Values for reference fields (phase, owner, severity, etc.) are selected from a searchable multi-select populated from the corresponding Octane entity list
    - Conditions can be joined with **AND** or **OR** using a per-row connector dropdown
 
@@ -990,8 +993,9 @@ A filter has:
    - `epic` → `subtype EQ epic`
    - `feature` → `subtype EQ feature`
 2. **Fields** — which fields to return in the result set (e.g. `["id", "name", "phase", "owner"]`)
-3. **Criteria** — an array of clauses that are AND/OR-joined to build the Octane SDK query
-4. **Ownership (`ownerEmail`)**:
+3. **Order by (optional)** — a metadata-backed field name used to sort query results (ascending)
+4. **Criteria** — an array of clauses that are AND/OR-joined to build the Octane SDK query
+5. **Ownership (`ownerEmail`)**:
    - `null` for admin-created shared templates
    - user email for private member templates
 

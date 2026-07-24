@@ -247,6 +247,7 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
   const [availableFieldsLoading, setAvailableFieldsLoading] = useState(false);
   const [creationMode, setCreationMode] = useState<FilterCreationMode | null>(allowCustomQueryString ? null : 'manual');
   const [selectedFields, setSelectedFields] = useState<string[]>(defaultFields);
+  const [orderByField, setOrderByField] = useState('');
   const [fieldSearch, setFieldSearch] = useState('');
   const [criteria, setCriteria] = useState<FilterCriteriaClause[]>([emptyCriterion()]);
   const [filterQueryString, setFilterQueryString] = useState('');
@@ -290,6 +291,7 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
     setTitle(''); setDescription(''); setEntityType('backlog_items');
     setCreationMode(allowCustomQueryString ? null : 'manual');
     setSelectedFields(defaultFields);
+    setOrderByField('');
     setFieldSearch('');
     setCriteria([emptyCriterion()]);
     setFilterQueryString('');
@@ -302,6 +304,7 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
     setCreationMode('manual');
     setFieldSearch('');
     try { setSelectedFields(JSON.parse(f.fields)); } catch { setSelectedFields(defaultFields); }
+    setOrderByField((f.orderBy ?? '').trim());
     try {
       const parsed: FilterCriteriaClause[] = JSON.parse(f.criteria);
       // Backfill logicalOperator for criteria saved before AND/OR support was added
@@ -320,6 +323,7 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
       setEditingFilter(null);
       setTitle(cloned.title); setDescription(cloned.description || '');
       setEntityType(normalizeEntityType(cloned.entityType)); setSelectedFields(cloned.fields);
+      setOrderByField((cloned.orderBy ?? '').trim());
       setCriteria(cloned.criteria.length > 0 ? cloned.criteria : [emptyCriterion()]);
       const canUseQueryString = allowCustomQueryString && !!cloned.filterQueryString;
       setFilterQueryString(canUseQueryString ? (cloned.filterQueryString || '') : '');
@@ -339,6 +343,7 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
     try {
       const parsed = await parseFilterQueryString(workspaceId, { filterQueryString: filterQueryString.trim() });
       setSelectedFields(parsed.fields);
+      setOrderByField((parsed.orderBy ?? '').trim());
       setCriteria(parsed.criteria.length > 0 ? parsed.criteria : [emptyCriterion()]);
       setFilterQueryString(parsed.filterQueryString);
       setQueryStringApplied(true);
@@ -424,6 +429,9 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
     field.label.toLowerCase().includes(fieldSearch.toLowerCase()) ||
     field.name.toLowerCase().includes(fieldSearch.toLowerCase())
   );
+  const orderByFieldOptions = orderByField && !dynamicFieldOptions.some(field => field.name === orderByField)
+    ? [...dynamicFieldOptions, { name: orderByField, label: orderByField, fromMetadata: false }]
+    : dynamicFieldOptions;
 
   const getSelectedFieldLabel = (fieldName: string): string => {
     if (fieldName === TRIAGE_SLA_FIELD) return `🚦 ${TRIAGE_SLA_FIELD}`;
@@ -454,6 +462,7 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
           entityType,
           fields: selectedFields,
           criteria: cleanedCriteria,
+          orderBy: orderByField.trim() || undefined,
           filterQueryString: normalizedFilterQueryString || undefined
         };
         await updateFilter(workspaceId, editingFilter.id, payload);
@@ -465,6 +474,7 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
           entityType,
           fields: selectedFields,
           criteria: cleanedCriteria,
+          orderBy: orderByField.trim() || undefined,
           filterQueryString: normalizedFilterQueryString || undefined
         };
         await createFilter(workspaceId, payload);
@@ -502,6 +512,10 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
   };
   const parseFields = (fieldsJson: string): string[] => {
     try { return JSON.parse(fieldsJson); } catch { return []; }
+  };
+  const parseOrderBy = (value?: string | null): string => {
+    if (!value) return '';
+    return value.trim();
   };
 
   const canEditFilter = (filter: Filter): boolean => {
@@ -731,6 +745,21 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
                       </div>
                     </div>
                   )}
+                  <div className="space-y-1.5">
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Order by</label>
+                    <select
+                      value={orderByField}
+                      onChange={e => setOrderByField(e.target.value)}
+                      className={inputClass}
+                    >
+                      <option value="">None</option>
+                      {orderByFieldOptions.map(field => (
+                        <option key={field.name} value={field.name}>
+                          {field.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
               ) : (
                 <>
@@ -871,6 +900,22 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
                     )}
                   </div>
 
+                  <div className="space-y-1.5">
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Order by</label>
+                    <select
+                      value={orderByField}
+                      onChange={e => setOrderByField(e.target.value)}
+                      className={inputClass}
+                    >
+                      <option value="">None</option>
+                      {orderByFieldOptions.map(field => (
+                        <option key={field.name} value={field.name}>
+                          {field.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
                   <div className="space-y-2">
                     <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Filter Criteria</label>
                     <p className="text-xs text-slate-400 dark:text-slate-500">
@@ -969,6 +1014,7 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
           {filters.map((f, idx) => {
             const criteriaList = parseCriteria(f.criteria);
             const fieldsList = parseFields(f.fields);
+            const orderBy = parseOrderBy(f.orderBy);
             const exState = executeState[f.id];
             const hasResults = !exState?.isExecuting && exState?.results != null && exState.results.length > 0;
 
@@ -1013,6 +1059,11 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
                         {fieldsList.length > 8 && (
                           <span className="inline-block px-2 py-0.5 rounded-md bg-slate-50 dark:bg-slate-800 text-slate-400 dark:text-slate-500 text-xs border border-slate-100 dark:border-slate-700">
                             +{fieldsList.length - 8} more
+                          </span>
+                        )}
+                        {orderBy && (
+                          <span className="inline-block px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 text-xs border border-emerald-100 dark:border-emerald-500/20">
+                            Order by: {orderBy}
                           </span>
                         )}
                       </div>
