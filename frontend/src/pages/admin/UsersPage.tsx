@@ -1,9 +1,9 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
-import { Loader2, Search, ChevronUp, ChevronDown, ChevronsUpDown, Users, UserPlus, X, AlertCircle, Trash2 } from 'lucide-react';
+import { Loader2, Search, ChevronUp, ChevronDown, ChevronsUpDown, Users, UserPlus, X, AlertCircle, Trash2, RotateCcw } from 'lucide-react';
 import toast from 'react-hot-toast';
 import type { ApiErrorResponse } from '../../types/auth';
 import type { UserSummary } from '../../services/apiService';
-import { adminDeleteUser, adminGetUsers, adminOnboardUser } from '../../services/apiService';
+import { adminDeleteUser, adminGetUsers, adminOnboardUser, adminResendInvite } from '../../services/apiService';
 import ConfirmDialog from '../../components/ConfirmDialog';
 import { useAuth } from '../../hooks/useAuth';
 
@@ -46,6 +46,7 @@ export default function UsersPage() {
   const [onboardError, setOnboardError] = useState('');
   const [userToDelete, setUserToDelete] = useState<UserSummary | null>(null);
   const [isDeletingUser, setIsDeletingUser] = useState(false);
+  const [resendingInviteUserId, setResendingInviteUserId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -105,6 +106,19 @@ export default function UsersPage() {
       toast.error(axiosError.response?.data?.message || 'Failed to delete user.');
     } finally {
       setIsDeletingUser(false);
+    }
+  };
+
+  const handleResendInvite = async (user: UserSummary) => {
+    setResendingInviteUserId(user.id);
+    try {
+      const response = await adminResendInvite(user.id);
+      toast.success(response.message || `Invite resent to ${user.email}.`);
+    } catch (err: unknown) {
+      const axiosError = err as { response?: { data?: ApiErrorResponse } };
+      toast.error(axiosError.response?.data?.message || 'Failed to resend invite.');
+    } finally {
+      setResendingInviteUserId(null);
     }
   };
 
@@ -318,16 +332,30 @@ export default function UsersPage() {
                     </td>
                     {isSuperAdmin && (
                       <td className="px-5 py-3.5 text-right">
-                        <button
-                          type="button"
-                          onClick={() => setUserToDelete(user)}
-                          disabled={isDeletingUser || user.email === currentUser?.email}
-                          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-rose-200 text-rose-600 hover:bg-rose-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                          title={user.email === currentUser?.email ? 'You cannot delete your own account' : `Delete ${user.email}`}
-                        >
-                          {isDeletingUser && userToDelete?.id === user.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
-                          Delete
-                        </button>
+                        <div className="inline-flex items-center gap-2">
+                          {user.mustSetPassword && (
+                            <button
+                              type="button"
+                              onClick={() => handleResendInvite(user)}
+                              disabled={!!resendingInviteUserId || isDeletingUser}
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-indigo-200 text-indigo-600 hover:bg-indigo-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                              title={`Resend invite to ${user.email}`}
+                            >
+                              {resendingInviteUserId === user.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" />}
+                              Resend Invite
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => setUserToDelete(user)}
+                            disabled={isDeletingUser || user.email === currentUser?.email || !!resendingInviteUserId}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-rose-200 text-rose-600 hover:bg-rose-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            title={user.email === currentUser?.email ? 'You cannot delete your own account' : `Delete ${user.email}`}
+                          >
+                            {isDeletingUser && userToDelete?.id === user.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                            Delete
+                          </button>
+                        </div>
                       </td>
                     )}
                   </tr>

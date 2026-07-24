@@ -296,6 +296,24 @@ public class AuthService {
         return genericResponse;
     }
 
+    @Transactional
+    public String resendPendingInviteByAdmin(String currentAdminEmail, java.util.UUID userId) {
+        AppUser user = appUserRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found."));
+
+        String currentEmail = normalizeEmail(currentAdminEmail);
+        if (currentEmail != null && currentEmail.equalsIgnoreCase(user.getEmail()) && !user.isMustSetPassword()) {
+            throw new IllegalArgumentException("Your account is already active and does not need an invite.");
+        }
+
+        if (!user.isMustSetPassword()) {
+            throw new IllegalArgumentException("This user has already completed onboarding.");
+        }
+
+        inviteMagicLinkService.createAndSendInviteMagicLink(user.getEmail(), user.getName());
+        return "Invite resent to " + user.getEmail() + ".";
+    }
+
     @Transactional(readOnly = true)
     public InviteMagicLinkVerificationResponseDto verifyInviteMagicLink(String token) {
         InviteMagicLinkService.ValidationResult result = inviteMagicLinkService.validateInviteMagicLink(token);

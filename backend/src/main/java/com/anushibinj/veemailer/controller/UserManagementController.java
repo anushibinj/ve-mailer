@@ -49,6 +49,19 @@ public class UserManagementController {
     }
 
     /**
+     * Resends an invite magic link for users who have not completed onboarding.
+     */
+    @PostMapping("/{userId}/resend-invite")
+    public ResponseEntity<ApiResponseWrapper> resendInvite(@PathVariable java.util.UUID userId) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || authentication.getName() == null) {
+            throw new IllegalArgumentException("Authentication is required.");
+        }
+        String message = authService.resendPendingInviteByAdmin(authentication.getName(), userId);
+        return ResponseEntity.ok(ApiResponseWrapper.success(message));
+    }
+
+    /**
      * Permanently deletes a user account and related records.
      * Super admins cannot delete their own account.
      */

@@ -564,6 +564,11 @@ export const adminDeleteUser = async (userId: string): Promise<{ success: boolea
   return response.data;
 };
 
+export const adminResendInvite = async (userId: string): Promise<{ success: boolean; message: string }> => {
+  const response = await api.post(`/api/admin/users/${userId}/resend-invite`);
+  return response.data;
+};
+
 // --- Admin General Settings ---
 
 export interface GeneralSettings {

@@ -394,6 +394,45 @@ class AuthServiceTest {
     }
 
     @Test
+    void resendPendingInviteByAdmin_PendingUser_SendsLink() {
+        AppUser pendingUser = AppUser.builder()
+                .id(UUID.randomUUID())
+                .name("Pending User")
+                .email("pending@company.com")
+                .passwordHash("hashed")
+                .enabled(true)
+                .mustSetPassword(true)
+                .roles(Set.of(memberRole))
+                .build();
+        when(appUserRepository.findById(pendingUser.getId())).thenReturn(Optional.of(pendingUser));
+
+        String result = authService.resendPendingInviteByAdmin("admin@company.com", pendingUser.getId());
+
+        assertEquals("Invite resent to pending@company.com.", result);
+        verify(inviteMagicLinkService).createAndSendInviteMagicLink("pending@company.com", "Pending User");
+    }
+
+    @Test
+    void resendPendingInviteByAdmin_ActiveUser_Throws() {
+        AppUser activeUser = AppUser.builder()
+                .id(UUID.randomUUID())
+                .name("Active User")
+                .email("active@company.com")
+                .passwordHash("hashed")
+                .enabled(true)
+                .mustSetPassword(false)
+                .roles(Set.of(memberRole))
+                .build();
+        when(appUserRepository.findById(activeUser.getId())).thenReturn(Optional.of(activeUser));
+
+        IllegalArgumentException ex = assertThrows(
+                IllegalArgumentException.class,
+                () -> authService.resendPendingInviteByAdmin("admin@company.com", activeUser.getId()));
+        assertTrue(ex.getMessage().contains("already completed onboarding"));
+        verify(inviteMagicLinkService, never()).createAndSendInviteMagicLink(anyString(), anyString());
+    }
+
+    @Test
     void acceptInvite_UsesMagicLinkToken() {
         AcceptInviteRequestDto request = AcceptInviteRequestDto.builder()
                 .token("magic-token")

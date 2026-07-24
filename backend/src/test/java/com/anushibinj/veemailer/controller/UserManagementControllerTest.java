@@ -21,6 +21,7 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -96,5 +97,18 @@ class UserManagementControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.message").value("User deleted successfully."));
+    }
+
+    @Test
+    @WithMockUser(username = "admin@company.com", roles = "ADMIN")
+    void testResendInvite_returnsSuccessWrapper() throws Exception {
+        UUID userId = UUID.randomUUID();
+        when(authService.resendPendingInviteByAdmin(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.eq(userId)))
+                .thenReturn("Invite resent to pending@company.com.");
+
+        mockMvc.perform(post("/api/admin/users/{userId}/resend-invite", userId).contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Invite resent to pending@company.com."));
     }
 }

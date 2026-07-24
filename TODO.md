@@ -45,6 +45,6 @@
 - [x] Append the header hpeclienttype=HPE_MQM_UI to every request made to octane. Write a comment that this is done to simulate the octane frontend behavior
 - [x] Add a new field in the workspace configuration called "Workspace shortcode" to store the shortcode of the workspace like "77BD". This will be used later in other areas. Just implement the CRUD operations for this and allow existing people who can edit the workspace to edit this as well. These are super admins and workspace admins.
 - [ ] Add a workspace-admin-onboarding flow where the super admin just creates the title of the workspace in draft mode and sends a notification (e-mail/DM) to the workspace admin to configure the rest of the data
-- [ ] The tickets should be sorted in descending order of creation_time of the tickets. That is, the newest tickets should come on the top.
-- [ ] In the admin panel under users, I already see people for whom I have sent invites but they haven't accepted the invites. Add an option to resend invites at a later point of time.
+- [x] The tickets should be sorted in descending order of creation_time of the tickets. That is, the newest tickets should come on the top.
+- [x] In the admin panel under users, I already see people for whom I have sent invites but they haven't accepted the invites. Add an option to resend invites at a later point of time.
 - [ ] Once an user has onboarded, the super admins should receive a mail saying that user XYZ has onboarded now.

@@ -614,12 +614,13 @@ All mail analytics endpoints require the `ADMIN` role. They provide aggregated s
 
 ### Admin — User Management (`/api/admin/users`)
 
-Superadmins can list all users and onboard new users without requiring self-signup.
+Superadmins can list all users, onboard users, resend pending invites, and delete accounts.
 
 | Method | Path              | Role required | Description                                                        |
 |--------|-------------------|:-------------:|--------------------------------------------------------------------|
 | `GET`  | `/admin/users`    | ADMIN         | List all users with role and subscription counts                   |
 | `POST` | `/admin/users`    | ADMIN         | Onboard a new user (creates account + sends invite magic link to email) |
+| `POST` | `/admin/users/{userId}/resend-invite` | ADMIN | Resend a magic-link invite for a user who has not completed onboarding |
 | `DELETE` | `/admin/users/{userId}` | ADMIN   | Permanently delete a user account (self-delete is blocked)         |
 
 **Onboard user request body:** `{ "name": "Jane Smith", "email": "jane@company.com" }`
@@ -631,7 +632,7 @@ Superadmins can list all users and onboard new users without requiring self-sign
 4. The user opens the link, lands on `/accept-invite`, and chooses a new password (no OTP entry).
 5. On success, the user is automatically logged in and `mustSetPassword` is cleared.
 
-Users with a pending invite appear with an **amber "Pending invite"** badge in the Users table. If the link expires, they can request a fresh magic link from the Accept Invite page.
+Users with a pending invite appear with an **amber "Pending invite"** badge in the Users table. Superadmins can use **Resend Invite** from the Users page to send a fresh magic link later, and users can also request a new link from the Accept Invite page.
 
 ---
 
