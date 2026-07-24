@@ -55,6 +55,7 @@ VE Mailer acts as a notification broker between Microfocus ALM Octane (ValueEdge
 Key capabilities:
 
 - Browse registered **Workspaces** and their active subscriptions
+- Switch the workspace dashboard between **grid** and **list** views (persisted in browser localStorage)
 - Subscribe, update, or unsubscribe via a simple **OTP-verified** flow
 - Receive **email digests** on a custom schedule — daily or weekly (Mondays), at one or more specific hours you choose
 - Create **Filter Templates** — structured query definitions (entity type, fields, criteria) that are stored as reusable templates and dynamically compiled into Octane SDK queries
@@ -220,7 +221,7 @@ ve-mailer/
     │   ├── App.tsx                   # Root; React Router + AuthProvider
     │   ├── api.ts                    # Axios instance with JWT request interceptor + 403 session-expiry handler
     │   ├── components/
-    │   │   ├── LandingView.tsx       # Workspace picker + Filter Templates link
+    │   │   ├── LandingView.tsx       # Workspace picker (grid/list toggle persisted per browser) + Filter Templates link
     │   │   ├── FilterBuilderView.tsx # Create / browse filter templates
     │   │   ├── ProtectedRoute.tsx    # Auth guard with role-based access
     │   │   ├── RecipientGroupsView.tsx # Workspace-scoped recipient group management (admin/workspace admin)

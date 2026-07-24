@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { fetchWorkspaces, type Workspace } from '../services/apiService';
-import { Loader2, ChevronRight, LayoutGrid, AlertCircle } from 'lucide-react';
+import { Loader2, ChevronRight, LayoutGrid, LayoutList, AlertCircle } from 'lucide-react';
 
 interface LandingViewProps {
   onSelectWorkspace: (workspaceId: string) => void;
@@ -24,10 +24,17 @@ const ICON_SHADOWS = [
   'shadow-cyan-500/40',
 ];
 
+type WorkspaceViewMode = 'grid' | 'list';
+const WORKSPACE_VIEW_MODE_STORAGE_KEY = 've-mailer-workspace-view-mode';
+
 const LandingView: React.FC<LandingViewProps> = ({ onSelectWorkspace }) => {
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<WorkspaceViewMode>(() => {
+    const savedMode = localStorage.getItem(WORKSPACE_VIEW_MODE_STORAGE_KEY);
+    return savedMode === 'list' ? 'list' : 'grid';
+  });
 
   useEffect(() => {
     const loadWorkspaces = async () => {
@@ -47,6 +54,10 @@ const LandingView: React.FC<LandingViewProps> = ({ onSelectWorkspace }) => {
     };
     loadWorkspaces();
   }, []);
+
+  useEffect(() => {
+    localStorage.setItem(WORKSPACE_VIEW_MODE_STORAGE_KEY, viewMode);
+  }, [viewMode]);
 
   const connectivityBadge = (workspace: Workspace) => {
     if (workspace.connectivityStatus === 'ONLINE') {
@@ -121,6 +132,36 @@ const LandingView: React.FC<LandingViewProps> = ({ onSelectWorkspace }) => {
 
       {/* Workspace grid */}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <div className="flex items-center justify-end mb-4">
+          <div className="inline-flex items-center rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-1">
+            <button
+              type="button"
+              onClick={() => setViewMode('grid')}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                viewMode === 'grid'
+                  ? 'bg-indigo-600 text-white'
+                  : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+              }`}
+              aria-pressed={viewMode === 'grid'}
+            >
+              <LayoutGrid className="h-3.5 w-3.5" />
+              Grid
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('list')}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                viewMode === 'list'
+                  ? 'bg-indigo-600 text-white'
+                  : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+              }`}
+              aria-pressed={viewMode === 'list'}
+            >
+              <LayoutList className="h-3.5 w-3.5" />
+              List
+            </button>
+          </div>
+        </div>
         {workspaces.length === 0 ? (
           <div className="text-center bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm p-14 animate-scale-in">
             <div className="h-14 w-14 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center mx-auto mb-4">
@@ -130,7 +171,7 @@ const LandingView: React.FC<LandingViewProps> = ({ onSelectWorkspace }) => {
             <p className="text-slate-400 dark:text-slate-500 text-xs mt-1">Contact your admin to get access.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className={viewMode === 'grid' ? 'grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3' : 'space-y-3'}>
             {workspaces.map((workspace, idx) => {
               const gradient = ICON_GRADIENTS[idx % ICON_GRADIENTS.length];
               const shadow = ICON_SHADOWS[idx % ICON_SHADOWS.length];
@@ -140,7 +181,9 @@ const LandingView: React.FC<LandingViewProps> = ({ onSelectWorkspace }) => {
                   key={workspace.id}
                   onClick={() => onSelectWorkspace(workspace.id)}
                   style={{ animationDelay: `${idx * 60}ms` }}
-                  className="group animate-slide-up bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-lg dark:hover:shadow-slate-900/60 hover:border-indigo-200 dark:hover:border-indigo-700/50 hover:-translate-y-0.5 transition-all duration-200 text-left p-5 flex items-center gap-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-950 cursor-pointer"
+                  className={`group animate-slide-up bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-lg dark:hover:shadow-slate-900/60 hover:border-indigo-200 dark:hover:border-indigo-700/50 transition-all duration-200 text-left p-5 flex items-center gap-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-950 cursor-pointer ${
+                    viewMode === 'grid' ? 'hover:-translate-y-0.5' : ''
+                  }`}
                 >
                   <div className={`h-12 w-12 rounded-xl bg-gradient-to-br ${gradient} flex items-center justify-center flex-shrink-0 shadow-lg ${shadow} group-hover:scale-110 group-hover:shadow-xl transition-all duration-300`}>
                     <span className="text-white font-bold text-lg">{initial}</span>
