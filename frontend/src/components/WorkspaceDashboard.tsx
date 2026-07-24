@@ -12,7 +12,7 @@ import {
 } from '../services/apiService';
 import { formatHourLabel } from '../services/scheduleUtils';
 import { useAuth } from '../hooks/useAuth';
-import { Loader2, ArrowLeft, SlidersHorizontal, Pencil, Play, Plus, Bell, Mail, Settings2, Users, PowerOff, Power } from 'lucide-react';
+import { Loader2, ArrowLeft, SlidersHorizontal, Pencil, Eye, Play, Plus, Bell, Mail, Settings2, Users, PowerOff, Power } from 'lucide-react';
 import toast from 'react-hot-toast';
 import EditSubscriptionModal from './EditSubscriptionModal';
 import SubscriptionFormModal from './SubscriptionFormModal';
@@ -225,6 +225,7 @@ const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({ workspaceId, on
           subscription={editingSubscription}
           workspaceId={workspaceId}
           filters={filters}
+          readOnly={!canManage && !!editingSubscription.groupId}
           onClose={() => setEditingSubscription(null)}
           onSuccess={() => { setEditingSubscription(null); loadData(); }}
         />
@@ -354,13 +355,15 @@ const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({ workspaceId, on
                           )}
                           <button
                             onClick={() => handleToggleSubscription(sub)}
-                            disabled={togglingIds.has(sub.id)}
+                            disabled={togglingIds.has(sub.id) || (!canManage && !!sub.groupId)}
                             className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
                               sub.status === 'DISABLED'
                                 ? 'text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 border-emerald-100 dark:border-emerald-500/20 hover:bg-emerald-100 dark:hover:bg-emerald-500/20'
                                 : 'text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/10 border-amber-100 dark:border-amber-500/20 hover:bg-amber-100 dark:hover:bg-amber-500/20'
                             }`}
-                            title={sub.status === 'DISABLED' ? 'Enable subscription' : 'Disable subscription'}
+                            title={!canManage && sub.groupId
+                              ? 'Group subscriptions can be managed only by workspace admins and super admins'
+                              : (sub.status === 'DISABLED' ? 'Enable subscription' : 'Disable subscription')}
                           >
                             {togglingIds.has(sub.id)
                               ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -374,8 +377,8 @@ const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({ workspaceId, on
                             onClick={() => setEditingSubscription(sub)}
                             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/60 hover:border-indigo-200 dark:hover:border-indigo-700 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors cursor-pointer"
                           >
-                            <Pencil className="h-3.5 w-3.5" />
-                            Edit
+                            {!canManage && sub.groupId ? <Eye className="h-3.5 w-3.5" /> : <Pencil className="h-3.5 w-3.5" />}
+                            {!canManage && sub.groupId ? 'View' : 'Edit'}
                           </button>
                         </div>
                       </td>

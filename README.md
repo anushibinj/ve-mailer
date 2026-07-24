@@ -545,7 +545,7 @@ Private filter subscriptions are enforced server-side:
 - A private filter can only be subscribed by its owner.
 - Group subscriptions can only use admin-shared filters.
 
-**Subscription visibility:** `ADMIN` users see all subscriptions for the workspace; `MEMBER` users see only their own subscriptions. The frontend hides the "Recipient Email" column and labels the section "My Subscriptions" for `MEMBER` users.
+**Subscription visibility:** `ADMIN` users see all subscriptions for the workspace; `MEMBER` users see only their own subscriptions plus any group subscriptions that include them. For group subscriptions, `MEMBER` users get a **View-only** experience (no edit, unsubscribe, enable/disable, or schedule changes). The frontend hides the "Recipient Email" column and labels the section "My Subscriptions" for `MEMBER` users.
 
 | Method   | Path                                                      | Role required | Description                                              |
 |----------|-----------------------------------------------------------|:-------------:|----------------------------------------------------------|

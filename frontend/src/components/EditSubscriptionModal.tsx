@@ -16,6 +16,7 @@ interface EditSubscriptionModalProps {
   subscription: Subscription;
   workspaceId: string;
   filters: Filter[];
+  readOnly?: boolean;
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
@@ -47,7 +48,7 @@ function filterHasTriageSla(filter?: Filter): boolean {
 }
 
 const EditSubscriptionModal: React.FC<EditSubscriptionModalProps> = ({
-  subscription, workspaceId, filters, isOpen, onClose, onSuccess,
+  subscription, workspaceId, filters, readOnly = false, isOpen, onClose, onSuccess,
 }) => {
   const { user } = useAuth();
   const isGroupSubscription = Boolean(subscription.groupId);
@@ -136,7 +137,7 @@ const EditSubscriptionModal: React.FC<EditSubscriptionModalProps> = ({
                 <Bell className={`h-4 w-4 ${isDisabled ? 'text-amber-600 dark:text-amber-400' : 'text-indigo-600 dark:text-indigo-400'}`} />
               </div>
               <div className="flex items-center gap-2">
-                <h3 className="text-base font-semibold text-slate-900 dark:text-white">Edit Subscription</h3>
+                <h3 className="text-base font-semibold text-slate-900 dark:text-white">{readOnly ? 'View Subscription' : 'Edit Subscription'}</h3>
                 {isDisabled && (
                   <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 text-xs font-semibold border border-amber-100 dark:border-amber-500/20">
                     Disabled
@@ -170,120 +171,154 @@ const EditSubscriptionModal: React.FC<EditSubscriptionModalProps> = ({
 
           {step === 'edit' && (
             <div className="space-y-4">
-              <div className="space-y-1.5">
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Schedule</label>
-                <select
-                  value={scheduleType}
-                  onChange={e => setScheduleType(e.target.value as 'DAILY' | 'WEEKLY')}
-                  className={selectClass}
-                >
-                  <option value="DAILY">Daily</option>
-                  <option value="WEEKLY">Weekly (every Monday)</option>
-                </select>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Notification Hours</label>
-                <div className="flex gap-2">
-                  <select
-                    value={hourToAdd}
-                    onChange={e => setHourToAdd(Number(e.target.value))}
-                    className={`flex-1 ${selectClass}`}
-                  >
-                    {Array.from({ length: 24 }, (_, i) => (
-                      <option key={i} value={i}>{formatHourLabel(i)}</option>
-                    ))}
-                  </select>
-                  <button
-                    type="button"
-                    onClick={() => { if (!scheduledHours.includes(hourToAdd)) setScheduledHours(prev => [...prev, hourToAdd].sort((a, b) => a - b)); }}
-                    disabled={scheduledHours.includes(hourToAdd)}
-                    className="inline-flex items-center gap-1.5 px-4 py-2.5 border border-indigo-200 dark:border-indigo-500/30 rounded-xl text-sm font-medium text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
-                  >
-                    <Plus className="h-4 w-4" />Add
-                  </button>
-                </div>
-                {scheduledHours.length === 0 ? (
-                  <p className="text-xs text-slate-400 dark:text-slate-500">No hours added. Add at least one.</p>
-                ) : (
-                  <div className="flex flex-wrap gap-1.5 mt-1">
-                    {scheduledHours.map(h => (
-                      <span key={h} className="inline-flex items-center gap-1 px-2.5 py-1 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-500/20 rounded-full text-xs font-medium">
-                        {formatHourLabel(h)}
-                        <button
-                          type="button"
-                          onClick={() => setScheduledHours(prev => prev.filter(x => x !== h))}
-                          className="hover:text-indigo-900 dark:hover:text-indigo-100 transition-colors ml-0.5 cursor-pointer"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      </span>
-                    ))}
+              {readOnly ? (
+                <div className="space-y-3">
+                  <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-800/40 px-3.5 py-3">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Schedule</p>
+                    <p className="mt-1 text-sm font-medium text-slate-900 dark:text-slate-100">
+                      {subscription.schedule.type === 'DAILY' ? 'Daily' : 'Weekly (every Monday)'}
+                    </p>
                   </div>
-                )}
-              </div>
+                  <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-800/40 px-3.5 py-3">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Notification Hours</p>
+                    <p className="mt-1 text-sm font-medium text-slate-900 dark:text-slate-100">
+                      {subscription.schedule.hours.map(formatHourLabel).join(', ')}
+                    </p>
+                  </div>
+                  {triageEnabled && (
+                    <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-800/40 px-3.5 py-3">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Triage SLA Threshold</p>
+                      <p className="mt-1 text-sm font-medium text-slate-900 dark:text-slate-100">{subscription.triageSlaThreshold ?? 'GREEN'}</p>
+                    </div>
+                  )}
+                  <div className="pt-1 flex justify-end">
+                    <button
+                      type="button"
+                      onClick={handleClose}
+                      className="py-2 px-4 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/60 transition-colors cursor-pointer"
+                    >
+                      Close
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="space-y-1.5">
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Schedule</label>
+                    <select
+                      value={scheduleType}
+                      onChange={e => setScheduleType(e.target.value as 'DAILY' | 'WEEKLY')}
+                      className={selectClass}
+                    >
+                      <option value="DAILY">Daily</option>
+                      <option value="WEEKLY">Weekly (every Monday)</option>
+                    </select>
+                  </div>
 
-              {triageEnabled && (
-                <div className="space-y-1.5">
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
-                    Triage SLA threshold
-                  </label>
-                  <div
-                    role="group"
-                    aria-label="Triage SLA threshold"
-                    className="flex rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden"
-                  >
-                    {TRIAGE_SLA_OPTIONS.map(option => (
+                  <div className="space-y-1.5">
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Notification Hours</label>
+                    <div className="flex gap-2">
+                      <select
+                        value={hourToAdd}
+                        onChange={e => setHourToAdd(Number(e.target.value))}
+                        className={`flex-1 ${selectClass}`}
+                      >
+                        {Array.from({ length: 24 }, (_, i) => (
+                          <option key={i} value={i}>{formatHourLabel(i)}</option>
+                        ))}
+                      </select>
                       <button
-                        key={option.value}
                         type="button"
-                        onClick={() => setTriageSlaThreshold(option.value)}
-                        className={`flex-1 px-3 py-2 text-sm font-semibold text-center leading-tight transition-colors cursor-pointer ${
-                          triageSlaThreshold === option.value
-                            ? 'bg-indigo-600 text-white'
-                            : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'
+                        onClick={() => { if (!scheduledHours.includes(hourToAdd)) setScheduledHours(prev => [...prev, hourToAdd].sort((a, b) => a - b)); }}
+                        disabled={scheduledHours.includes(hourToAdd)}
+                        className="inline-flex items-center gap-1.5 px-4 py-2.5 border border-indigo-200 dark:border-indigo-500/30 rounded-xl text-sm font-medium text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                      >
+                        <Plus className="h-4 w-4" />Add
+                      </button>
+                    </div>
+                    {scheduledHours.length === 0 ? (
+                      <p className="text-xs text-slate-400 dark:text-slate-500">No hours added. Add at least one.</p>
+                    ) : (
+                      <div className="flex flex-wrap gap-1.5 mt-1">
+                        {scheduledHours.map(h => (
+                          <span key={h} className="inline-flex items-center gap-1 px-2.5 py-1 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-500/20 rounded-full text-xs font-medium">
+                            {formatHourLabel(h)}
+                            <button
+                              type="button"
+                              onClick={() => setScheduledHours(prev => prev.filter(x => x !== h))}
+                              className="hover:text-indigo-900 dark:hover:text-indigo-100 transition-colors ml-0.5 cursor-pointer"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {triageEnabled && (
+                    <div className="space-y-1.5">
+                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+                        Triage SLA threshold
+                      </label>
+                      <div
+                        role="group"
+                        aria-label="Triage SLA threshold"
+                        className="flex rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden"
+                      >
+                        {TRIAGE_SLA_OPTIONS.map(option => (
+                          <button
+                            key={option.value}
+                            type="button"
+                            onClick={() => setTriageSlaThreshold(option.value)}
+                            className={`flex-1 px-3 py-2 text-sm font-semibold text-center leading-tight transition-colors cursor-pointer ${
+                              triageSlaThreshold === option.value
+                                ? 'bg-indigo-600 text-white'
+                                : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'
+                            }`}
+                          >
+                            <span className="block">{option.title}</span>
+                            <span className="block">{option.timeline}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between pt-1">
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setStep('confirmToggle')}
+                        className={`flex items-center gap-1.5 text-sm font-medium transition-colors cursor-pointer ${
+                          isDisabled
+                            ? 'text-emerald-500 dark:text-emerald-400 hover:text-emerald-600 dark:hover:text-emerald-300'
+                            : 'text-amber-500 dark:text-amber-400 hover:text-amber-600 dark:hover:text-amber-300'
                         }`}
                       >
-                        <span className="block">{option.title}</span>
-                        <span className="block">{option.timeline}</span>
+                        {isDisabled ? <Power className="h-3.5 w-3.5" /> : <PowerOff className="h-3.5 w-3.5" />}
+                        {isDisabled ? 'Enable' : 'Disable'}
                       </button>
-                    ))}
+                      <span className="text-slate-300 dark:text-slate-600">|</span>
+                      <button
+                        type="button"
+                        onClick={() => setStep('confirmDelete')}
+                        className="text-sm text-rose-500 dark:text-rose-400 hover:text-rose-600 dark:hover:text-rose-300 font-medium transition-colors cursor-pointer"
+                      >
+                        Unsubscribe
+                      </button>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleSave}
+                      disabled={isSaving || scheduledHours.length === 0}
+                      className="flex items-center gap-2 py-2 px-5 bg-indigo-600 hover:bg-indigo-500 dark:bg-indigo-500 dark:hover:bg-indigo-400 text-white text-sm font-semibold rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900 disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer"
+                    >
+                      {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save Changes'}
+                    </button>
                   </div>
-                </div>
+                </>
               )}
-
-              <div className="flex items-center justify-between pt-1">
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setStep('confirmToggle')}
-                    className={`flex items-center gap-1.5 text-sm font-medium transition-colors cursor-pointer ${
-                      isDisabled
-                        ? 'text-emerald-500 dark:text-emerald-400 hover:text-emerald-600 dark:hover:text-emerald-300'
-                        : 'text-amber-500 dark:text-amber-400 hover:text-amber-600 dark:hover:text-amber-300'
-                    }`}
-                  >
-                    {isDisabled ? <Power className="h-3.5 w-3.5" /> : <PowerOff className="h-3.5 w-3.5" />}
-                    {isDisabled ? 'Enable' : 'Disable'}
-                  </button>
-                  <span className="text-slate-300 dark:text-slate-600">|</span>
-                  <button
-                    type="button"
-                    onClick={() => setStep('confirmDelete')}
-                    className="text-sm text-rose-500 dark:text-rose-400 hover:text-rose-600 dark:hover:text-rose-300 font-medium transition-colors cursor-pointer"
-                  >
-                    Unsubscribe
-                  </button>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleSave}
-                  disabled={isSaving || scheduledHours.length === 0}
-                  className="flex items-center gap-2 py-2 px-5 bg-indigo-600 hover:bg-indigo-500 dark:bg-indigo-500 dark:hover:bg-indigo-400 text-white text-sm font-semibold rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900 disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer"
-                >
-                  {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save Changes'}
-                </button>
-              </div>
             </div>
           )}
 
