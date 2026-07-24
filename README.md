@@ -189,10 +189,10 @@ ve-mailer/
 │   │       ├── AiSummaryService.java      # Generates AI ticket summaries via DynamicAiClientService
 │   │       ├── AppUserDetailsService.java # Spring Security UserDetailsService
 │   │       ├── AuthService.java      # Signup, login, forgot/reset password, token refresh
-│   │       ├── CleanupService.java   # Purges expired OTPs every 5 min
+│   │       ├── CleanupService.java   # Purges expired OTPs and invite magic links every 5 min
 │   │       ├── DynamicAiClientService.java  # Builds Spring AI ChatClient from DB config at runtime
 │   │       ├── DynamicMailSenderService.java # Builds JavaMailSender from DB config
-│   │       ├── EmailService.java     # Async OTP email sender
+│   │       ├── EmailService.java     # Async OTP + invite magic-link email sender
 │   │       ├── FilterService.java    # CRUD + clone + execute (conditional limit) against Octane
 │   │       ├── GeneralSettingsService.java  # DB-first query limit with property fallback
 │   │       ├── JwtService.java       # JWT token generation and validation
@@ -201,7 +201,8 @@ ve-mailer/
 │   │       ├── NotificationPreferencesService.java # Admin SMTP settings CRUD
 │   │       ├── NotificationService.java # Async digest email sender
 │   │       ├── OctaneCacheService.java  # In-memory Octane client cache
-│   │       ├── OtpService.java       # OTP generation, hashing, validation
+│   │       ├── InviteMagicLinkService.java # Single-use invite token generation + validation
+│   │       ├── OtpService.java       # OTP generation, hashing, validation (signup/reset/subscriptions)
 │   │       ├── PollingService.java   # Hourly cron trigger — dispatches by schedule
 │   │       ├── RecipientGroupService.java # Recipient group CRUD + member management
 │   │       ├── RefreshTokenService.java # Refresh token lifecycle + single-session enforcement
@@ -299,10 +300,19 @@ subscriber_scheduled_hours  (element collection table)
 OtpRequest
   id
   email
-  actionType      -- SUBSCRIBE | UPDATE | UNSUBSCRIBE | SIGNUP_VERIFICATION | PASSWORD_RESET | INVITE
+  actionType      -- SUBSCRIBE | UPDATE | UNSUBSCRIBE | SIGNUP_VERIFICATION | PASSWORD_RESET
   payload         -- JSON: { workspaceId, filterId, schedule: { type, hours[] } } or user signup data
   otpHash         -- BCrypt hash of the 6-digit OTP
   expiresAt       -- 10 minutes from creation
+
+InviteMagicLink
+  id
+  email (UNIQUE)
+  tokenHash       -- SHA-256 hash of a high-entropy random token
+  expiresAt       -- time-limited invite link expiry
+  usedAt          -- null until first successful use (single-use enforcement)
+  resendCount     -- cooldown multiplier for repeated link requests
+  lastSentAt      -- timestamp of most recent send
 
 AppUser
   id (UUID PK)
@@ -392,8 +402,9 @@ All endpoints are prefixed with `/api/v1` for business APIs, `/api/auth` for aut
 | `POST` | `/auth/forgot-password`| `email`                                              | No            | Send password reset OTP                 |
 | `POST` | `/auth/verify-reset-otp`| `email`, `otp`                                      | No            | Verify password reset OTP               |
 | `POST` | `/auth/reset-password` | `email`, `otp`, `newPassword`, `confirmPassword`     | No            | Reset password (invalidates sessions)   |
-| `POST` | `/auth/accept-invite`  | `email`, `otp`, `newPassword`, `confirmPassword`     | No            | Accept admin invite — sets password, auto-logs in |
-| `POST` | `/auth/resend-invite`  | `email`                                              | No            | Resend invite OTP for pending account   |
+| `POST` | `/auth/request-invite-link` | `email`                                        | No            | Request invite magic link for pending account |
+| `GET`  | `/auth/verify-invite-link`  | Query: `token`                                  | No            | Validate invite magic link status       |
+| `POST` | `/auth/accept-invite`       | `token`, `newPassword`, `confirmPassword`       | No            | Accept admin invite link — sets password, auto-logs in |
 | `GET`  | `/auth/me`             | —                                                    | Yes           | Get current user profile                |
 
 **Signup restrictions:**
@@ -608,18 +619,18 @@ Superadmins can list all users and onboard new users without requiring self-sign
 | Method | Path              | Role required | Description                                                        |
 |--------|-------------------|:-------------:|--------------------------------------------------------------------|
 | `GET`  | `/admin/users`    | ADMIN         | List all users with role and subscription counts                   |
-| `POST` | `/admin/users`    | ADMIN         | Onboard a new user (creates account + sends invite OTP to email)   |
+| `POST` | `/admin/users`    | ADMIN         | Onboard a new user (creates account + sends invite magic link to email) |
 
 **Onboard user request body:** `{ "name": "Jane Smith", "email": "jane@company.com" }`
 
 **User onboarding flow:**
 1. Admin submits name + email via the Admin Panel → Users page.
 2. Backend creates an account with a random temporary password and `mustSetPassword = true`.
-3. An invite email containing a 6-digit OTP and a direct VE Mailer GUI link is sent to the user.
-4. The user navigates to `/accept-invite`, enters their email and the OTP, and chooses a new password.
+3. An invite email containing a single-use, time-limited magic link is sent to the user.
+4. The user opens the link, lands on `/accept-invite`, and chooses a new password (no OTP entry).
 5. On success, the user is automatically logged in and `mustSetPassword` is cleared.
 
-Users with a pending invite appear with an **amber "Pending invite"** badge in the Users table. If the OTP expires, the user can click "Resend invite code" on the Accept Invite page.
+Users with a pending invite appear with an **amber "Pending invite"** badge in the Users table. If the link expires, they can request a fresh magic link from the Accept Invite page.
 
 ---
 
@@ -727,6 +738,8 @@ app.auth.allow-multiple-sessions=false
 app.auth.jwt.secret=<your-256-bit-secret>
 app.auth.jwt.access-token-expiration-ms=900000
 app.auth.jwt.refresh-token-expiration-ms=604800000
+app.auth.invite-link.expiration-minutes=10
+app.auth.invite-link.base-resend-seconds=30
 
 # CORS — comma-separated list of allowed origins
 app.cors.allowed-origins=http://localhost:5173,http://localhost:80,http://localhost

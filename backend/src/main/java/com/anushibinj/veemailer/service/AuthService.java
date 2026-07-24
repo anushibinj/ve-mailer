@@ -26,6 +26,7 @@ public class AuthService {
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final OtpService otpService;
+    private final InviteMagicLinkService inviteMagicLinkService;
     private final JwtService jwtService;
     private final RefreshTokenService refreshTokenService;
     private final AuthenticationManager authenticationManager;
@@ -207,23 +208,27 @@ public class AuthService {
 
     /**
      * Creates a new user account without requiring self-signup.
-     * Sends an invite OTP so the user can set their own password via /accept-invite.
+     * Sends an invite magic link so the user can set their own password via /accept-invite.
      */
     @Transactional
     public String onboardUser(AdminOnboardUserRequestDto request) {
-        if (appUserRepository.existsByEmail(request.getEmail())) {
+        String normalizedInviteEmail = normalizeEmail(request.getEmail());
+        if (normalizedInviteEmail == null) {
+            throw new IllegalArgumentException("Email is required.");
+        }
+        if (appUserRepository.existsByEmail(normalizedInviteEmail)) {
             throw new IllegalArgumentException("A user with this email is already registered.");
         }
 
         Role memberRole = roleRepository.findByRoleName("MEMBER")
                 .orElseGet(() -> roleRepository.save(Role.builder().roleName("MEMBER").build()));
 
-        // Random temp password — the user will never know it; they must use the invite OTP flow
+        // Random temp password — the user will never know it; they must use the invite magic-link flow
         String tempPasswordHash = passwordEncoder.encode(java.util.UUID.randomUUID().toString());
 
         AppUser user = AppUser.builder()
                 .name(request.getName())
-                .email(request.getEmail())
+                .email(normalizedInviteEmail)
                 .passwordHash(tempPasswordHash)
                 .enabled(true)
                 .mustSetPassword(true)
@@ -232,29 +237,24 @@ public class AuthService {
 
         appUserRepository.save(user);
 
-        otpService.createAndSendInviteOtp(request.getEmail(), request.getName());
+        inviteMagicLinkService.createAndSendInviteMagicLink(normalizedInviteEmail, request.getName());
 
-        return "User onboarded successfully. An invite has been sent to " + request.getEmail() + ".";
+        return "User onboarded successfully. An invite has been sent to " + normalizedInviteEmail + ".";
     }
 
     /**
-     * Validates an invite OTP, sets the user's password, and auto-logs them in.
+     * Validates an invite magic link, sets the user's password, and auto-logs them in.
      */
     @Transactional
     public AuthResponseDto acceptInvite(AcceptInviteRequestDto request) {
-        OtpRequest otpRequest = otpService.validateOtp(request.getEmail(), request.getOtp());
-
-        if (otpRequest.getActionType() != ActionType.INVITE) {
-            throw new IllegalArgumentException("Invalid OTP purpose.");
-        }
-
         if (!request.getNewPassword().equals(request.getConfirmPassword())) {
             throw new IllegalArgumentException("Passwords do not match.");
         }
 
         validatePasswordStrength(request.getNewPassword());
 
-        AppUser user = appUserRepository.findByEmail(request.getEmail())
+        String invitedEmail = inviteMagicLinkService.consumeInviteMagicLink(request.getToken());
+        AppUser user = appUserRepository.findByEmail(invitedEmail)
                 .orElseThrow(() -> new IllegalArgumentException("User not found."));
 
         if (!user.isMustSetPassword()) {
@@ -264,27 +264,61 @@ public class AuthService {
         user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
         user.setMustSetPassword(false);
         appUserRepository.save(user);
-
-        otpService.cleanupOtp(otpRequest);
+        refreshTokenService.revokeAllUserTokens(user);
 
         return buildAuthResponse(user);
     }
 
     /**
-     * Resends an invite OTP to a pending (mustSetPassword=true) user.
+     * If a pending invite exists for the given email, sends a fresh magic link.
+     * Returns a generic success message to avoid account enumeration.
      */
     @Transactional
-    public String resendInvite(String email) {
-        AppUser user = appUserRepository.findByEmail(email)
-                .orElseThrow(() -> new IllegalArgumentException("No account found with this email."));
-
-        if (!user.isMustSetPassword()) {
-            throw new IllegalArgumentException("This account has already been activated.");
+    public String requestInviteMagicLink(String email) {
+        String genericResponse = "If your invite is still pending, a magic link has been sent to your email.";
+        String normalizedEmail = normalizeEmail(email);
+        if (normalizedEmail == null) {
+            return genericResponse;
         }
+        AppUser user = appUserRepository.findByEmail(normalizedEmail).orElse(null);
+        if (user == null || !user.isMustSetPassword()) {
+            return genericResponse;
+        }
+        inviteMagicLinkService.createAndSendInviteMagicLink(user.getEmail(), user.getName());
+        return genericResponse;
+    }
 
-        otpService.createAndSendInviteOtp(email, user.getName());
-
-        return "A new invite code has been sent to " + email + ".";
+    @Transactional(readOnly = true)
+    public InviteMagicLinkVerificationResponseDto verifyInviteMagicLink(String token) {
+        InviteMagicLinkService.ValidationResult result = inviteMagicLinkService.validateInviteMagicLink(token);
+        if (result.status() == InviteMagicLinkService.ValidationStatus.VALID) {
+            AppUser user = appUserRepository.findByEmail(result.email()).orElse(null);
+            if (user == null || !user.isMustSetPassword()) {
+                return InviteMagicLinkVerificationResponseDto.builder()
+                        .status("USED")
+                        .message("This invite link has already been used.")
+                        .build();
+            }
+        }
+        return switch (result.status()) {
+            case VALID -> InviteMagicLinkVerificationResponseDto.builder()
+                    .status("VALID")
+                    .message("Invite link verified.")
+                    .email(result.email())
+                    .build();
+            case EXPIRED -> InviteMagicLinkVerificationResponseDto.builder()
+                    .status("EXPIRED")
+                    .message("This invite link has expired. Please request a new one.")
+                    .build();
+            case USED -> InviteMagicLinkVerificationResponseDto.builder()
+                    .status("USED")
+                    .message("This invite link has already been used.")
+                    .build();
+            case INVALID -> InviteMagicLinkVerificationResponseDto.builder()
+                    .status("INVALID")
+                    .message("This invite link is invalid.")
+                    .build();
+        };
     }
 
     public AuthResponseDto.UserProfileDto getCurrentUser(String email) {
@@ -355,5 +389,13 @@ public class AuthService {
         int start = json.indexOf(searchKey) + searchKey.length();
         int end = json.indexOf("\"", start);
         return json.substring(start, end);
+    }
+
+    private String normalizeEmail(String email) {
+        if (email == null) {
+            return null;
+        }
+        String normalized = email.trim().toLowerCase();
+        return normalized.isEmpty() ? null : normalized;
     }
 }

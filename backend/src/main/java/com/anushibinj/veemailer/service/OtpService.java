@@ -33,17 +33,6 @@ public class OtpService {
         emailService.sendOtpEmail(email, otp);
     }
 
-    /**
-     * Creates and persists an OTP record and sends an invite-specific email.
-     * Used when onboarding a user that was pre-created by an admin.
-     */
-    public void createAndSendInviteOtp(String email, String name) {
-        String otp = generateOtp();
-        saveOtp(email, ActionType.INVITE, null, otp);
-        // Asynchronously send invite email with richer context
-        emailService.sendInviteEmail(email, name, otp);
-    }
-
     private void saveOtp(String email, ActionType actionType, String payload, String otp) {
         String hash = passwordEncoder.encode(otp);
 

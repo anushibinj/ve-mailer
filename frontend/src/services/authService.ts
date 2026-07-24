@@ -10,6 +10,8 @@ import type {
   ResetPasswordRequest,
   RefreshTokenRequest,
   AcceptInviteRequest,
+  RequestInviteMagicLinkRequest,
+  InviteMagicLinkVerificationResponse,
   UserProfile,
 } from '../types/auth';
 
@@ -107,8 +109,15 @@ export const acceptInvite = async (data: AcceptInviteRequest): Promise<AuthRespo
   return response.data;
 };
 
-export const resendInvite = async (email: string): Promise<ApiResponseWrapper> => {
-  const response = await api.post<ApiResponseWrapper>('/api/auth/resend-invite', { email });
+export const requestInviteMagicLink = async (data: RequestInviteMagicLinkRequest): Promise<ApiResponseWrapper> => {
+  const response = await api.post<ApiResponseWrapper>('/api/auth/request-invite-link', data);
+  return response.data;
+};
+
+export const verifyInviteMagicLink = async (token: string): Promise<InviteMagicLinkVerificationResponse> => {
+  const response = await api.get<InviteMagicLinkVerificationResponse>('/api/auth/verify-invite-link', {
+    params: { token },
+  });
   return response.data;
 };
 

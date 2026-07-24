@@ -40,6 +40,9 @@ class AuthServiceTest {
     private OtpService otpService;
 
     @Mock
+    private InviteMagicLinkService inviteMagicLinkService;
+
+    @Mock
     private JwtService jwtService;
 
     @Mock
@@ -342,5 +345,67 @@ class AuthServiceTest {
         when(refreshTokenService.isTokenExpired(expiredToken)).thenReturn(true);
 
         assertThrows(IllegalArgumentException.class, () -> authService.refreshToken(request));
+    }
+
+    @Test
+    void requestInviteMagicLink_PendingUser_SendsLink() {
+        AppUser pendingUser = AppUser.builder()
+                .id(UUID.randomUUID())
+                .name("Pending User")
+                .email("pending@company.com")
+                .passwordHash("hashed")
+                .enabled(true)
+                .mustSetPassword(true)
+                .roles(Set.of(memberRole))
+                .build();
+
+        when(appUserRepository.findByEmail("pending@company.com")).thenReturn(Optional.of(pendingUser));
+
+        String result = authService.requestInviteMagicLink("pending@company.com");
+
+        assertEquals("If your invite is still pending, a magic link has been sent to your email.", result);
+        verify(inviteMagicLinkService).createAndSendInviteMagicLink("pending@company.com", "Pending User");
+    }
+
+    @Test
+    void requestInviteMagicLink_NonPendingUser_ReturnsGenericMessage() {
+        when(appUserRepository.findByEmail("active@company.com")).thenReturn(Optional.of(testUser));
+
+        String result = authService.requestInviteMagicLink("active@company.com");
+
+        assertEquals("If your invite is still pending, a magic link has been sent to your email.", result);
+        verify(inviteMagicLinkService, never()).createAndSendInviteMagicLink(anyString(), anyString());
+    }
+
+    @Test
+    void acceptInvite_UsesMagicLinkToken() {
+        AcceptInviteRequestDto request = AcceptInviteRequestDto.builder()
+                .token("magic-token")
+                .newPassword("NewPassword1!")
+                .confirmPassword("NewPassword1!")
+                .build();
+        AppUser pendingUser = AppUser.builder()
+                .id(UUID.randomUUID())
+                .name("Pending User")
+                .email("pending@company.com")
+                .passwordHash("hashed")
+                .enabled(true)
+                .mustSetPassword(true)
+                .roles(Set.of(memberRole))
+                .build();
+
+        when(inviteMagicLinkService.consumeInviteMagicLink("magic-token")).thenReturn("pending@company.com");
+        when(appUserRepository.findByEmail("pending@company.com")).thenReturn(Optional.of(pendingUser));
+        when(passwordEncoder.encode("NewPassword1!")).thenReturn("new-hashed");
+        when(jwtService.generateAccessToken(pendingUser)).thenReturn("access-token");
+        when(jwtService.getAccessTokenExpirationMs()).thenReturn(900000L);
+        when(refreshTokenService.createRefreshToken(pendingUser))
+                .thenReturn(RefreshToken.builder().token("refresh-token").build());
+
+        AuthResponseDto result = authService.acceptInvite(request);
+
+        assertNotNull(result);
+        assertEquals("access-token", result.getAccessToken());
+        verify(refreshTokenService).revokeAllUserTokens(pendingUser);
     }
 }

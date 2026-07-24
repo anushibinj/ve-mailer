@@ -66,24 +66,25 @@ class EmailServiceTest {
     }
 
     @Test
-    void testSendInviteEmail_IncludesFrontendUrlLink() throws Exception {
+    void testSendInviteMagicLinkEmail_IncludesMagicLinkAndFallbackPage() throws Exception {
         String recipient = "invitee@example.com";
-        String otp = "123456";
         String frontendUrl = "http://localhost:5173";
+        String magicLink = frontendUrl + "/accept-invite?token=abc";
 
         ReflectionTestUtils.setField(emailService, "frontendUrl", frontendUrl);
         when(dynamicMailSenderService.getSession()).thenReturn(testSession());
         when(dynamicMailSenderService.getFromAddress()).thenReturn("noreply@test.com");
         doNothing().when(dynamicMailSenderService).send(any(MimeMessage.class));
 
-        emailService.sendInviteEmail(recipient, "Invitee", otp);
+        emailService.sendInviteMagicLinkEmail(recipient, "Invitee", magicLink, 10);
 
         ArgumentCaptor<MimeMessage> captor = ArgumentCaptor.forClass(MimeMessage.class);
         verify(dynamicMailSenderService, times(1)).send(captor.capture());
         String body = captor.getValue().getContent().toString();
 
-        assertTrue(body.contains("Open VE Mailer in your browser: " + frontendUrl),
-                "Invite email body should include the VE Mailer frontend URL");
-        assertTrue(body.contains(otp), "Invite email body should include the OTP code");
+        assertTrue(body.contains(magicLink), "Invite email body should include the magic link");
+        assertTrue(body.contains(frontendUrl + "/accept-invite"),
+                "Invite email body should include the fallback accept-invite page URL");
+        assertTrue(body.contains("only once"), "Invite email body should mention single-use");
     }
 }

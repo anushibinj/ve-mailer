@@ -66,7 +66,8 @@ flowchart TD
             APS[AI Preferences Service]
             DMS[Dynamic Mail Sender Service]
             DAIS[Dynamic AI Client Service]
-            OTP[OTP Service<br/>Invite link uses app.frontend.url]
+            OTP[OTP Service<br/>signup/reset/subscription verification]
+            IMLS[Invite Magic Link Service<br/>single-use onboarding links]
             PS[Polling Service<br/>threshold-aware dispatch]
             NS[Notification Service]
             AIS[AI Summary Service]
@@ -84,6 +85,7 @@ flowchart TD
             RR[Role Repository]
             RTR[RefreshToken Repository]
             OTPR[OtpRequest Repository]
+            IMLR[InviteMagicLink Repository]
             FR[Filter Repository]
             WR[Workspace Repository<br/>persists workspace shortcode]
             WAR[WorkspaceAdmin Repository]
@@ -165,6 +167,7 @@ flowchart TD
     AS --> JWT
     AS --> RTS
     AS --> OTP
+    AS --> IMLS
     AS --> UR
     ABS --> UR
     ABS --> RR
@@ -196,6 +199,9 @@ flowchart TD
     OTP --> OTPR
     OTP --> DMS
     OTP --> SMTP
+    IMLS --> IMLR
+    IMLS --> DMS
+    IMLS --> SMTP
     FS --> VE
     FS --> TSP
     PS --> FS

@@ -41,7 +41,7 @@ public class EmailService {
     }
 
     @Async
-    public void sendInviteEmail(String to, String name, String otp) {
+    public void sendInviteMagicLinkEmail(String to, String name, String magicLink, int expiresInMinutes) {
         try {
             Session session = dynamicMailSenderService.getSession();
             String from = dynamicMailSenderService.getFromAddress();
@@ -53,13 +53,13 @@ public class EmailService {
             message.setText(
                 "Hello " + name + ",\n\n" +
                 "You have been invited to use VE Mailer.\n\n" +
-                "Your one-time invite code is: " + otp + "\n" +
-                "This code will expire in 10 minutes.\n\n" +
+                "Use the secure one-time link below to finish setting up your account:\n\n" +
+                magicLink + "\n\n" +
+                "This link will expire in " + expiresInMinutes + " minutes and can be used only once.\n\n" +
                 "To set up your account:\n" +
-                "  1. Open VE Mailer in your browser: " + frontendUrl + "\n" +
-                "  2. On the login page, click \"Accept Invite\".\n" +
-                "  3. Enter your email address (" + to + ") and the code above.\n" +
-                "  4. Choose a new password.\n\n" +
+                "  1. Click the link above.\n" +
+                "  2. Choose a new password.\n\n" +
+                "You can also request a fresh link from: " + frontendUrl + "/accept-invite\n\n" +
                 "If you did not expect this invitation, please ignore this email.",
                 "UTF-8"
             );
@@ -67,8 +67,8 @@ public class EmailService {
 
             dynamicMailSenderService.send(message);
         } catch (MessagingException e) {
-            log.error("Failed to send invite email to {}: {}", to, e.getMessage());
-            throw new RuntimeException("Failed to send invite email", e);
+            log.error("Failed to send invite magic link email to {}: {}", to, e.getMessage());
+            throw new RuntimeException("Failed to send invite magic link email", e);
         }
     }
 }

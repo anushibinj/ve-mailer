@@ -151,7 +151,7 @@ export default function UsersPage() {
               </button>
             </div>
             <p className="text-sm text-slate-500 dark:text-slate-400">
-              Creates an account and sends an invite code to the user's email. They'll set their own password on first login.
+              Creates an account and sends a secure magic link to the user's email. They'll set their own password from that link.
             </p>
 
             {onboardError && (

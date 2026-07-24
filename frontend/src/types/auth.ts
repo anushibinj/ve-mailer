@@ -66,12 +66,17 @@ export interface RefreshTokenRequest {
 }
 
 export interface AcceptInviteRequest {
-  email: string;
-  otp: string;
+  token: string;
   newPassword: string;
   confirmPassword: string;
 }
 
-export interface ResendInviteRequest {
+export interface RequestInviteMagicLinkRequest {
   email: string;
+}
+
+export interface InviteMagicLinkVerificationResponse {
+  status: 'VALID' | 'EXPIRED' | 'INVALID' | 'USED';
+  message: string;
+  email?: string;
 }

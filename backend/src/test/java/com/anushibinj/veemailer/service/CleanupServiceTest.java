@@ -1,6 +1,7 @@
 package com.anushibinj.veemailer.service;
 
 import com.anushibinj.veemailer.repository.OtpRequestRepository;
+import com.anushibinj.veemailer.repository.InviteMagicLinkRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -20,6 +21,8 @@ class CleanupServiceTest {
 
     @Mock
     private OtpRequestRepository otpRequestRepository;
+    @Mock
+    private InviteMagicLinkRepository inviteMagicLinkRepository;
 
     @InjectMocks
     private CleanupService cleanupService;
@@ -32,6 +35,7 @@ class CleanupServiceTest {
 
         ArgumentCaptor<LocalDateTime> captor = ArgumentCaptor.forClass(LocalDateTime.class);
         verify(otpRequestRepository, times(1)).deleteByExpiresAtBefore(captor.capture());
+        verify(inviteMagicLinkRepository, times(1)).deleteByExpiresAtBefore(any(LocalDateTime.class));
 
         LocalDateTime captured = captor.getValue();
         LocalDateTime after = LocalDateTime.now();
@@ -46,5 +50,6 @@ class CleanupServiceTest {
         cleanupService.cleanupExpiredOtps();
 
         verify(otpRequestRepository, times(1)).deleteByExpiresAtBefore(any(LocalDateTime.class));
+        verify(inviteMagicLinkRepository, times(1)).deleteByExpiresAtBefore(any(LocalDateTime.class));
     }
 }

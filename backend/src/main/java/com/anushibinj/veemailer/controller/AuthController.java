@@ -69,10 +69,16 @@ public class AuthController {
         return ResponseEntity.ok(response);
     }
 
-    @PostMapping("/resend-invite")
-    public ResponseEntity<ApiResponseWrapper> resendInvite(@RequestBody ForgotPasswordRequestDto request) {
-        String message = authService.resendInvite(request.getEmail());
+    @PostMapping("/request-invite-link")
+    public ResponseEntity<ApiResponseWrapper> requestInviteLink(@Valid @RequestBody RequestInviteMagicLinkDto request) {
+        String message = authService.requestInviteMagicLink(request.getEmail());
         return ResponseEntity.ok(ApiResponseWrapper.success(message));
+    }
+
+    @GetMapping("/verify-invite-link")
+    public ResponseEntity<InviteMagicLinkVerificationResponseDto> verifyInviteLink(@RequestParam String token) {
+        InviteMagicLinkVerificationResponseDto response = authService.verifyInviteMagicLink(token);
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/me")

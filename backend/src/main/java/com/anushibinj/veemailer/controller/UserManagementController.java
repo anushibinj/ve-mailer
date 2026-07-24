@@ -36,7 +36,7 @@ public class UserManagementController {
 
     /**
      * Onboards a new user without requiring self-signup.
-     * Creates the account and sends an invite OTP to the given email.
+     * Creates the account and sends an invite magic link to the given email.
      */
     @PostMapping
     public ResponseEntity<ApiResponseWrapper> onboardUser(@Valid @RequestBody AdminOnboardUserRequestDto request) {
