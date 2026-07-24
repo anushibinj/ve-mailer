@@ -202,6 +202,19 @@
 						</exclude>
 					</excludes>
 				</configuration>
+				<executions>
+					<!--
+						Writes META-INF/build-info.properties into the JAR at build time.
+						Spring Boot auto-configures a BuildProperties bean from this file,
+						which is read by AboutController to expose /api/about.
+					-->
+					<execution>
+						<id>build-info</id>
+						<goals>
+							<goal>build-info</goal>
+						</goals>
+					</execution>
+				</executions>
 			</plugin>
 			<plugin>
 				<groupId>org.jacoco</groupId>

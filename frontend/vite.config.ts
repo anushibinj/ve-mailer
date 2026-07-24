@@ -8,6 +8,10 @@ export default defineConfig(({ mode }: ConfigEnv) => {
   return {
     base: env.VITE_BASE_PATH || "/",
     plugins: [react()],
+    // Inject the ISO build timestamp at bundle time so the footer can display it.
+    define: {
+      "import.meta.env.VITE_BUILD_TIME": JSON.stringify(new Date().toISOString()),
+    },
     test: {
       environment: "jsdom",
       setupFiles: ["./src/test/setup.ts"],

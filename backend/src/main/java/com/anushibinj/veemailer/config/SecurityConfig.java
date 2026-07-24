@@ -57,6 +57,8 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 // Public auth endpoints
                 .requestMatchers("/api/auth/**").permitAll()
+                // Build metadata — unauthenticated so the footer can call it from the login page
+                .requestMatchers("/api/about").permitAll()
                 // H2 console for development
                 .requestMatchers("/h2-console/**").permitAll()
                 // All other API endpoints require authentication

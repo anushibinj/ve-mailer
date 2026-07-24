@@ -1,5 +1,5 @@
-import { describe, it, expect, afterEach, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, afterEach, vi, beforeEach } from 'vitest';
+import { render, screen, act } from '@testing-library/react';
 import AppFooter, { sanitizeHtml } from '../AppFooter';
 
 // ---------------------------------------------------------------------------
@@ -63,67 +63,85 @@ describe('sanitizeHtml', () => {
 // AppFooter component tests
 // ---------------------------------------------------------------------------
 describe('AppFooter', () => {
+  beforeEach(() => {
+    // Mock fetch so the /api/about call in useEffect never causes network errors in tests.
+    // The promise resolves immediately so act() can flush all state updates.
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      json: () => Promise.resolve({ buildDate: 'development', buildTime: 'development', version: 'development' }),
+    }));
+  });
+
   afterEach(() => {
     vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
   });
 
-  it('renders nothing when VITE_FOOTER_HTML is empty', () => {
+  it('always renders a footer element, even without VITE_FOOTER_HTML', async () => {
+    // The footer always shows build metadata regardless of VITE_FOOTER_HTML
     vi.stubEnv('VITE_FOOTER_HTML', '');
-    const { container } = render(<AppFooter />);
-    expect(container.firstChild).toBeNull();
-  });
-
-  it('renders nothing when VITE_FOOTER_HTML is whitespace only', () => {
-    vi.stubEnv('VITE_FOOTER_HTML', '   ');
-    const { container } = render(<AppFooter />);
-    expect(container.firstChild).toBeNull();
-  });
-
-  it('renders a footer element when HTML content is provided', () => {
-    vi.stubEnv('VITE_FOOTER_HTML', '<div>Powered by VE Mailer</div>');
-    render(<AppFooter />);
+    await act(async () => { render(<AppFooter />); });
     expect(screen.getByRole('contentinfo')).toBeInTheDocument();
   });
 
-  it('carries stacking and layout classes needed for the app-shell sticky footer', () => {
+  it('renders a footer element when HTML content is provided', async () => {
+    vi.stubEnv('VITE_FOOTER_HTML', '<div>Powered by VE Mailer</div>');
+    await act(async () => { render(<AppFooter />); });
+    expect(screen.getByRole('contentinfo')).toBeInTheDocument();
+  });
+
+  it('carries stacking and layout classes needed for the app-shell sticky footer', async () => {
     // z-10 keeps the footer above scrollable content; shrink-0 prevents the
     // flex container from compressing the footer; w-full ensures it spans the viewport.
     vi.stubEnv('VITE_FOOTER_HTML', '<div>Footer</div>');
-    render(<AppFooter />);
+    await act(async () => { render(<AppFooter />); });
     const footer = screen.getByRole('contentinfo');
     expect(footer.className).toContain('z-10');
     expect(footer.className).toContain('shrink-0');
     expect(footer.className).toContain('w-full');
   });
 
-  it('no footer element is present in the DOM when VITE_FOOTER_HTML is unset (no bottom spacing)', () => {
-    // When no footer is configured, the layout should have no footer-related DOM node,
-    // ensuring the flex-1 content area fills the full app-shell height without gap.
+  it('renders a footer element in the DOM even when VITE_FOOTER_HTML is unset (build info is always shown)', async () => {
+    // The footer always renders so build metadata is always visible.
     vi.stubEnv('VITE_FOOTER_HTML', '');
-    const { container } = render(<AppFooter />);
-    expect(container.querySelector('footer')).toBeNull();
+    let container!: HTMLElement;
+    await act(async () => { ({ container } = render(<AppFooter />)); });
+    expect(container.querySelector('footer')).not.toBeNull();
   });
 
-  it('renders a link as a clickable anchor with the correct href', () => {
+  it('renders a link as a clickable anchor with the correct href', async () => {
     vi.stubEnv('VITE_FOOTER_HTML', '<a href="https://example.com">Company Portal</a>');
-    render(<AppFooter />);
+    await act(async () => { render(<AppFooter />); });
     const link = screen.getByRole('link', { name: 'Company Portal' });
     expect(link).toBeInTheDocument();
     expect(link).toHaveAttribute('href', 'https://example.com');
   });
 
-  it('strips script tags from the rendered footer HTML', () => {
+  it('strips script tags from the rendered footer HTML', async () => {
     vi.stubEnv('VITE_FOOTER_HTML', '<div>Safe<script>alert("xss")</script></div>');
-    render(<AppFooter />);
+    await act(async () => { render(<AppFooter />); });
     const footer = screen.getByRole('contentinfo');
     expect(footer.querySelector('script')).toBeNull();
   });
 
-  it('does not render event-handler attributes in the footer', () => {
+  it('does not render event-handler attributes in the footer', async () => {
     vi.stubEnv('VITE_FOOTER_HTML', '<div onclick="evil()">Text</div>');
-    render(<AppFooter />);
+    await act(async () => { render(<AppFooter />); });
     const footer = screen.getByRole('contentinfo');
     const div = footer.querySelector('div');
     expect(div).not.toHaveAttribute('onclick');
   });
+
+  it('shows "Frontend built:" label in the footer', async () => {
+    await act(async () => { render(<AppFooter />); });
+    const footer = screen.getByRole('contentinfo');
+    expect(footer.textContent).toContain('Frontend built:');
+  });
+
+  it('shows "Backend built:" label in the footer', async () => {
+    await act(async () => { render(<AppFooter />); });
+    const footer = screen.getByRole('contentinfo');
+    expect(footer.textContent).toContain('Backend built:');
+  });
 });
+
+

@@ -22,6 +22,7 @@ flowchart TD
         RGP[Recipient Groups Page]
         AI[Axios Interceptors]
         FFG[Frontend Feature Flags<br/>VITE_ALLOW_CUSTOM_QUERY_STRING]
+        GF[Global Footer<br/>build date via /api/about]
     end
 
     subgraph Backend["Backend (Spring Boot)"]
@@ -75,6 +76,7 @@ flowchart TD
             MAUS[Mail Audit Service]
             GSS[General Settings Service]
             OMS[Octane Metadata Service<br/>ui_bundle fallback for configured fields]
+            ABCtrl[About Controller<br/>public — build date + version]
         end
 
         subgraph DataLayer["Data Layer (JPA)"]
@@ -155,6 +157,8 @@ flowchart TD
     AE -->|HTTP 403 JSON| AI
     ADH -->|HTTP 403 JSON| AI
     AI -->|auth:session-expired event| AC
+
+    GF -->|GET /api/about — no auth| ABCtrl
 
     %% Auth flows
     ACtrl --> AS
