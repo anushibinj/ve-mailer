@@ -236,7 +236,26 @@ class FilterServiceTest {
         ParsedFilterQueryResponse parsed = filterService.parseFilterQueryString(
                 "fields=id,name&query=name EQ ^*Case360*^&order_by=creation_time");
         assertEquals("creation_time", parsed.getOrderBy());
-        assertEquals("fields=id,name&query=name EQ ^*Case360*^&order_by=creation_time",
+        assertEquals("ASC", parsed.getOrderByDirection());
+        assertEquals("fields=id,name&query=name EQ ^*Case360*^&order_by=creation_time&order_by_direction=ASC",
                 parsed.getFilterQueryString());
+    }
+
+    @Test
+    void testParseFilterQueryString_ParsesOrderByDirectionDesc() {
+        ParsedFilterQueryResponse parsed = filterService.parseFilterQueryString(
+                "fields=id,name&query=name EQ ^*Case360*^&order_by=creation_time&order_by_direction=desc");
+        assertEquals("creation_time", parsed.getOrderBy());
+        assertEquals("DESC", parsed.getOrderByDirection());
+        assertEquals("fields=id,name&query=name EQ ^*Case360*^&order_by=creation_time&order_by_direction=DESC",
+                parsed.getFilterQueryString());
+    }
+
+    @Test
+    void testParseFilterQueryString_RejectsOrderByDirectionWithoutOrderBy() {
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> filterService.parseFilterQueryString(
+                        "fields=id,name&query=name EQ ^*Case360*^&order_by_direction=DESC"));
+        assertTrue(ex.getMessage().contains("order_by_direction requires order_by"));
     }
 }

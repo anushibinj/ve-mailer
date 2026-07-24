@@ -162,7 +162,7 @@ ve-mailer/
 │   │   │   ├── MailAuditLog.java            # Mail delivery audit record entity
 │   │   │   ├── Workspace.java
 │   │   │   ├── WorkspaceAdminMapping.java   # Maps users to workspaces they administer
-│   │   │   ├── Filter.java                 # title, description, entityType, fields (JSON), criteria (JSON), orderBy
+│   │   │   ├── Filter.java                 # title, description, entityType, fields (JSON), criteria (JSON), orderBy, orderByDirection
 │   │   │   ├── FilterCriteriaClause.java   # POJO: field, operator, values[], logicalOperator (AND|OR)
 │   │   │   ├── EmailSubscriber.java
 │   │   │   ├── OtpRequest.java
@@ -272,7 +272,8 @@ Filter
   entityType      -- Octane filter scope (e.g. "backlog_items", "epic", "feature")
   fields          -- JSON array of field names to fetch (TEXT column)
   criteria        -- JSON array of FilterCriteriaClause objects (TEXT column)
-  orderBy         -- optional field used for ascending query sorting
+  orderBy         -- optional field used for query sorting
+  orderByDirection -- optional sort direction: ASC (default) | DESC
 
   FilterCriteriaClause (embedded in criteria JSON):
     field         -- Octane field name
@@ -472,11 +473,12 @@ Filter templates are visibility-scoped:
 - `logicalOperator`: `AND` (default) or `OR` — controls how this clause is joined to the previous one. Ignored for the first clause.
 - `referenceValues`: optional; when `true`, criteria are emitted as reference-ID clauses like `code_review_owner_udf EQ {id IN 8666}`
 
-**Query-string format:** `fields=id,name&query=name EQ ^*Case360*^&order_by=creation_time`
+**Query-string format:** `fields=id,name&query=name EQ ^*Case360*^&order_by=creation_time&order_by_direction=DESC`
 
 - `fields` is a comma-separated list of output fields
 - `query` supports one or more clauses joined by `AND` or `;`
-- `order_by` is optional and applies ascending ordering on the given field
+- `order_by` is optional and selects the field used for sorting
+- `order_by_direction` is optional (`ASC` default, `DESC` supported)
 - `query` can include `||` OR groups when all OR-joined expressions target the same field
 - Accepted operators in query-string mode: `EQ`, `NEQ`, `IN`, `NOT_IN` (mapped internally to `IN`/`NOT_IN`)
 - Values can be wrapped with `^...^` and multiple values are comma-separated inside the wrapper
@@ -993,7 +995,7 @@ A filter has:
    - `epic` → `subtype EQ epic`
    - `feature` → `subtype EQ feature`
 2. **Fields** — which fields to return in the result set (e.g. `["id", "name", "phase", "owner"]`)
-3. **Order by (optional)** — a metadata-backed field name used to sort query results (ascending)
+3. **Order by (optional)** — a metadata-backed field name plus direction (`ASC`/`DESC`) used to sort query results
 4. **Criteria** — an array of clauses that are AND/OR-joined to build the Octane SDK query
 5. **Ownership (`ownerEmail`)**:
    - `null` for admin-created shared templates

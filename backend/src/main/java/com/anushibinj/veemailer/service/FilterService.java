@@ -92,6 +92,7 @@ public class FilterService {
         try {
             String fieldsJson = objectMapper.writeValueAsString(resolvedDto.getFields());
             String criteriaJson = objectMapper.writeValueAsString(resolvedDto.getCriteria());
+            String orderBy = normalizeOrderBy(resolvedDto.getOrderBy());
 
             Filter filter = Filter.builder()
                     .title(resolvedDto.getTitle())
@@ -100,7 +101,10 @@ public class FilterService {
                     .entityType(resolvedDto.getEntityType())
                     .fields(fieldsJson)
                     .criteria(criteriaJson)
-                    .orderBy(normalizeOrderBy(resolvedDto.getOrderBy()))
+                    .orderBy(orderBy)
+                    .orderByDirection(normalizeOrderByDirection(
+                            resolvedDto.getOrderByDirection(),
+                            orderBy))
                     .ownerEmail(normalizeEmail(ownerEmail))
                     .build();
 
@@ -132,6 +136,7 @@ public class FilterService {
         String fieldsRaw = params.get("fields");
         String queryRaw = params.get("query");
         String orderByRaw = params.get("order_by");
+        String orderByDirectionRaw = params.get("order_by_direction");
 
         if (fieldsRaw == null || fieldsRaw.isBlank()) {
             throw new IllegalArgumentException("Invalid filter query string: missing fields parameter");
@@ -151,12 +156,17 @@ public class FilterService {
 
         List<FilterCriteriaClause> parsedCriteria = parseCriteriaExpression(queryRaw);
         String orderBy = normalizeOrderBy(orderByRaw);
-        String normalized = buildFilterQueryString(parsedFields, parsedCriteria, Set.of(), orderBy);
+        if (orderBy == null && orderByDirectionRaw != null && !orderByDirectionRaw.isBlank()) {
+            throw new IllegalArgumentException("order_by_direction requires order_by");
+        }
+        String orderByDirection = normalizeOrderByDirection(orderByDirectionRaw, orderBy);
+        String normalized = buildFilterQueryString(parsedFields, parsedCriteria, Set.of(), orderBy, orderByDirection);
 
         return ParsedFilterQueryResponse.builder()
                 .fields(parsedFields)
                 .criteria(parsedCriteria)
                 .orderBy(orderBy)
+                .orderByDirection(orderByDirection)
                 .filterQueryString(normalized)
                 .build();
     }
@@ -169,7 +179,9 @@ public class FilterService {
             List<FilterCriteriaClause> criteria = objectMapper.readValue(filter.getCriteria(), new TypeReference<>() {});
             Workspace workspace = filter.getWorkspace();
             Set<String> referenceFieldNames = resolveReferenceFieldNames(workspace, filter.getEntityType());
-            return buildFilterQueryString(fields, criteria, referenceFieldNames, normalizeOrderBy(filter.getOrderBy()));
+            String orderBy = normalizeOrderBy(filter.getOrderBy());
+            String orderByDirection = normalizeOrderByDirection(filter.getOrderByDirection(), orderBy);
+            return buildFilterQueryString(fields, criteria, referenceFieldNames, orderBy, orderByDirection);
         } catch (JsonProcessingException e) {
             throw new RuntimeException("Failed to deserialize filter data", e);
         }
@@ -201,18 +213,22 @@ public class FilterService {
             List<String> fields = objectMapper.readValue(filter.getFields(), new TypeReference<>() {});
             List<FilterCriteriaClause> criteria = objectMapper.readValue(filter.getCriteria(), new TypeReference<>() {});
             Set<String> referenceFieldNames = resolveReferenceFieldNames(filter.getWorkspace(), filter.getEntityType());
+            String orderBy = normalizeOrderBy(filter.getOrderBy());
+            String orderByDirection = normalizeOrderByDirection(filter.getOrderByDirection(), orderBy);
             return FilterDto.builder()
                     .title("Clone of " + filter.getTitle())
                     .description(filter.getDescription())
                     .entityType(filter.getEntityType())
                     .fields(fields)
                     .criteria(criteria)
-                    .orderBy(normalizeOrderBy(filter.getOrderBy()))
+                    .orderBy(orderBy)
+                    .orderByDirection(orderByDirection)
                     .filterQueryString(buildFilterQueryString(
                             fields,
                             criteria,
                             referenceFieldNames,
-                            normalizeOrderBy(filter.getOrderBy())))
+                            orderBy,
+                            orderByDirection))
                     .build();
         } catch (JsonProcessingException e) {
             throw new RuntimeException("Failed to deserialize filter data", e);
@@ -235,7 +251,9 @@ public class FilterService {
             filter.setEntityType(resolvedDto.getEntityType());
             filter.setFields(fieldsJson);
             filter.setCriteria(criteriaJson);
-            filter.setOrderBy(normalizeOrderBy(resolvedDto.getOrderBy()));
+            String orderBy = normalizeOrderBy(resolvedDto.getOrderBy());
+            filter.setOrderBy(orderBy);
+            filter.setOrderByDirection(normalizeOrderByDirection(resolvedDto.getOrderByDirection(), orderBy));
 
             return filterRepository.save(filter);
         } catch (JsonProcessingException e) {
@@ -272,6 +290,7 @@ public class FilterService {
             List<String> fields = objectMapper.readValue(filter.getFields(), new TypeReference<>() {});
             List<FilterCriteriaClause> clauses = objectMapper.readValue(filter.getCriteria(), new TypeReference<>() {});
             String orderByField = normalizeOrderBy(filter.getOrderBy());
+            String orderByDirection = normalizeOrderByDirection(filter.getOrderByDirection(), orderByField);
 
             // Compute the effective fields to fetch — strips pseudo-fields, adds silent
             // dependencies (AI Summary → name+description, Triage SLA → creation_time, always → id).
@@ -298,7 +317,7 @@ public class FilterService {
                     .query(query)
                     .addFields(effectiveFetchFields.toArray(new String[0]));
             if (orderByField != null) {
-                getEntities = getEntities.addOrderBy(orderByField, true);
+                getEntities = getEntities.addOrderBy(orderByField, "ASC".equals(orderByDirection));
             }
             // Apply LIMIT only when a positive integer is configured; -1 means unlimited.
             if (effectiveLimit > 0) {
@@ -340,6 +359,7 @@ public class FilterService {
             List<String> fields = objectMapper.readValue(filter.getFields(), new TypeReference<>() {});
             List<FilterCriteriaClause> clauses = objectMapper.readValue(filter.getCriteria(), new TypeReference<>() {});
             String orderByField = normalizeOrderBy(filter.getOrderBy());
+            String orderByDirection = normalizeOrderByDirection(filter.getOrderByDirection(), orderByField);
             List<String> effectiveFetchFields = computeEffectiveFetchFields(fields);
             if (orderByField != null && !effectiveFetchFields.contains(orderByField)) {
                 effectiveFetchFields.add(orderByField);
@@ -362,7 +382,7 @@ public class FilterService {
                     .query(query)
                     .addFields(effectiveFetchFields.toArray(new String[0]));
             if (orderByField != null) {
-                getEntities = getEntities.addOrderBy(orderByField, true);
+                getEntities = getEntities.addOrderBy(orderByField, "ASC".equals(orderByDirection));
             }
             getEntities = getEntities.limit(effectivePreviewLimit);
 
@@ -675,6 +695,7 @@ public class FilterService {
                     .fields(parsed.getFields())
                     .criteria(parsed.getCriteria())
                     .orderBy(parsed.getOrderBy())
+                    .orderByDirection(parsed.getOrderByDirection())
                     .filterQueryString(parsed.getFilterQueryString())
                     .build();
         }
@@ -688,7 +709,12 @@ public class FilterService {
         for (FilterCriteriaClause clause : dto.getCriteria()) {
             validateClause(clause);
         }
-        dto.setOrderBy(normalizeOrderBy(dto.getOrderBy()));
+        String orderBy = normalizeOrderBy(dto.getOrderBy());
+        if (orderBy == null && dto.getOrderByDirection() != null && !dto.getOrderByDirection().isBlank()) {
+            throw new IllegalArgumentException("orderByDirection requires orderBy");
+        }
+        dto.setOrderBy(orderBy);
+        dto.setOrderByDirection(normalizeOrderByDirection(dto.getOrderByDirection(), orderBy));
         return dto;
     }
 
@@ -984,14 +1010,15 @@ public class FilterService {
     }
 
     String buildFilterQueryString(List<String> fields, List<FilterCriteriaClause> criteria) {
-        return buildFilterQueryString(fields, criteria, Set.of(), null);
+        return buildFilterQueryString(fields, criteria, Set.of(), null, null);
     }
 
     private String buildFilterQueryString(
             List<String> fields,
             List<FilterCriteriaClause> criteria,
             Set<String> referenceFieldNames,
-            String orderBy) {
+            String orderBy,
+            String orderByDirection) {
         if (fields == null || fields.isEmpty()) {
             throw new IllegalArgumentException("fields must not be empty");
         }
@@ -1013,9 +1040,14 @@ public class FilterService {
                 .collect(Collectors.joining(" AND "));
 
         String normalizedOrderBy = normalizeOrderBy(orderBy);
-        return normalizedOrderBy == null
-                ? "fields=" + fieldsPart + "&query=" + queryPart
-                : "fields=" + fieldsPart + "&query=" + queryPart + "&order_by=" + normalizedOrderBy;
+        String normalizedOrderByDirection = normalizeOrderByDirection(orderByDirection, normalizedOrderBy);
+        if (normalizedOrderBy == null) {
+            return "fields=" + fieldsPart + "&query=" + queryPart;
+        }
+        return "fields=" + fieldsPart
+                + "&query=" + queryPart
+                + "&order_by=" + normalizedOrderBy
+                + "&order_by_direction=" + normalizedOrderByDirection;
     }
 
     private String serializeClause(FilterCriteriaClause clause, Set<String> referenceFieldNames) {
@@ -1071,7 +1103,7 @@ public class FilterService {
             }
             String key = decodeQueryComponent(pair.substring(0, separator)).trim().toLowerCase();
             String value = decodeQueryComponent(pair.substring(separator + 1)).trim();
-            if (!"fields".equals(key) && !"query".equals(key) && !"order_by".equals(key)) {
+            if (!"fields".equals(key) && !"query".equals(key) && !"order_by".equals(key) && !"order_by_direction".equals(key)) {
                 throw new IllegalArgumentException("Unsupported filter query parameter: " + key);
             }
             params.put(key, value);
@@ -1085,6 +1117,20 @@ public class FilterService {
         }
         String normalized = orderBy.trim();
         return normalized.isEmpty() ? null : normalized;
+    }
+
+    private String normalizeOrderByDirection(String orderByDirection, String normalizedOrderBy) {
+        if (normalizedOrderBy == null) {
+            return null;
+        }
+        if (orderByDirection == null || orderByDirection.isBlank()) {
+            return "ASC";
+        }
+        String normalized = orderByDirection.trim().toUpperCase();
+        if (!"ASC".equals(normalized) && !"DESC".equals(normalized)) {
+            throw new IllegalArgumentException("orderByDirection must be ASC or DESC");
+        }
+        return normalized;
     }
 
     private String decodeQueryComponent(String value) {

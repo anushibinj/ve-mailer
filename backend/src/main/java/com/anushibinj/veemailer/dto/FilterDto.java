@@ -31,8 +31,10 @@ public class FilterDto {
 
     private List<FilterCriteriaClause> criteria;
 
-    /** Optional field name for ascending result ordering. */
+    /** Optional field name used for result ordering. */
     private String orderBy;
+    /** Optional order direction for orderBy: ASC (default) or DESC. */
+    private String orderByDirection;
 
     /**
      * Optional compact form of filter definition:

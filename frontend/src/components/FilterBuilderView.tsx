@@ -30,6 +30,7 @@ interface FilterBuilderViewProps {
 
 type ViewMode = 'list' | 'create' | 'edit';
 type FilterCreationMode = 'queryString' | 'manual';
+type OrderByDirection = 'ASC' | 'DESC';
 
 const ENTITY_TYPES = [
   { value: 'backlog_items', label: 'Backlog Items (Story/Defect/Quality Story)' },
@@ -42,6 +43,7 @@ const CUSTOM_PSEUDO_FIELDS = [AI_SUMMARY_FIELD, TRIAGE_SLA_FIELD];
 
 const emptyCriterion = (): FilterCriteriaClause => ({ field: '', operator: 'IN', values: [], logicalOperator: 'AND' });
 const defaultFields = ['id', 'name', 'phase', 'owner'];
+const DEFAULT_ORDER_BY_DIRECTION: OrderByDirection = 'ASC';
 
 const normalizeEntityType = (raw: string): string => {
   if (raw === 'defect' || raw === 'story' || raw === 'quality_story') return 'backlog_items';
@@ -248,6 +250,7 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
   const [creationMode, setCreationMode] = useState<FilterCreationMode | null>(allowCustomQueryString ? null : 'manual');
   const [selectedFields, setSelectedFields] = useState<string[]>(defaultFields);
   const [orderByField, setOrderByField] = useState('');
+  const [orderByDirection, setOrderByDirection] = useState<OrderByDirection>(DEFAULT_ORDER_BY_DIRECTION);
   const [fieldSearch, setFieldSearch] = useState('');
   const [criteria, setCriteria] = useState<FilterCriteriaClause[]>([emptyCriterion()]);
   const [filterQueryString, setFilterQueryString] = useState('');
@@ -292,6 +295,7 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
     setCreationMode(allowCustomQueryString ? null : 'manual');
     setSelectedFields(defaultFields);
     setOrderByField('');
+    setOrderByDirection(DEFAULT_ORDER_BY_DIRECTION);
     setFieldSearch('');
     setCriteria([emptyCriterion()]);
     setFilterQueryString('');
@@ -305,6 +309,7 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
     setFieldSearch('');
     try { setSelectedFields(JSON.parse(f.fields)); } catch { setSelectedFields(defaultFields); }
     setOrderByField((f.orderBy ?? '').trim());
+    setOrderByDirection(f.orderByDirection === 'DESC' ? 'DESC' : DEFAULT_ORDER_BY_DIRECTION);
     try {
       const parsed: FilterCriteriaClause[] = JSON.parse(f.criteria);
       // Backfill logicalOperator for criteria saved before AND/OR support was added
@@ -324,6 +329,7 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
       setTitle(cloned.title); setDescription(cloned.description || '');
       setEntityType(normalizeEntityType(cloned.entityType)); setSelectedFields(cloned.fields);
       setOrderByField((cloned.orderBy ?? '').trim());
+      setOrderByDirection(cloned.orderByDirection === 'DESC' ? 'DESC' : DEFAULT_ORDER_BY_DIRECTION);
       setCriteria(cloned.criteria.length > 0 ? cloned.criteria : [emptyCriterion()]);
       const canUseQueryString = allowCustomQueryString && !!cloned.filterQueryString;
       setFilterQueryString(canUseQueryString ? (cloned.filterQueryString || '') : '');
@@ -344,6 +350,7 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
       const parsed = await parseFilterQueryString(workspaceId, { filterQueryString: filterQueryString.trim() });
       setSelectedFields(parsed.fields);
       setOrderByField((parsed.orderBy ?? '').trim());
+      setOrderByDirection(parsed.orderByDirection === 'DESC' ? 'DESC' : DEFAULT_ORDER_BY_DIRECTION);
       setCriteria(parsed.criteria.length > 0 ? parsed.criteria : [emptyCriterion()]);
       setFilterQueryString(parsed.filterQueryString);
       setQueryStringApplied(true);
@@ -463,6 +470,7 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
           fields: selectedFields,
           criteria: cleanedCriteria,
           orderBy: orderByField.trim() || undefined,
+          orderByDirection: orderByField.trim() ? orderByDirection : undefined,
           filterQueryString: normalizedFilterQueryString || undefined
         };
         await updateFilter(workspaceId, editingFilter.id, payload);
@@ -475,6 +483,7 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
           fields: selectedFields,
           criteria: cleanedCriteria,
           orderBy: orderByField.trim() || undefined,
+          orderByDirection: orderByField.trim() ? orderByDirection : undefined,
           filterQueryString: normalizedFilterQueryString || undefined
         };
         await createFilter(workspaceId, payload);
@@ -513,9 +522,11 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
   const parseFields = (fieldsJson: string): string[] => {
     try { return JSON.parse(fieldsJson); } catch { return []; }
   };
-  const parseOrderBy = (value?: string | null): string => {
-    if (!value) return '';
-    return value.trim();
+  const parseOrderBy = (field?: string | null, direction?: string | null): string => {
+    const normalizedField = field?.trim();
+    if (!normalizedField) return '';
+    const normalizedDirection = direction === 'DESC' ? 'DESC' : 'ASC';
+    return `${normalizedField} (${normalizedDirection})`;
   };
 
   const canEditFilter = (filter: Filter): boolean => {
@@ -747,18 +758,29 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
                   )}
                   <div className="space-y-1.5">
                     <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Order by</label>
-                    <select
-                      value={orderByField}
-                      onChange={e => setOrderByField(e.target.value)}
-                      className={inputClass}
-                    >
-                      <option value="">None</option>
-                      {orderByFieldOptions.map(field => (
-                        <option key={field.name} value={field.name}>
-                          {field.label}
-                        </option>
-                      ))}
-                    </select>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <select
+                        value={orderByField}
+                        onChange={e => setOrderByField(e.target.value)}
+                        className={inputClass}
+                      >
+                        <option value="">None</option>
+                        {orderByFieldOptions.map(field => (
+                          <option key={field.name} value={field.name}>
+                            {field.label}
+                          </option>
+                        ))}
+                      </select>
+                      <select
+                        value={orderByDirection}
+                        onChange={e => setOrderByDirection(e.target.value as OrderByDirection)}
+                        className={inputClass}
+                        disabled={!orderByField}
+                      >
+                        <option value="ASC">Ascending</option>
+                        <option value="DESC">Descending</option>
+                      </select>
+                    </div>
                   </div>
                 </div>
               ) : (
@@ -902,18 +924,29 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
 
                   <div className="space-y-1.5">
                     <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Order by</label>
-                    <select
-                      value={orderByField}
-                      onChange={e => setOrderByField(e.target.value)}
-                      className={inputClass}
-                    >
-                      <option value="">None</option>
-                      {orderByFieldOptions.map(field => (
-                        <option key={field.name} value={field.name}>
-                          {field.label}
-                        </option>
-                      ))}
-                    </select>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <select
+                        value={orderByField}
+                        onChange={e => setOrderByField(e.target.value)}
+                        className={inputClass}
+                      >
+                        <option value="">None</option>
+                        {orderByFieldOptions.map(field => (
+                          <option key={field.name} value={field.name}>
+                            {field.label}
+                          </option>
+                        ))}
+                      </select>
+                      <select
+                        value={orderByDirection}
+                        onChange={e => setOrderByDirection(e.target.value as OrderByDirection)}
+                        className={inputClass}
+                        disabled={!orderByField}
+                      >
+                        <option value="ASC">Ascending</option>
+                        <option value="DESC">Descending</option>
+                      </select>
+                    </div>
                   </div>
 
                   <div className="space-y-2">
@@ -1014,7 +1047,7 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
           {filters.map((f, idx) => {
             const criteriaList = parseCriteria(f.criteria);
             const fieldsList = parseFields(f.fields);
-            const orderBy = parseOrderBy(f.orderBy);
+            const orderBy = parseOrderBy(f.orderBy, f.orderByDirection);
             const exState = executeState[f.id];
             const hasResults = !exState?.isExecuting && exState?.results != null && exState.results.length > 0;
 

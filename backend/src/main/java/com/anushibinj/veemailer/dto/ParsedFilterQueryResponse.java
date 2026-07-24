@@ -16,5 +16,6 @@ public class ParsedFilterQueryResponse {
     private List<String> fields;
     private List<FilterCriteriaClause> criteria;
     private String orderBy;
+    private String orderByDirection;
     private String filterQueryString;
 }

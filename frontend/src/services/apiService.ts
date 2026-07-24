@@ -90,6 +90,7 @@ export interface Filter {
   fields: string;   // JSON string from backend
   criteria: string;  // JSON string from backend
   orderBy?: string | null;
+  orderByDirection?: 'ASC' | 'DESC' | null;
   ownerEmail?: string | null;
   editable?: boolean;
   adminManaged?: boolean;
@@ -102,6 +103,7 @@ export interface FilterCreatePayload {
   fields: string[];
   criteria: FilterCriteriaClause[];
   orderBy?: string;
+  orderByDirection?: 'ASC' | 'DESC';
   filterQueryString?: string;
 }
 
@@ -112,6 +114,7 @@ export interface FilterUpdatePayload {
   fields: string[];
   criteria: FilterCriteriaClause[];
   orderBy?: string;
+  orderByDirection?: 'ASC' | 'DESC';
   filterQueryString?: string;
 }
 
@@ -123,6 +126,7 @@ export interface ParsedFilterQueryResponse {
   fields: string[];
   criteria: FilterCriteriaClause[];
   orderBy?: string | null;
+  orderByDirection?: 'ASC' | 'DESC' | null;
   filterQueryString: string;
 }
 
