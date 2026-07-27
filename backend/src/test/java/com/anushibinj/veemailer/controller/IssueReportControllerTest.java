@@ -1,6 +1,7 @@
 package com.anushibinj.veemailer.controller;
 
 import com.anushibinj.veemailer.dto.IssueReportResponseDto;
+import com.anushibinj.veemailer.dto.IssueUploadConfigDto;
 import com.anushibinj.veemailer.model.IssueStatus;
 import com.anushibinj.veemailer.service.AppUserDetailsService;
 import com.anushibinj.veemailer.service.IssueReportService;
@@ -43,6 +44,21 @@ class IssueReportControllerTest {
 
     @MockBean
     private AppUserDetailsService appUserDetailsService;
+
+    @Test
+    void issueUploadConfig_isPublic() throws Exception {
+        when(issueReportService.getUploadConfig()).thenReturn(
+                IssueUploadConfigDto.builder()
+                        .maxUploadBytes(5242880L)
+                        .maxStoredScreenshotBytes(1048576L)
+                        .build()
+        );
+
+        mockMvc.perform(get("/api/v1/issues/config"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.maxUploadBytes").value(5242880))
+                .andExpect(jsonPath("$.maxStoredScreenshotBytes").value(1048576));
+    }
 
     @Test
     void submitIssue_allowsPublicSubmission() throws Exception {

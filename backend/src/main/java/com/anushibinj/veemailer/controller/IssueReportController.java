@@ -3,6 +3,7 @@ package com.anushibinj.veemailer.controller;
 import com.anushibinj.veemailer.dto.ApiResponseWrapper;
 import com.anushibinj.veemailer.dto.IssueReportResponseDto;
 import com.anushibinj.veemailer.dto.IssueStatusUpdateRequestDto;
+import com.anushibinj.veemailer.dto.IssueUploadConfigDto;
 import com.anushibinj.veemailer.service.IssueReportService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -30,6 +31,11 @@ import java.util.UUID;
 public class IssueReportController {
 
     private final IssueReportService issueReportService;
+
+    @GetMapping("/api/v1/issues/config")
+    public ResponseEntity<IssueUploadConfigDto> getIssueUploadConfig() {
+        return ResponseEntity.ok(issueReportService.getUploadConfig());
+    }
 
     @PostMapping(path = "/api/v1/issues", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponseWrapper> submitIssue(

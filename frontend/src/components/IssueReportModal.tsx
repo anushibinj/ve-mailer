@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AlertCircle, Loader2, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import type { ApiErrorResponse } from '../types/auth';
-import { submitIssueReport } from '../services/apiService';
+import { fetchIssueUploadConfig, submitIssueReport } from '../services/apiService';
 
 interface IssueReportModalProps {
   isOpen: boolean;
@@ -15,8 +15,30 @@ export default function IssueReportModal({ isOpen, onClose }: IssueReportModalPr
   const [screenshot, setScreenshot] = useState<File | null>(null);
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isConfigLoading, setIsConfigLoading] = useState(false);
+  const [maxUploadBytes, setMaxUploadBytes] = useState<number | null>(null);
+  const [maxStoredScreenshotBytes, setMaxStoredScreenshotBytes] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setIsConfigLoading(true);
+    fetchIssueUploadConfig()
+      .then(config => {
+        setMaxUploadBytes(config.maxUploadBytes);
+        setMaxStoredScreenshotBytes(config.maxStoredScreenshotBytes);
+      })
+      .catch(() => {
+        setError('Could not load screenshot limits from the server. Please try again.');
+      })
+      .finally(() => setIsConfigLoading(false));
+  }, [isOpen]);
 
   if (!isOpen) return null;
+
+  const maxUploadLabel = maxUploadBytes
+    ? `${(maxUploadBytes / (1024 * 1024)).toFixed(2)} MB`
+    : '';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,6 +46,13 @@ export default function IssueReportModal({ isOpen, onClose }: IssueReportModalPr
 
     if (!message.trim() && !screenshot) {
       setError('Either message or screenshot is required.');
+      return;
+    }
+    if (screenshot && maxUploadBytes && screenshot.size > maxUploadBytes) {
+      const selectedMb = (screenshot.size / (1024 * 1024)).toFixed(2);
+      setError(
+        `Selected file is ${selectedMb} MB, which exceeds the upload limit of ${maxUploadLabel}.`
+      );
       return;
     }
 
@@ -41,10 +70,35 @@ export default function IssueReportModal({ isOpen, onClose }: IssueReportModalPr
       onClose();
     } catch (err: unknown) {
       const axiosError = err as { response?: { data?: ApiErrorResponse } };
-      setError(axiosError.response?.data?.message || 'Failed to submit issue.');
+      const backendError = axiosError.response?.data;
+      if (backendError?.fieldErrors && Object.keys(backendError.fieldErrors).length > 0) {
+        const details = Object.entries(backendError.fieldErrors)
+          .map(([field, messageText]) => `${field}: ${messageText}`)
+          .join(' | ');
+        setError(`${backendError.message} (${details})`);
+      } else {
+        setError(backendError?.message || 'Failed to submit issue.');
+      }
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleScreenshotChange = (file: File | null) => {
+    setError('');
+    if (!file) {
+      setScreenshot(null);
+      return;
+    }
+    if (maxUploadBytes && file.size > maxUploadBytes) {
+      const selectedMb = (file.size / (1024 * 1024)).toFixed(2);
+      setError(
+        `Selected file is ${selectedMb} MB, which exceeds the upload limit of ${maxUploadLabel}.`
+      );
+      setScreenshot(null);
+      return;
+    }
+    setScreenshot(file);
   };
 
   return (
@@ -89,9 +143,14 @@ export default function IssueReportModal({ isOpen, onClose }: IssueReportModalPr
             <input
               type="file"
               accept="image/*"
-              onChange={e => setScreenshot(e.target.files?.[0] ?? null)}
+              onChange={e => handleScreenshotChange(e.target.files?.[0] ?? null)}
               className="w-full px-3 py-2 border border-slate-200 dark:border-slate-600 rounded-xl text-sm text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800/60"
             />
+            {maxUploadBytes && (
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Max upload size: {maxUploadLabel}. Stored screenshot target: {((maxStoredScreenshotBytes ?? maxUploadBytes) / (1024 * 1024)).toFixed(2)} MB.
+              </p>
+            )}
           </div>
 
           <div className="space-y-1.5">
@@ -115,10 +174,14 @@ export default function IssueReportModal({ isOpen, onClose }: IssueReportModalPr
             </button>
             <button
               type="submit"
-              disabled={isSubmitting}
+              disabled={isSubmitting || isConfigLoading}
               className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
-              {isSubmitting ? <><Loader2 className="h-4 w-4 animate-spin" />Submitting…</> : 'Submit Issue'}
+              {isSubmitting
+                ? <><Loader2 className="h-4 w-4 animate-spin" />Submitting…</>
+                : isConfigLoading
+                  ? <><Loader2 className="h-4 w-4 animate-spin" />Loading limits…</>
+                : 'Submit Issue'}
             </button>
           </div>
         </form>

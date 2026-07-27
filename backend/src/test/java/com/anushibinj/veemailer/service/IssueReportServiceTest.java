@@ -34,6 +34,7 @@ class IssueReportServiceTest {
     @BeforeEach
     void setUp() {
         ReflectionTestUtils.setField(issueReportService, "maxScreenshotBytes", 1024L);
+        ReflectionTestUtils.setField(issueReportService, "maxUploadBytes", 2048L);
     }
 
     @Test
@@ -66,12 +67,12 @@ class IssueReportServiceTest {
                 "screenshot",
                 "img.png",
                 "image/png",
-                new byte[2048]
+                new byte[3000]
         );
 
         assertThatThrownBy(() -> issueReportService.submitIssue(null, null, screenshot, null))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("maximum allowed size");
+                .hasMessageContaining("exceeds the upload limit");
     }
 
     @Test
@@ -89,5 +90,12 @@ class IssueReportServiceTest {
         IssueReportResponseDto updated = issueReportService.updateStatus(id, IssueStatus.RESOLVED);
 
         assertThat(updated.getStatus()).isEqualTo(IssueStatus.RESOLVED);
+    }
+
+    @Test
+    void getUploadConfig_returnsConfiguredLimits() {
+        var config = issueReportService.getUploadConfig();
+        assertThat(config.getMaxUploadBytes()).isEqualTo(2048L);
+        assertThat(config.getMaxStoredScreenshotBytes()).isEqualTo(1024L);
     }
 }

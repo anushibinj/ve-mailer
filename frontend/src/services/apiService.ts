@@ -395,6 +395,16 @@ export interface SubmitIssuePayload {
   screenshot?: File | null;
 }
 
+export interface IssueUploadConfig {
+  maxUploadBytes: number;
+  maxStoredScreenshotBytes: number;
+}
+
+export const fetchIssueUploadConfig = async (): Promise<IssueUploadConfig> => {
+  const response = await api.get('/api/v1/issues/config');
+  return response.data;
+};
+
 export const submitIssueReport = async (
   payload: SubmitIssuePayload
 ): Promise<{ success: boolean; message: string }> => {

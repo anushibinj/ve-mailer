@@ -578,9 +578,10 @@ The global footer includes a **Raise an issue** action that is available to auth
 
 | Method | Path      | Auth Required | Description |
 |--------|-----------|:-------------:|-------------|
+| `GET`  | `/issues/config` | No      | Get server-side issue upload limits (`maxUploadBytes`, `maxStoredScreenshotBytes`) used by the footer modal |
 | `POST` | `/issues` | No            | Submit a `multipart/form-data` issue report with optional `message`, optional `reporterEmail`, and optional screenshot. Either `message` or screenshot is required. |
 
-New issue reports are saved with default status `OPEN`.
+New issue reports are saved with default status `OPEN`. Uploaded screenshots are validated against server limits, and the backend attempts to compress oversized images before rejecting them.
 
 ### Admin — Issues Dashboard (`/api/admin/issues`)
 
@@ -770,6 +771,9 @@ spring.flyway.enabled=true
 spring.application.name=veemailer
 veemailer.octane.ui-bundle-field-names=product_udf
 veemailer.issues.max-screenshot-bytes=1048576
+veemailer.issues.max-upload-bytes=5242880
+spring.servlet.multipart.max-file-size=10MB
+spring.servlet.multipart.max-request-size=10MB
 
 # Authentication
 app.auth.allowed-domains=company.com,int-company.com

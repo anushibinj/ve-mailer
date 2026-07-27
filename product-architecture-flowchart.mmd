@@ -175,7 +175,8 @@ flowchart TD
 
     GF -->|GET /api/about — no auth| ABCtrl
     GF --> IRM
-    IRM --> AI
+    IRM -->|GET /api/v1/issues/config| AI
+    IRM -->|POST /api/v1/issues| AI
 
     %% Auth flows
     ACtrl --> AS

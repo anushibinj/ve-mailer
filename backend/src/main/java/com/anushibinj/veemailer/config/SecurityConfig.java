@@ -60,7 +60,7 @@ public class SecurityConfig {
                 // Build metadata — unauthenticated so the footer can call it from the login page
                 .requestMatchers("/api/about").permitAll()
                 // Public issue reporting endpoint exposed through the global footer
-                .requestMatchers("/api/v1/issues").permitAll()
+                .requestMatchers("/api/v1/issues/**").permitAll()
                 // H2 console for development
                 .requestMatchers("/h2-console/**").permitAll()
                 // All other API endpoints require authentication
