@@ -18,6 +18,8 @@ A full-stack application that lets users subscribe to email digest notifications
     - [Workspaces](#workspaces)
     - [Filters](#filters)
     - [Subscriptions](#subscriptions)
+    - [Public Issue Reporting](#public-issue-reporting)
+    - [Admin — Issues Dashboard (`/api/admin/issues`)](#admin--issues-dashboard-apiadminissues)
     - [Admin — Notification Preferences (`/api/admin`)](#admin--notification-preferences-apiadmin)
     - [Admin — Mail Analytics (`/api/admin/mail-analytics`)](#admin--mail-analytics-apiadminmail-analytics)
   - [Running Locally](#running-locally)
@@ -62,6 +64,7 @@ Key capabilities:
 - Create **Filter Templates** — structured query definitions (entity type, fields, criteria) that are stored as reusable templates and dynamically compiled into Octane SDK queries
 - **Execute filters on demand** — preview matching results from ValueEdge directly in the UI before subscribing
 - Add **custom pseudo-fields** such as **✨ AI Summary** and **Triage SLA** to enrich preview/email output without changing Octane metadata
+- Raise public **Issue Reports** from the global footer and triage them in an admin-only dashboard
 
 ---
 
@@ -374,6 +377,17 @@ MailAuditLog
   sentAt              -- timestamp of dispatch (indexed)
   durationMs          -- time to send in milliseconds
 
+IssueReport
+  id (UUID PK)
+  reporterEmail       -- optional email supplied by the reporter
+  message             -- optional issue description
+  screenshotData      -- optional screenshot bytes (PostgreSQL BYTEA)
+  screenshotContentType -- optional MIME type (e.g. image/png)
+  screenshotFileName  -- optional uploaded filename
+  status              -- OPEN | IN_PROGRESS | RESOLVED | CLOSED
+  createdAt
+  updatedAt
+
 RecipientGroup
   id (UUID PK)
   workspace_id        -- FK → Workspace
@@ -558,6 +572,25 @@ Private filter subscriptions are enforced server-side:
 | `DELETE` | `/workspaces/{id}/subscriptions/{subId}`                  | Any (own)     | Unsubscribe                                              |
 | `POST`   | `/workspaces/{id}/subscriptions/{subId}/run`              | ADMIN         | Immediately send a notification email                    |
 
+### Public Issue Reporting
+
+The global footer includes a **Raise an issue** action that is available to authenticated and unauthenticated users.
+
+| Method | Path      | Auth Required | Description |
+|--------|-----------|:-------------:|-------------|
+| `POST` | `/issues` | No            | Submit a `multipart/form-data` issue report with optional `message`, optional `reporterEmail`, and optional screenshot. Either `message` or screenshot is required. |
+
+New issue reports are saved with default status `OPEN`.
+
+### Admin — Issues Dashboard (`/api/admin/issues`)
+
+All issue dashboard endpoints require the `ADMIN` role.
+
+| Method  | Path                        | Role required | Description |
+|---------|-----------------------------|:-------------:|-------------|
+| `GET`   | `/admin/issues`             | ADMIN         | List all submitted issues (newest first), including screenshot preview payload when available |
+| `PATCH` | `/admin/issues/{issueId}/status` | ADMIN    | Update issue status (`OPEN`, `IN_PROGRESS`, `RESOLVED`, `CLOSED`) |
+
 ### Recipient Groups
 
 Recipient groups (teams) are workspace-scoped collections of email addresses. Admins and workspace admins can create groups and bulk-subscribe them to filter templates.
@@ -736,6 +769,7 @@ spring.flyway.enabled=true
 
 spring.application.name=veemailer
 veemailer.octane.ui-bundle-field-names=product_udf
+veemailer.issues.max-screenshot-bytes=1048576
 
 # Authentication
 app.auth.allowed-domains=company.com,int-company.com
@@ -826,7 +860,7 @@ Prompts are stored in `backend/src/main/resources/prompts/` and can be customize
 |-------------------------|--------------------------------------------------------------------------|------------------------------------------------------------||
 | `VITE_BACKEND_ROOT_URL` | Base URL of the Spring Boot backend                                      | `http://localhost:8080`                                    |
 | `VITE_ALLOW_CUSTOM_QUERY_STRING` | Enables query-string based filter creation and copy-string actions in the UI | `false` |
-| `VITE_FOOTER_HTML`      | Optional HTML injected as the global app footer (sanitized before render) | `<div style="text-align:center">Powered by VE Mailer</div>` |
+| `VITE_FOOTER_HTML`      | Optional HTML injected into the global app footer (sanitized before render) | `<div style="text-align:center">Powered by VE Mailer</div>` |
 
 Create a `.env.local` file in the `frontend/` directory. Vite exposes only variables prefixed with `VITE_` to the browser bundle.
 
@@ -839,7 +873,7 @@ Controls whether the filter builder exposes query-string based workflow.
 
 #### `VITE_FOOTER_HTML` — custom footer
 
-Set this variable to any HTML snippet and it will be rendered as a `<footer>` element at the bottom of every page. Leave it empty (or unset) to hide the footer entirely.
+Set this variable to any HTML snippet and it will be rendered inside the global footer at the bottom of every page.
 
 ```env
 # Plain text footer

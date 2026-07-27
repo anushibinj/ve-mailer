@@ -1,5 +1,5 @@
 import { Suspense, lazy, useState } from 'react';
-import { Settings, Layers, Bell, Sparkles, BarChart2, Users, UsersRound } from 'lucide-react';
+import { Settings, Layers, Bell, Sparkles, BarChart2, Users, UsersRound, TriangleAlert } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import LoadingPlaceholder from '../../components/LoadingPlaceholder';
 
@@ -10,8 +10,9 @@ const MailAnalyticsPage = lazy(() => import('./MailAnalyticsPage'));
 const UsersPage = lazy(() => import('./UsersPage'));
 const GeneralSettingsPage = lazy(() => import('./GeneralSettingsPage'));
 const RecipientGroupsPage = lazy(() => import('./RecipientGroupsPage'));
+const IssuesPage = lazy(() => import('./IssuesPage'));
 
-type AdminTab = 'notification-preferences' | 'ai-preferences' | 'workspaces' | 'mail-analytics' | 'users' | 'general' | 'recipient-groups';
+type AdminTab = 'notification-preferences' | 'ai-preferences' | 'workspaces' | 'mail-analytics' | 'users' | 'general' | 'recipient-groups' | 'issues';
 
 const allTabs: { key: AdminTab; label: string; icon: React.ReactNode; description: string; adminOnly?: boolean }[] = [
   { key: 'general', label: 'General', icon: <Settings className="h-4 w-4" />, description: 'App-wide settings', adminOnly: true },
@@ -21,6 +22,7 @@ const allTabs: { key: AdminTab; label: string; icon: React.ReactNode; descriptio
   { key: 'ai-preferences', label: 'AI', icon: <Sparkles className="h-4 w-4" />, description: 'AI configuration', adminOnly: true },
   { key: 'mail-analytics', label: 'Analytics', icon: <BarChart2 className="h-4 w-4" />, description: 'Mail statistics', adminOnly: true },
   { key: 'users', label: 'Users', icon: <Users className="h-4 w-4" />, description: 'User management', adminOnly: true },
+  { key: 'issues', label: 'Issues', icon: <TriangleAlert className="h-4 w-4" />, description: 'Issue reports', adminOnly: true },
 ];
 
 export default function AdminControlPanel() {
@@ -36,6 +38,7 @@ export default function AdminControlPanel() {
     'users': 'Loading users...',
     'general': 'Loading settings...',
     'recipient-groups': 'Loading groups...',
+    'issues': 'Loading issues...',
   };
 
   return (
@@ -98,6 +101,7 @@ export default function AdminControlPanel() {
             {activeTab === 'users' && <UsersPage />}
             {activeTab === 'general' && <GeneralSettingsPage />}
             {activeTab === 'recipient-groups' && <RecipientGroupsPage />}
+            {activeTab === 'issues' && <IssuesPage />}
           </Suspense>
         </div>
       </div>

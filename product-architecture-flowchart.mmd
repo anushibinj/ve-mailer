@@ -17,12 +17,14 @@ flowchart TD
         WAM[Workspace Admin Manager]
         MAP[Mail Analytics Page]
         UP[Users Page]
+        IP[Issues Page]
         GSP[General Settings Page]
         RGV[Recipient Groups View]
         RGP[Recipient Groups Page]
         AI[Axios Interceptors]
         FFG[Frontend Feature Flags<br/>VITE_ALLOW_CUSTOM_QUERY_STRING]
         GF[Global Footer<br/>build date via /api/about]
+        IRM[Issue Report Modal]
         LZ[React Lazy + Suspense<br/>route/tab/modal code splitting]
     end
 
@@ -79,6 +81,8 @@ flowchart TD
             GSS[General Settings Service]
             OMS[Octane Metadata Service<br/>ui_bundle fallback for configured fields]
             ABCtrl[About Controller<br/>public — build date + version]
+            ICtrl[Issue Report Controller<br/>public submit + admin dashboard]
+            ISS[Issue Report Service]
         end
 
         subgraph DataLayer["Data Layer (JPA)"]
@@ -96,6 +100,7 @@ flowchart TD
             MALR[MailAuditLog Repository]
             RGR[RecipientGroup Repository]
             GSR[GeneralSettings Repository]
+            IRR[IssueReport Repository]
         end
     end
 
@@ -126,12 +131,14 @@ flowchart TD
     ACP --> UP
     ACP --> GSP
     ACP --> RGP
+    ACP --> IP
     NPP --> AI
     AIPP --> AI
     WMP --> AI
     WAM --> AI
     MAP --> AI
     UP --> AI
+    IP --> AI
     GSP --> AI
     RGP --> AI
     RGV --> AI
@@ -154,6 +161,7 @@ flowchart TD
     AI --> UMCtrl
     AI --> GSCtrl
     AI --> RGCtrl
+    AI --> ICtrl
 
     %% Security flow
     JF --> JWT
@@ -166,6 +174,8 @@ flowchart TD
     AI -->|auth:session-expired event| AC
 
     GF -->|GET /api/about — no auth| ABCtrl
+    GF --> IRM
+    IRM --> AI
 
     %% Auth flows
     ACtrl --> AS
@@ -230,7 +240,10 @@ flowchart TD
     RGCtrl --> RGS
     RGCtrl --> WAS
     RGS --> RGR
+    ICtrl --> ISS
+    ISS --> IRR
     RGR --> DB
+    IRR --> DB
     GSCtrl --> GSS
     GSS --> GSR
     GSS --> FS

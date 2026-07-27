@@ -373,6 +373,61 @@ export const toggleSubscription = async (workspaceId: string, subscriptionId: st
   return response.data;
 };
 
+// --- Public Issue Reporting ---
+
+export type IssueStatus = 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED';
+
+export interface IssueReport {
+  id: string;
+  reporterEmail: string | null;
+  message: string | null;
+  status: IssueStatus;
+  createdAt: string;
+  updatedAt: string;
+  hasScreenshot: boolean;
+  screenshotContentType: string | null;
+  screenshotBase64: string | null;
+}
+
+export interface SubmitIssuePayload {
+  message?: string;
+  reporterEmail?: string;
+  screenshot?: File | null;
+}
+
+export const submitIssueReport = async (
+  payload: SubmitIssuePayload
+): Promise<{ success: boolean; message: string }> => {
+  const formData = new FormData();
+  if (payload.message?.trim()) {
+    formData.append('message', payload.message.trim());
+  }
+  if (payload.reporterEmail?.trim()) {
+    formData.append('reporterEmail', payload.reporterEmail.trim());
+  }
+  if (payload.screenshot) {
+    formData.append('screenshot', payload.screenshot);
+  }
+
+  const response = await api.post('/api/v1/issues', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return response.data;
+};
+
+export const adminGetIssues = async (): Promise<IssueReport[]> => {
+  const response = await api.get('/api/admin/issues');
+  return response.data;
+};
+
+export const adminUpdateIssueStatus = async (
+  issueId: string,
+  status: IssueStatus
+): Promise<IssueReport> => {
+  const response = await api.patch(`/api/admin/issues/${issueId}/status`, { status });
+  return response.data;
+};
+
 // --- Admin Notification Preferences ---
 
 export interface NotificationPreferencesResponse {

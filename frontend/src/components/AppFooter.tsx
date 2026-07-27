@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import IssueReportModal from './IssueReportModal';
 
 // Tags that are completely removed along with their entire subtree.
 const DANGEROUS_TAGS = new Set([
@@ -152,6 +153,7 @@ export default function AppFooter() {
   // ISO timestamp injected by Vite's define at bundle/dev-server start time
   const frontendBuildTime = import.meta.env.VITE_BUILD_TIME as string | undefined;
   const [backendBuild, setBackendBuild] = useState<BackendBuildInfo | null>(null);
+  const [isIssueModalOpen, setIsIssueModalOpen] = useState(false);
 
   useEffect(() => {
     const backendUrl = (import.meta.env.VITE_BACKEND_ROOT_URL as string | undefined) ?? '';
@@ -179,26 +181,39 @@ export default function AppFooter() {
     : '…';
 
   return (
-    <footer className="w-full shrink-0 border-t border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-900 py-1.5 px-4 text-xs text-slate-500 dark:text-slate-400 z-10 flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
-      {/* Optional custom HTML from VITE_FOOTER_HTML */}
-      {sanitized.trim() && (
-        <span dangerouslySetInnerHTML={{ __html: sanitized }} />
-      )}
+    <>
+      <footer className="w-full shrink-0 border-t border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-900 py-1.5 px-4 text-xs text-slate-500 dark:text-slate-400 z-10 flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+        <span className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setIsIssueModalOpen(true)}
+            className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 dark:hover:text-indigo-300 font-medium cursor-pointer"
+          >
+            Raise an issue
+          </button>
 
-      {/* Build metadata */}
-      <span className="ml-auto flex items-center gap-3 whitespace-nowrap">
-        <span>
-          Frontend built: <strong className="text-slate-700 dark:text-slate-300">{frontendLabel}</strong>
-        </span>
-        <span className="text-slate-300 dark:text-slate-600">|</span>
-        <span>
-          Backend built:{' '}
-          <strong className="text-slate-700 dark:text-slate-300">{backendLabel}</strong>
-          {backendBuild?.version && backendBuild.version !== 'development' && backendBuild.version !== 'unknown' && (
-            <span className="ml-1 text-slate-400 dark:text-slate-500">v{backendBuild.version}</span>
+          {/* Optional custom HTML from VITE_FOOTER_HTML */}
+          {sanitized.trim() && (
+            <span dangerouslySetInnerHTML={{ __html: sanitized }} />
           )}
         </span>
-      </span>
-    </footer>
+
+        {/* Build metadata */}
+        <span className="ml-auto flex items-center gap-3 whitespace-nowrap">
+          <span>
+            Frontend built: <strong className="text-slate-700 dark:text-slate-300">{frontendLabel}</strong>
+          </span>
+          <span className="text-slate-300 dark:text-slate-600">|</span>
+          <span>
+            Backend built:{' '}
+            <strong className="text-slate-700 dark:text-slate-300">{backendLabel}</strong>
+            {backendBuild?.version && backendBuild.version !== 'development' && backendBuild.version !== 'unknown' && (
+              <span className="ml-1 text-slate-400 dark:text-slate-500">v{backendBuild.version}</span>
+            )}
+          </span>
+        </span>
+      </footer>
+      <IssueReportModal isOpen={isIssueModalOpen} onClose={() => setIsIssueModalOpen(false)} />
+    </>
   );
 }
