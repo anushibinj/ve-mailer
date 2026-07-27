@@ -535,11 +535,14 @@ public class FilterService {
 
     private Query.QueryBuilder buildClause(FilterCriteriaClause clause, Set<String> referenceFieldNames) {
         String operator = clause.getOperator().toUpperCase();
+        boolean nullAsReference = Boolean.TRUE.equals(clause.getReferenceValues())
+                || referenceFieldNames.contains(clause.getField());
+        Object nullToken = nullAsReference ? Query.NULL_REFERENCE : Query.NULL;
         if ("IS_EMPTY".equals(operator)) {
-            return Query.statement(clause.getField(), QueryMethod.EqualTo, Query.NULL);
+            return Query.statement(clause.getField(), QueryMethod.EqualTo, nullToken);
         }
         if ("IS_NOT_EMPTY".equals(operator)) {
-            return Query.not(clause.getField(), QueryMethod.EqualTo, Query.NULL);
+            return Query.not(clause.getField(), QueryMethod.EqualTo, nullToken);
         }
 
         String[] values = clause.getValues().toArray(new String[0]);
@@ -1069,11 +1072,14 @@ public class FilterService {
 
     private String serializeClause(FilterCriteriaClause clause, Set<String> referenceFieldNames) {
         String operator = clause.getOperator().trim().toUpperCase();
+        String[] emptyValues = new String[0];
+        boolean referenceField = shouldTreatAsReferenceIds(clause, referenceFieldNames, emptyValues);
+        String nullLiteral = referenceField ? "{null}" : "null";
         if ("IS_EMPTY".equals(operator)) {
-            return clause.getField().trim() + " EQ null";
+            return clause.getField().trim() + " EQ " + nullLiteral;
         }
         if ("IS_NOT_EMPTY".equals(operator)) {
-            return clause.getField().trim() + " NEQ null";
+            return clause.getField().trim() + " NEQ " + nullLiteral;
         }
 
         List<String> values = clause.getValues().stream().map(String::trim).collect(Collectors.toList());
@@ -1127,7 +1133,11 @@ public class FilterService {
     }
 
     private boolean isNullLiteral(String rawValueToken) {
-        return "null".equalsIgnoreCase(unwrapCarets(rawValueToken == null ? "" : rawValueToken.trim()));
+        String normalized = unwrapCarets(rawValueToken == null ? "" : rawValueToken.trim());
+        if (normalized.length() >= 2 && normalized.startsWith("{") && normalized.endsWith("}")) {
+            normalized = normalized.substring(1, normalized.length() - 1).trim();
+        }
+        return "null".equalsIgnoreCase(normalized);
     }
 
     private Map<String, String> parseFilterQueryParams(String filterQueryString) {

@@ -182,6 +182,17 @@ class FilterServiceTest {
     }
 
     @Test
+    void testParseFilterQueryString_ParsesReferenceNullLiterals() {
+        ParsedFilterQueryResponse parsed = filterService.parseFilterQueryString(
+                "fields=id,name&query=owner EQ {null} AND phase NEQ {null}");
+        assertEquals(2, parsed.getCriteria().size());
+        assertEquals("IS_EMPTY", parsed.getCriteria().get(0).getOperator());
+        assertTrue(parsed.getCriteria().get(0).getValues().isEmpty());
+        assertEquals("IS_NOT_EMPTY", parsed.getCriteria().get(1).getOperator());
+        assertTrue(parsed.getCriteria().get(1).getValues().isEmpty());
+    }
+
+    @Test
     void testParseFilterQueryString_ParsesQuotedOctaneQueryWithCrossFilterAndOr() {
         ParsedFilterQueryResponse parsed = filterService.parseFilterQueryString(
                 "fields=id,name,owner,phase&query=\"owner EQ {id EQ 8666};(phase EQ {id EQ ^pgxw2gll8xe6du9y1jx87596z^}||phase EQ {id EQ ^dk9y4yv0r3w6dcy1r8ny94xv8^})\"");
@@ -251,6 +262,27 @@ class FilterServiceTest {
                         FilterCriteriaClause.builder().field("owner").operator("IS_NOT_EMPTY").values(List.of()).build()
                 ));
         assertEquals("fields=id,name&query=description EQ null AND owner NEQ null", output);
+    }
+
+    @Test
+    void testBuildFilterQueryString_SerializesReferenceIsEmptyOperators() {
+        String output = filterService.buildFilterQueryString(
+                List.of("id", "name"),
+                List.of(
+                        FilterCriteriaClause.builder()
+                                .field("owner")
+                                .operator("IS_EMPTY")
+                                .values(List.of())
+                                .referenceValues(true)
+                                .build(),
+                        FilterCriteriaClause.builder()
+                                .field("phase")
+                                .operator("IS_NOT_EMPTY")
+                                .values(List.of())
+                                .referenceValues(true)
+                                .build()
+                ));
+        assertEquals("fields=id,name&query=owner EQ {null} AND phase NEQ {null}", output);
     }
 
     @Test
