@@ -20,7 +20,7 @@ public class FilterCriteriaClause {
     /** Octane field name, e.g. "defect_type", "product_udf", "phase" */
     private String field;
 
-    /** Operator: "IN" or "NOT_IN" */
+    /** Operator: "IN", "NOT_IN", "IS_EMPTY", or "IS_NOT_EMPTY" */
     private String operator;
 
     /** One or more values (Octane entity IDs or literal strings) */

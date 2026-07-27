@@ -42,6 +42,17 @@ const TRIAGE_SLA_FIELD = 'Triage SLA';
 const CUSTOM_PSEUDO_FIELDS = [AI_SUMMARY_FIELD, TRIAGE_SLA_FIELD];
 
 const emptyCriterion = (): FilterCriteriaClause => ({ field: '', operator: 'IN', values: [], logicalOperator: 'AND' });
+const isEmptyOperator = (operator?: string): boolean => operator === 'IS_EMPTY' || operator === 'IS_NOT_EMPTY';
+const criterionHasRequiredValue = (criterion: FilterCriteriaClause): boolean => {
+  if (isEmptyOperator(criterion.operator)) return true;
+  return criterion.values.length > 0 && criterion.values.some(v => v.trim() !== '');
+};
+const formatCriterionSummary = (criterion: FilterCriteriaClause): string => {
+  if (isEmptyOperator(criterion.operator)) {
+    return criterion.operator.toLowerCase().replace('_', ' ');
+  }
+  return `${criterion.operator.toLowerCase().replace('_', ' ')} [${criterion.values.join(', ')}]`;
+};
 const defaultFields = ['id', 'name', 'phase', 'owner'];
 const DEFAULT_ORDER_BY_DIRECTION: OrderByDirection = 'ASC';
 
@@ -448,7 +459,7 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
 
   const isFormValid = title.trim() !== '' && creationMode !== null && selectedFields.length > 0
     && criteria.length > 0
-    && criteria.every(c => c.field.trim() !== '' && c.values.length > 0 && c.values.some(v => v.trim() !== ''))
+    && criteria.every(c => c.field.trim() !== '' && criterionHasRequiredValue(c))
     && (!isQueryStringMode || (filterQueryString.trim() !== '' && queryStringApplied));
 
   const handleSave = async (e: React.FormEvent) => {
@@ -459,7 +470,9 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
       // Filter out empty values; keep IDs as-is (they may look like "123456789" or "phase.defect.new")
       const cleanedCriteria = criteria.map(c => ({
         ...c,
-        values: c.values.map(v => v.trim()).filter(v => v !== '')
+        values: isEmptyOperator(c.operator)
+          ? []
+          : c.values.map(v => v.trim()).filter(v => v !== '')
       }));
       const normalizedFilterQueryString = isQueryStringMode ? filterQueryString.trim() : '';
       if (viewMode === 'edit' && editingFilter) {
@@ -748,8 +761,7 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
                             <p key={`${criterion.field}-${ci}`}>
                               {ci > 0 ? 'AND ' : ''}
                               <span className="font-semibold text-slate-700 dark:text-slate-200">{criterion.field}</span>{' '}
-                              {criterion.operator}{' '}
-                              [{criterion.values.join(', ')}]
+                              {formatCriterionSummary(criterion)}
                             </p>
                           ))}
                         </div>
@@ -1110,8 +1122,7 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
                                 </span>
                               )}
                               <span className="font-medium text-slate-500 dark:text-slate-400">{c.field}</span>{' '}
-                              <span className="text-slate-400 dark:text-slate-500">{c.operator.toLowerCase().replace('_', ' ')}</span>{' '}
-                              [{c.values.join(', ')}]
+                              <span className="text-slate-400 dark:text-slate-500">{formatCriterionSummary(c)}</span>
                             </span>
                           ))}
                         </div>

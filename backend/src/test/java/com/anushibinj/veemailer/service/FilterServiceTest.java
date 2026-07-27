@@ -171,6 +171,17 @@ class FilterServiceTest {
     }
 
     @Test
+    void testParseFilterQueryString_ParsesIsEmptyAndIsNotEmpty() {
+        ParsedFilterQueryResponse parsed = filterService.parseFilterQueryString(
+                "fields=id,name&query=description EQ null AND owner NEQ null");
+        assertEquals(2, parsed.getCriteria().size());
+        assertEquals("IS_EMPTY", parsed.getCriteria().get(0).getOperator());
+        assertTrue(parsed.getCriteria().get(0).getValues().isEmpty());
+        assertEquals("IS_NOT_EMPTY", parsed.getCriteria().get(1).getOperator());
+        assertTrue(parsed.getCriteria().get(1).getValues().isEmpty());
+    }
+
+    @Test
     void testParseFilterQueryString_ParsesQuotedOctaneQueryWithCrossFilterAndOr() {
         ParsedFilterQueryResponse parsed = filterService.parseFilterQueryString(
                 "fields=id,name,owner,phase&query=\"owner EQ {id EQ 8666};(phase EQ {id EQ ^pgxw2gll8xe6du9y1jx87596z^}||phase EQ {id EQ ^dk9y4yv0r3w6dcy1r8ny94xv8^})\"");
@@ -229,6 +240,31 @@ class FilterServiceTest {
                         .referenceValues(true)
                         .build()));
         assertEquals("fields=id,name&query=code_review_owner_udf EQ {id IN 8666}", output);
+    }
+
+    @Test
+    void testBuildFilterQueryString_SerializesIsEmptyOperators() {
+        String output = filterService.buildFilterQueryString(
+                List.of("id", "name"),
+                List.of(
+                        FilterCriteriaClause.builder().field("description").operator("IS_EMPTY").values(List.of()).build(),
+                        FilterCriteriaClause.builder().field("owner").operator("IS_NOT_EMPTY").values(List.of()).build()
+                ));
+        assertEquals("fields=id,name&query=description EQ null AND owner NEQ null", output);
+    }
+
+    @Test
+    void testBuildFilterQueryString_RejectsValuesForIsEmptyOperator() {
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
+                filterService.buildFilterQueryString(
+                        List.of("id"),
+                        List.of(FilterCriteriaClause.builder()
+                                .field("description")
+                                .operator("IS_EMPTY")
+                                .values(List.of("unexpected"))
+                                .build())
+                ));
+        assertTrue(ex.getMessage().contains("criteria values must be empty for IS_EMPTY/IS_NOT_EMPTY"));
     }
 
     @Test

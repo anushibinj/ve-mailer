@@ -534,8 +534,16 @@ public class FilterService {
     }
 
     private Query.QueryBuilder buildClause(FilterCriteriaClause clause, Set<String> referenceFieldNames) {
+        String operator = clause.getOperator().toUpperCase();
+        if ("IS_EMPTY".equals(operator)) {
+            return Query.statement(clause.getField(), QueryMethod.EqualTo, Query.NULL);
+        }
+        if ("IS_NOT_EMPTY".equals(operator)) {
+            return Query.not(clause.getField(), QueryMethod.EqualTo, Query.NULL);
+        }
+
         String[] values = clause.getValues().toArray(new String[0]);
-        boolean negate = "NOT_IN".equalsIgnoreCase(clause.getOperator());
+        boolean negate = "NOT_IN".equals(operator);
         boolean referenceIds = shouldTreatAsReferenceIds(clause, referenceFieldNames, values);
 
         if (referenceIds) {
@@ -749,6 +757,15 @@ public class FilterService {
         String field = matcher.group(1).trim();
         String operatorToken = matcher.group(2).trim().toUpperCase();
         String rawValues = matcher.group(3).trim();
+
+        if (("EQ".equals(operatorToken) || "NEQ".equals(operatorToken)) && isNullLiteral(rawValues)) {
+            return FilterCriteriaClause.builder()
+                    .field(field)
+                    .operator("EQ".equals(operatorToken) ? "IS_EMPTY" : "IS_NOT_EMPTY")
+                    .values(List.of())
+                    .build();
+        }
+
         boolean referenceValues = isReferenceValueExpression(rawValues);
         List<String> values = parseValueTokens(rawValues, rawClause);
 
@@ -1051,9 +1068,17 @@ public class FilterService {
     }
 
     private String serializeClause(FilterCriteriaClause clause, Set<String> referenceFieldNames) {
+        String operator = clause.getOperator().trim().toUpperCase();
+        if ("IS_EMPTY".equals(operator)) {
+            return clause.getField().trim() + " EQ null";
+        }
+        if ("IS_NOT_EMPTY".equals(operator)) {
+            return clause.getField().trim() + " NEQ null";
+        }
+
         List<String> values = clause.getValues().stream().map(String::trim).collect(Collectors.toList());
         boolean referenceIds = shouldTreatAsReferenceIds(clause, referenceFieldNames, values.toArray(new String[0]));
-        boolean negate = "NOT_IN".equalsIgnoreCase(clause.getOperator());
+        boolean negate = "NOT_IN".equals(operator);
 
         if (referenceIds) {
             String inner = "id IN " + String.join(",", values);
@@ -1062,10 +1087,10 @@ public class FilterService {
         }
 
         String valueLiteral = "^" + String.join(",", values) + "^";
-        String operator = negate
+        String queryOperator = negate
                 ? (values.size() == 1 ? "NEQ" : "NOT_IN")
                 : (values.size() == 1 ? "EQ" : "IN");
-        return clause.getField().trim() + " " + operator + " " + valueLiteral;
+        return clause.getField().trim() + " " + queryOperator + " " + valueLiteral;
     }
 
     private void validateClause(FilterCriteriaClause clause) {
@@ -1078,16 +1103,31 @@ public class FilterService {
         if (clause.getOperator() == null || clause.getOperator().isBlank()) {
             throw new IllegalArgumentException("criteria operator must not be blank");
         }
-        String operator = clause.getOperator().toUpperCase();
-        if (!"IN".equals(operator) && !"NOT_IN".equals(operator)) {
-            throw new IllegalArgumentException("criteria operator must be IN or NOT_IN");
+        String operator = clause.getOperator().trim().toUpperCase();
+        if (!"IN".equals(operator)
+                && !"NOT_IN".equals(operator)
+                && !"IS_EMPTY".equals(operator)
+                && !"IS_NOT_EMPTY".equals(operator)) {
+            throw new IllegalArgumentException("criteria operator must be IN, NOT_IN, IS_EMPTY, or IS_NOT_EMPTY");
         }
+
+        if ("IS_EMPTY".equals(operator) || "IS_NOT_EMPTY".equals(operator)) {
+            if (clause.getValues() != null && !clause.getValues().isEmpty()) {
+                throw new IllegalArgumentException("criteria values must be empty for IS_EMPTY/IS_NOT_EMPTY");
+            }
+            return;
+        }
+
         if (clause.getValues() == null || clause.getValues().isEmpty()) {
             throw new IllegalArgumentException("criteria values must not be empty");
         }
         if (clause.getValues().stream().anyMatch(v -> v == null || v.isBlank())) {
             throw new IllegalArgumentException("criteria values must not contain blanks");
         }
+    }
+
+    private boolean isNullLiteral(String rawValueToken) {
+        return "null".equalsIgnoreCase(unwrapCarets(rawValueToken == null ? "" : rawValueToken.trim()));
     }
 
     private Map<String, String> parseFilterQueryParams(String filterQueryString) {

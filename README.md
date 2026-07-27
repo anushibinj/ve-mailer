@@ -497,7 +497,7 @@ Filter templates are visibility-scoped:
 }
 ```
 
-- `operator`: `IN` or `NOT_IN`
+- `operator`: `IN`, `NOT_IN`, `IS_EMPTY`, or `IS_NOT_EMPTY`
 - `logicalOperator`: `AND` (default) or `OR` — controls how this clause is joined to the previous one. Ignored for the first clause.
 - `referenceValues`: optional; when `true`, criteria are emitted as reference-ID clauses like `code_review_owner_udf EQ {id IN 8666}`
 
@@ -508,7 +508,7 @@ Filter templates are visibility-scoped:
 - `order_by` is optional and selects the field used for sorting
 - `order_by_direction` is optional (`ASC` default, `DESC` supported)
 - `query` can include `||` OR groups when all OR-joined expressions target the same field
-- Accepted operators in query-string mode: `EQ`, `NEQ`, `IN`, `NOT_IN` (mapped internally to `IN`/`NOT_IN`)
+- Accepted operators in query-string mode: `EQ`, `NEQ`, `IN`, `NOT_IN`; `EQ null` maps to `IS_EMPTY` and `NEQ null` maps to `IS_NOT_EMPTY`
 - Values can be wrapped with `^...^` and multiple values are comma-separated inside the wrapper
 - Reference-ID clauses are supported, e.g. `owner EQ {id IN 8666}` and `phase EQ {id IN phase.defect.new,phase.defect.in_progress}`
 

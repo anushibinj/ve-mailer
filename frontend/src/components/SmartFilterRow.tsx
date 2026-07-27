@@ -22,10 +22,14 @@ interface SmartFilterRowProps {
 const REFERENCE_OPERATORS = [
   { value: 'IN', label: 'is' },
   { value: 'NOT_IN', label: 'is not' },
+  { value: 'IS_EMPTY', label: 'is empty' },
+  { value: 'IS_NOT_EMPTY', label: 'is not empty' },
 ];
 const STRING_OPERATORS = [
   { value: 'IN', label: 'is' },
   { value: 'NOT_IN', label: 'is not' },
+  { value: 'IS_EMPTY', label: 'is empty' },
+  { value: 'IS_NOT_EMPTY', label: 'is not empty' },
 ];
 const LOGICAL_OPERATORS = [
   { value: 'AND', label: 'And', desc: 'All filters must match' },
@@ -36,6 +40,10 @@ function getOperatorsForField(field: OctaneFieldDto | undefined) {
   if (!field) return REFERENCE_OPERATORS;
   if (field.reference) return REFERENCE_OPERATORS;
   return STRING_OPERATORS;
+}
+
+function isEmptyOperator(operator: string | undefined): boolean {
+  return operator === 'IS_EMPTY' || operator === 'IS_NOT_EMPTY';
 }
 
 // ------------------------------------------------------------------ //
@@ -493,6 +501,7 @@ export const SmartFilterRow: React.FC<SmartFilterRowProps> = ({
 
   const isReference = selectedFieldMeta?.reference ?? false;
   const isNumeric   = selectedFieldMeta?.fieldType === 'integer' || selectedFieldMeta?.fieldType === 'float';
+  const showValueInput = !isEmptyOperator(clause.operator);
 
   return (
     <div className="border border-slate-200 dark:border-slate-700 rounded-xl overflow-visible bg-white dark:bg-slate-900">
@@ -549,7 +558,14 @@ export const SmartFilterRow: React.FC<SmartFilterRowProps> = ({
           {/* Operator */}
           <select
             value={clause.operator}
-            onChange={e => onChange({ operator: e.target.value })}
+            onChange={e => {
+              const nextOperator = e.target.value;
+              if (isEmptyOperator(nextOperator)) {
+                onChange({ operator: nextOperator, values: [], referenceValues: false });
+                return;
+              }
+              onChange({ operator: nextOperator });
+            }}
             className={`${inputClass} sm:w-32`}
           >
             {operators.map(op => (
@@ -558,7 +574,11 @@ export const SmartFilterRow: React.FC<SmartFilterRowProps> = ({
           </select>
 
           {/* Value input */}
-          {isReference ? (
+          {!showValueInput ? (
+            <div className={`${inputClass} flex items-center text-slate-400 dark:text-slate-500`}>
+              No value required
+            </div>
+          ) : isReference ? (
             <ValuePicker
               values={fieldValues}
               selected={clause.values}
