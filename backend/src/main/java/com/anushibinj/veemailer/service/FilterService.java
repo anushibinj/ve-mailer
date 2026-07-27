@@ -83,7 +83,7 @@ public class FilterService {
     /**
      * Persist a new filter template associated with a workspace.
      *
-     * @param ownerEmail null for shared admin template, non-null for user-private template.
+     * @param ownerEmail owner email for the creating user.
      */
     public Filter createFilter(FilterDto dto, String ownerEmail) {
         Workspace workspace = workspaceRepository.findById(dto.getWorkspaceId())
@@ -106,6 +106,7 @@ public class FilterService {
                             resolvedDto.getOrderByDirection(),
                             orderBy))
                     .ownerEmail(normalizeEmail(ownerEmail))
+                    .isPublic(Boolean.TRUE.equals(resolvedDto.getIsPublic()))
                     .build();
 
             return filterRepository.save(filter);
@@ -223,6 +224,7 @@ public class FilterService {
                     .criteria(criteria)
                     .orderBy(orderBy)
                     .orderByDirection(orderByDirection)
+                    .isPublic(filter.isPublic())
                     .filterQueryString(buildFilterQueryString(
                             fields,
                             criteria,
@@ -254,6 +256,9 @@ public class FilterService {
             String orderBy = normalizeOrderBy(resolvedDto.getOrderBy());
             filter.setOrderBy(orderBy);
             filter.setOrderByDirection(normalizeOrderByDirection(resolvedDto.getOrderByDirection(), orderBy));
+            if (resolvedDto.getIsPublic() != null) {
+                filter.setPublic(resolvedDto.getIsPublic());
+            }
 
             return filterRepository.save(filter);
         } catch (JsonProcessingException e) {

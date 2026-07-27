@@ -45,17 +45,17 @@ public class FilterController {
         return ResponseEntity.ok(filters);
     }
 
-    // --- Filter template mutations (workspace manager or owner for private filters) ---
+    // --- Filter template mutations (workspace manager or owner for private/public filters) ---
 
     @PostMapping
     public ResponseEntity<Filter> createFilter(
             @PathVariable UUID workspaceId,
             @Valid @RequestBody FilterDto dto) {
         Authentication authentication = currentAuthentication();
-        boolean canManage = canManageWorkspaceTemplates(authentication, workspaceId);
         // Ensure the workspaceId in the path is used (DTO may also carry it, path wins)
         dto.setWorkspaceId(workspaceId);
-        String ownerEmail = canManage ? null : normalizeEmail(authenticationName(authentication));
+        String ownerEmail = normalizeEmail(authenticationName(authentication));
+        boolean canManage = canManageWorkspaceTemplates(authentication, workspaceId);
         Filter saved = filterService.createFilter(dto, ownerEmail);
         applyAccessMetadata(saved, authenticationName(authentication), canManage);
         return ResponseEntity.ok(saved);
@@ -138,7 +138,7 @@ public class FilterController {
         Filter filter = filterService.getFilterInWorkspace(filterId, workspaceId);
         String currentEmail = authenticationName(authentication);
         boolean canManage = canManageWorkspaceTemplates(authentication, workspaceId);
-        if (!canManage && !isSharedAdminTemplate(filter) && !isOwnedByCurrentUser(filter, currentEmail)) {
+        if (!canManage && !isPublicTemplate(filter) && !isOwnedByCurrentUser(filter, currentEmail)) {
             throw new AccessDeniedException("You are not authorized to view this filter");
         }
         applyAccessMetadata(filter, currentEmail, canManage);
@@ -189,12 +189,17 @@ public class FilterController {
                 && filter.getOwnerEmail().equalsIgnoreCase(currentEmail);
     }
 
-    private boolean isSharedAdminTemplate(Filter filter) {
+    private boolean isLegacyAdminTemplate(Filter filter) {
         return filter.getOwnerEmail() == null;
     }
 
+    private boolean isPublicTemplate(Filter filter) {
+        return filter.isPublic() || isLegacyAdminTemplate(filter);
+    }
+
     private void applyAccessMetadata(Filter filter, String currentEmail, boolean canManageWorkspace) {
-        filter.setAdminManaged(isSharedAdminTemplate(filter));
+        filter.setAdminManaged(isLegacyAdminTemplate(filter));
+        filter.setPublicTemplate(isPublicTemplate(filter));
         filter.setEditable(canManageWorkspace || isOwnedByCurrentUser(filter, currentEmail));
     }
 }

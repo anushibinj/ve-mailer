@@ -256,6 +256,7 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [entityType, setEntityType] = useState('backlog_items');
+  const [isPublicFilter, setIsPublicFilter] = useState(false);
   const [availableFields, setAvailableFields] = useState<OctaneFieldDto[]>([]);
   const [availableFieldsLoading, setAvailableFieldsLoading] = useState(false);
   const [creationMode, setCreationMode] = useState<FilterCreationMode | null>(allowCustomQueryString ? null : 'manual');
@@ -303,6 +304,7 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
 
   const resetForm = () => {
     setTitle(''); setDescription(''); setEntityType('backlog_items');
+    setIsPublicFilter(false);
     setCreationMode(allowCustomQueryString ? null : 'manual');
     setSelectedFields(defaultFields);
     setOrderByField('');
@@ -316,6 +318,7 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
 
   const populateFormFromFilter = (f: Filter) => {
     setTitle(f.title); setDescription(f.description || ''); setEntityType(normalizeEntityType(f.entityType));
+    setIsPublicFilter(resolvePublicTemplate(f));
     setCreationMode('manual');
     setFieldSearch('');
     try { setSelectedFields(JSON.parse(f.fields)); } catch { setSelectedFields(defaultFields); }
@@ -338,6 +341,7 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
       const cloned = await cloneFilter(workspaceId, f.id);
       setEditingFilter(null);
       setTitle(cloned.title); setDescription(cloned.description || '');
+      setIsPublicFilter(Boolean(cloned.isPublic));
       setEntityType(normalizeEntityType(cloned.entityType)); setSelectedFields(cloned.fields);
       setOrderByField((cloned.orderBy ?? '').trim());
       setOrderByDirection(cloned.orderByDirection === 'DESC' ? 'DESC' : DEFAULT_ORDER_BY_DIRECTION);
@@ -482,6 +486,7 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
           entityType,
           fields: selectedFields,
           criteria: cleanedCriteria,
+          isPublic: isPublicFilter,
           orderBy: orderByField.trim() || undefined,
           orderByDirection: orderByField.trim() ? orderByDirection : undefined,
           filterQueryString: normalizedFilterQueryString || undefined
@@ -495,6 +500,7 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
           entityType,
           fields: selectedFields,
           criteria: cleanedCriteria,
+          isPublic: isPublicFilter,
           orderBy: orderByField.trim() || undefined,
           orderByDirection: orderByField.trim() ? orderByDirection : undefined,
           filterQueryString: normalizedFilterQueryString || undefined
@@ -549,9 +555,12 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
     return canManageAllFilters;
   };
 
-  const isAdminManagedFilter = (filter: Filter): boolean => {
-    if (typeof filter.adminManaged === 'boolean') {
-      return filter.adminManaged;
+  const resolvePublicTemplate = (filter: Filter): boolean => {
+    if (typeof filter.publicTemplate === 'boolean') {
+      return filter.publicTemplate;
+    }
+    if (typeof filter.isPublic === 'boolean') {
+      return filter.isPublic;
     }
     return !filter.ownerEmail;
   };
@@ -560,7 +569,7 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
     if (filter.ownerEmail && filter.ownerEmail.trim() !== '') {
       return filter.ownerEmail;
     }
-    return 'Admin';
+    return 'Legacy admin template';
   };
 
   if (isLoading) {
@@ -628,6 +637,40 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
                     <option key={t.value} value={t.value}>{t.label}</option>
                   ))}
                 </select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Visibility</label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setIsPublicFilter(false)}
+                    className={`text-left rounded-xl border p-4 transition-colors cursor-pointer ${
+                      !isPublicFilter
+                        ? 'border-indigo-400 bg-indigo-50 dark:bg-indigo-500/10'
+                        : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800'
+                    }`}
+                  >
+                    <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">Private</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                      Only you can see and subscribe to this filter.
+                    </p>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsPublicFilter(true)}
+                    className={`text-left rounded-xl border p-4 transition-colors cursor-pointer ${
+                      isPublicFilter
+                        ? 'border-indigo-400 bg-indigo-50 dark:bg-indigo-500/10'
+                        : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800'
+                    }`}
+                  >
+                    <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">Public</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                      Everyone in this workspace can see and subscribe to this filter.
+                    </p>
+                  </button>
+                </div>
               </div>
 
               {allowCustomQueryString && (
@@ -1077,9 +1120,9 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
                         <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-500/20">
                           {toEntityTypeLabel(f.entityType)}
                         </span>
-                        {isAdminManagedFilter(f) ? (
+                        {resolvePublicTemplate(f) ? (
                           <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
-                            Admin template
+                            Public template
                           </span>
                         ) : (
                           <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide bg-violet-100 dark:bg-violet-500/20 text-violet-700 dark:text-violet-300 border border-violet-200 dark:border-violet-500/30">

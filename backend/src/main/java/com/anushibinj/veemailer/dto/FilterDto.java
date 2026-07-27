@@ -44,4 +44,7 @@ public class FilterDto {
      * are persisted instead of the raw fields/criteria payload.
      */
     private String filterQueryString;
+
+    /** Visibility flag: true = public to workspace, false = private to owner. */
+    private Boolean isPublic;
 }

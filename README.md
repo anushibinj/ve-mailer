@@ -469,14 +469,14 @@ Connectivity status is persisted per workspace and refreshed:
 ### Filters
 
 Filter templates are visibility-scoped:
-- **Admin-created templates** are shared and visible to everyone in the workspace (`ownerEmail = null`).
-- **Member-created templates** are private to their owner (`ownerEmail = member email`).
-- Members can create/manage only their own private templates; admins/workspace admins can manage all templates.
+- Every template has an owner (`ownerEmail`) and a visibility flag (`isPublic`).
+- Owners can set their own templates to **public** (visible/subscribable by all workspace users) or **private** (owner-only).
+- Admins/workspace admins can manage all templates in the workspace.
 
 | Method | Path                                           | Role required | Description                                     |
 |--------|------------------------------------------------|:-------------:|-------------------------------------------------|
 | `GET`  | `/workspaces/{id}/filters`                     | Any           | List accessible templates (shared admin + own private) |
-| `POST` | `/workspaces/{id}/filters`                     | Any           | Create template (members create private; admins create shared) |
+| `POST` | `/workspaces/{id}/filters`                     | Any           | Create template with owner-controlled visibility (`isPublic`) |
 | `PUT`  | `/workspaces/{id}/filters/{filterId}`          | Any (owner/admin) | Update owned private template or any template as admin |
 | `POST` | `/workspaces/{id}/filters/parse-query-string`  | Any           | Validate and parse `fields=...&query=...` into structured criteria |
 | `GET`  | `/workspaces/{id}/filters/{filterId}/query-string` | Any (accessible filter) | Export an accessible filter as copyable string |
@@ -484,7 +484,8 @@ Filter templates are visibility-scoped:
 
 `GET /filters` responses also include:
 - `editable`: whether the current user can edit/delete the filter
-- `adminManaged`: whether the filter is an admin-created shared template
+- `publicTemplate`: whether the filter is visible to all users in the workspace
+- `adminManaged`: legacy marker for old admin-shared templates (for backward compatibility)
 
 **FilterCriteriaClause** (element of the `criteria` array):
 
@@ -559,7 +560,7 @@ All subscription endpoints require authentication. Users may only update/delete 
 
 Private filter subscriptions are enforced server-side:
 - A private filter can only be subscribed by its owner.
-- Group subscriptions can only use admin-shared filters.
+- Group subscriptions can only use public filters.
 
 **Subscription visibility:** `ADMIN` users see all subscriptions for the workspace; `MEMBER` users see only their own subscriptions plus any group subscriptions that include them. For group subscriptions, `MEMBER` users get a **View-only** experience (no edit, unsubscribe, enable/disable, or schedule changes). The frontend hides the "Recipient Email" column and labels the section "My Subscriptions" for `MEMBER` users.
 

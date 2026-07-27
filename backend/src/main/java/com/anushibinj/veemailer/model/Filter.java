@@ -1,6 +1,7 @@
 package com.anushibinj.veemailer.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -67,11 +68,21 @@ public class Filter {
     @Column(name = "owner_email")
     private String ownerEmail;
 
+    /** True when this template is visible to everyone in the workspace. */
+    @JsonProperty("isPublic")
+    @Column(name = "is_public", nullable = false)
+    @Builder.Default
+    private boolean isPublic = false;
+
     /** Computed per request; true when current user can edit/delete this filter. */
     @Transient
     private Boolean editable;
 
-    /** Computed per request; true when this is an admin-created shared template. */
+    /** Computed per request; true when this is an admin-created legacy shared template. */
     @Transient
     private Boolean adminManaged;
+
+    /** Computed per request; true when this template is visible to all workspace users. */
+    @Transient
+    private Boolean publicTemplate;
 }

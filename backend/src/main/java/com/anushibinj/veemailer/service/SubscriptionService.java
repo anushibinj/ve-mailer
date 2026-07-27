@@ -191,7 +191,7 @@ public class SubscriptionService {
 
         Filter filter = filterRepository.findById(filterId)
                 .orElseThrow(() -> new IllegalArgumentException("Filter not found"));
-        if (filter.getOwnerEmail() != null) {
+        if (!filter.isPublic() && filter.getOwnerEmail() != null) {
             throw new AccessDeniedException("Private user filters cannot be used for group subscriptions");
         }
 
@@ -343,7 +343,7 @@ public class SubscriptionService {
     }
 
     private void enforceFilterCanBeSubscribedByRecipient(Filter filter, String recipientEmail) {
-        if (filter.getOwnerEmail() == null) {
+        if (filter.isPublic() || filter.getOwnerEmail() == null) {
             return;
         }
         if (!filter.getOwnerEmail().equalsIgnoreCase(recipientEmail)) {

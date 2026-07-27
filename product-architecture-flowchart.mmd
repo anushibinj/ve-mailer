@@ -48,7 +48,7 @@ flowchart TD
         subgraph BusinessModule["Business Module"]
             WCtrl[Workspace Controller]
             FCtrl[Filter Controller]
-            FAuth[Filter Access Guard<br/>shared admin + private owner]
+            FAuth[Filter Access Guard<br/>public/private + owner/admin rights]
             FParse[Parse Query String Endpoint]
             FExport[Filter Query String Export Endpoint]
             SCtrl[Subscription Controller<br/>triage threshold in requests]

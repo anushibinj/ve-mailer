@@ -21,7 +21,7 @@ public interface FilterRepository extends JpaRepository<Filter, UUID> {
             SELECT f
             FROM Filter f
             WHERE f.workspace.id = :workspaceId
-              AND (f.ownerEmail IS NULL OR LOWER(f.ownerEmail) = LOWER(:email))
+              AND (f.isPublic = true OR f.ownerEmail IS NULL OR LOWER(f.ownerEmail) = LOWER(:email))
             """)
     List<Filter> findVisibleForUser(@Param("workspaceId") UUID workspaceId, @Param("email") String email);
 }

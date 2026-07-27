@@ -92,8 +92,10 @@ export interface Filter {
   orderBy?: string | null;
   orderByDirection?: 'ASC' | 'DESC' | null;
   ownerEmail?: string | null;
+  isPublic?: boolean;
   editable?: boolean;
   adminManaged?: boolean;
+  publicTemplate?: boolean;
 }
 
 export interface FilterCreatePayload {
@@ -102,6 +104,7 @@ export interface FilterCreatePayload {
   entityType: string;
   fields: string[];
   criteria: FilterCriteriaClause[];
+  isPublic: boolean;
   orderBy?: string;
   orderByDirection?: 'ASC' | 'DESC';
   filterQueryString?: string;
@@ -113,6 +116,7 @@ export interface FilterUpdatePayload {
   entityType: string;
   fields: string[];
   criteria: FilterCriteriaClause[];
+  isPublic: boolean;
   orderBy?: string;
   orderByDirection?: 'ASC' | 'DESC';
   filterQueryString?: string;
