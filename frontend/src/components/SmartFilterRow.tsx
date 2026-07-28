@@ -18,32 +18,110 @@ interface SmartFilterRowProps {
   canRemove: boolean;
 }
 
-// Operators available per field type category
+type FieldKind = 'reference' | 'number' | 'date' | 'boolean' | 'text';
+
 const REFERENCE_OPERATORS = [
   { value: 'IN', label: 'is' },
   { value: 'NOT_IN', label: 'is not' },
+  { value: 'STARTS_WITH', label: 'starts with' },
+  { value: 'CONTAINS', label: 'contains' },
+  { value: 'NOT_CONTAINS', label: 'does not contain' },
   { value: 'IS_EMPTY', label: 'is empty' },
   { value: 'IS_NOT_EMPTY', label: 'is not empty' },
 ];
-const STRING_OPERATORS = [
+const TEXT_OPERATORS = [
   { value: 'IN', label: 'is' },
   { value: 'NOT_IN', label: 'is not' },
+  { value: 'STARTS_WITH', label: 'starts with' },
+  { value: 'CONTAINS', label: 'contains' },
+  { value: 'NOT_CONTAINS', label: 'does not contain' },
   { value: 'IS_EMPTY', label: 'is empty' },
   { value: 'IS_NOT_EMPTY', label: 'is not empty' },
+];
+const NUMBER_OPERATORS = [
+  { value: 'EQ', label: '=' },
+  { value: 'NEQ', label: '≠' },
+  { value: 'LT', label: '<' },
+  { value: 'LTE', label: '≤' },
+  { value: 'GT', label: '>' },
+  { value: 'GTE', label: '≥' },
+  { value: 'IS_EMPTY', label: 'is empty' },
+  { value: 'IS_NOT_EMPTY', label: 'is not empty' },
+];
+const DATE_OPERATORS = [
+  { value: 'LT', label: 'is before' },
+  { value: 'LTE', label: 'is on or before' },
+  { value: 'GT', label: 'is after' },
+  { value: 'GTE', label: 'is on or after' },
+  { value: 'IS_EMPTY', label: 'is empty' },
+  { value: 'IS_NOT_EMPTY', label: 'is not empty' },
+];
+const BOOLEAN_OPERATORS = [
+  { value: 'EQ', label: 'is' },
+  { value: 'NEQ', label: 'is not' },
+  { value: 'IS_EMPTY', label: 'is empty' },
+  { value: 'IS_NOT_EMPTY', label: 'is not empty' },
+];
+const DATE_PRESET_OPTIONS = [
+  { value: 'TODAY', label: 'Today' },
+  { value: 'YESTERDAY', label: 'Yesterday' },
+  { value: 'LAST_24_HOURS', label: 'Last 24 hours' },
+  { value: 'LAST_7_DAYS', label: 'Last 7 days' },
+  { value: 'LAST_30_DAYS', label: 'Last 30 days' },
+  { value: 'CUSTOM', label: 'Custom date/time' },
 ];
 const LOGICAL_OPERATORS = [
   { value: 'AND', label: 'And', desc: 'All filters must match' },
   { value: 'OR',  label: 'Or',  desc: 'At least one filter must match' },
 ];
 
+function getFieldKind(field: OctaneFieldDto | undefined): FieldKind {
+  if (!field) return 'text';
+  if (field.reference) return 'reference';
+  if (field.fieldType === 'integer' || field.fieldType === 'float') return 'number';
+  if (field.fieldType === 'date_time' || field.fieldType === 'date') return 'date';
+  if (field.fieldType === 'boolean') return 'boolean';
+  return 'text';
+}
+
 function getOperatorsForField(field: OctaneFieldDto | undefined) {
-  if (!field) return REFERENCE_OPERATORS;
-  if (field.reference) return REFERENCE_OPERATORS;
-  return STRING_OPERATORS;
+  const kind = getFieldKind(field);
+  if (kind === 'reference') return REFERENCE_OPERATORS;
+  if (kind === 'number') return NUMBER_OPERATORS;
+  if (kind === 'date') return DATE_OPERATORS;
+  if (kind === 'boolean') return BOOLEAN_OPERATORS;
+  return TEXT_OPERATORS;
+}
+
+function getDefaultOperatorForField(field: OctaneFieldDto | undefined): string {
+  return getOperatorsForField(field)[0].value;
+}
+
+function isDatePresetToken(value: string | undefined): boolean {
+  if (!value) return false;
+  const upper = value.toUpperCase();
+  return upper === 'TODAY'
+    || upper === 'YESTERDAY'
+    || upper === 'LAST_24_HOURS'
+    || upper === 'LAST_7_DAYS'
+    || upper === 'LAST_30_DAYS';
+}
+
+function getDefaultValueForField(field: OctaneFieldDto | undefined, operator: string): string[] {
+  if (isEmptyOperator(operator)) return [];
+  const kind = getFieldKind(field);
+  if (kind === 'reference') return [];
+  if (kind === 'boolean') return ['true'];
+  if (kind === 'date') return ['LAST_24_HOURS'];
+  return [''];
 }
 
 function isEmptyOperator(operator: string | undefined): boolean {
   return operator === 'IS_EMPTY' || operator === 'IS_NOT_EMPTY';
+}
+
+function isReferenceTextOperator(operator: string | undefined): boolean {
+  return operator === 'STARTS_WITH' || operator === 'CONTAINS' || operator === 'NOT_CONTAINS';
 }
 
 // ------------------------------------------------------------------ //
@@ -321,11 +399,13 @@ const ValuePicker: React.FC<ValuePickerProps> = ({ values, selected, loading, se
  * Shows:
  * - AND/OR connector for rows after the first
  * - A searchable "Field" dropdown populated from Octane metadata
- * - An "Operator" dropdown (is / is not) appropriate for the field type
+ * - An "Operator" dropdown adapted from the runtime field type
  * - A "Value" control:
  *     - Reference fields → searchable multi-select populated from Octane
- *     - String/memo fields → text input
- *     - Integer/float fields → number input
+ *     - String/memo fields → free-text input
+ *     - Integer/float fields → number input with comparison operators
+ *     - Date fields → preset date windows + custom date/time
+ *     - Boolean fields → true/false dropdown
  */
 export const SmartFilterRow: React.FC<SmartFilterRowProps> = ({
   clause,
@@ -428,11 +508,17 @@ export const SmartFilterRow: React.FC<SmartFilterRowProps> = ({
   const currentLogical = clause.logicalOperator || 'AND';
   const logicalLabel = LOGICAL_OPERATORS.find(l => l.value === currentLogical)?.label ?? 'And';
   const operators = getOperatorsForField(selectedFieldMeta);
+  const selectedFieldKind = getFieldKind(selectedFieldMeta);
 
   const handleFieldChange = (fieldName: string) => {
     const selectedMeta = allFields.find(f => f.name === fieldName);
-    // Reset values when field changes since the value type may differ
-    onChange({ field: fieldName, values: [], referenceValues: selectedMeta?.reference ?? false });
+    const nextOperator = getDefaultOperatorForField(selectedMeta);
+    onChange({
+      field: fieldName,
+      operator: nextOperator,
+      values: getDefaultValueForField(selectedMeta, nextOperator),
+      referenceValues: selectedMeta?.reference ?? false,
+    });
   };
 
   const handleTextValueChange = (val: string) => {
@@ -499,9 +585,38 @@ export const SmartFilterRow: React.FC<SmartFilterRowProps> = ({
       .finally(() => setValuesLoading(false));
   };
 
-  const isReference = selectedFieldMeta?.reference ?? false;
-  const isNumeric   = selectedFieldMeta?.fieldType === 'integer' || selectedFieldMeta?.fieldType === 'float';
+  useEffect(() => {
+    if (!selectedFieldMeta) return;
+    if (!operators.some(op => op.value === clause.operator)) {
+      const nextOperator = getDefaultOperatorForField(selectedFieldMeta);
+      onChange({
+        operator: nextOperator,
+        values: getDefaultValueForField(selectedFieldMeta, nextOperator),
+        referenceValues: selectedFieldMeta.reference,
+      });
+    }
+  // Intentionally do not add `onChange` to avoid recreating this synchronizer every render.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedFieldMeta, operators, clause.operator]);
+
+  const isReference = selectedFieldKind === 'reference';
+  const isNumeric = selectedFieldKind === 'number';
+  const isDate = selectedFieldKind === 'date';
+  const isBoolean = selectedFieldKind === 'boolean';
   const showValueInput = !isEmptyOperator(clause.operator);
+
+  const selectedDateValue = clause.values[0] ?? '';
+  const selectedDatePreset = isDatePresetToken(selectedDateValue) ? selectedDateValue.toUpperCase() : 'CUSTOM';
+  const dateInputFromIso = (iso: string): string => {
+    const parsed = new Date(iso);
+    if (Number.isNaN(parsed.getTime())) return '';
+    const localMillis = parsed.getTime() - parsed.getTimezoneOffset() * 60000;
+    return new Date(localMillis).toISOString().slice(0, 16);
+  };
+  const isoFromDateInput = (value: string): string => {
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? '' : parsed.toISOString();
+  };
 
   return (
     <div className="border border-slate-200 dark:border-slate-700 rounded-xl overflow-visible bg-white dark:bg-slate-900">
@@ -561,7 +676,14 @@ export const SmartFilterRow: React.FC<SmartFilterRowProps> = ({
             onChange={e => {
               const nextOperator = e.target.value;
               if (isEmptyOperator(nextOperator)) {
-                onChange({ operator: nextOperator, values: [], referenceValues: false });
+                onChange({ operator: nextOperator, values: [], referenceValues: selectedFieldMeta?.reference ?? false });
+                return;
+              }
+              if (clause.values.length === 0 || (clause.values.length === 1 && clause.values[0] === '')) {
+                onChange({
+                  operator: nextOperator,
+                  values: getDefaultValueForField(selectedFieldMeta, nextOperator),
+                });
                 return;
               }
               onChange({ operator: nextOperator });
@@ -578,7 +700,7 @@ export const SmartFilterRow: React.FC<SmartFilterRowProps> = ({
             <div className={`${inputClass} flex items-center text-slate-400 dark:text-slate-500`}>
               No value required
             </div>
-          ) : isReference ? (
+          ) : isReference && !isReferenceTextOperator(clause.operator) ? (
             <ValuePicker
               values={fieldValues}
               selected={clause.values}
@@ -597,6 +719,45 @@ export const SmartFilterRow: React.FC<SmartFilterRowProps> = ({
               className={inputClass}
               placeholder="Enter number…"
             />
+          ) : isDate ? (
+            <div className="space-y-2">
+              <select
+                value={selectedDatePreset}
+                onChange={e => {
+                  const selected = e.target.value;
+                  if (selected === 'CUSTOM') {
+                    const current = clause.values[0] ?? '';
+                    onChange({ values: [isDatePresetToken(current) ? '' : current] });
+                    return;
+                  }
+                  onChange({ values: [selected] });
+                }}
+                className={inputClass}
+              >
+                {DATE_PRESET_OPTIONS.map(option => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              {selectedDatePreset === 'CUSTOM' && (
+                <input
+                  type="datetime-local"
+                  value={dateInputFromIso(clause.values[0] ?? '')}
+                  onChange={e => onChange({ values: [isoFromDateInput(e.target.value)] })}
+                  className={inputClass}
+                />
+              )}
+            </div>
+          ) : isBoolean ? (
+            <select
+              value={(clause.values[0] ?? 'true').toLowerCase()}
+              onChange={e => handleTextValueChange(e.target.value)}
+              className={inputClass}
+            >
+              <option value="true">True</option>
+              <option value="false">False</option>
+            </select>
           ) : (
             <input
               type="text"

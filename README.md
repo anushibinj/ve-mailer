@@ -284,7 +284,7 @@ Filter
 
   FilterCriteriaClause (embedded in criteria JSON):
     field         -- Octane field name
-    operator      -- IN | NOT_IN
+    operator      -- type-driven operator (IN/NOT_IN, EQ/NEQ, GT/GTE/LT/LTE, CONTAINS/NOT_CONTAINS/STARTS_WITH, IS_EMPTY/IS_NOT_EMPTY)
     values[]      -- list of match values or Octane IDs
     logicalOperator -- AND | OR (join with previous clause)
     referenceValues -- nullable boolean; true = query as field EQ {id IN ...}
@@ -498,7 +498,7 @@ Filter templates are visibility-scoped:
 }
 ```
 
-- `operator`: `IN`, `NOT_IN`, `IS_EMPTY`, or `IS_NOT_EMPTY`
+- `operator`: type-driven; supported values are `IN`, `NOT_IN`, `EQ`, `NEQ`, `GT`, `GTE`, `LT`, `LTE`, `CONTAINS`, `NOT_CONTAINS`, `STARTS_WITH`, `IS_EMPTY`, `IS_NOT_EMPTY`
 - `logicalOperator`: `AND` (default) or `OR` — controls how this clause is joined to the previous one. Ignored for the first clause.
 - `referenceValues`: optional; when `true`, criteria are emitted as reference-ID clauses like `code_review_owner_udf EQ {id IN 8666}`
 
@@ -509,7 +509,7 @@ Filter templates are visibility-scoped:
 - `order_by` is optional and selects the field used for sorting
 - `order_by_direction` is optional (`ASC` default, `DESC` supported)
 - `query` can include `||` OR groups when all OR-joined expressions target the same field
-- Accepted operators in query-string mode: `EQ`, `NEQ`, `IN`, `NOT_IN`; `EQ null`/`EQ {null}` map to `IS_EMPTY` and `NEQ null`/`NEQ {null}` map to `IS_NOT_EMPTY`
+- Accepted operators in query-string mode: `EQ`, `NEQ`, `IN`, `NOT_IN`, `GT`, `GTE`, `LT`, `LTE`; `EQ null`/`EQ {null}` map to `IS_EMPTY` and `NEQ null`/`NEQ {null}` map to `IS_NOT_EMPTY`
 - Values can be wrapped with `^...^` and multiple values are comma-separated inside the wrapper
 - Reference-ID clauses are supported, e.g. `owner EQ {id IN 8666}` and `phase EQ {id IN phase.defect.new,phase.defect.in_progress}`
 
@@ -1040,7 +1040,9 @@ Filter templates are the core building block. Each filter is stored as structure
    - Selected field chips are drag-reorderable, and that exact order is reused in both preview output and email table columns
    - Special pseudo-fields (✨ AI Summary, 🚦 Triage SLA) are shown in the same field-selection panel for a single, unified picker experience
    - An **Order by** selector appears immediately after **Fields to Fetch**, using the same metadata-driven field options
+   - Operators are selected dynamically from each field's runtime metadata (`fieldType` + `reference`), so numeric/date/boolean/text/reference fields each get relevant operator sets
    - Values for reference fields (phase, owner, severity, etc.) are selected from a searchable multi-select populated from the corresponding Octane entity list
+   - Date fields support relative presets (Today, Yesterday, Last 24 hours, Last 7 days, Last 30 days) plus custom date/time input
    - Conditions can be joined with **AND** or **OR** using a per-row connector dropdown
 
 2. **Query-string import** (power users, optional) — paste a compact `fields=...&query=...` string that the backend validates and converts into structured clauses

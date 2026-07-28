@@ -154,7 +154,7 @@ class FilterServiceTest {
         assertEquals(List.of("id", "name"), parsed.getFields());
         assertEquals(1, parsed.getCriteria().size());
         assertEquals("name", parsed.getCriteria().get(0).getField());
-        assertEquals("IN", parsed.getCriteria().get(0).getOperator());
+        assertEquals("EQ", parsed.getCriteria().get(0).getOperator());
         assertEquals(List.of("*Case360*"), parsed.getCriteria().get(0).getValues());
         assertEquals("fields=id,name&query=name EQ ^*Case360*^", parsed.getFilterQueryString());
     }
@@ -164,7 +164,7 @@ class FilterServiceTest {
         ParsedFilterQueryResponse parsed = filterService.parseFilterQueryString(
                 "fields=id,name,phase&query=name EQ ^*Case360*^ AND phase NOT_IN ^phase.defect.closed,phase.defect.rejected^");
         assertEquals(2, parsed.getCriteria().size());
-        assertEquals("IN", parsed.getCriteria().get(0).getOperator());
+        assertEquals("EQ", parsed.getCriteria().get(0).getOperator());
         assertEquals("NOT_IN", parsed.getCriteria().get(1).getOperator());
         assertEquals(List.of("phase.defect.closed", "phase.defect.rejected"),
                 parsed.getCriteria().get(1).getValues());
@@ -201,7 +201,7 @@ class FilterServiceTest {
         assertEquals(2, parsed.getCriteria().size());
 
         assertEquals("owner", parsed.getCriteria().get(0).getField());
-        assertEquals("IN", parsed.getCriteria().get(0).getOperator());
+        assertEquals("EQ", parsed.getCriteria().get(0).getOperator());
         assertEquals(List.of("8666"), parsed.getCriteria().get(0).getValues());
         assertEquals(Boolean.TRUE, parsed.getCriteria().get(0).getReferenceValues());
 
@@ -325,5 +325,29 @@ class FilterServiceTest {
                 () -> filterService.parseFilterQueryString(
                         "fields=id,name&query=name EQ ^*Case360*^&order_by_direction=DESC"));
         assertTrue(ex.getMessage().contains("order_by_direction requires order_by"));
+    }
+
+    @Test
+    void testBuildFilterQueryString_SerializesTypedOperators() {
+        String output = filterService.buildFilterQueryString(
+                List.of("id", "name", "creation_time"),
+                List.of(
+                        FilterCriteriaClause.builder().field("name").operator("CONTAINS").values(List.of("Incident")).build(),
+                        FilterCriteriaClause.builder().field("creation_time").operator("LT").values(List.of("LAST_24_HOURS")).build()
+                ));
+
+        assertEquals("fields=id,name,creation_time&query=name EQ ^*Incident*^ AND creation_time LT ^LAST_24_HOURS^",
+                output);
+    }
+
+    @Test
+    void testParseFilterQueryString_ParsesComparisonOperators() {
+        ParsedFilterQueryResponse parsed = filterService.parseFilterQueryString(
+                "fields=id,creation_time&query=creation_time LT ^LAST_24_HOURS^");
+
+        assertEquals(1, parsed.getCriteria().size());
+        assertEquals("creation_time", parsed.getCriteria().get(0).getField());
+        assertEquals("LT", parsed.getCriteria().get(0).getOperator());
+        assertEquals(List.of("LAST_24_HOURS"), parsed.getCriteria().get(0).getValues());
     }
 }

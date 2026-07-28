@@ -3,6 +3,9 @@ package com.anushibinj.veemailer.service;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.LinkedHashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -57,9 +60,21 @@ import lombok.extern.slf4j.Slf4j;
 public class FilterService {
     private static final String ENTITY_TYPE_BACKLOG_ITEMS = "backlog_items";
     private static final List<String> BACKLOG_SUBTYPES = List.of("defect", "story", "quality_story");
+    private static final Set<String> SUPPORTED_OPERATORS = Set.of(
+            "IN", "NOT_IN",
+            "EQ", "NEQ",
+            "GT", "GTE", "LT", "LTE",
+            "CONTAINS", "NOT_CONTAINS", "STARTS_WITH",
+            "IS_EMPTY", "IS_NOT_EMPTY"
+    );
+    private static final Set<String> SINGLE_VALUE_OPERATORS = Set.of(
+            "EQ", "NEQ",
+            "GT", "GTE", "LT", "LTE",
+            "CONTAINS", "NOT_CONTAINS", "STARTS_WITH"
+    );
 
     private static final Pattern FILTER_QUERY_CLAUSE_PATTERN = Pattern.compile(
-            "^([A-Za-z0-9_]+)\\s+(EQ|NEQ|IN|NOT_IN)\\s+(.+)$",
+            "^([A-Za-z0-9_]+)\\s+(EQ|NEQ|IN|NOT_IN|GT|GTE|LT|LTE)\\s+(.+)$",
             Pattern.CASE_INSENSITIVE);
 
 
@@ -551,22 +566,65 @@ public class FilterService {
         }
 
         String[] values = clause.getValues().toArray(new String[0]);
-        boolean negate = "NOT_IN".equals(operator);
         boolean referenceIds = shouldTreatAsReferenceIds(clause, referenceFieldNames, values);
 
         if (referenceIds) {
-            // Reference fields: field EqualTo (id IN [...])  or  NOT(field EqualTo (id IN [...]))
-            Query.QueryBuilder inner = Query.statement(clause.getField(), QueryMethod.EqualTo,
-                    Query.statement("id", QueryMethod.In, values));
-            return negate ? Query.not(clause.getField(), QueryMethod.EqualTo,
-                    Query.statement("id", QueryMethod.In, values)) : inner;
-        } else {
-            // Literal fields: field IN [...]  or  NOT(field IN [...])
-            if (negate) {
-                return Query.not(clause.getField(), QueryMethod.In, values);
+            if ("CONTAINS".equals(operator)) {
+                return Query.statement(clause.getField(), QueryMethod.EqualTo,
+                        Query.statement("name", QueryMethod.EqualTo, "*" + values[0] + "*"));
             }
-            return Query.statement(clause.getField(), QueryMethod.In, values);
+            if ("NOT_CONTAINS".equals(operator)) {
+                return Query.not(clause.getField(), QueryMethod.EqualTo,
+                        Query.statement("name", QueryMethod.EqualTo, "*" + values[0] + "*"));
+            }
+            if ("STARTS_WITH".equals(operator)) {
+                return Query.statement(clause.getField(), QueryMethod.EqualTo,
+                        Query.statement("name", QueryMethod.EqualTo, values[0] + "*"));
+            }
+            QueryMethod idOperator = ("EQ".equals(operator) || "NEQ".equals(operator))
+                    ? QueryMethod.EqualTo
+                    : QueryMethod.In;
+            Object idValue = idOperator == QueryMethod.EqualTo ? values[0] : values;
+            Query.QueryBuilder idClause = Query.statement("id", idOperator, idValue);
+            if ("NOT_IN".equals(operator) || "NEQ".equals(operator)) {
+                return Query.not(clause.getField(), QueryMethod.EqualTo, idClause);
+            }
+            if ("IN".equals(operator) || "EQ".equals(operator)) {
+                return Query.statement(clause.getField(), QueryMethod.EqualTo, idClause);
+            }
+            throw new IllegalArgumentException("Operator '" + operator + "' is not supported for reference fields");
         }
+
+        return switch (operator) {
+            case "IN" -> Query.statement(clause.getField(), QueryMethod.In, values);
+            case "NOT_IN" -> Query.not(clause.getField(), QueryMethod.In, values);
+            case "EQ" -> Query.statement(clause.getField(), QueryMethod.EqualTo, coerceComparableValue(values[0]));
+            case "NEQ" -> Query.not(clause.getField(), QueryMethod.EqualTo, coerceComparableValue(values[0]));
+            case "GT" -> Query.statement(clause.getField(), QueryMethod.GreaterThan, coerceComparableValue(values[0]));
+            case "GTE" -> Query.statement(clause.getField(), QueryMethod.GreaterThanOrEqualTo, coerceComparableValue(values[0]));
+            case "LT" -> Query.statement(clause.getField(), QueryMethod.LessThan, coerceComparableValue(values[0]));
+            case "LTE" -> Query.statement(clause.getField(), QueryMethod.LessThanOrEqualTo, coerceComparableValue(values[0]));
+            case "CONTAINS" -> Query.statement(clause.getField(), QueryMethod.EqualTo, "*" + values[0] + "*");
+            case "NOT_CONTAINS" -> Query.not(clause.getField(), QueryMethod.EqualTo, "*" + values[0] + "*");
+            case "STARTS_WITH" -> Query.statement(clause.getField(), QueryMethod.EqualTo, values[0] + "*");
+            default -> throw new IllegalArgumentException("Unsupported operator: " + operator);
+        };
+    }
+
+    private Object coerceComparableValue(String rawValue) {
+        String normalized = rawValue == null ? "" : rawValue.trim();
+        if (normalized.isEmpty()) {
+            return normalized;
+        }
+        String upper = normalized.toUpperCase();
+        return switch (upper) {
+            case "TODAY" -> LocalDate.now(ZoneOffset.UTC).atStartOfDay().toInstant(ZoneOffset.UTC).toString();
+            case "YESTERDAY" -> LocalDate.now(ZoneOffset.UTC).minusDays(1).atStartOfDay().toInstant(ZoneOffset.UTC).toString();
+            case "LAST_24_HOURS" -> Instant.now().minusSeconds(24 * 60 * 60).toString();
+            case "LAST_7_DAYS" -> Instant.now().minusSeconds(7L * 24 * 60 * 60).toString();
+            case "LAST_30_DAYS" -> Instant.now().minusSeconds(30L * 24 * 60 * 60).toString();
+            default -> normalized;
+        };
     }
 
     /** Heuristic fallback used only when explicit/metadata signal is not available. */
@@ -778,16 +836,22 @@ public class FilterService {
         List<String> values = parseValueTokens(rawValues, rawClause);
 
         String mappedOperator;
-        if ("EQ".equals(operatorToken) || "IN".equals(operatorToken)) {
-            mappedOperator = "IN";
-        } else if ("NEQ".equals(operatorToken) || "NOT_IN".equals(operatorToken)) {
-            mappedOperator = "NOT_IN";
+        if ("EQ".equals(operatorToken) || "IN".equals(operatorToken)
+                || "NEQ".equals(operatorToken) || "NOT_IN".equals(operatorToken)
+                || "GT".equals(operatorToken) || "GTE".equals(operatorToken)
+                || "LT".equals(operatorToken) || "LTE".equals(operatorToken)) {
+            mappedOperator = operatorToken;
         } else {
             throw new IllegalArgumentException("Unsupported operator in clause: " + rawClause);
         }
 
-        if (("EQ".equals(operatorToken) || "NEQ".equals(operatorToken)) && values.size() > 1) {
-            throw new IllegalArgumentException("EQ/NEQ clauses must contain exactly one value: " + rawClause);
+        if (("EQ".equals(operatorToken)
+                || "NEQ".equals(operatorToken)
+                || "GT".equals(operatorToken)
+                || "GTE".equals(operatorToken)
+                || "LT".equals(operatorToken)
+                || "LTE".equals(operatorToken)) && values.size() > 1) {
+            throw new IllegalArgumentException("Single-value clauses must contain exactly one value: " + rawClause);
         }
 
         return FilterCriteriaClause.builder()
@@ -811,8 +875,8 @@ public class FilterService {
 
         for (String token : orParts) {
             FilterCriteriaClause part = parseClause(stripOuterParentheses(token.trim()));
-            if ("NOT_IN".equalsIgnoreCase(part.getOperator())) {
-                throw new IllegalArgumentException("OR groups do not support NOT_IN clauses: " + rawClause);
+            if (!"EQ".equalsIgnoreCase(part.getOperator()) && !"IN".equalsIgnoreCase(part.getOperator())) {
+                throw new IllegalArgumentException("OR groups support EQ/IN clauses only: " + rawClause);
             }
             if (resolvedField == null) {
                 resolvedField = part.getField();
@@ -834,7 +898,7 @@ public class FilterService {
 
         return FilterCriteriaClause.builder()
                 .field(resolvedField)
-                .operator(resolvedOperator)
+                .operator("IN")
                 .values(new ArrayList<>(mergedValues))
                 .referenceValues(resolvedReferenceValues)
                 .build();
@@ -1089,19 +1153,41 @@ public class FilterService {
 
         List<String> values = clause.getValues().stream().map(String::trim).collect(Collectors.toList());
         boolean referenceIds = shouldTreatAsReferenceIds(clause, referenceFieldNames, values.toArray(new String[0]));
-        boolean negate = "NOT_IN".equals(operator);
+
+        if (referenceIds && ("CONTAINS".equals(operator) || "NOT_CONTAINS".equals(operator) || "STARTS_WITH".equals(operator))) {
+            String singleValue = values.isEmpty() ? "" : values.get(0);
+            if ("CONTAINS".equals(operator)) {
+                return clause.getField().trim() + " EQ ^*" + singleValue + "*^";
+            }
+            if ("NOT_CONTAINS".equals(operator)) {
+                return clause.getField().trim() + " NEQ ^*" + singleValue + "*^";
+            }
+            return clause.getField().trim() + " EQ ^" + singleValue + "*^";
+        }
 
         if (referenceIds) {
-            String inner = "id IN " + String.join(",", values);
-            String outerOperator = negate ? "NEQ" : "EQ";
+            String innerOperator = ("EQ".equals(operator) || "NEQ".equals(operator)) ? "EQ" : "IN";
+            String inner = "id " + innerOperator + " " + String.join(",", values);
+            String outerOperator = ("NOT_IN".equals(operator) || "NEQ".equals(operator)) ? "NEQ" : "EQ";
             return clause.getField().trim() + " " + outerOperator + " {" + inner + "}";
         }
 
-        String valueLiteral = "^" + String.join(",", values) + "^";
-        String queryOperator = negate
-                ? (values.size() == 1 ? "NEQ" : "NOT_IN")
-                : (values.size() == 1 ? "EQ" : "IN");
-        return clause.getField().trim() + " " + queryOperator + " " + valueLiteral;
+        String singleValue = values.isEmpty() ? "" : values.get(0);
+        return switch (operator) {
+            case "IN", "NOT_IN" -> {
+                String valueLiteral = "^" + String.join(",", values) + "^";
+                String queryOperator = "NOT_IN".equals(operator)
+                        ? (values.size() == 1 ? "NEQ" : "NOT_IN")
+                        : (values.size() == 1 ? "EQ" : "IN");
+                yield clause.getField().trim() + " " + queryOperator + " " + valueLiteral;
+            }
+            case "EQ", "NEQ", "GT", "GTE", "LT", "LTE" -> clause.getField().trim()
+                    + " " + operator + " ^" + singleValue + "^";
+            case "CONTAINS" -> clause.getField().trim() + " EQ ^*" + singleValue + "*^";
+            case "NOT_CONTAINS" -> clause.getField().trim() + " NEQ ^*" + singleValue + "*^";
+            case "STARTS_WITH" -> clause.getField().trim() + " EQ ^" + singleValue + "*^";
+            default -> throw new IllegalArgumentException("Unsupported criteria operator: " + operator);
+        };
     }
 
     private void validateClause(FilterCriteriaClause clause) {
@@ -1115,11 +1201,8 @@ public class FilterService {
             throw new IllegalArgumentException("criteria operator must not be blank");
         }
         String operator = clause.getOperator().trim().toUpperCase();
-        if (!"IN".equals(operator)
-                && !"NOT_IN".equals(operator)
-                && !"IS_EMPTY".equals(operator)
-                && !"IS_NOT_EMPTY".equals(operator)) {
-            throw new IllegalArgumentException("criteria operator must be IN, NOT_IN, IS_EMPTY, or IS_NOT_EMPTY");
+        if (!SUPPORTED_OPERATORS.contains(operator)) {
+            throw new IllegalArgumentException("Unsupported criteria operator: " + operator);
         }
 
         if ("IS_EMPTY".equals(operator) || "IS_NOT_EMPTY".equals(operator)) {
@@ -1134,6 +1217,16 @@ public class FilterService {
         }
         if (clause.getValues().stream().anyMatch(v -> v == null || v.isBlank())) {
             throw new IllegalArgumentException("criteria values must not contain blanks");
+        }
+        if (SINGLE_VALUE_OPERATORS.contains(operator) && clause.getValues().size() != 1) {
+            throw new IllegalArgumentException("criteria operator " + operator + " requires exactly one value");
+        }
+        if (Boolean.TRUE.equals(clause.getReferenceValues())
+                && !"IN".equals(operator)
+                && !"NOT_IN".equals(operator)
+                && !"EQ".equals(operator)
+                && !"NEQ".equals(operator)) {
+            throw new IllegalArgumentException("reference criteria support IN, NOT_IN, EQ, and NEQ only");
         }
     }
 
