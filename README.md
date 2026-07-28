@@ -1042,7 +1042,7 @@ Filter templates are the core building block. Each filter is stored as structure
    - An **Order by** selector appears immediately after **Fields to Fetch**, using the same metadata-driven field options
    - Operators are selected dynamically from each field's runtime metadata (`fieldType` + `reference`), so numeric/date/boolean/text/reference fields each get relevant operator sets
    - Values for reference fields (phase, owner, severity, etc.) are selected from a searchable multi-select populated from the corresponding Octane entity list
-   - Date fields support relative presets (Today, Yesterday, Last 24 hours, Last 7 days, Last 30 days) plus custom date/time input
+   - Date fields support relative presets (Today, Yesterday, Last 24 hours, Last 7 days, Last 30 days, and configurable Last X days) plus custom date/time input
    - Conditions can be joined with **AND** or **OR** using a per-row connector dropdown
 
 2. **Query-string import** (power users, optional) — paste a compact `fields=...&query=...` string that the backend validates and converts into structured clauses

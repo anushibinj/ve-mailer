@@ -350,4 +350,18 @@ class FilterServiceTest {
         assertEquals("LT", parsed.getCriteria().get(0).getOperator());
         assertEquals(List.of("LAST_24_HOURS"), parsed.getCriteria().get(0).getValues());
     }
+
+    @Test
+    void testBuildFilterQueryString_SerializesLastXDaysToken() {
+        String output = filterService.buildFilterQueryString(
+                List.of("id", "creation_time"),
+                List.of(
+                        FilterCriteriaClause.builder()
+                                .field("creation_time")
+                                .operator("LT")
+                                .values(List.of("LAST_X_DAYS_45"))
+                                .build()
+                ));
+        assertEquals("fields=id,creation_time&query=creation_time LT ^LAST_X_DAYS_45^", output);
+    }
 }

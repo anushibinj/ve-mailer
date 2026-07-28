@@ -68,6 +68,7 @@ const DATE_PRESET_OPTIONS = [
   { value: 'LAST_24_HOURS', label: 'Last 24 hours' },
   { value: 'LAST_7_DAYS', label: 'Last 7 days' },
   { value: 'LAST_30_DAYS', label: 'Last 30 days' },
+  { value: 'LAST_X_DAYS', label: 'Last X days' },
   { value: 'CUSTOM', label: 'Custom date/time' },
 ];
 const LOGICAL_OPERATORS = [
@@ -107,6 +108,15 @@ function isDatePresetToken(value: string | undefined): boolean {
     || upper === 'LAST_24_HOURS'
     || upper === 'LAST_7_DAYS'
     || upper === 'LAST_30_DAYS';
+}
+
+function parseLastNDaysToken(value: string | undefined): number | null {
+  if (!value) return null;
+  const normalized = value.trim().toUpperCase();
+  const match = normalized.match(/^LAST_(\d+)_DAYS$/) ?? normalized.match(/^LAST_X_DAYS_(\d+)$/);
+  if (!match) return null;
+  const days = Number.parseInt(match[1], 10);
+  return Number.isFinite(days) && days > 0 ? days : null;
 }
 
 function getDefaultValueForField(field: OctaneFieldDto | undefined, operator: string): string[] {
@@ -608,7 +618,27 @@ export const SmartFilterRow: React.FC<SmartFilterRowProps> = ({
   const showValueInput = !isEmptyOperator(clause.operator);
 
   const selectedDateValue = clause.values[0] ?? '';
-  const selectedDatePreset = isDatePresetToken(selectedDateValue) ? selectedDateValue.toUpperCase() : 'CUSTOM';
+  const parsedLastNDays = parseLastNDaysToken(selectedDateValue);
+  const selectedDatePreset = (() => {
+    const upper = selectedDateValue.toUpperCase();
+    if (upper.startsWith('LAST_X_DAYS_')) {
+      return 'LAST_X_DAYS';
+    }
+    if (upper === 'TODAY'
+      || upper === 'YESTERDAY'
+      || upper === 'LAST_24_HOURS'
+      || upper === 'LAST_7_DAYS'
+      || upper === 'LAST_30_DAYS') {
+      return upper;
+    }
+    if (parsedLastNDays !== null) {
+      return upper === 'LAST_7_DAYS' || upper === 'LAST_30_DAYS' ? upper : 'LAST_X_DAYS';
+    }
+    return 'CUSTOM';
+  })();
+  const lastXDaysValue = selectedDatePreset === 'LAST_X_DAYS'
+    ? String(parsedLastNDays ?? 7)
+    : '7';
   const dateInputFromIso = (iso: string): string => {
     const parsed = new Date(iso);
     if (Number.isNaN(parsed.getTime())) return '';
@@ -732,6 +762,10 @@ export const SmartFilterRow: React.FC<SmartFilterRowProps> = ({
                     onChange({ values: [isDatePresetToken(current) ? '' : current] });
                     return;
                   }
+                  if (selected === 'LAST_X_DAYS') {
+                    onChange({ values: ['LAST_X_DAYS_7'] });
+                    return;
+                  }
                   onChange({ values: [selected] });
                 }}
                 className={inputClass}
@@ -742,6 +776,29 @@ export const SmartFilterRow: React.FC<SmartFilterRowProps> = ({
                   </option>
                 ))}
               </select>
+              {selectedDatePreset === 'LAST_X_DAYS' && (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min={1}
+                    step={1}
+                    value={lastXDaysValue}
+                    onChange={e => {
+                      const raw = e.target.value.trim();
+                      if (raw === '') {
+                        return;
+                      }
+                      const days = Number.parseInt(raw, 10);
+                      if (!Number.isFinite(days) || days < 1) {
+                        return;
+                      }
+                      onChange({ values: [`LAST_X_DAYS_${days}`] });
+                    }}
+                    className={inputClass}
+                  />
+                  <span className="text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">days</span>
+                </div>
+              )}
               {selectedDatePreset === 'CUSTOM' && (
                 <input
                   type="datetime-local"

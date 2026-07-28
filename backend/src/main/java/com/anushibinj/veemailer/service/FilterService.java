@@ -76,6 +76,8 @@ public class FilterService {
     private static final Pattern FILTER_QUERY_CLAUSE_PATTERN = Pattern.compile(
             "^([A-Za-z0-9_]+)\\s+(EQ|NEQ|IN|NOT_IN|GT|GTE|LT|LTE)\\s+(.+)$",
             Pattern.CASE_INSENSITIVE);
+    private static final Pattern LAST_N_DAYS_PATTERN = Pattern.compile("^LAST_(\\d+)_DAYS$");
+    private static final Pattern LAST_X_DAYS_PATTERN = Pattern.compile("^LAST_X_DAYS_(\\d+)$");
 
 
     private final FilterRepository filterRepository;
@@ -617,6 +619,20 @@ public class FilterService {
             return normalized;
         }
         String upper = normalized.toUpperCase();
+        Matcher lastXDaysMatcher = LAST_X_DAYS_PATTERN.matcher(upper);
+        if (lastXDaysMatcher.matches()) {
+            int days = Integer.parseInt(lastXDaysMatcher.group(1));
+            if (days > 0) {
+                return Instant.now().minusSeconds((long) days * 24 * 60 * 60).toString();
+            }
+        }
+        Matcher lastNDaysMatcher = LAST_N_DAYS_PATTERN.matcher(upper);
+        if (lastNDaysMatcher.matches()) {
+            int days = Integer.parseInt(lastNDaysMatcher.group(1));
+            if (days > 0) {
+                return Instant.now().minusSeconds((long) days * 24 * 60 * 60).toString();
+            }
+        }
         return switch (upper) {
             case "TODAY" -> LocalDate.now(ZoneOffset.UTC).atStartOfDay().toInstant(ZoneOffset.UTC).toString();
             case "YESTERDAY" -> LocalDate.now(ZoneOffset.UTC).minusDays(1).atStartOfDay().toInstant(ZoneOffset.UTC).toString();
