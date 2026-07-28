@@ -7,6 +7,7 @@ import {
   addRecipientGroupMember,
   removeRecipientGroupMember,
   fetchWorkspaceUsers,
+  fetchAllowedDomains,
   type RecipientGroup,
   type UserSummary,
 } from '../services/apiService';
@@ -36,17 +37,26 @@ const inputClass =
   'focus:outline-none focus:border-indigo-500 dark:focus:border-indigo-400 ' +
   'focus:ring-2 focus:ring-indigo-500/15 dark:focus:ring-indigo-400/15 transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500';
 
+/** Returns true when the query is a syntactically valid email ending with one of the allowed domains. */
+function isValidCustomEmail(query: string, allowedDomains: string[]): boolean {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(query.trim())) return false;
+  const domain = query.trim().split('@')[1].toLowerCase();
+  return allowedDomains.some(d => d.trim().toLowerCase() === domain);
+}
+
 // ── Group form modal ─────────────────────────────────────────────────────────
 
 interface GroupFormModalProps {
   isOpen: boolean;
   initial?: RecipientGroup | null;
   users: UserSummary[];
+  allowedDomains: string[];
   onClose: () => void;
   onSave: (name: string, description: string, memberEmails: string[]) => Promise<void>;
 }
 
-function GroupFormModal({ isOpen, initial, users, onClose, onSave }: GroupFormModalProps) {
+function GroupFormModal({ isOpen, initial, users, allowedDomains, onClose, onSave }: GroupFormModalProps) {
   const [name, setName] = useState(initial?.name ?? '');
   const [description, setDescription] = useState(initial?.description ?? '');
   const [selectedEmails, setSelectedEmails] = useState<string[]>(
@@ -228,7 +238,21 @@ function GroupFormModal({ isOpen, initial, users, onClose, onSave }: GroupFormMo
                 )}
                 {pickerOpen && query && available.length === 0 && (
                   <div className="absolute z-20 mt-1 w-full bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-lg px-3 py-2.5">
-                    <p className="text-sm text-slate-400 dark:text-slate-500">No users match "{query}".</p>
+                    {isValidCustomEmail(query, allowedDomains) && !selectedEmails.includes(query.trim().toLowerCase()) ? (
+                      <button
+                        type="button"
+                        onMouseDown={e => { e.preventDefault(); addEmail(query.trim()); }}
+                        className="w-full text-left text-sm text-indigo-600 dark:text-indigo-400 font-medium hover:underline"
+                      >
+                        Add &quot;{query.trim()}&quot; as custom email
+                      </button>
+                    ) : (
+                      <p className="text-sm text-slate-400 dark:text-slate-500">
+                        No users match &quot;{query}&quot;.{allowedDomains.length > 0 && (
+                          <> Custom emails must end with: <span className="font-medium">{allowedDomains.join(', ')}</span>.</>
+                        )}
+                      </p>
+                    )}
                   </div>
                 )}
               </div>
@@ -262,10 +286,11 @@ function GroupFormModal({ isOpen, initial, users, onClose, onSave }: GroupFormMo
 interface AddMemberPickerProps {
   users: UserSummary[];
   existingEmails: Set<string>;
+  allowedDomains: string[];
   onAdd: (email: string) => Promise<void>;
 }
 
-function AddMemberPicker({ users, existingEmails, onAdd }: AddMemberPickerProps) {
+function AddMemberPicker({ users, existingEmails, allowedDomains, onAdd }: AddMemberPickerProps) {
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
   const [adding, setAdding] = useState(false);
@@ -333,7 +358,21 @@ function AddMemberPicker({ users, existingEmails, onAdd }: AddMemberPickerProps)
       )}
       {open && query && available.length === 0 && (
         <div className="absolute z-20 mt-1 w-full bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-lg px-3 py-2.5">
-          <p className="text-sm text-slate-400 dark:text-slate-500">No users match "{query}".</p>
+          {isValidCustomEmail(query, allowedDomains) && !existingEmails.has(query.trim().toLowerCase()) ? (
+            <button
+              type="button"
+              onMouseDown={e => { e.preventDefault(); handleSelect(query.trim()); }}
+              className="w-full text-left text-sm text-indigo-600 dark:text-indigo-400 font-medium hover:underline"
+            >
+              Add &quot;{query.trim()}&quot; as custom email
+            </button>
+          ) : (
+            <p className="text-sm text-slate-400 dark:text-slate-500">
+              No users match &quot;{query}&quot;.{allowedDomains.length > 0 && (
+                <> Custom emails must end with: <span className="font-medium">{allowedDomains.join(', ')}</span>.</>
+              )}
+            </p>
+          )}
         </div>
       )}
     </div>
@@ -345,6 +384,7 @@ function AddMemberPicker({ users, existingEmails, onAdd }: AddMemberPickerProps)
 const RecipientGroupsView: React.FC<RecipientGroupsViewProps> = ({ workspaceId, onBack }) => {
   const [groups, setGroups] = useState<RecipientGroup[]>([]);
   const [users, setUsers] = useState<UserSummary[]>([]);
+  const [allowedDomains, setAllowedDomains] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [formOpen, setFormOpen] = useState(false);
@@ -367,6 +407,11 @@ const RecipientGroupsView: React.FC<RecipientGroupsViewProps> = ({ workspaceId, 
       setIsLoading(false);
     }
   }, [workspaceId]);
+
+  // Load allowed domains once on mount — these change only with server config
+  useEffect(() => {
+    fetchAllowedDomains().then(setAllowedDomains).catch(() => { /* non-critical */ });
+  }, []);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -479,6 +524,7 @@ const RecipientGroupsView: React.FC<RecipientGroupsViewProps> = ({ workspaceId, 
         isOpen={formOpen || editTarget !== null}
         initial={editTarget}
         users={users}
+        allowedDomains={allowedDomains}
         onClose={() => { setFormOpen(false); setEditTarget(null); }}
         onSave={editTarget ? handleEdit : handleCreate}
       />
@@ -617,6 +663,7 @@ const RecipientGroupsView: React.FC<RecipientGroupsViewProps> = ({ workspaceId, 
                     <AddMemberPicker
                       users={users}
                       existingEmails={new Set(Array.from(group.memberEmails).map(e => e.toLowerCase()))}
+                      allowedDomains={allowedDomains}
                       onAdd={email => handleAddMember(group.id, email)}
                     />
                   </div>

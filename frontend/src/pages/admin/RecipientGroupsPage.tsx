@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   fetchWorkspaces,
   adminFetchWorkspaces,
@@ -8,8 +8,11 @@ import {
   deleteRecipientGroup,
   addRecipientGroupMember,
   removeRecipientGroupMember,
+  fetchWorkspaceUsers,
+  fetchAllowedDomains,
   type Workspace,
   type RecipientGroup,
+  type UserSummary,
 } from '../../services/apiService';
 import {
   Loader2,
@@ -17,7 +20,6 @@ import {
   Users,
   Pencil,
   Trash2,
-  UserPlus,
   UserMinus,
   ChevronDown,
   ChevronRight,
@@ -41,41 +43,83 @@ const selectClass =
   'focus:outline-none focus:border-indigo-500 dark:focus:border-indigo-400 ' +
   'focus:ring-2 focus:ring-indigo-500/15 dark:focus:ring-indigo-400/15 transition-all appearance-none';
 
+/** Returns true when the query is a valid email ending with one of the allowed domains. */
+function isValidCustomEmail(query: string, allowedDomains: string[]): boolean {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(query.trim())) return false;
+  const domain = query.trim().split('@')[1].toLowerCase();
+  return allowedDomains.some(d => d.trim().toLowerCase() === domain);
+}
+
 // ── Group form modal ─────────────────────────────────────────────────────────
 
 interface GroupFormModalProps {
   isOpen: boolean;
   initial?: RecipientGroup | null;
+  users: UserSummary[];
+  allowedDomains: string[];
   onClose: () => void;
   onSave: (name: string, description: string, memberEmails: string[]) => Promise<void>;
 }
 
-function GroupFormModal({ isOpen, initial, onClose, onSave }: GroupFormModalProps) {
+function GroupFormModal({ isOpen, initial, users, allowedDomains, onClose, onSave }: GroupFormModalProps) {
   const [name, setName] = useState(initial?.name ?? '');
   const [description, setDescription] = useState(initial?.description ?? '');
-  const [membersText, setMembersText] = useState(
-    initial ? Array.from(initial.memberEmails).join('\n') : ''
+  const [selectedEmails, setSelectedEmails] = useState<string[]>(
+    initial ? Array.from(initial.memberEmails) : []
   );
+  const [query, setQuery] = useState('');
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const pickerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setName(initial?.name ?? '');
     setDescription(initial?.description ?? '');
-    setMembersText(initial ? Array.from(initial.memberEmails).join('\n') : '');
+    setSelectedEmails(initial ? Array.from(initial.memberEmails) : []);
+    setQuery('');
+    setPickerOpen(false);
   }, [initial, isOpen]);
+
+  useEffect(() => {
+    const h = (e: MouseEvent) => {
+      if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) {
+        setPickerOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, []);
+
+  const available = users.filter(u => {
+    const lc = query.toLowerCase();
+    return (
+      !selectedEmails.includes(u.email.toLowerCase()) &&
+      (lc === '' || u.name.toLowerCase().includes(lc) || u.email.toLowerCase().includes(lc))
+    );
+  });
+
+  const addEmail = (email: string) => {
+    const lc = email.toLowerCase();
+    if (!selectedEmails.includes(lc)) {
+      setSelectedEmails(prev => [...prev, lc]);
+    }
+    setQuery('');
+    setPickerOpen(false);
+  };
+
+  const removeEmail = (email: string) => {
+    setSelectedEmails(prev => prev.filter(e => e !== email));
+  };
 
   if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const emails = membersText
-      .split(/[\n,;]+/)
-      .map(e => e.trim().toLowerCase())
-      .filter(Boolean);
     setSaving(true);
     try {
-      await onSave(name.trim(), description.trim(), emails);
+      await onSave(name.trim(), description.trim(), selectedEmails);
     } finally {
       setSaving(false);
     }
@@ -115,9 +159,78 @@ function GroupFormModal({ isOpen, initial, onClose, onSave }: GroupFormModalProp
               <input type="text" value={description} onChange={e => setDescription(e.target.value)} placeholder="Optional" className={inputClass} />
             </div>
             <div className="space-y-1.5">
-              <label className="block text-sm font-medium text-slate-700">Member Emails</label>
-              <textarea rows={5} value={membersText} onChange={e => setMembersText(e.target.value)} placeholder="One email per line" className={`${inputClass} resize-none`} />
-              <p className="text-xs text-slate-400">Comma or newline separated. Members can also be managed individually.</p>
+              <label className="block text-sm font-medium text-slate-700">Members</label>
+
+              {/* Selected members as pills */}
+              {selectedEmails.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {selectedEmails.map(email => {
+                    const user = users.find(u => u.email.toLowerCase() === email);
+                    return (
+                      <span
+                        key={email}
+                        className="inline-flex items-center gap-1 pl-2.5 pr-1.5 py-1 bg-indigo-50 text-indigo-700 border border-indigo-100 rounded-full text-xs font-medium"
+                      >
+                        {user ? user.name : email}
+                        <button
+                          type="button"
+                          onClick={() => removeEmail(email)}
+                          className="hover:text-indigo-900 transition-colors ml-0.5 cursor-pointer"
+                          aria-label={`Remove ${email}`}
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Searchable picker */}
+              <div ref={pickerRef} className="relative">
+                <input
+                  type="text"
+                  value={query}
+                  onChange={e => { setQuery(e.target.value); setPickerOpen(true); }}
+                  onFocus={() => setPickerOpen(true)}
+                  placeholder="Search users or enter a custom email…"
+                  className={inputClass}
+                />
+                {pickerOpen && available.length > 0 && (
+                  <div className="absolute z-20 mt-1 w-full bg-white rounded-xl border border-slate-200 shadow-lg max-h-44 overflow-y-auto">
+                    {available.map(u => (
+                      <button
+                        key={u.email}
+                        type="button"
+                        onMouseDown={e => { e.preventDefault(); addEmail(u.email); }}
+                        className="w-full px-3 py-2.5 text-left hover:bg-slate-50 transition-colors"
+                      >
+                        <div className="text-sm font-medium text-slate-900">{u.name}</div>
+                        <div className="text-xs text-slate-400">{u.email}</div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {pickerOpen && query && available.length === 0 && (
+                  <div className="absolute z-20 mt-1 w-full bg-white rounded-xl border border-slate-200 shadow-lg px-3 py-2.5">
+                    {isValidCustomEmail(query, allowedDomains) && !selectedEmails.includes(query.trim().toLowerCase()) ? (
+                      <button
+                        type="button"
+                        onMouseDown={e => { e.preventDefault(); addEmail(query.trim()); }}
+                        className="w-full text-left text-sm text-indigo-600 font-medium hover:underline"
+                      >
+                        Add &quot;{query.trim()}&quot; as custom email
+                      </button>
+                    ) : (
+                      <p className="text-sm text-slate-400">
+                        No users match &quot;{query}&quot;.{allowedDomains.length > 0 && (
+                          <> Custom emails must end with: <span className="font-medium">{allowedDomains.join(', ')}</span>.</>
+                        )}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
             <div className="flex gap-3 pt-1">
               <button type="button" onClick={onClose} className="flex-1 py-2.5 px-4 border border-slate-200 text-slate-600 text-sm font-semibold rounded-xl hover:bg-slate-50 transition-all cursor-pointer">Cancel</button>
@@ -132,28 +245,101 @@ function GroupFormModal({ isOpen, initial, onClose, onSave }: GroupFormModalProp
   );
 }
 
-// ── Add member inline form ────────────────────────────────────────────────────
+// ── Add member picker (search + custom email) ─────────────────────────────────
 
-function AddMemberRow({ onAdd }: { onAdd: (email: string) => Promise<void> }) {
-  const [email, setEmail] = useState('');
+interface AddMemberPickerProps {
+  users: UserSummary[];
+  existingEmails: Set<string>;
+  allowedDomains: string[];
+  onAdd: (email: string) => Promise<void>;
+}
+
+function AddMemberPicker({ users, existingEmails, allowedDomains, onAdd }: AddMemberPickerProps) {
+  const [query, setQuery] = useState('');
+  const [open, setOpen] = useState(false);
   const [adding, setAdding] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email.trim()) return;
+  useEffect(() => {
+    const h = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, []);
+
+  const available = users.filter(u => {
+    const lc = query.toLowerCase();
+    return (
+      !existingEmails.has(u.email.toLowerCase()) &&
+      (lc === '' || u.name.toLowerCase().includes(lc) || u.email.toLowerCase().includes(lc))
+    );
+  });
+
+  const handleSelect = async (email: string) => {
     setAdding(true);
-    try { await onAdd(email.trim().toLowerCase()); setEmail(''); }
-    finally { setAdding(false); }
+    setOpen(false);
+    setQuery('');
+    try {
+      await onAdd(email.toLowerCase());
+    } finally {
+      setAdding(false);
+    }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex gap-2 mt-3">
-      <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Add member email…" className={`flex-1 ${inputClass}`} />
-      <button type="submit" disabled={adding || !email.trim()} className="inline-flex items-center gap-1.5 px-4 py-2.5 border border-indigo-200 rounded-xl text-sm font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer">
-        {adding ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />}
-        Add
-      </button>
-    </form>
+    <div ref={ref} className="relative mt-3">
+      <div className="relative">
+        <input
+          type="text"
+          value={query}
+          onChange={e => { setQuery(e.target.value); setOpen(true); }}
+          onFocus={() => setOpen(true)}
+          placeholder={adding ? 'Adding…' : 'Search users or enter a custom email…'}
+          disabled={adding}
+          className={`${inputClass} ${adding ? 'opacity-50 cursor-not-allowed' : ''}`}
+        />
+        {adding && (
+          <div className="absolute right-3 top-1/2 -translate-y-1/2">
+            <Loader2 className="h-4 w-4 animate-spin text-slate-400" />
+          </div>
+        )}
+      </div>
+      {open && available.length > 0 && (
+        <div className="absolute z-20 mt-1 w-full bg-white rounded-xl border border-slate-200 shadow-lg max-h-44 overflow-y-auto">
+          {available.map(u => (
+            <button
+              key={u.email}
+              type="button"
+              onMouseDown={e => { e.preventDefault(); handleSelect(u.email); }}
+              className="w-full px-3 py-2.5 text-left hover:bg-slate-50 transition-colors"
+            >
+              <div className="text-sm font-medium text-slate-900">{u.name}</div>
+              <div className="text-xs text-slate-400">{u.email}</div>
+            </button>
+          ))}
+        </div>
+      )}
+      {open && query && available.length === 0 && (
+        <div className="absolute z-20 mt-1 w-full bg-white rounded-xl border border-slate-200 shadow-lg px-3 py-2.5">
+          {isValidCustomEmail(query, allowedDomains) && !existingEmails.has(query.trim().toLowerCase()) ? (
+            <button
+              type="button"
+              onMouseDown={e => { e.preventDefault(); handleSelect(query.trim()); }}
+              className="w-full text-left text-sm text-indigo-600 font-medium hover:underline"
+            >
+              Add &quot;{query.trim()}&quot; as custom email
+            </button>
+          ) : (
+            <p className="text-sm text-slate-400">
+              No users match &quot;{query}&quot;.{allowedDomains.length > 0 && (
+                <> Custom emails must end with: <span className="font-medium">{allowedDomains.join(', ')}</span>.</>
+              )}
+            </p>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -166,12 +352,19 @@ export default function RecipientGroupsPage() {
   const [wsLoading, setWsLoading] = useState(true);
 
   const [groups, setGroups] = useState<RecipientGroup[]>([]);
+  const [users, setUsers] = useState<UserSummary[]>([]);
+  const [allowedDomains, setAllowedDomains] = useState<string[]>([]);
   const [groupsLoading, setGroupsLoading] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [formOpen, setFormOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<RecipientGroup | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<RecipientGroup | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Load allowed domains once on mount
+  useEffect(() => {
+    fetchAllowedDomains().then(setAllowedDomains).catch(() => { /* non-critical */ });
+  }, []);
 
   // Load workspaces
   useEffect(() => {
@@ -187,13 +380,17 @@ export default function RecipientGroupsPage() {
       .finally(() => setWsLoading(false));
   }, [isAdmin]);
 
-  // Load groups for selected workspace
+  // Load groups and workspace users for selected workspace
   const loadGroups = useCallback(async () => {
     if (!selectedWsId) return;
     setGroupsLoading(true);
     try {
-      const data = await fetchRecipientGroups(selectedWsId);
+      const [data, usersData] = await Promise.all([
+        fetchRecipientGroups(selectedWsId),
+        fetchWorkspaceUsers(selectedWsId),
+      ]);
       setGroups(data);
+      setUsers(usersData);
     } catch {
       toast.error('Failed to load recipient groups.');
     } finally {
@@ -294,6 +491,8 @@ export default function RecipientGroupsPage() {
       <GroupFormModal
         isOpen={formOpen || editTarget !== null}
         initial={editTarget}
+        users={users}
+        allowedDomains={allowedDomains}
         onClose={() => { setFormOpen(false); setEditTarget(null); }}
         onSave={editTarget ? handleEdit : handleCreate}
       />
@@ -425,7 +624,12 @@ export default function RecipientGroupsPage() {
                       </div>
                     )}
 
-                    <AddMemberRow onAdd={email => handleAddMember(group.id, email)} />
+                    <AddMemberPicker
+                      users={users}
+                      existingEmails={new Set(Array.from(group.memberEmails).map(e => e.toLowerCase()))}
+                      allowedDomains={allowedDomains}
+                      onAdd={email => handleAddMember(group.id, email)}
+                    />
                   </div>
                 )}
               </div>

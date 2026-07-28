@@ -415,6 +415,15 @@ public class AuthService {
         }
     }
 
+    /** Returns the list of allowed email domains from configuration. */
+    public List<String> getAllowedDomains() {
+        return Arrays.stream(allowedDomains.split(","))
+                .map(String::trim)
+                .map(String::toLowerCase)
+                .filter(s -> !s.isEmpty())
+                .collect(Collectors.toList());
+    }
+
     private void validatePasswordStrength(String password) {
         if (password.length() < 8) {
             throw new IllegalArgumentException("Password must be at least 8 characters long.");

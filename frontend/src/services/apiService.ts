@@ -643,6 +643,11 @@ export const adminGetNonAppUsers = async (): Promise<string[]> => {
   return response.data;
 };
 
+export const fetchAllowedDomains = async (): Promise<string[]> => {
+  const response = await api.get('/api/auth/allowed-domains');
+  return response.data;
+};
+
 // --- Admin General Settings ---
 
 export interface GeneralSettings {

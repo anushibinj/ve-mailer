@@ -86,4 +86,14 @@ public class AuthController {
         AuthResponseDto.UserProfileDto profile = authService.getCurrentUser(authentication.getName());
         return ResponseEntity.ok(profile);
     }
+
+    /**
+     * Returns the list of allowed e-mail domains from server configuration.
+     * Public endpoint — no authentication required — so the frontend can
+     * validate custom email addresses before submitting.
+     */
+    @GetMapping("/allowed-domains")
+    public ResponseEntity<java.util.List<String>> getAllowedDomains() {
+        return ResponseEntity.ok(authService.getAllowedDomains());
+    }
 }
