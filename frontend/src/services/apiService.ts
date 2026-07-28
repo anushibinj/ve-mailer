@@ -638,6 +638,11 @@ export const adminResendInvite = async (userId: string): Promise<{ success: bool
   return response.data;
 };
 
+export const adminGetNonAppUsers = async (): Promise<string[]> => {
+  const response = await api.get('/api/admin/users/non-app-users');
+  return response.data;
+};
+
 // --- Admin General Settings ---
 
 export interface GeneralSettings {

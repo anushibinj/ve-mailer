@@ -4,11 +4,13 @@ import com.anushibinj.veemailer.dto.UserSummaryDto;
 import com.anushibinj.veemailer.model.AppUser;
 import com.anushibinj.veemailer.repository.AppUserRepository;
 import com.anushibinj.veemailer.repository.EmailSubscriberRepository;
+import com.anushibinj.veemailer.repository.RecipientGroupRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -22,6 +24,7 @@ public class UserQueryService {
 
     private final AppUserRepository appUserRepository;
     private final EmailSubscriberRepository emailSubscriberRepository;
+    private final RecipientGroupRepository recipientGroupRepository;
 
     /** Returns all registered users enriched with their active subscription counts. */
     public List<UserSummaryDto> getAllUserSummaries() {
@@ -54,5 +57,25 @@ public class UserQueryService {
                 .subscribedFilterCount(subscribedFilterCount)
                 .mustSetPassword(user.isMustSetPassword())
                 .build();
+    }
+
+    /**
+     * Returns a sorted list of emails that appear as recipient-group members but do not
+     * have a corresponding application-user account.  These are candidates for onboarding.
+     */
+    public List<String> getNonAppUserEmails() {
+        Set<String> appUserEmails = appUserRepository.findAll()
+                .stream()
+                .map(u -> u.getEmail().trim().toLowerCase())
+                .collect(Collectors.toSet());
+
+        return recipientGroupRepository.findAll()
+                .stream()
+                .flatMap(group -> group.getMemberEmails().stream())
+                .map(email -> email.trim().toLowerCase())
+                .filter(email -> !email.isEmpty() && !appUserEmails.contains(email))
+                .distinct()
+                .sorted()
+                .collect(Collectors.toList());
     }
 }

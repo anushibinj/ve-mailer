@@ -74,4 +74,13 @@ public class UserManagementController {
         String message = authService.deleteUserBySuperAdmin(authentication.getName(), userId);
         return ResponseEntity.ok(ApiResponseWrapper.success(message));
     }
+
+    /**
+     * Returns emails of people who appear in recipient-group member lists but
+     * have no application-user account.  These are candidates for onboarding.
+     */
+    @GetMapping("/non-app-users")
+    public ResponseEntity<List<String>> getNonAppUsers() {
+        return ResponseEntity.ok(userQueryService.getNonAppUserEmails());
+    }
 }
