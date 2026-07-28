@@ -78,9 +78,11 @@ const LOGICAL_OPERATORS = [
 function getFieldKind(field: OctaneFieldDto | undefined): FieldKind {
   if (!field) return 'text';
   if (field.reference) return 'reference';
-  if (field.fieldType === 'integer' || field.fieldType === 'float') return 'number';
-  if (field.fieldType === 'date_time' || field.fieldType === 'date') return 'date';
-  if (field.fieldType === 'boolean') return 'boolean';
+  const normalizedType = (field.fieldType ?? '').trim().toLowerCase().replace('-', '_');
+  if (normalizedType === 'integer' || normalizedType === 'float') return 'number';
+  // Octane metadata may return date types as "date_time", "datetime", or "date".
+  if (normalizedType === 'date_time' || normalizedType === 'datetime' || normalizedType === 'date') return 'date';
+  if (normalizedType === 'boolean') return 'boolean';
   return 'text';
 }
 
