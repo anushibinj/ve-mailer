@@ -53,4 +53,8 @@ public class NotificationPreferences {
     @Builder.Default
     @Column(nullable = false)
     private boolean requiresAuth = true;
+
+    /** Comma-separated list of admin email addresses for system-level notifications. */
+    @Column(columnDefinition = "TEXT")
+    private String adminNotificationEmails;
 }

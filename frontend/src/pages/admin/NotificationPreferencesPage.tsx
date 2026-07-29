@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   adminGetNotificationPreferences,
   adminUpdateNotificationPreferences,
@@ -8,8 +8,12 @@ import type {
   NotificationPreferencesUpdatePayload,
 } from '../../services/apiService';
 import toast from 'react-hot-toast';
+import { X } from 'lucide-react';
 
 const PASSWORD_PLACEHOLDER = '(unchanged)';
+
+/** Simple email validation regex */
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function NotificationPreferencesPage() {
   const [loading, setLoading] = useState(true);
@@ -25,6 +29,12 @@ export default function NotificationPreferencesPage() {
   const [password, setPassword] = useState('');
   const [startTlsEnabled, setStartTlsEnabled] = useState(false);
 
+  // Admin notification emails
+  const [adminEmails, setAdminEmails] = useState<string[]>([]);
+  const [adminEmailInput, setAdminEmailInput] = useState('');
+  const [adminEmailError, setAdminEmailError] = useState('');
+  const adminEmailInputRef = useRef<HTMLInputElement>(null);
+
   const loadPreferences = async () => {
     try {
       setLoading(true);
@@ -38,6 +48,7 @@ export default function NotificationPreferencesPage() {
         setUsername(data.username ?? '');
         setPassword(data.requiresAuth ? PASSWORD_PLACEHOLDER : '');
         setStartTlsEnabled(data.startTlsEnabled);
+        setAdminEmails(data.adminNotificationEmails ?? []);
       }
     } catch {
       toast.error('Failed to load notification preferences');
@@ -56,6 +67,35 @@ export default function NotificationPreferencesPage() {
     if (!value) {
       setUsername('');
       setPassword('');
+    }
+  };
+
+  /** Adds a trimmed, lowercase email to the admin list if valid and not already present. */
+  const addAdminEmail = (raw: string) => {
+    const email = raw.trim().toLowerCase();
+    if (!EMAIL_RE.test(email)) {
+      setAdminEmailError('Please enter a valid email address.');
+      return;
+    }
+    if (adminEmails.includes(email)) {
+      setAdminEmailError('This email is already in the list.');
+      return;
+    }
+    setAdminEmails(prev => [...prev, email]);
+    setAdminEmailInput('');
+    setAdminEmailError('');
+  };
+
+  const removeAdminEmail = (email: string) => {
+    setAdminEmails(prev => prev.filter(e => e !== email));
+  };
+
+  const handleAdminEmailKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault();
+      if (adminEmailInput.trim()) addAdminEmail(adminEmailInput);
+    } else if (e.key === 'Backspace' && adminEmailInput === '' && adminEmails.length > 0) {
+      setAdminEmails(prev => prev.slice(0, -1));
     }
   };
 
@@ -93,6 +133,7 @@ export default function NotificationPreferencesPage() {
       username: requiresAuth ? username.trim() : undefined,
       password: requiresAuth ? password : undefined,
       startTlsEnabled,
+      adminNotificationEmails: adminEmails,
     };
 
     try {
@@ -282,6 +323,54 @@ export default function NotificationPreferencesPage() {
           <label htmlFor="starttls" className="text-sm text-gray-700 dark:text-gray-200">
             Enable STARTTLS
           </label>
+        </div>
+
+        {/* Admin notification emails */}
+        <div className="border-t border-gray-200 dark:border-gray-700 pt-5 mt-1">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+            Admin notification email addresses
+          </label>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+            These addresses receive system-level alerts — such as when a new user completes
+            onboarding. They do not need to be registered in the application and may be
+            distribution lists or role-based inboxes (e.g. <span className="font-mono">admin@company.com</span>).
+          </p>
+
+          {/* Tag pills */}
+          <div
+            className="flex flex-wrap gap-1.5 min-h-[42px] p-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 cursor-text"
+            onClick={() => adminEmailInputRef.current?.focus()}
+          >
+            {adminEmails.map(email => (
+              <span
+                key={email}
+                className="inline-flex items-center gap-1 pl-2.5 pr-1.5 py-0.5 rounded-full text-xs font-medium bg-indigo-50 dark:bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-500/30"
+              >
+                {email}
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); removeAdminEmail(email); }}
+                  className="text-indigo-500 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-200 transition-colors cursor-pointer"
+                  aria-label={`Remove ${email}`}
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </span>
+            ))}
+            <input
+              ref={adminEmailInputRef}
+              type="text"
+              value={adminEmailInput}
+              onChange={(e) => { setAdminEmailInput(e.target.value); setAdminEmailError(''); }}
+              onKeyDown={handleAdminEmailKeyDown}
+              onBlur={() => { if (adminEmailInput.trim()) addAdminEmail(adminEmailInput); }}
+              placeholder={adminEmails.length === 0 ? 'Type an email and press Enter or comma…' : ''}
+              className="flex-1 min-w-[220px] bg-transparent text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 outline-none border-none p-0"
+            />
+          </div>
+          {adminEmailError && (
+            <p className="mt-1 text-xs text-red-600 dark:text-red-400">{adminEmailError}</p>
+          )}
         </div>
 
         <div className="pt-4">

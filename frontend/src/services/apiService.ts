@@ -453,6 +453,8 @@ export interface NotificationPreferencesResponse {
   password: string; // always "(unchanged)" from the API when requiresAuth=true
   startTlsEnabled: boolean;
   configured: boolean;
+  /** Admin emails that receive system-level notifications (e.g. user onboarded). */
+  adminNotificationEmails: string[];
 }
 
 export interface NotificationPreferencesUpdatePayload {
@@ -464,6 +466,8 @@ export interface NotificationPreferencesUpdatePayload {
   // Leave as "(unchanged)" to preserve existing password; provide new value to replace
   password?: string;
   startTlsEnabled: boolean;
+  /** Admin emails that receive system-level notifications. May contain addresses not in the system. */
+  adminNotificationEmails?: string[];
 }
 
 export const adminGetNotificationPreferences = async (): Promise<NotificationPreferencesResponse> => {

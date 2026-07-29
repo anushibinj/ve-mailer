@@ -38,6 +38,8 @@ public class AuthService {
     private final EmailSubscriberRepository emailSubscriberRepository;
     private final OtpRequestRepository otpRequestRepository;
     private final InviteMagicLinkRepository inviteMagicLinkRepository;
+    private final NotificationPreferencesService notificationPreferencesService;
+    private final EmailService emailService;
 
     @Value("${app.auth.allowed-domains}")
     private String allowedDomains;
@@ -273,6 +275,10 @@ public class AuthService {
         user.setMustSetPassword(false);
         appUserRepository.save(user);
         refreshTokenService.revokeAllUserTokens(user);
+
+        // Notify configured admin emails that a new user has completed onboarding
+        List<String> adminEmails = notificationPreferencesService.getAdminNotificationEmails();
+        emailService.sendOnboardingNotificationToAdmins(user.getName(), user.getEmail(), adminEmails);
 
         return buildAuthResponse(user);
     }

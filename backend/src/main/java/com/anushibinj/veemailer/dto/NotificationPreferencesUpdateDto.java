@@ -7,6 +7,8 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 /**
  * Request DTO for creating/updating notification preferences.
  * When requiresAuth is false, username and password are ignored.
@@ -36,4 +38,7 @@ public class NotificationPreferencesUpdateDto {
     private String password;
 
     private boolean startTlsEnabled;
+
+    /** Admin email addresses that receive system-level notifications (e.g., new user onboarded). May contain addresses not in the system. */
+    private List<String> adminNotificationEmails;
 }

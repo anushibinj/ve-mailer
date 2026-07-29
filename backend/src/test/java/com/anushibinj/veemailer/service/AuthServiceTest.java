@@ -67,6 +67,12 @@ class AuthServiceTest {
     @Mock
     private InviteMagicLinkRepository inviteMagicLinkRepository;
 
+    @Mock
+    private NotificationPreferencesService notificationPreferencesService;
+
+    @Mock
+    private EmailService emailService;
+
     @InjectMocks
     private AuthService authService;
 
@@ -456,6 +462,7 @@ class AuthServiceTest {
         when(jwtService.getAccessTokenExpirationMs()).thenReturn(900000L);
         when(refreshTokenService.createRefreshToken(pendingUser))
                 .thenReturn(RefreshToken.builder().token("refresh-token").build());
+        when(notificationPreferencesService.getAdminNotificationEmails()).thenReturn(java.util.Collections.emptyList());
 
         AuthResponseDto result = authService.acceptInvite(request);
 

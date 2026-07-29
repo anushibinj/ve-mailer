@@ -7,7 +7,9 @@ import com.anushibinj.veemailer.repository.NotificationPreferencesRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -26,6 +28,7 @@ public class NotificationPreferencesService {
         if (all.isEmpty()) {
             return NotificationPreferencesResponseDto.builder()
                     .configured(false)
+                    .adminNotificationEmails(Collections.emptyList())
                     .build();
         }
         NotificationPreferences prefs = all.get(0);
@@ -59,6 +62,7 @@ public class NotificationPreferencesService {
                     .username(dto.isRequiresAuth() ? dto.getUsername() : null)
                     .password(dto.isRequiresAuth() ? dto.getPassword() : null)
                     .startTlsEnabled(dto.isStartTlsEnabled())
+                    .adminNotificationEmails(encodeEmails(dto.getAdminNotificationEmails()))
                     .build();
         } else {
             prefs = all.get(0);
@@ -67,6 +71,7 @@ public class NotificationPreferencesService {
             prefs.setFromAddress(dto.getFromAddress());
             prefs.setRequiresAuth(dto.isRequiresAuth());
             prefs.setStartTlsEnabled(dto.isStartTlsEnabled());
+            prefs.setAdminNotificationEmails(encodeEmails(dto.getAdminNotificationEmails()));
 
             if (dto.isRequiresAuth()) {
                 prefs.setUsername(dto.getUsername());
@@ -93,6 +98,18 @@ public class NotificationPreferencesService {
         return all.isEmpty() ? null : all.get(0);
     }
 
+    /**
+     * Returns the list of configured admin notification email addresses.
+     * Returns an empty list if none are configured.
+     */
+    public List<String> getAdminNotificationEmails() {
+        NotificationPreferences prefs = getEntity();
+        if (prefs == null || prefs.getAdminNotificationEmails() == null || prefs.getAdminNotificationEmails().isBlank()) {
+            return Collections.emptyList();
+        }
+        return decodeEmails(prefs.getAdminNotificationEmails());
+    }
+
     private NotificationPreferencesResponseDto toResponseDto(NotificationPreferences prefs) {
         return NotificationPreferencesResponseDto.builder()
                 .host(prefs.getHost())
@@ -103,6 +120,29 @@ public class NotificationPreferencesService {
                 .password(prefs.isRequiresAuth() ? PASSWORD_PLACEHOLDER : null)
                 .startTlsEnabled(prefs.isStartTlsEnabled())
                 .configured(true)
+                .adminNotificationEmails(decodeEmails(prefs.getAdminNotificationEmails()))
                 .build();
+    }
+
+    /** Converts a list of emails to a comma-separated string for storage. */
+    private static String encodeEmails(List<String> emails) {
+        if (emails == null || emails.isEmpty()) {
+            return null;
+        }
+        return emails.stream()
+                .map(String::trim)
+                .filter(e -> !e.isEmpty())
+                .collect(Collectors.joining(","));
+    }
+
+    /** Parses a comma-separated email string back into a list. */
+    private static List<String> decodeEmails(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return Collections.emptyList();
+        }
+        return java.util.Arrays.stream(raw.split(","))
+                .map(String::trim)
+                .filter(e -> !e.isEmpty())
+                .collect(Collectors.toList());
     }
 }
