@@ -80,4 +80,34 @@ public class MailAuditService {
             log.error("Failed to persist mail audit log (failure) for {}", recipientEmail, e);
         }
     }
+
+    /**
+     * Records a skipped notification when no tickets matched a filter.
+     */
+    @Async
+    public void recordSkippedNoTickets(UUID workspaceId, String workspaceTitle,
+                                       String recipientEmail, UUID filterTemplateId,
+                                       String filterTitle, UUID subscriptionId,
+                                       UUID userId, String mailSubject) {
+        MailAuditLog entry = MailAuditLog.builder()
+                .workspaceId(workspaceId)
+                .workspaceTitle(workspaceTitle)
+                .recipientEmail(recipientEmail)
+                .filterTemplateId(filterTemplateId)
+                .filterTitle(filterTitle)
+                .subscriptionId(subscriptionId)
+                .userId(userId)
+                .mailSubject(mailSubject)
+                .ticketCount(0)
+                .deliveryStatus(DeliveryStatus.SUCCESS)
+                .failureReason("Skipped sending email: no tickets matched the filter")
+                .sentAt(Instant.now())
+                .durationMs(0L)
+                .build();
+        try {
+            repository.save(entry);
+        } catch (Exception e) {
+            log.error("Failed to persist mail audit log (skipped) for {}", recipientEmail, e);
+        }
+    }
 }

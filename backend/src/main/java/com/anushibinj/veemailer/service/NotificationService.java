@@ -67,6 +67,13 @@ public class NotificationService {
                                             int limit,
                                             Workspace workspace,
                                             String filterTitle) {
+        if (results.isEmpty()) {
+            log.info("Skipping notification emails for workspace {} filter '{}' because no tickets matched",
+                    workspace.getId(), filterTitle);
+            recordNoTicketAuditEntries(subscribers, workspace, filterTitle);
+            return;
+        }
+
         // Check if AI Summary is enabled and generate summaries
         boolean aiSummaryEnabled = fields.contains(AiSummaryService.AI_SUMMARY_FIELD);
         String[] aiSummaries = null;
@@ -197,6 +204,38 @@ public class NotificationService {
         helper.setText(htmlBody, true);
         message.saveChanges();
         dynamicMailSenderService.send(message);
+    }
+
+    /**
+     * Records one audit entry per intended recipient when no tickets matched a filter.
+     */
+    private void recordNoTicketAuditEntries(List<EmailSubscriber> subscribers, Workspace workspace, String filterTitle) {
+        String subject = buildMailSubject(filterTitle, 0);
+        for (EmailSubscriber subscriber : subscribers) {
+            if (subscriber.getGroup() != null) {
+                Set<String> memberEmailSet = subscriber.getGroup().getMemberEmails();
+                List<String> validEmails = memberEmailSet == null ? List.of() : memberEmailSet.stream()
+                        .filter(e -> e != null && !e.isBlank())
+                        .collect(Collectors.toList());
+                for (String email : validEmails) {
+                    mailAuditService.recordSkippedNoTickets(
+                            workspace.getId(), workspace.getTitle(), email,
+                            subscriber.getFilter() != null ? subscriber.getFilter().getId() : null,
+                            filterTitle, subscriber.getId(), null, subject);
+                }
+                continue;
+            }
+
+            String recipientEmail = subscriber.getRecipientEmail();
+            if (recipientEmail == null || recipientEmail.isBlank()) {
+                log.warn("Skipping no-ticket audit for subscriber {} — no recipient email", subscriber.getId());
+                continue;
+            }
+            mailAuditService.recordSkippedNoTickets(
+                    workspace.getId(), workspace.getTitle(), recipientEmail,
+                    subscriber.getFilter() != null ? subscriber.getFilter().getId() : null,
+                    filterTitle, subscriber.getId(), null, subject);
+        }
     }
 
     /**

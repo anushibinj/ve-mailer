@@ -66,37 +66,46 @@ class NotificationServiceTest {
         sub1.setRecipientEmail("user1@example.com");
         EmailSubscriber sub2 = new EmailSubscriber();
         sub2.setRecipientEmail("user2@example.com");
+        EntityModel entity = new EntityModel(Set.of(new StringFieldModel("name", "Item 1")));
 
         notificationService.processAndSendNotifications(
-                List.of(sub1, sub2), Collections.emptyList(), List.of("name"), 25, testWorkspace, "Open Defects");
+                List.of(sub1, sub2), List.of(entity), List.of("name"), 25, testWorkspace, "Open Defects");
 
         verify(dynamicMailSenderService, times(2)).send(any(MimeMessage.class));
         // Verify audit logging recorded success for each subscriber
         verify(mailAuditService, times(2)).recordSuccess(
                 eq(testWorkspace.getId()), eq(testWorkspace.getTitle()),
                 anyString(), any(), eq("Open Defects"), any(), any(),
-                eq("[ve-mailer] 0 tickets \u2013 Open Defects"), eq(0), anyLong());
+                eq("[ve-mailer] 1 ticket \u2013 Open Defects"), eq(1), anyLong());
     }
 
     @Test
-    void testProcessAndSendNotifications_EmptyList_NoEmailSent() {
+    void testProcessAndSendNotifications_EmptyResults_NoEmailSentButAuditRecorded() {
+        EmailSubscriber sub = new EmailSubscriber();
+        sub.setRecipientEmail("user1@example.com");
+
         notificationService.processAndSendNotifications(
-                Collections.emptyList(), Collections.emptyList(), List.of("name"), 25, testWorkspace, "Open Defects");
+                List.of(sub), Collections.emptyList(), List.of("name"), 25, testWorkspace, "Open Defects");
 
         verify(dynamicMailSenderService, never()).send(any(MimeMessage.class));
+        verify(mailAuditService).recordSkippedNoTickets(
+                eq(testWorkspace.getId()), eq(testWorkspace.getTitle()),
+                eq("user1@example.com"), any(), eq("Open Defects"), any(), any(),
+                eq("[ve-mailer] 0 tickets \u2013 Open Defects"));
     }
 
     @Test
     void testProcessAndSendNotifications_SubjectUsesFilterTitle() throws Exception {
         EmailSubscriber sub = new EmailSubscriber();
         sub.setRecipientEmail("check@example.com");
+        EntityModel entity = new EntityModel(Set.of(new StringFieldModel("name", "Item 1")));
 
         notificationService.processAndSendNotifications(
-                List.of(sub), Collections.emptyList(), List.of("name"), 25, testWorkspace, "Open Defects");
+                List.of(sub), List.of(entity), List.of("name"), 25, testWorkspace, "Open Defects");
 
         ArgumentCaptor<MimeMessage> captor = ArgumentCaptor.forClass(MimeMessage.class);
         verify(dynamicMailSenderService).send(captor.capture());
-        assertEquals("[ve-mailer] 0 tickets \u2013 Open Defects", captor.getValue().getSubject());
+        assertEquals("[ve-mailer] 1 ticket \u2013 Open Defects", captor.getValue().getSubject());
     }
 
     // ── buildMailSubject ──────────────────────────────────────────────────────

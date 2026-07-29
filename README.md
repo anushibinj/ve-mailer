@@ -1117,7 +1117,7 @@ The same dynamic query building is used by `PollingService` when sending schedul
 | 3 | Queries `WEEKLY` subscribers whose `scheduledHours` contains the current hour — **only on Mondays** |
 | 4 | Groups matching subscribers by `(workspaceId, filterId)` to avoid duplicate API calls |
 | 5 | Calls `FilterService.executeFilter()` once per group |
-| 6 | Passes results to `NotificationService` to send async digest emails |
+| 6 | Passes results to `NotificationService`; when a filter returns 0 tickets, no email is sent and an audit "skipped (no tickets)" record is stored per intended recipient |
 
 On startup, `ScheduleMigrationRunner` converts any legacy `Frequency`-based subscribers to the new `scheduleType` + `scheduledHours` model:
 
