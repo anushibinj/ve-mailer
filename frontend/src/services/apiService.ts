@@ -545,7 +545,7 @@ export interface MailAuditLogEntry {
   userId: string | null;
   mailSubject: string | null;
   ticketCount: number;
-  deliveryStatus: 'SUCCESS' | 'FAILED';
+  deliveryStatus: 'SUCCESS' | 'FAILED' | 'SKIPPED';
   failureReason: string | null;
   sentAt: string;
   durationMs: number | null;
@@ -588,7 +588,7 @@ export interface MailHistoryParams {
   workspaceId?: string;
   recipientEmail?: string;
   filterTitle?: string;
-  status?: 'SUCCESS' | 'FAILED';
+  status?: 'SUCCESS' | 'FAILED' | 'SKIPPED';
   from?: string;
   to?: string;
   page?: number;

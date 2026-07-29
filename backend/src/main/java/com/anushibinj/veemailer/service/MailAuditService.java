@@ -99,7 +99,7 @@ public class MailAuditService {
                 .userId(userId)
                 .mailSubject(mailSubject)
                 .ticketCount(0)
-                .deliveryStatus(DeliveryStatus.SUCCESS)
+                .deliveryStatus(DeliveryStatus.SKIPPED)
                 .failureReason("Skipped sending email: no tickets matched the filter")
                 .sentAt(Instant.now())
                 .durationMs(0L)

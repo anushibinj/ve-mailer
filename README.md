@@ -163,7 +163,7 @@ ve-mailer/
 │   │   │   ├── Role.java             # Role entity (ADMIN, MEMBER, WORKSPACE_ADMIN)
 │   │   │   ├── RefreshToken.java     # Refresh token entity (revocable, per-user)
 │   │   │   ├── NotificationPreferences.java # SMTP config entity (host, port, username, password, TLS)
-│   │   │   ├── DeliveryStatus.java          # Enum: SUCCESS | FAILED
+│   │   │   ├── DeliveryStatus.java          # Enum: SUCCESS | FAILED | SKIPPED
 │   │   │   ├── MailAuditLog.java            # Mail delivery audit record entity
 │   │   │   ├── Workspace.java
 │   │   │   ├── WorkspaceAdminMapping.java   # Maps users to workspaces they administer
@@ -372,7 +372,7 @@ MailAuditLog
   userId              -- nullable, user who owns the subscription
   mailSubject         -- email subject line
   ticketCount         -- number of tickets in digest
-  deliveryStatus      -- SUCCESS | FAILED
+  deliveryStatus      -- SUCCESS | FAILED | SKIPPED
   failureReason       -- nullable, error message on failure (max 2000 chars)
   sentAt              -- timestamp of dispatch (indexed)
   durationMs          -- time to send in milliseconds
@@ -644,7 +644,7 @@ All mail analytics endpoints require the `ADMIN` role. They provide aggregated s
 | `workspaceId`    | —       | Filter by workspace UUID           |
 | `recipientEmail` | —       | Filter by recipient (substring)    |
 | `filterTitle`    | —       | Filter by filter template title    |
-| `status`         | —       | `SUCCESS` or `FAILED`              |
+| `status`         | —       | `SUCCESS`, `FAILED`, or `SKIPPED`  |
 | `from`           | —       | Start date (ISO date)              |
 | `to`             | —       | End date (ISO date)                |
 | `page`           | `0`     | Page number (0-indexed)            |

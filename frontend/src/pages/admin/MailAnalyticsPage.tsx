@@ -232,7 +232,7 @@ export default function MailAnalyticsPage() {
             className="border border-gray-300 rounded-md px-3 py-1.5 text-sm"
             value={historyFilter.status ?? ''}
             onChange={(e) => {
-              const val = e.target.value as 'SUCCESS' | 'FAILED' | '';
+              const val = e.target.value as 'SUCCESS' | 'FAILED' | 'SKIPPED' | '';
               setHistoryFilter((f) => ({ ...f, status: val || undefined }));
               setHistoryPage(0);
             }}
@@ -240,6 +240,7 @@ export default function MailAnalyticsPage() {
             <option value="">All statuses</option>
             <option value="SUCCESS">Success</option>
             <option value="FAILED">Failed</option>
+            <option value="SKIPPED">Skipped</option>
           </select>
         </div>
 
@@ -272,9 +273,15 @@ export default function MailAnalyticsPage() {
                       <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${
                         entry.deliveryStatus === 'SUCCESS'
                           ? 'bg-green-100 text-green-700'
-                          : 'bg-red-100 text-red-700'
+                          : entry.deliveryStatus === 'FAILED'
+                            ? 'bg-red-100 text-red-700'
+                            : 'bg-amber-100 text-amber-700'
                       }`}>
-                        {entry.deliveryStatus}
+                        {entry.deliveryStatus === 'SUCCESS'
+                          ? 'Success'
+                          : entry.deliveryStatus === 'FAILED'
+                            ? 'Failed'
+                            : 'Skipped'}
                       </span>
                     </td>
                     <td className="py-2 px-3">

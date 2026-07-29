@@ -107,7 +107,7 @@ class MailAuditServiceTest {
         verify(repository).save(captor.capture());
 
         MailAuditLog saved = captor.getValue();
-        assertThat(saved.getDeliveryStatus()).isEqualTo(DeliveryStatus.SUCCESS);
+        assertThat(saved.getDeliveryStatus()).isEqualTo(DeliveryStatus.SKIPPED);
         assertThat(saved.getTicketCount()).isEqualTo(0);
         assertThat(saved.getDurationMs()).isEqualTo(0L);
         assertThat(saved.getFailureReason()).isEqualTo("Skipped sending email: no tickets matched the filter");
