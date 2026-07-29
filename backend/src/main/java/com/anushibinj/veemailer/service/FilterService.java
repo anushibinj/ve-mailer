@@ -639,8 +639,21 @@ public class FilterService {
             case "LAST_24_HOURS" -> Instant.now().minusSeconds(24 * 60 * 60).toString();
             case "LAST_7_DAYS" -> Instant.now().minusSeconds(7L * 24 * 60 * 60).toString();
             case "LAST_30_DAYS" -> Instant.now().minusSeconds(30L * 24 * 60 * 60).toString();
-            default -> normalized;
+            default -> coerceNumericOrString(normalized);
         };
+    }
+
+    /** Try to parse a plain string as Long, then Double; return String if neither succeeds. */
+    private Object coerceNumericOrString(String value) {
+        try {
+            return Long.parseLong(value);
+        } catch (NumberFormatException ignored) {
+        }
+        try {
+            return Double.parseDouble(value);
+        } catch (NumberFormatException ignored) {
+        }
+        return value;
     }
 
     /** Heuristic fallback used only when explicit/metadata signal is not available. */
