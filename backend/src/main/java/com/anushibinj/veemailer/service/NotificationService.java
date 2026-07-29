@@ -102,6 +102,7 @@ public class NotificationService {
         String htmlBody = buildHtmlTable(results, fields, limit, aiSummaryEnabled, aiSummaries, linkContext, filterTitle);
         // Append a footer link so recipients can jump directly to their workspace subscriptions.
         String workspaceUrl = frontendUrl.stripTrailing() + "/workspace/" + workspace.getId();
+        htmlBody = prependWorkspaceLink(htmlBody, workspaceUrl);
         htmlBody = appendWorkspaceFooter(htmlBody, workspaceUrl);
         String subject = buildMailSubject(filterTitle, results.size());
         // Each subscriber is handled independently so one failure cannot affect the others.
@@ -447,6 +448,24 @@ public class NotificationService {
     String sanitizeAiHtml(String html) {
         if (html == null || html.isEmpty()) return "";
         return Jsoup.clean(html, Safelist.basic());
+    }
+
+    /**
+     * Injects a "View your subscriptions" link into the intro paragraph at the top of the
+     * HTML email body — right after the ticket-count sentence — so recipients can navigate
+     * to their workspace in one click without scrolling to the footer.
+     * Uses {@code replaceFirst} on the first {@code </p>} tag, which is always the intro line
+     * in our own generated HTML.
+     */
+    String prependWorkspaceLink(String html, String workspaceUrl) {
+        if (html == null) return html;
+        String link =
+            " <a href=\"" + escapeHtml(workspaceUrl) + "\" " +
+            "style=\"color:#1a73e8;text-decoration:none;font-size:12px;\">" +
+            "View your subscriptions &#8594;" +
+            "</a>";
+        // The first </p> in our generated body is always the intro sentence.
+        return html.replaceFirst("</p>", link + "</p>");
     }
 
     /**
