@@ -164,7 +164,7 @@ ve-mailer/
 │   │   │   ├── Role.java             # Role entity (ADMIN, MEMBER, WORKSPACE_ADMIN)
 │   │   │   ├── RefreshToken.java     # Refresh token entity (revocable, per-user)
 │   │   │   ├── NotificationPreferences.java # SMTP config entity (host, port, username, password, TLS)
-│   │   │   ├── DeliveryStatus.java          # Enum: SUCCESS | FAILED
+│   │   │   ├── DeliveryStatus.java          # Enum: SUCCESS | FAILED | SKIPPED
 │   │   │   ├── MailAuditLog.java            # Mail delivery audit record entity
 │   │   │   ├── Workspace.java
 │   │   │   ├── WorkspaceAdminMapping.java   # Maps users to workspaces they administer
@@ -374,7 +374,7 @@ MailAuditLog
   userId              -- nullable, user who owns the subscription
   mailSubject         -- email subject line
   ticketCount         -- number of tickets in digest
-  deliveryStatus      -- SUCCESS | FAILED
+  deliveryStatus      -- SUCCESS | FAILED | SKIPPED
   failureReason       -- nullable, error message on failure (max 2000 chars)
   sentAt              -- timestamp of dispatch (indexed)
   durationMs          -- time to send in milliseconds
@@ -646,7 +646,7 @@ All mail analytics endpoints require the `ADMIN` role. They provide aggregated s
 | `workspaceId`    | —       | Filter by workspace UUID           |
 | `recipientEmail` | —       | Filter by recipient (substring)    |
 | `filterTitle`    | —       | Filter by filter template title    |
-| `status`         | —       | `SUCCESS` or `FAILED`              |
+| `status`         | —       | `SUCCESS`, `FAILED`, or `SKIPPED`  |
 | `from`           | —       | Start date (ISO date)              |
 | `to`             | —       | End date (ISO date)                |
 | `page`           | `0`     | Page number (0-indexed)            |
@@ -1147,7 +1147,7 @@ The same dynamic query building is used by `PollingService` when sending schedul
 | 3 | Queries `WEEKLY` subscribers whose `scheduledHours` contains the current hour — **only on Mondays** |
 | 4 | Groups matching subscribers by `(workspaceId, filterId)` to avoid duplicate API calls |
 | 5 | Calls `FilterService.executeFilter()` once per group |
-| 6 | Passes results to `NotificationService` to send async digest emails |
+| 6 | Passes results to `NotificationService`; when a filter returns 0 tickets, no email is sent and an audit "skipped (no tickets)" record is stored per intended recipient |
 
 On startup, `ScheduleMigrationRunner` converts any legacy `Frequency`-based subscribers to the new `scheduleType` + `scheduledHours` model:
 

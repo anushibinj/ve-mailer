@@ -91,4 +91,25 @@ class MailAuditServiceTest {
 
         verify(repository).save(any());
     }
+
+    @Test
+    void recordSkippedNoTickets_savesSuccessEntryWithSkipReason() {
+        UUID wsId = UUID.randomUUID();
+        UUID filterId = UUID.randomUUID();
+        UUID subId = UUID.randomUUID();
+
+        mailAuditService.recordSkippedNoTickets(
+                wsId, "Workspace A", "user@example.com",
+                filterId, "Open Defects", subId, null,
+                "[ve-mailer] 0 tickets – Open Defects");
+
+        ArgumentCaptor<MailAuditLog> captor = ArgumentCaptor.forClass(MailAuditLog.class);
+        verify(repository).save(captor.capture());
+
+        MailAuditLog saved = captor.getValue();
+        assertThat(saved.getDeliveryStatus()).isEqualTo(DeliveryStatus.SKIPPED);
+        assertThat(saved.getTicketCount()).isEqualTo(0);
+        assertThat(saved.getDurationMs()).isEqualTo(0L);
+        assertThat(saved.getFailureReason()).isEqualTo("Skipped sending email: no tickets matched the filter");
+    }
 }
