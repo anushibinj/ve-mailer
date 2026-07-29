@@ -105,15 +105,15 @@ export default function AiPreferencesPage() {
   return (
     <div>
       <div className="mb-6">
-        <h2 className="text-xl font-semibold text-gray-900">Configure AI Preferences</h2>
-        <p className="mt-1 text-sm text-gray-500">
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Configure AI Preferences</h2>
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
           Configure the AI provider settings used to generate ticket summaries in notification emails.
         </p>
       </div>
 
       {!configured && (
-        <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-          <p className="text-sm text-yellow-800">
+        <div className="mb-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700/30 rounded-lg">
+          <p className="text-sm text-yellow-800 dark:text-yellow-300">
             <strong>Not configured.</strong> AI summary generation will not work until these settings are saved.
           </p>
         </div>
@@ -121,7 +121,7 @@ export default function AiPreferencesPage() {
 
       <form onSubmit={handleSubmit} className="space-y-5 max-w-lg">
         <div>
-          <label htmlFor="ai-api-key" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="ai-api-key" className="block text-sm font-medium text-gray-700 dark:text-gray-200">
             API Key
           </label>
           <div className="mt-1 relative">
@@ -141,25 +141,25 @@ export default function AiPreferencesPage() {
                 }
               }}
               placeholder={configured ? '(unchanged)' : 'Enter your API key'}
-              className="block w-full rounded-md border border-gray-300 px-3 py-2 pr-16 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              className="block w-full rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 pr-16 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-200 dark:placeholder-gray-400"
             />
             <button
               type="button"
               onClick={() => setShowApiKey(!showApiKey)}
-              className="absolute inset-y-0 right-0 px-3 flex items-center text-xs text-gray-500 hover:text-gray-700"
+              className="absolute inset-y-0 right-0 px-3 flex items-center text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
             >
               {showApiKey ? 'Hide' : 'Show'}
             </button>
           </div>
           {configured && (
-            <p className="mt-1 text-xs text-gray-500">
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
               Leave as "(unchanged)" to keep the existing API key.
             </p>
           )}
         </div>
 
         <div>
-          <label htmlFor="ai-base-url" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="ai-base-url" className="block text-sm font-medium text-gray-700 dark:text-gray-200">
             Base URL
           </label>
           <input
@@ -168,13 +168,13 @@ export default function AiPreferencesPage() {
             value={baseUrl}
             onChange={(e) => setBaseUrl(e.target.value)}
             placeholder="https://api.openai.com"
-            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+            className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-200 dark:placeholder-gray-400"
             required
           />
         </div>
 
         <div>
-          <label htmlFor="ai-completions-path" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="ai-completions-path" className="block text-sm font-medium text-gray-700 dark:text-gray-200">
             Chat Completions Path
           </label>
           <input
@@ -183,16 +183,16 @@ export default function AiPreferencesPage() {
             value={chatCompletionsPath}
             onChange={(e) => setChatCompletionsPath(e.target.value)}
             placeholder="/v1/chat/completions"
-            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+            className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-200 dark:placeholder-gray-400"
             required
           />
-          <p className="mt-1 text-xs text-gray-500">
+          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
             Path appended to the Base URL for chat requests. Must start with /.
           </p>
         </div>
 
         <div>
-          <label htmlFor="ai-model" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="ai-model" className="block text-sm font-medium text-gray-700 dark:text-gray-200">
             Model
           </label>
           <input
@@ -201,7 +201,7 @@ export default function AiPreferencesPage() {
             value={model}
             onChange={(e) => setModel(e.target.value)}
             placeholder="gpt-4.1-mini"
-            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+            className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-200 dark:placeholder-gray-400"
             required
           />
         </div>

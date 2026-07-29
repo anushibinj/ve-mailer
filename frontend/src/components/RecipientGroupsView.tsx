@@ -1,11 +1,9 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+﻿import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   fetchRecipientGroups,
   createRecipientGroup,
   updateRecipientGroup,
   deleteRecipientGroup,
-  addRecipientGroupMember,
-  removeRecipientGroupMember,
   fetchWorkspaceUsers,
   fetchAllowedDomains,
   type RecipientGroup,
@@ -18,7 +16,6 @@ import {
   Users,
   Pencil,
   Trash2,
-  UserMinus,
   X,
   ChevronDown,
   ChevronRight,
@@ -45,7 +42,7 @@ function isValidCustomEmail(query: string, allowedDomains: string[]): boolean {
   return allowedDomains.some(d => d.trim().toLowerCase() === domain);
 }
 
-// ── Group form modal ─────────────────────────────────────────────────────────
+// â”€â”€ Group form modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 interface GroupFormModalProps {
   isOpen: boolean;
@@ -281,105 +278,7 @@ function GroupFormModal({ isOpen, initial, users, allowedDomains, onClose, onSav
   );
 }
 
-// ── Add member user picker ────────────────────────────────────────────────────
-
-interface AddMemberPickerProps {
-  users: UserSummary[];
-  existingEmails: Set<string>;
-  allowedDomains: string[];
-  onAdd: (email: string) => Promise<void>;
-}
-
-function AddMemberPicker({ users, existingEmails, allowedDomains, onAdd }: AddMemberPickerProps) {
-  const [query, setQuery] = useState('');
-  const [open, setOpen] = useState(false);
-  const [adding, setAdding] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const h = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener('mousedown', h);
-    return () => document.removeEventListener('mousedown', h);
-  }, []);
-
-  const available = users.filter(u => {
-    const lc = query.toLowerCase();
-    return (
-      !existingEmails.has(u.email.toLowerCase()) &&
-      (lc === '' || u.name.toLowerCase().includes(lc) || u.email.toLowerCase().includes(lc))
-    );
-  });
-
-  const handleSelect = async (email: string) => {
-    setAdding(true);
-    setOpen(false);
-    setQuery('');
-    try {
-      await onAdd(email.toLowerCase());
-    } finally {
-      setAdding(false);
-    }
-  };
-
-  return (
-    <div ref={ref} className="relative mt-3">
-      <div className="relative">
-        <input
-          type="text"
-          value={query}
-          onChange={e => { setQuery(e.target.value); setOpen(true); }}
-          onFocus={() => setOpen(true)}
-          placeholder={adding ? 'Adding…' : 'Search users to add…'}
-          disabled={adding}
-          className={`w-full px-3.5 py-2.5 border border-slate-200 dark:border-slate-600 rounded-xl text-sm text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800/60 focus:outline-none focus:border-indigo-500 dark:focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/15 dark:focus:ring-indigo-400/15 transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500 ${adding ? 'opacity-50 cursor-not-allowed' : ''}`}
-        />
-        {adding && (
-          <div className="absolute right-3 top-1/2 -translate-y-1/2">
-            <Loader2 className="h-4 w-4 animate-spin text-slate-400" />
-          </div>
-        )}
-      </div>
-      {open && available.length > 0 && (
-        <div className="absolute z-20 mt-1 w-full bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-lg max-h-44 overflow-y-auto">
-          {available.map(u => (
-            <button
-              key={u.email}
-              type="button"
-              onMouseDown={e => { e.preventDefault(); handleSelect(u.email); }}
-              className="w-full px-3 py-2.5 text-left hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
-            >
-              <div className="text-sm font-medium text-slate-900 dark:text-slate-100">{u.name}</div>
-              <div className="text-xs text-slate-400 dark:text-slate-500">{u.email}</div>
-            </button>
-          ))}
-        </div>
-      )}
-      {open && query && available.length === 0 && (
-        <div className="absolute z-20 mt-1 w-full bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-lg px-3 py-2.5">
-          {isValidCustomEmail(query, allowedDomains) && !existingEmails.has(query.trim().toLowerCase()) ? (
-            <button
-              type="button"
-              onMouseDown={e => { e.preventDefault(); handleSelect(query.trim()); }}
-              className="w-full text-left text-sm text-indigo-600 dark:text-indigo-400 font-medium hover:underline"
-            >
-              Add &quot;{query.trim()}&quot; as custom email
-            </button>
-          ) : (
-            <p className="text-sm text-slate-400 dark:text-slate-500">
-              No users match &quot;{query}&quot;.{allowedDomains.length > 0 && (
-                <> Custom emails must end with: <span className="font-medium">{allowedDomains.join(', ')}</span>.</>
-              )}
-            </p>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ── Main view ────────────────────────────────────────────────────────────────
+// â”€â”€ Main view â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const RecipientGroupsView: React.FC<RecipientGroupsViewProps> = ({ workspaceId, onBack }) => {
   const [groups, setGroups] = useState<RecipientGroup[]>([]);
@@ -465,28 +364,6 @@ const RecipientGroupsView: React.FC<RecipientGroupsViewProps> = ({ workspaceId, 
       toast.error('Failed to delete group.');
     } finally {
       setIsDeleting(false);
-    }
-  };
-
-  const handleAddMember = async (groupId: string, email: string) => {
-    try {
-      const updated = await addRecipientGroupMember(workspaceId, groupId, email);
-      setGroups(prev => prev.map(g => g.id === groupId ? updated : g));
-      toast.success(`${email} added to group.`);
-    } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
-        ?? 'Failed to add member.';
-      toast.error(msg);
-    }
-  };
-
-  const handleRemoveMember = async (groupId: string, email: string) => {
-    try {
-      const updated = await removeRecipientGroupMember(workspaceId, groupId, email);
-      setGroups(prev => prev.map(g => g.id === groupId ? updated : g));
-      toast.success(`${email} removed from group.`);
-    } catch {
-      toast.error('Failed to remove member.');
     }
   };
 
@@ -626,46 +503,37 @@ const RecipientGroupsView: React.FC<RecipientGroupsViewProps> = ({ workspaceId, 
                   </div>
                 </div>
 
-                {/* Members panel (expanded) */}
+                {/* Members panel (expanded) — read-only view with member badges */}
                 {isExpanded && (
                   <div className="border-t border-slate-100 dark:border-slate-800 px-5 py-4 bg-slate-50/50 dark:bg-slate-800/30">
                     <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">
-                      Members
+                      Members ({group.memberCount})
                     </p>
 
                     {group.memberEmails.length === 0 ? (
-                      <p className="text-sm text-slate-400 dark:text-slate-500 mb-3">
-                        No members yet.
+                      <p className="text-sm text-slate-400 dark:text-slate-500">
+                        No members yet. Click <strong>Edit</strong> to add members.
                       </p>
                     ) : (
-                      <div className="space-y-1.5 mb-3">
-                        {Array.from(group.memberEmails).map(email => (
-                          <div
-                            key={email}
-                            className="flex items-center justify-between gap-2 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl px-3 py-2"
-                          >
-                            <span className="text-sm text-slate-700 dark:text-slate-300 truncate">
-                              {email}
-                            </span>
-                            <button
-                              onClick={() => handleRemoveMember(group.id, email)}
-                              className="p-1 text-slate-400 hover:text-rose-500 dark:hover:text-rose-400 transition-colors cursor-pointer flex-shrink-0"
-                              aria-label={`Remove ${email}`}
-                              title="Remove member"
+                      <div className="flex flex-wrap gap-1.5">
+                        {Array.from(group.memberEmails).map(email => {
+                          const member = users.find(u => u.email.toLowerCase() === email.toLowerCase());
+                          const displayName = member?.name || email;
+                          return (
+                            <span
+                              key={email}
+                              title={member ? email : undefined}
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700"
                             >
-                              <UserMinus className="h-3.5 w-3.5" />
-                            </button>
-                          </div>
-                        ))}
+                              <span className="h-4 w-4 rounded-full bg-gradient-to-br from-indigo-400 to-violet-500 flex items-center justify-center flex-shrink-0 text-white text-[9px] font-bold">
+                                {displayName.charAt(0).toUpperCase()}
+                              </span>
+                              {displayName}
+                            </span>
+                          );
+                        })}
                       </div>
                     )}
-
-                    <AddMemberPicker
-                      users={users}
-                      existingEmails={new Set(Array.from(group.memberEmails).map(e => e.toLowerCase()))}
-                      allowedDomains={allowedDomains}
-                      onAdd={email => handleAddMember(group.id, email)}
-                    />
                   </div>
                 )}
               </div>

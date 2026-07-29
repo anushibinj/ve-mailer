@@ -124,8 +124,8 @@ const WorkspaceManagementPage: React.FC = () => {
       {/* Page header */}
       <div className="mb-8 flex items-center justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Workspace Management</h1>
-          <p className="mt-1 text-sm text-gray-500">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Workspace Management</h1>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
             {isAdmin ? 'Create and manage ValueEdge workspace connections.' : 'Manage your assigned workspaces.'}
           </p>
         </div>
@@ -144,15 +144,15 @@ const WorkspaceManagementPage: React.FC = () => {
       {isLoading ? (
         <div className="flex flex-col items-center justify-center py-24">
           <Loader2 className="h-8 w-8 animate-spin text-blue-500 mb-4" />
-          <p className="text-gray-500">Loading workspaces…</p>
+          <p className="text-gray-500 dark:text-gray-400">Loading workspaces…</p>
         </div>
       ) : workspaces.length === 0 ? (
-        <div className="text-center bg-white rounded-lg border border-gray-200 shadow-sm py-20">
+        <div className="text-center bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm py-20">
           <div className="flex items-center justify-center h-14 w-14 rounded-full bg-blue-50 mx-auto mb-4">
             <Plus className="h-7 w-7 text-blue-500" />
           </div>
-          <h3 className="text-lg font-medium text-gray-900 mb-1">No workspaces yet</h3>
-          <p className="text-sm text-gray-500 mb-5">
+          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-1">No workspaces yet</h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-5">
             Add your first ValueEdge workspace to get started.
           </p>
           <button
@@ -164,61 +164,61 @@ const WorkspaceManagementPage: React.FC = () => {
           </button>
         </div>
       ) : (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+              <thead className="bg-gray-50 dark:bg-gray-700/40">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Title
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Shortcode
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Shared Space ID
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Workspace ID
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Client ID
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Client Key
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Root URL
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Status
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                 {workspaces.map(ws => (
-                  <tr key={ws.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                  <tr key={ws.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
                       {ws.title}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 font-mono">
                       {ws.workspaceShortcode || <span className="text-gray-300">—</span>}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 font-mono">
                       {ws.sharedSpaceId}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 font-mono">
                       {ws.workspaceId}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 font-mono">
                       {ws.clientId}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       <div className="inline-flex items-center gap-1.5">
-                        <KeyRound className="h-3.5 w-3.5 text-gray-400" />
+                        <KeyRound className="h-3.5 w-3.5 text-gray-400 dark:text-gray-500" />
                         {ws.clientKeyConfigured ? (
                           <span className="inline-flex items-center gap-1 text-green-700 font-medium">
                             <CheckCircle className="h-3.5 w-3.5" />
@@ -232,7 +232,7 @@ const WorkspaceManagementPage: React.FC = () => {
                         )}
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate" title={ws.rootUrl}>
+                    <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 max-w-xs truncate" title={ws.rootUrl}>
                       {ws.rootUrl || <span className="text-gray-300">—</span>}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
@@ -242,12 +242,12 @@ const WorkspaceManagementPage: React.FC = () => {
                         </span>
                       )}
                       {ws.status === 'DRAFT' && (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 border border-amber-200">
                           Draft
                         </span>
                       )}
                       {ws.status === 'DISABLED' && (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500 border border-gray-200">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-600">
                           Disabled
                         </span>
                       )}
@@ -256,7 +256,7 @@ const WorkspaceManagementPage: React.FC = () => {
                       <div className="inline-flex items-center gap-2">
                         <button
                           onClick={() => handleOpenEdit(ws)}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 rounded-md text-xs font-medium text-gray-700 bg-white hover:bg-gray-50 hover:border-blue-300 transition-colors"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md text-xs font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 hover:border-blue-300 transition-colors"
                         >
                           <Pencil className="h-3.5 w-3.5" />
                           Edit
@@ -264,7 +264,7 @@ const WorkspaceManagementPage: React.FC = () => {
                         <button
                           onClick={() => handleTestConnection(ws)}
                           disabled={testingWorkspaceId === ws.id}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-indigo-200 rounded-md text-xs font-medium text-indigo-600 bg-white hover:bg-indigo-50 hover:border-indigo-400 disabled:opacity-50 transition-colors"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-indigo-200 rounded-md text-xs font-medium text-indigo-600 bg-white dark:bg-gray-700 hover:bg-indigo-50 dark:hover:bg-gray-600 hover:border-indigo-400 disabled:opacity-50 transition-colors"
                         >
                           {testingWorkspaceId === ws.id ? (
                             <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -277,14 +277,14 @@ const WorkspaceManagementPage: React.FC = () => {
                           <>
                             <button
                               onClick={() => setAdminManageTarget(adminManageTarget?.id === ws.id ? null : ws)}
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-violet-200 rounded-md text-xs font-medium text-violet-600 bg-white hover:bg-violet-50 hover:border-violet-400 transition-colors"
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-violet-200 rounded-md text-xs font-medium text-violet-600 bg-white dark:bg-gray-700 hover:bg-violet-50 dark:hover:bg-gray-600 hover:border-violet-400 transition-colors"
                             >
                               <Shield className="h-3.5 w-3.5" />
                               Admins
                             </button>
                             <button
                               onClick={() => setDeleteTarget(ws)}
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-red-200 rounded-md text-xs font-medium text-red-600 bg-white hover:bg-red-50 hover:border-red-400 transition-colors"
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-red-200 rounded-md text-xs font-medium text-red-600 bg-white dark:bg-gray-700 hover:bg-red-50 dark:hover:bg-gray-600 hover:border-red-400 transition-colors"
                             >
                               <Trash2 className="h-3.5 w-3.5" />
                               Delete

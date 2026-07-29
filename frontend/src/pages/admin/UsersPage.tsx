@@ -16,9 +16,9 @@ function formatRole(role: string): string {
 
 function roleBadgeClass(role: string): string {
   const name = formatRole(role).toUpperCase();
-  if (name === 'ADMIN') return 'bg-violet-50 text-violet-700 border-violet-100';
-  if (name === 'MEMBER') return 'bg-indigo-50 text-indigo-700 border-indigo-100';
-  return 'bg-slate-50 text-slate-600 border-slate-100';
+  if (name === 'ADMIN') return 'bg-violet-50 dark:bg-violet-500/10 text-violet-700 dark:text-violet-300 border-violet-100 dark:border-violet-500/20';
+  if (name === 'MEMBER') return 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border-indigo-100 dark:border-indigo-500/20';
+  return 'bg-slate-50 dark:bg-slate-700/60 text-slate-600 dark:text-slate-300 border-slate-100 dark:border-slate-600';
 }
 
 function SortIcon({ active, dir }: { active: boolean; dir: SortDir }) {
@@ -182,9 +182,10 @@ export default function UsersPage() {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center py-20">
-        <Loader2 className="h-7 w-7 animate-spin text-indigo-500 mb-3" />
-        <p className="text-sm text-slate-400">Loading users…</p>
+      <div className="space-y-3">
+        {[1, 2, 3, 4].map(i => (
+          <div key={i} className="h-14 skeleton rounded-xl" />
+        ))}
       </div>
     );
   }
@@ -345,70 +346,73 @@ export default function UsersPage() {
       )}
 
       {sorted.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-12 text-center">
-          <div className="h-12 w-12 rounded-2xl bg-slate-50 flex items-center justify-center mx-auto mb-4">
-            <Users className="h-6 w-6 text-slate-300" />
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm p-12 text-center">
+          <div className="h-12 w-12 rounded-2xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center mx-auto mb-4">
+            <Users className="h-6 w-6 text-slate-300 dark:text-slate-600" />
           </div>
-          <p className="text-slate-500 text-sm">
+          <p className="text-slate-500 dark:text-slate-400 text-sm">
             {search.trim() ? 'No users match your search.' : 'No users found.'}
           </p>
         </div>
       ) : (
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-100 text-sm">
+            <table className="min-w-full divide-y divide-slate-100 dark:divide-slate-800 text-sm">
               <thead>
-                <tr className="bg-slate-50/60">
+                <tr className="bg-slate-50/60 dark:bg-slate-800/40">
                   <th
                     scope="col"
-                    className="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap cursor-pointer select-none hover:text-indigo-600 transition-colors"
+                    className="px-5 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider whitespace-nowrap cursor-pointer select-none hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
                     onClick={() => handleSort('name')}
                   >
                     Name <SortIcon active={sortKey === 'name'} dir={sortDir} />
                   </th>
                   <th
                     scope="col"
-                    className="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap cursor-pointer select-none hover:text-indigo-600 transition-colors"
+                    className="px-5 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider whitespace-nowrap cursor-pointer select-none hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
                     onClick={() => handleSort('email')}
                   >
                     Email <SortIcon active={sortKey === 'email'} dir={sortDir} />
                   </th>
-                  <th scope="col" className="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap">
+                  <th scope="col" className="px-5 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider whitespace-nowrap">
                     Roles
                   </th>
                   <th
                     scope="col"
-                    className="px-5 py-3 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap cursor-pointer select-none hover:text-indigo-600 transition-colors"
+                    className="px-5 py-3 text-right text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider whitespace-nowrap cursor-pointer select-none hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
                     onClick={() => handleSort('subscribedFilterCount')}
                   >
                     Subscriptions <SortIcon active={sortKey === 'subscribedFilterCount'} dir={sortDir} />
                   </th>
                   {isSuperAdmin && (
-                    <th scope="col" className="px-5 py-3 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap">
+                    <th scope="col" className="px-5 py-3 text-right text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider whitespace-nowrap">
                       Actions
                     </th>
                   )}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-50">
+              <tbody className="divide-y divide-slate-50 dark:divide-slate-800/60">
                 {sorted.map((user) => (
-                  <tr key={user.id} className="hover:bg-slate-50/70 transition-colors">
-                    <td className="px-5 py-3.5 font-medium text-slate-900 whitespace-nowrap">
+                  <tr key={user.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors">
+                    <td className="px-5 py-3.5 font-medium text-slate-900 dark:text-white whitespace-nowrap">
                       <div className="flex items-center gap-2.5">
                         <div className="h-7 w-7 rounded-full bg-gradient-to-br from-indigo-400 to-violet-500 flex items-center justify-center flex-shrink-0">
                           <span className="text-white text-xs font-semibold">
                             {user.name?.charAt(0)?.toUpperCase() ?? '?'}
                           </span>
                         </div>
-                        {user.name || <span className="text-slate-400">—</span>}
+                        {/* Show full name; hovering reveals email per TODO */}
+                        <span title={user.email}>
+                          {user.name || <span className="text-slate-400">—</span>}
+                        </span>
                         {user.mustSetPassword && (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-500/25">
                             Pending invite
                           </span>
                         )}
                       </div>
                     </td>
-                    <td className="px-5 py-3.5 text-slate-500 whitespace-nowrap">{user.email}</td>
+                    <td className="px-5 py-3.5 text-slate-500 dark:text-slate-400 whitespace-nowrap">{user.email}</td>
                     <td className="px-5 py-3.5">
                       <div className="flex flex-wrap gap-1">
                         {user.roles.length === 0 ? (
@@ -426,7 +430,7 @@ export default function UsersPage() {
                       </div>
                     </td>
                     <td className="px-5 py-3.5 text-right">
-                      <span className="inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100 text-xs font-semibold tabular-nums">
+                      <span className="inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-500/20 text-xs font-semibold tabular-nums">
                         {user.subscribedFilterCount}
                       </span>
                     </td>

@@ -19,9 +19,9 @@ const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'
 
 function StatCard({ label, value }: { label: string; value: string | number | null }) {
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
-      <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">{label}</p>
-      <p className="mt-1 text-2xl font-bold text-gray-900">{value ?? '—'}</p>
+    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 shadow-sm">
+      <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide font-medium">{label}</p>
+      <p className="mt-1 text-2xl font-bold text-gray-900 dark:text-white">{value ?? '—'}</p>
     </div>
   );
 }
@@ -89,7 +89,7 @@ export default function MailAnalyticsPage() {
     <div className="space-y-6">
       {/* Date preset selector */}
       <div className="flex items-center gap-2">
-        <span className="text-sm text-gray-600 font-medium">Period:</span>
+        <span className="text-sm text-gray-600 dark:text-gray-300 font-medium">Period:</span>
         {([['today', 'Today'], ['7days', 'Last 7 Days'], ['30days', 'Last 30 Days']] as [DatePreset, string][]).map(
           ([key, label]) => (
             <button
@@ -98,7 +98,7 @@ export default function MailAnalyticsPage() {
               className={`px-3 py-1 text-sm rounded-md font-medium transition-colors ${
                 datePreset === key
                   ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
               }`}
             >
               {label}
@@ -107,12 +107,12 @@ export default function MailAnalyticsPage() {
         )}
       </div>
 
-      {loading && <p className="text-sm text-gray-500">Loading analytics…</p>}
+      {loading && <p className="text-sm text-gray-500 dark:text-gray-400">Loading analytics…</p>}
 
       {!loading && !hasData && (
-        <div className="text-center py-16 bg-white rounded-lg border border-gray-200">
-          <p className="text-gray-500 text-lg">No mail activity yet.</p>
-          <p className="text-gray-400 text-sm mt-1">Analytics will appear once notifications are sent.</p>
+        <div className="text-center py-16 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+          <p className="text-gray-500 dark:text-gray-400 text-lg">No mail activity yet.</p>
+          <p className="text-gray-400 dark:text-gray-500 text-sm mt-1">Analytics will appear once notifications are sent.</p>
         </div>
       )}
 
@@ -130,8 +130,8 @@ export default function MailAnalyticsPage() {
           {/* Charts row 1 */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Daily Volume */}
-            <div className="bg-white rounded-lg border border-gray-200 p-4">
-              <h3 className="text-sm font-semibold text-gray-700 mb-3">Daily Mail Volume</h3>
+            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3">Daily Mail Volume</h3>
               <ResponsiveContainer width="100%" height={220}>
                 <BarChart data={dailyVolume}>
                   <CartesianGrid strokeDasharray="3 3" />
@@ -144,8 +144,8 @@ export default function MailAnalyticsPage() {
             </div>
 
             {/* Unique Recipients */}
-            <div className="bg-white rounded-lg border border-gray-200 p-4">
-              <h3 className="text-sm font-semibold text-gray-700 mb-3">Unique Recipients per Day</h3>
+            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3">Unique Recipients per Day</h3>
               <ResponsiveContainer width="100%" height={220}>
                 <LineChart data={dailyRecipients}>
                   <CartesianGrid strokeDasharray="3 3" />
@@ -161,8 +161,8 @@ export default function MailAnalyticsPage() {
           {/* Charts row 2 */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Workspace Distribution */}
-            <div className="bg-white rounded-lg border border-gray-200 p-4">
-              <h3 className="text-sm font-semibold text-gray-700 mb-3">Workspace Distribution</h3>
+            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3">Workspace Distribution</h3>
               {workspaceDist.length > 0 ? (
                 <ResponsiveContainer width="100%" height={220}>
                   <PieChart>
@@ -177,13 +177,13 @@ export default function MailAnalyticsPage() {
                   </PieChart>
                 </ResponsiveContainer>
               ) : (
-                <p className="text-sm text-gray-400 text-center py-8">No data</p>
+                <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-8">No data</p>
               )}
             </div>
 
             {/* Filter Usage */}
-            <div className="bg-white rounded-lg border border-gray-200 p-4">
-              <h3 className="text-sm font-semibold text-gray-700 mb-3">Most Used Filters</h3>
+            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3">Most Used Filters</h3>
               {filterUsage.length > 0 ? (
                 <ResponsiveContainer width="100%" height={220}>
                   <BarChart data={filterUsage} layout="vertical">
@@ -195,7 +195,7 @@ export default function MailAnalyticsPage() {
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
-                <p className="text-sm text-gray-400 text-center py-8">No data</p>
+                <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-8">No data</p>
               )}
             </div>
           </div>
@@ -203,15 +203,15 @@ export default function MailAnalyticsPage() {
       )}
 
       {/* Mail History Table */}
-      <div className="bg-white rounded-lg border border-gray-200 p-4">
-        <h3 className="text-sm font-semibold text-gray-700 mb-3">Mail History</h3>
+      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3">Mail History</h3>
 
         {/* Filters */}
         <div className="flex flex-wrap gap-3 mb-4">
           <input
             type="text"
             placeholder="Recipient email"
-            className="border border-gray-300 rounded-md px-3 py-1.5 text-sm w-48"
+            className="border border-gray-300 dark:border-gray-600 rounded-md px-3 py-1.5 text-sm w-48 dark:bg-gray-700 dark:text-gray-200 dark:placeholder-gray-400"
             value={historyFilter.recipientEmail ?? ''}
             onChange={(e) => {
               setHistoryFilter((f) => ({ ...f, recipientEmail: e.target.value || undefined }));
@@ -221,7 +221,7 @@ export default function MailAnalyticsPage() {
           <input
             type="text"
             placeholder="Filter template"
-            className="border border-gray-300 rounded-md px-3 py-1.5 text-sm w-48"
+            className="border border-gray-300 dark:border-gray-600 rounded-md px-3 py-1.5 text-sm w-48 dark:bg-gray-700 dark:text-gray-200 dark:placeholder-gray-400"
             value={historyFilter.filterTitle ?? ''}
             onChange={(e) => {
               setHistoryFilter((f) => ({ ...f, filterTitle: e.target.value || undefined }));
@@ -229,7 +229,7 @@ export default function MailAnalyticsPage() {
             }}
           />
           <select
-            className="border border-gray-300 rounded-md px-3 py-1.5 text-sm"
+            className="border border-gray-300 dark:border-gray-600 rounded-md px-3 py-1.5 text-sm dark:bg-gray-700 dark:text-gray-200"
             value={historyFilter.status ?? ''}
             onChange={(e) => {
               const val = e.target.value as 'SUCCESS' | 'FAILED' | '';
@@ -247,7 +247,7 @@ export default function MailAnalyticsPage() {
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
             <thead>
-              <tr className="border-b border-gray-200 text-left text-xs text-gray-500 uppercase">
+              <tr className="border-b border-gray-200 dark:border-gray-700 text-left text-xs text-gray-500 dark:text-gray-400 uppercase">
                 <th className="py-2 px-3">Time Sent</th>
                 <th className="py-2 px-3">Workspace</th>
                 <th className="py-2 px-3">Recipient</th>
@@ -260,7 +260,7 @@ export default function MailAnalyticsPage() {
             <tbody>
               {history && history.content.length > 0 ? (
                 history.content.map((entry) => (
-                  <tr key={entry.id} className="border-b border-gray-100 hover:bg-gray-50">
+                  <tr key={entry.id} className="border-b border-gray-100 dark:border-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-700/50">
                     <td className="py-2 px-3 whitespace-nowrap">
                       {new Date(entry.sentAt).toLocaleString()}
                     </td>
@@ -284,7 +284,7 @@ export default function MailAnalyticsPage() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={7} className="py-8 text-center text-gray-400">
+                  <td colSpan={7} className="py-8 text-center text-gray-400 dark:text-gray-500">
                     No mail history found.
                   </td>
                 </tr>
@@ -296,21 +296,21 @@ export default function MailAnalyticsPage() {
         {/* Pagination */}
         {history && history.totalPages > 1 && (
           <div className="flex items-center justify-between mt-4">
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-gray-500 dark:text-gray-400">
               Page {history.number + 1} of {history.totalPages} ({history.totalElements} total)
             </p>
             <div className="flex gap-2">
               <button
                 disabled={history.number === 0}
                 onClick={() => setHistoryPage((p) => Math.max(0, p - 1))}
-                className="px-3 py-1 text-sm rounded-md border border-gray-300 disabled:opacity-40 hover:bg-gray-100"
+                className="px-3 py-1 text-sm rounded-md border border-gray-300 dark:border-gray-600 dark:text-gray-300 disabled:opacity-40 hover:bg-gray-100 dark:hover:bg-gray-700"
               >
                 Previous
               </button>
               <button
                 disabled={history.number >= history.totalPages - 1}
                 onClick={() => setHistoryPage((p) => p + 1)}
-                className="px-3 py-1 text-sm rounded-md border border-gray-300 disabled:opacity-40 hover:bg-gray-100"
+                className="px-3 py-1 text-sm rounded-md border border-gray-300 dark:border-gray-600 dark:text-gray-300 disabled:opacity-40 hover:bg-gray-100 dark:hover:bg-gray-700"
               >
                 Next
               </button>

@@ -41,6 +41,7 @@ A full-stack application that lets users subscribe to email digest notifications
   - [Building for Production](#building-for-production)
     - [Backend JAR](#backend-jar)
     - [Frontend Docker Image](#frontend-docker-image)
+  - [Frontend URL Structure](#frontend-url-structure)
   - [How It Works](#how-it-works)
     - [Subscription Flow](#subscription-flow)
     - [Filter Templates](#filter-templates)
@@ -222,15 +223,16 @@ ve-mailer/
 │
 └── frontend/                         # React + Vite application
     ├── src/
-    │   ├── App.tsx                   # Root; React Router + AuthProvider
+    │   ├── App.tsx                   # Root; URL-based React Router, ThemeToggle, AppShell, WorkspaceShell
     │   ├── api.ts                    # Axios instance with JWT request interceptor + 403 session-expiry handler
     │   ├── components/
+    │   │   ├── ui/                   # Shared design-system components (Button, Badge, Card, Input, Skeleton, etc.)
     │   │   ├── LandingView.tsx       # Workspace picker (grid/list toggle persisted per browser) + Filter Templates link
-    │   │   ├── FilterBuilderView.tsx # Create / browse filter templates
+    │   │   ├── FilterBuilderView.tsx # Create / browse filter templates; global_id_udf cells are hyperlinked
     │   │   ├── ProtectedRoute.tsx    # Auth guard with role-based access
     │   │   ├── LoadingPlaceholder.tsx # Shared Suspense fallback (spinner + contextual loading text)
-    │   │   ├── RecipientGroupsView.tsx # Workspace-scoped recipient group management (admin/workspace admin)
-    │   │   └── WorkspaceDashboard.tsx # Subscription management + filter execution
+    │   │   ├── RecipientGroupsView.tsx # Workspace-scoped recipient group management; accordion shows read-only member badges
+    │   │   └── WorkspaceDashboard.tsx # Subscription management + filter execution with sortable/filterable table
     │   ├── hooks/
     │   │   └── useAuth.tsx           # AuthContext + AuthProvider + useAuth hook
     │   ├── pages/
@@ -240,7 +242,7 @@ ve-mailer/
     │   │   ├── ForgotPasswordPage.tsx # Request password reset OTP
     │   │   ├── ResetPasswordPage.tsx # OTP verification + new password
     │   │   └── admin/
-    │   │       ├── AdminControlPanel.tsx         # Left-sidebar admin dashboard (Workspaces, Preferences, AI, General, Mail Analytics, Users, Groups)
+    │   │       ├── AdminControlPanel.tsx         # Left-sidebar admin dashboard; tab routing via ?tab= query param
     │   │       ├── AiPreferencesPage.tsx          # AI model config form
     │   │       ├── GeneralSettingsPage.tsx        # Query result limit config (supports -1 for unlimited)
     │   │       ├── MailAnalyticsPage.tsx          # Mail delivery analytics dashboard (charts + history)
@@ -1000,6 +1002,34 @@ docker run -p 80:80 ve-mailer-frontend
 ```
 
 > **Note:** `VITE_BACKEND_ROOT_URL` is baked into the bundle at build time by Vite. To point the production image at the correct backend, either pass it as a build argument or use an Nginx proxy configuration to forward `/api` requests to the backend service.
+
+---
+
+## Frontend URL Structure
+
+All navigation in the frontend is URL-based (React Router). Bookmark or share any page directly.
+
+| URL                                    | View                                            | Auth Required |
+|:---------------------------------------|:------------------------------------------------|:-------------|
+| `/login`                               | Login page                                      | No           |
+| `/signup`                              | Sign up page                                    | No           |
+| `/verify-signup`                       | OTP verification for new accounts               | No           |
+| `/forgot-password`                     | Request password reset                          | No           |
+| `/reset-password`                      | Reset password with OTP                         | No           |
+| `/accept-invite`                       | Accept workspace invite and set password        | No           |
+| `/`                                    | Workspace picker (landing view)                 | Yes          |
+| `/workspace/:workspaceId`              | Workspace dashboard (subscriptions)             | Yes          |
+| `/workspace/:workspaceId/filters`      | Filter template management                      | Yes          |
+| `/workspace/:workspaceId/groups`       | Recipient group management                      | Yes          |
+| `/admin`                               | Admin control panel (defaults to first tab)     | Admin only   |
+| `/admin?tab=workspaces`                | Workspace management tab                        | Admin only   |
+| `/admin?tab=recipient-groups`          | Recipient groups management tab                 | Admin only   |
+| `/admin?tab=notification-preferences`  | SMTP notification settings tab                  | Super admin  |
+| `/admin?tab=ai-preferences`            | AI model configuration tab                      | Super admin  |
+| `/admin?tab=mail-analytics`            | Mail delivery analytics tab                     | Super admin  |
+| `/admin?tab=users`                     | User management tab                             | Super admin  |
+| `/admin?tab=general`                   | General settings tab                            | Super admin  |
+| `/admin?tab=issues`                    | Issue reports tab                               | Super admin  |
 
 ---
 

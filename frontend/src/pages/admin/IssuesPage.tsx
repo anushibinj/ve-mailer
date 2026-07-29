@@ -56,47 +56,47 @@ export default function IssuesPage() {
     return (
       <div className="flex flex-col items-center justify-center py-20">
         <Loader2 className="h-7 w-7 animate-spin text-indigo-500 mb-3" />
-        <p className="text-sm text-slate-400">Loading issues…</p>
+        <p className="text-sm text-slate-400 dark:text-gray-400">Loading issues…</p>
       </div>
     );
   }
 
   if (issues.length === 0) {
     return (
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-12 text-center">
-        <div className="h-12 w-12 rounded-2xl bg-slate-50 flex items-center justify-center mx-auto mb-4">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-slate-100 dark:border-gray-700/50 shadow-sm p-12 text-center">
+        <div className="h-12 w-12 rounded-2xl bg-slate-50 dark:bg-gray-700/40 flex items-center justify-center mx-auto mb-4">
           <AlertCircle className="h-6 w-6 text-slate-300" />
         </div>
-        <p className="text-slate-500 text-sm">No issues have been raised yet.</p>
+        <p className="text-slate-500 dark:text-gray-400 text-sm">No issues have been raised yet.</p>
       </div>
     );
   }
 
   return (
     <>
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-slate-100 dark:border-gray-700/50 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-slate-100 text-sm">
-            <thead className="bg-slate-50/70">
+            <thead className="bg-slate-50/70 dark:bg-gray-700/40">
               <tr>
-                <th className="px-4 py-3 text-left font-semibold text-slate-600">Raised At</th>
-                <th className="px-4 py-3 text-left font-semibold text-slate-600">Email</th>
-                <th className="px-4 py-3 text-left font-semibold text-slate-600">Message</th>
-                <th className="px-4 py-3 text-left font-semibold text-slate-600">Screenshot</th>
-                <th className="px-4 py-3 text-left font-semibold text-slate-600">Status</th>
+                <th className="px-4 py-3 text-left font-semibold text-slate-600 dark:text-gray-300">Raised At</th>
+                <th className="px-4 py-3 text-left font-semibold text-slate-600 dark:text-gray-300">Email</th>
+                <th className="px-4 py-3 text-left font-semibold text-slate-600 dark:text-gray-300">Message</th>
+                <th className="px-4 py-3 text-left font-semibold text-slate-600 dark:text-gray-300">Screenshot</th>
+                <th className="px-4 py-3 text-left font-semibold text-slate-600 dark:text-gray-300">Status</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-100 dark:divide-gray-700/50">
               {issues.map(issue => (
-                <tr key={issue.id} className="hover:bg-slate-50/60">
-                  <td className="px-4 py-3 text-slate-600 whitespace-nowrap">
+                <tr key={issue.id} className="hover:bg-slate-50/60 dark:hover:bg-gray-700/30">
+                  <td className="px-4 py-3 text-slate-600 dark:text-gray-300 whitespace-nowrap">
                     {new Date(issue.createdAt).toLocaleString()}
                   </td>
-                  <td className="px-4 py-3 text-slate-600">{issue.reporterEmail || '—'}</td>
-                  <td className="px-4 py-3 text-slate-700 max-w-md">
+                  <td className="px-4 py-3 text-slate-600 dark:text-gray-300">{issue.reporterEmail || '—'}</td>
+                  <td className="px-4 py-3 text-slate-700 dark:text-gray-200 max-w-md">
                     <p className="whitespace-pre-wrap break-words">{issue.message || '—'}</p>
                   </td>
-                  <td className="px-4 py-3 text-slate-600">
+                  <td className="px-4 py-3 text-slate-600 dark:text-gray-300">
                     {issue.hasScreenshot ? (
                       <button
                         type="button"
@@ -112,7 +112,7 @@ export default function IssuesPage() {
                       value={issue.status}
                       disabled={updatingIssueId === issue.id}
                       onChange={(e) => handleStatusChange(issue.id, e.target.value as IssueStatus)}
-                      className="border border-slate-200 rounded-lg px-2.5 py-1.5 bg-white text-slate-700"
+                      className="border border-slate-200 dark:border-gray-600 rounded-lg px-2.5 py-1.5 bg-white dark:bg-gray-700 text-slate-700 dark:text-gray-200"
                     >
                       {ISSUE_STATUSES.map(status => (
                         <option key={status} value={status}>
@@ -130,13 +130,13 @@ export default function IssuesPage() {
 
       {previewIssue && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="max-w-4xl w-full bg-white rounded-2xl border border-slate-200 p-4 space-y-3">
+          <div className="max-w-4xl w-full bg-white dark:bg-gray-800 rounded-2xl border border-slate-200 dark:border-gray-700 p-4 space-y-3">
             <div className="flex items-center justify-between">
-              <h3 className="font-semibold text-slate-900">Issue screenshot</h3>
+              <h3 className="font-semibold text-slate-900 dark:text-white">Issue screenshot</h3>
               <button
                 type="button"
                 onClick={() => setPreviewIssue(null)}
-                className="text-slate-500 hover:text-slate-700"
+                className="text-slate-500 dark:text-gray-400 hover:text-slate-700 dark:hover:text-gray-200"
               >
                 Close
               </button>
@@ -145,10 +145,10 @@ export default function IssuesPage() {
               <img
                 src={screenshotDataUrl(previewIssue) as string}
                 alt="Issue screenshot"
-                className="max-h-[70vh] w-full object-contain rounded-lg border border-slate-200"
+                className="max-h-[70vh] w-full object-contain rounded-lg border border-slate-200 dark:border-gray-700"
               />
             ) : (
-              <p className="text-sm text-slate-500">Screenshot is not available.</p>
+              <p className="text-sm text-slate-500 dark:text-gray-400">Screenshot is not available.</p>
             )}
           </div>
         </div>

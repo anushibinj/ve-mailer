@@ -1276,6 +1276,26 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
                             <tr key={ri} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors align-top">
                               {fieldsList.map(col => {
                                 const display = row[col] ?? '—';
+                                // Render global_id_udf as a clickable hyperlink to the ValueEdge ticket
+                                if (col === 'global_id_udf' && display !== '—') {
+                                  const href = `https://rdapps.otxlab.net/value-edge-api/forwardTo?id=${display}`;
+                                  return (
+                                    <td
+                                      key={col}
+                                      className="px-4 py-2 text-slate-600 dark:text-slate-300 whitespace-normal break-words"
+                                      style={{ overflowWrap: 'anywhere' }}
+                                    >
+                                      <a
+                                        href={href}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-indigo-600 dark:text-indigo-400 hover:underline"
+                                      >
+                                        {String(display)}
+                                      </a>
+                                    </td>
+                                  );
+                                }
                                 return (
                                   <td
                                     key={col}

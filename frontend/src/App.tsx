@@ -1,11 +1,11 @@
-import React, { Suspense, lazy, useState } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, Link, useNavigate } from 'react-router-dom';
+﻿import React, { Suspense, lazy } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, Link, useNavigate, useLocation, useParams } from 'react-router-dom';
 import ProtectedRoute from './components/ProtectedRoute';
 import LoadingPlaceholder from './components/LoadingPlaceholder';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 import { Toaster } from 'react-hot-toast';
-import { Mail, LayoutDashboard, LogOut, ShieldCheck, Sun, Moon } from 'lucide-react';
+import { Mail, LayoutDashboard, LogOut, ShieldCheck, Sun, Moon, ChevronRight, Home } from 'lucide-react';
 
 const LandingView = lazy(() => import('./components/LandingView'));
 const WorkspaceDashboard = lazy(() => import('./components/WorkspaceDashboard'));
@@ -37,60 +37,100 @@ function ThemeToggle() {
   );
 }
 
-function AppHeader({ onLogoClick }: { onLogoClick?: () => void }) {
+function AppBreadcrumbs() {
+  const location = useLocation();
+  const { workspaceId } = useParams<{ workspaceId?: string }>();
+  const navigate = useNavigate();
+
+  if (!workspaceId) return null;
+
+  const isFilters = location.pathname.endsWith('/filters');
+  const isGroups  = location.pathname.endsWith('/groups');
+
+  return (
+    <nav aria-label="breadcrumb" className="hidden sm:flex items-center gap-1 text-xs text-slate-400 dark:text-slate-600">
+      <button
+        type="button"
+        onClick={() => navigate('/')}
+        className="flex items-center gap-1 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors cursor-pointer"
+      >
+        <Home className="h-3 w-3" />
+        Workspaces
+      </button>
+      <ChevronRight className="h-3 w-3" />
+      {isFilters || isGroups ? (
+        <>
+          <button
+            type="button"
+            onClick={() => navigate(`/workspace/${workspaceId}`)}
+            className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors cursor-pointer text-slate-500 dark:text-slate-400"
+          >
+            Dashboard
+          </button>
+          <ChevronRight className="h-3 w-3" />
+          <span className="text-slate-700 dark:text-slate-300 font-medium">
+            {isFilters ? 'Filters' : 'Groups'}
+          </span>
+        </>
+      ) : (
+        <span className="text-slate-700 dark:text-slate-300 font-medium">Dashboard</span>
+      )}
+    </nav>
+  );
+}
+
+function AppHeader() {
   const { logout, user, isAdmin, isWorkspaceAdmin } = useAuth();
   const navigate = useNavigate();
   const initial = user?.name?.charAt(0).toUpperCase() ?? '?';
   const showAdminNav = isAdmin || isWorkspaceAdmin;
 
   return (
-    <header className="sticky top-0 z-30 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-200/60 dark:border-slate-700/40 shadow-sm dark:shadow-slate-900/20">
+    <header className="sticky top-0 z-30 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border-b border-slate-200/60 dark:border-slate-700/40 shadow-sm dark:shadow-slate-900/20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex justify-between items-center gap-4">
-        {/* Left: logo + admin nav */}
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-4 min-w-0">
           <Link
             to="/"
-            onClick={onLogoClick}
-            className="flex items-center gap-2.5 group focus-visible:outline-none"
+            className="flex items-center gap-2.5 group focus-visible:outline-none flex-shrink-0"
           >
-            <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-md shadow-indigo-500/30 group-hover:shadow-indigo-500/60 group-hover:scale-110 transition-all duration-200 animate-pulse-glow">
+            <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center shadow-md shadow-indigo-500/30 group-hover:shadow-indigo-500/60 group-hover:scale-110 transition-all duration-200 animate-pulse-glow">
               <Mail className="h-3.5 w-3.5 text-white" />
             </div>
-            <span className="font-semibold text-slate-900 dark:text-white text-sm tracking-tight">
+            <span className="font-bold text-slate-900 dark:text-white text-sm tracking-tight">
               VE Mailer
             </span>
           </Link>
+          <AppBreadcrumbs />
+        </div>
 
+        <div className="flex items-center gap-2 flex-shrink-0">
           {showAdminNav && (
             <button
               onClick={() => navigate('/admin')}
-              className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 text-sm font-medium transition-colors cursor-pointer"
+              className="hidden sm:flex items-center gap-1.5 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 text-sm font-medium transition-colors cursor-pointer"
             >
               <LayoutDashboard className="h-3.5 w-3.5" />
-              Admin Panel
+              Admin
             </button>
           )}
-        </div>
 
-        {/* Right: theme toggle + user + sign out */}
-        <div className="flex items-center gap-2">
           <ThemeToggle />
 
           <div className="w-px h-4 bg-slate-200 dark:bg-slate-700" />
 
-          <div className="flex items-center gap-2.5">
-            <div className="h-7 w-7 rounded-full bg-gradient-to-br from-indigo-500/20 to-violet-500/20 dark:from-indigo-500/30 dark:to-violet-500/30 border border-indigo-500/30 dark:border-indigo-400/30 flex items-center justify-center">
+          <div className="flex items-center gap-2">
+            <div className="h-7 w-7 rounded-full bg-gradient-to-br from-indigo-500/20 to-violet-500/20 dark:from-indigo-500/30 dark:to-violet-500/30 border border-indigo-500/30 dark:border-indigo-400/30 flex items-center justify-center flex-shrink-0">
               <span className="text-indigo-600 dark:text-indigo-300 text-xs font-bold">{initial}</span>
             </div>
-            <span className="text-slate-700 dark:text-slate-300 text-sm hidden sm:block font-medium">
+            <span className="text-slate-700 dark:text-slate-300 text-sm hidden sm:block font-medium max-w-[120px] truncate" title={user?.name ?? ''}>
               {user?.name}
             </span>
           </div>
 
           {showAdminNav && (
-            <span className="hidden sm:flex items-center gap-1 text-xs bg-violet-50 dark:bg-violet-500/10 text-violet-600 dark:text-violet-300 border border-violet-200 dark:border-violet-500/25 px-2 py-0.5 rounded-full font-medium">
+            <span className="hidden md:flex items-center gap-1 text-xs bg-violet-50 dark:bg-violet-500/10 text-violet-600 dark:text-violet-300 border border-violet-200 dark:border-violet-500/25 px-2 py-0.5 rounded-full font-medium">
               <ShieldCheck className="h-3 w-3" />
-              {isAdmin ? 'Admin' : 'Workspace Admin'}
+              {isAdmin ? 'Admin' : 'WS Admin'}
             </span>
           )}
 
@@ -99,6 +139,7 @@ function AppHeader({ onLogoClick }: { onLogoClick?: () => void }) {
           <button
             onClick={() => logout()}
             className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 hover:text-rose-500 dark:hover:text-rose-400 text-sm font-medium transition-colors cursor-pointer"
+            aria-label="Sign out"
           >
             <LogOut className="h-3.5 w-3.5" />
             <span className="hidden sm:block">Sign Out</span>
@@ -109,69 +150,62 @@ function AppHeader({ onLogoClick }: { onLogoClick?: () => void }) {
   );
 }
 
-export function AdminLayout({ children }: { children: React.ReactNode }) {
+function AppShell({ children }: { children: React.ReactNode }) {
   return (
-    <>
+    <div className="min-h-full bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-50">
       <AppHeader />
-      {children}
-    </>
+      <main className="min-h-[calc(100vh-3.5rem)]">
+        {children}
+      </main>
+    </div>
   );
 }
 
-export function AppContent() {
-  const [currentView, setCurrentView] = useState<'landing' | 'workspace' | 'filters' | 'groups'>('landing');
-  const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string | null>(null);
+function WorkspaceShell() {
+  const { workspaceId } = useParams<{ workspaceId: string }>();
+  const navigate = useNavigate();
 
-  const handleSelectWorkspace = (workspaceId: string) => {
-    setSelectedWorkspaceId(workspaceId);
-    setCurrentView('workspace');
-  };
-
-  const handleBackToLanding = () => {
-    setSelectedWorkspaceId(null);
-    setCurrentView('landing');
-  };
-
-  const handleBackToWorkspace = () => setCurrentView('workspace');
-  const handleOpenFilterBuilder = () => setCurrentView('filters');
-  const handleOpenGroupManager = () => setCurrentView('groups');
+  if (!workspaceId) return <Navigate to="/" replace />;
 
   return (
-    <div className="min-h-full bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-50 font-sans">
-      <AppHeader onLogoClick={() => { setCurrentView('landing'); setSelectedWorkspaceId(null); }} />
-
-      {currentView === 'landing' && (
-        <Suspense fallback={<LoadingPlaceholder message="Loading dashboard..." />}>
-          <LandingView onSelectWorkspace={handleSelectWorkspace} />
-        </Suspense>
-      )}
-      {currentView === 'workspace' && selectedWorkspaceId && (
-        <Suspense fallback={<LoadingPlaceholder message="Loading workspace..." />}>
-          <WorkspaceDashboard
-            workspaceId={selectedWorkspaceId}
-            onBack={handleBackToLanding}
-            onOpenFilterBuilder={handleOpenFilterBuilder}
-            onOpenGroupManager={handleOpenGroupManager}
-          />
-        </Suspense>
-      )}
-      {currentView === 'filters' && selectedWorkspaceId && (
-        <Suspense fallback={<LoadingPlaceholder message="Loading filters..." />}>
-          <FilterBuilderView
-            workspaceId={selectedWorkspaceId}
-            onBack={handleBackToWorkspace}
-          />
-        </Suspense>
-      )}
-      {currentView === 'groups' && selectedWorkspaceId && (
-        <Suspense fallback={<LoadingPlaceholder message="Loading groups..." />}>
-          <RecipientGroupsView
-            workspaceId={selectedWorkspaceId}
-            onBack={handleBackToWorkspace}
-          />
-        </Suspense>
-      )}
-    </div>
+    <Routes>
+      <Route
+        index
+        element={
+          <Suspense fallback={<LoadingPlaceholder message="Loading workspace..." />}>
+            <WorkspaceDashboard
+              workspaceId={workspaceId}
+              onBack={() => navigate('/')}
+              onOpenFilterBuilder={() => navigate(`/workspace/${workspaceId}/filters`)}
+              onOpenGroupManager={() => navigate(`/workspace/${workspaceId}/groups`)}
+            />
+          </Suspense>
+        }
+      />
+      <Route
+        path="filters"
+        element={
+          <Suspense fallback={<LoadingPlaceholder message="Loading filters..." />}>
+            <FilterBuilderView
+              workspaceId={workspaceId}
+              onBack={() => navigate(`/workspace/${workspaceId}`)}
+            />
+          </Suspense>
+        }
+      />
+      <Route
+        path="groups"
+        element={
+          <Suspense fallback={<LoadingPlaceholder message="Loading groups..." />}>
+            <RecipientGroupsView
+              workspaceId={workspaceId}
+              onBack={() => navigate(`/workspace/${workspaceId}`)}
+            />
+          </Suspense>
+        }
+      />
+      <Route path="*" element={<Navigate to={`/workspace/${workspaceId}`} replace />} />
+    </Routes>
   );
 }
 
@@ -186,24 +220,40 @@ function App() {
               style: {
                 borderRadius: '12px',
                 fontSize: '14px',
+                fontFamily: 'Inter, system-ui, sans-serif',
               },
             }}
           />
           <div className="flex h-screen flex-col overflow-hidden">
             <div className="flex-1 overflow-y-auto">
               <Routes>
-                <Route path="/login"           element={<Suspense fallback={<LoadingPlaceholder message="Loading login..." />}><LoginPage /></Suspense>} />
-                <Route path="/signup"          element={<Suspense fallback={<LoadingPlaceholder message="Loading signup..." />}><SignupPage /></Suspense>} />
-                <Route path="/verify-signup"   element={<Suspense fallback={<LoadingPlaceholder message="Loading verification..." />}><VerifySignupPage /></Suspense>} />
-                <Route path="/forgot-password" element={<Suspense fallback={<LoadingPlaceholder message="Loading password recovery..." />}><ForgotPasswordPage /></Suspense>} />
-                <Route path="/reset-password"  element={<Suspense fallback={<LoadingPlaceholder message="Loading password reset..." />}><ResetPasswordPage /></Suspense>} />
-                <Route path="/accept-invite"   element={<Suspense fallback={<LoadingPlaceholder message="Loading invite..." />}><AcceptInvitePage /></Suspense>} />
+                <Route path="/login"           element={<Suspense fallback={<LoadingPlaceholder message="Loading..." />}><LoginPage /></Suspense>} />
+                <Route path="/signup"          element={<Suspense fallback={<LoadingPlaceholder message="Loading..." />}><SignupPage /></Suspense>} />
+                <Route path="/verify-signup"   element={<Suspense fallback={<LoadingPlaceholder message="Loading..." />}><VerifySignupPage /></Suspense>} />
+                <Route path="/forgot-password" element={<Suspense fallback={<LoadingPlaceholder message="Loading..." />}><ForgotPasswordPage /></Suspense>} />
+                <Route path="/reset-password"  element={<Suspense fallback={<LoadingPlaceholder message="Loading..." />}><ResetPasswordPage /></Suspense>} />
+                <Route path="/accept-invite"   element={<Suspense fallback={<LoadingPlaceholder message="Loading..." />}><AcceptInvitePage /></Suspense>} />
 
                 <Route
                   path="/"
                   element={
                     <ProtectedRoute>
-                      <AppContent />
+                      <AppShell>
+                        <Suspense fallback={<LoadingPlaceholder message="Loading workspaces..." />}>
+                          <LandingView />
+                        </Suspense>
+                      </AppShell>
+                    </ProtectedRoute>
+                  }
+                />
+
+                <Route
+                  path="/workspace/:workspaceId/*"
+                  element={
+                    <ProtectedRoute>
+                      <AppShell>
+                        <WorkspaceShell />
+                      </AppShell>
                     </ProtectedRoute>
                   }
                 />
@@ -212,13 +262,11 @@ function App() {
                   path="/admin"
                   element={
                     <ProtectedRoute requiredRoles={['ADMIN', 'WORKSPACE_ADMIN']}>
-                      <div className="min-h-full bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-50 font-sans">
-                        <AdminLayout>
-                          <Suspense fallback={<LoadingPlaceholder message="Loading settings..." />}>
-                            <AdminControlPanel />
-                          </Suspense>
-                        </AdminLayout>
-                      </div>
+                      <AppShell>
+                        <Suspense fallback={<LoadingPlaceholder message="Loading admin panel..." />}>
+                          <AdminControlPanel />
+                        </Suspense>
+                      </AppShell>
                     </ProtectedRoute>
                   }
                 />
@@ -226,7 +274,7 @@ function App() {
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </div>
-            <Suspense fallback={<LoadingPlaceholder message="Loading footer..." />}>
+            <Suspense fallback={null}>
               <AppFooter />
             </Suspense>
           </div>

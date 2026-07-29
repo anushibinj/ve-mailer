@@ -8,9 +8,9 @@ flowchart TD
         AC[Auth Context]
         PR[Protected Routes]
         LV[Landing View<br/>workspace grid/list toggle (localStorage)]
-        WD[Workspace Dashboard<br/>member group-subs are view-only]
-        FB[Filter Builder<br/>fields + order-by (+ direction)<br/>type-driven operators + value controls]
-        ACP[Admin Control Panel]
+        WD[Workspace Dashboard<br/>sortable/filterable subscriptions table]
+        FB[Filter Builder<br/>fields + order-by (+ direction)<br/>type-driven operators + value controls<br/>global_id_udf hyperlinks in preview]
+        ACP[Admin Control Panel<br/>URL-based tab routing (?tab=)]
         NPP[Notification Preferences Page]
         AIPP[AI Preferences Page]
         WMP[Workspace Management Page<br/>CRUD incl workspace shortcode]
@@ -19,13 +19,16 @@ flowchart TD
         UP[Users Page]
         IP[Issues Page]
         GSP[General Settings Page]
-        RGV[Recipient Groups View]
+        RGV[Recipient Groups View<br/>accordion shows read-only member badges]
         RGP[Recipient Groups Page]
         AI[Axios Interceptors]
         FFG[Frontend Feature Flags<br/>VITE_ALLOW_CUSTOM_QUERY_STRING]
         GF[Global Footer<br/>build date via /api/about]
         IRM[Issue Report Modal]
         LZ[React Lazy + Suspense<br/>route/tab/modal code splitting]
+        DS[Design System<br/>components/ui: Button, Badge, Card,<br/>Input, Skeleton, EmptyState, etc.]
+        TH[Theme System<br/>CSS custom properties + .dark class<br/>light/dark toggle persisted in localStorage]
+        AS2[AppShell + WorkspaceShell<br/>URL-based routing: /workspace/:id/*<br/>breadcrumbs + sticky header]
     end
 
     subgraph Backend["Backend (Spring Boot)"]
@@ -150,6 +153,11 @@ flowchart TD
     LZ --> WD
     LZ --> FB
     LZ --> ACP
+    DS --> LV
+    DS --> WD
+    DS --> ACP
+    TH --> AS2
+    AS2 --> PR
     AI --> WCtrl
     AI --> FCtrl
     AI --> FParse
