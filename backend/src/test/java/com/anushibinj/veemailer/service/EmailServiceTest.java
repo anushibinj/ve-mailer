@@ -48,7 +48,7 @@ class EmailServiceTest {
         assertNotNull(sent.getRecipients(Message.RecipientType.TO));
         assertEquals(1, sent.getRecipients(Message.RecipientType.TO).length);
         assertEquals(recipient, sent.getRecipients(Message.RecipientType.TO)[0].toString());
-        assertEquals("[ve-emailer] Your ve-emailer OTP", sent.getSubject());
+        assertEquals("[ve-mailer] Your sign-in code", sent.getSubject());
         String body = sent.getContent().toString();
         assertTrue(body.contains(otp), "Email body should contain the OTP code");
         assertTrue(body.contains("expire"), "Email body should mention expiration");

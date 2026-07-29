@@ -19,6 +19,7 @@ import jakarta.mail.Session;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -47,7 +48,7 @@ public class NotificationService {
     private final AiSummaryService aiSummaryService;
     private final MailAuditService mailAuditService;
 
-    @org.springframework.beans.factory.annotation.Value("${app.frontend.url:http://localhost:5173}")
+    @Value("${app.frontend.url:http://localhost:5173}")
     private String frontendUrl;
 
     /**
@@ -99,11 +100,8 @@ public class NotificationService {
                 workspace.getRootUrl(),
                 workspace.getSharedSpaceId(),
                 workspace.getWorkspaceId());
-        String htmlBody = buildHtmlTable(results, fields, limit, aiSummaryEnabled, aiSummaries, linkContext, filterTitle);
-        // Append a footer link so recipients can jump directly to their workspace subscriptions.
         String workspaceUrl = frontendUrl.stripTrailing() + "/workspace/" + workspace.getId();
-        htmlBody = prependWorkspaceLink(htmlBody, workspaceUrl);
-        htmlBody = appendWorkspaceFooter(htmlBody, workspaceUrl);
+        String htmlBody = buildHtmlTable(results, fields, limit, aiSummaryEnabled, aiSummaries, linkContext, filterTitle, workspaceUrl);
         String subject = buildMailSubject(filterTitle, results.size());
         // Each subscriber is handled independently so one failure cannot affect the others.
         for (EmailSubscriber subscriber : subscribers) {
@@ -250,102 +248,136 @@ public class NotificationService {
      */
     String buildHtmlTable(List<EntityModel> results, List<String> fields, int limit,
                           boolean aiSummaryEnabled, String[] aiSummaries) {
-        return buildHtmlTable(results, fields, limit, aiSummaryEnabled, aiSummaries, null, null);
+        return buildHtmlTable(results, fields, limit, aiSummaryEnabled, aiSummaries, null, null, null);
     }
 
     /**
-     * Convenience overload — delegates to the full implementation with no filter title.
+     * Convenience overload — delegates to the full implementation with no filter title or workspace URL.
      * Used by tests and callers that only need hyperlink support without a filter name in the intro.
      */
     String buildHtmlTable(List<EntityModel> results, List<String> fields, int limit,
                           boolean aiSummaryEnabled, String[] aiSummaries,
                           TicketLinkContext linkContext) {
-        return buildHtmlTable(results, fields, limit, aiSummaryEnabled, aiSummaries, linkContext, null);
+        return buildHtmlTable(results, fields, limit, aiSummaryEnabled, aiSummaries, linkContext, null, null);
     }
 
     /**
-     * Builds a styled HTML table whose columns are the filter's field names and
-     * whose rows are the Octane entities returned by the filter execution.
-     * The intro line shows the ticket count and filter name.
-     * When AI Summary is enabled, it appears as the first column.
-     * When {@code linkContext} is provided, hyperlink-eligible fields ({@code id},
-     * {@code global_id_udf}) are rendered as clickable deep-links to the ValueEdge ticket page.
+     * Convenience overload — delegates to the full implementation with no workspace URL.
      */
     String buildHtmlTable(List<EntityModel> results, List<String> fields, int limit,
                           boolean aiSummaryEnabled, String[] aiSummaries,
                           TicketLinkContext linkContext, String filterTitle) {
+        return buildHtmlTable(results, fields, limit, aiSummaryEnabled, aiSummaries, linkContext, filterTitle, null);
+    }
+
+    /**
+     * Builds a dark-themed, professional HTML email body with the given ticket data.
+     *
+     * <p>The table uses alternating row colours and all CSS is inline so it renders correctly
+     * in email clients that strip {@code <style>} blocks. When {@code workspaceUrl} is provided,
+     * a "View subscriptions" link appears in the intro line and in the email footer.
+     *
+     * <p>Layout rule: outer scaffolding uses only {@code <div>} elements so the
+     * {@code assertFalse(html.contains("<table"))} empty-state test continues to pass —
+     * {@code <table>} is used exclusively for the data grid.
+     */
+    String buildHtmlTable(List<EntityModel> results, List<String> fields, int limit,
+                          boolean aiSummaryEnabled, String[] aiSummaries,
+                          TicketLinkContext linkContext, String filterTitle, String workspaceUrl) {
         List<String> orderedFields = new ArrayList<>(fields);
         if (aiSummaryEnabled && !orderedFields.contains(AiSummaryService.AI_SUMMARY_FIELD)) {
             orderedFields.add(0, AiSummaryService.AI_SUMMARY_FIELD);
         }
 
-        StringBuilder sb = new StringBuilder();
-        sb.append("<html><body style=\"font-family:Arial,sans-serif;font-size:14px;\">");
-
         String trimmedTitle = filterTitle == null ? "" : filterTitle.strip();
         int count = results.size();
 
+        StringBuilder sb = new StringBuilder();
+
+        // ── Email wrapper ────────────────────────────────────────────────────
+        sb.append("<!DOCTYPE html><html><head>")
+          .append("<meta charset=\"UTF-8\">")
+          .append("<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">")
+          .append("</head>")
+          .append("<body style=\"margin:0;padding:0;background-color:#0f172a;")
+          .append("font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;\">")
+          .append("<div style=\"background-color:#0f172a;padding:32px 16px;\">")
+          .append("<div style=\"max-width:680px;margin:0 auto;background-color:#1e293b;")
+          .append("border-radius:12px;border:1px solid #334155;overflow:hidden;\">");
+
+        // ── Gradient header bar ──────────────────────────────────────────────
+        sb.append("<div style=\"background:linear-gradient(135deg,#4f46e5 0%,#7c3aed 100%);padding:18px 28px;\">")
+          .append("<span style=\"color:#ffffff;font-size:16px;font-weight:700;letter-spacing:-0.3px;\">")
+          .append("&#9993;&nbsp;&nbsp;VE Mailer</span>")
+          .append("</div>");
+
+        // ── Content area ─────────────────────────────────────────────────────
+        sb.append("<div style=\"padding:24px 28px 20px;\">");
+
+        // Intro paragraph
+        sb.append("<p style=\"margin:0 0 20px;font-size:14px;line-height:1.6;color:#cbd5e1;\">");
         if (results.isEmpty()) {
             if (!trimmedTitle.isEmpty()) {
-                sb.append("<p>No items matched the filter <strong>&quot;")
-                  .append(escapeHtml(trimmedTitle)).append("&quot;</strong>.</p>");
-            } else {
-                sb.append("<p><em>No items matched the filter criteria.</em></p>");
-            }
-        } else {
-            // Intro line: ticket count + filter name
-            sb.append("<p>");
-            if (!trimmedTitle.isEmpty()) {
-                sb.append("<strong>").append(count).append(count == 1 ? " ticket" : " tickets")
-                  .append("</strong> available for the filter <strong>&quot;")
+                sb.append("No items matched the filter <strong style=\"color:#f1f5f9;\">&quot;")
                   .append(escapeHtml(trimmedTitle)).append("&quot;</strong>.");
             } else {
-                sb.append("<strong>").append(count).append(count == 1 ? " ticket" : " tickets")
-                  .append("</strong> in this notification.");
+                sb.append("<em style=\"color:#94a3b8;\">No items matched the filter criteria.</em>");
             }
-            sb.append("</p>");
+        } else {
+            sb.append("<strong style=\"color:#f1f5f9;\">").append(count)
+              .append(count == 1 ? " ticket" : " tickets").append("</strong>");
+            if (!trimmedTitle.isEmpty()) {
+                sb.append(" matched the filter <strong style=\"color:#f1f5f9;\">&quot;")
+                  .append(escapeHtml(trimmedTitle)).append("&quot;</strong>.");
+            } else {
+                sb.append(" in this notification.");
+            }
+            if (workspaceUrl != null) {
+                sb.append("&nbsp;&nbsp;<a href=\"").append(escapeHtml(workspaceUrl))
+                  .append("\" style=\"color:#818cf8;text-decoration:none;font-size:12px;white-space:nowrap;\">")
+                  .append("View subscriptions &#8594;</a>");
+            }
+        }
+        sb.append("</p>");
 
-            sb.append("<table border=\"1\" cellpadding=\"6\" cellspacing=\"0\" ")
-              .append("style=\"border-collapse:collapse;width:100%;\">");
-
-            // Header row
-            sb.append("<thead><tr style=\"background-color:#f2f2f2;\">");
+        // Data table (only when there are results — keeps <table absent from empty-state HTML)
+        if (!results.isEmpty()) {
+            sb.append("<table border=\"0\" cellpadding=\"0\" cellspacing=\"0\" ")
+              .append("style=\"border-collapse:collapse;width:100%;border:1px solid #334155;\">")
+              .append("<thead><tr style=\"background-color:#0f172a;\">");
             for (String field : orderedFields) {
-                sb.append("<th style=\"text-align:left;padding:8px;\">")
-                  .append(escapeHtml(AiSummaryService.AI_SUMMARY_FIELD.equals(field) ? "AI Summary" : humanise(field)))
+                String label = AiSummaryService.AI_SUMMARY_FIELD.equals(field) ? "AI Summary" : humanise(field);
+                sb.append("<th style=\"padding:10px 12px;text-align:left;font-size:11px;font-weight:600;")
+                  .append("text-transform:uppercase;letter-spacing:0.05em;color:#64748b;")
+                  .append("border-bottom:1px solid #334155;\">")
+                  .append(escapeHtml(label))
                   .append("</th>");
             }
-            sb.append("</tr></thead>");
+            sb.append("</tr></thead><tbody>");
 
-            // Data rows
-            sb.append("<tbody>");
             for (int i = 0; i < results.size(); i++) {
                 EntityModel entity = results.get(i);
-                String rowBg = (i % 2 == 0) ? "#ffffff" : "#f9f9f9";
+                String rowBg = (i % 2 == 0) ? "#1e293b" : "#162032";
                 sb.append("<tr style=\"background-color:").append(rowBg).append(";\">");
                 for (String field : orderedFields) {
+                    sb.append("<td style=\"padding:10px 12px;font-size:13px;color:#e2e8f0;border-bottom:1px solid #253346;\">");
                     if (AiSummaryService.AI_SUMMARY_FIELD.equals(field)) {
                         String summary = (aiSummaries != null && i < aiSummaries.length)
                                 ? aiSummaries[i] : "AI summary unavailable.";
                         // AI summary is rendered as sanitized HTML — not escaped — so anchor tags,
                         // emphasis, and other email-safe formatting display correctly.
-                        sb.append("<td style=\"padding:8px;\">")
-                          .append(sanitizeAiHtml(summary))
-                          .append("</td>");
-                        continue;
-                    }
-                    String cellValue = TriageSlaPolicy.TRIAGE_SLA_FIELD.equals(field)
-                            ? TriageSlaPolicy.toDisplayLabel(entity)
-                            : extractFieldValue(field, entity.getValue(field));
-                    sb.append("<td style=\"padding:8px;\">" );
-                    if (linkContext != null && HYPERLINK_FIELDS.contains(field)) {
-                        // Hyperlink-eligible field: render as anchor to the VE ticket page.
-                        // For global_id_udf the display text is the field's own value, but
-                        // the URL always uses the internal numeric id for navigation.
-                        String ticketId = extractFieldValue("id", entity.getValue("id"));
-                        sb.append(buildTicketLink(linkContext, ticketId, cellValue));
+                        sb.append(sanitizeAiHtml(summary));
                     } else {
-                        sb.append(escapeHtml(cellValue));
+                        String cellValue = TriageSlaPolicy.TRIAGE_SLA_FIELD.equals(field)
+                                ? TriageSlaPolicy.toDisplayLabel(entity)
+                                : extractFieldValue(field, entity.getValue(field));
+                        if (linkContext != null && HYPERLINK_FIELDS.contains(field)) {
+                            // Hyperlink-eligible field: render as anchor to the VE ticket page.
+                            String ticketId = extractFieldValue("id", entity.getValue("id"));
+                            sb.append(buildTicketLink(linkContext, ticketId, cellValue));
+                        } else {
+                            sb.append(escapeHtml(cellValue));
+                        }
                     }
                     sb.append("</td>");
                 }
@@ -354,14 +386,34 @@ public class NotificationService {
             sb.append("</tbody></table>");
         }
 
-        // Only show the "limited to N items" footer when a positive limit is in effect.
-        // When limit is -1 (unlimited), the footer is omitted entirely.
+        // Limit notice (shown when a positive cap is in effect; -1 = unlimited)
         if (limit > 0) {
-            sb.append("<p style=\"font-size:11px;color:#888;\">")
+            sb.append("<p style=\"margin:12px 0 0;font-size:11px;color:#475569;\">")
               .append("This list is limited to ").append(limit).append(" items.")
               .append("</p>");
         }
-        sb.append("</body></html>");
+        sb.append("</div>"); // end content area
+
+        // ── Workspace footer ─────────────────────────────────────────────────
+        if (workspaceUrl != null) {
+            sb.append("<div style=\"border-top:1px solid #334155;padding:16px 28px;background-color:#162032;\">")
+              .append("<a href=\"").append(escapeHtml(workspaceUrl))
+              .append("\" style=\"color:#818cf8;text-decoration:none;font-weight:600;font-size:13px;\">")
+              .append("&#8599; Manage your subscriptions in VE Mailer</a>")
+              .append("<p style=\"margin:6px 0 0;font-size:11px;color:#475569;\">")
+              .append("You received this email because you have an active subscription. ")
+              .append("Visit the link above to adjust or disable notifications.")
+              .append("</p></div>");
+        }
+
+        // ── Bottom strip ─────────────────────────────────────────────────────
+        sb.append("<div style=\"background-color:#0f172a;padding:12px 28px;")
+          .append("border-top:1px solid #334155;text-align:center;\">")
+          .append("<span style=\"font-size:11px;color:#475569;\">")
+          .append("VE Mailer &middot; Automated notification system</span>")
+          .append("</div>")
+          .append("</div></div></body></html>");
+
         return sb.toString();
     }
 
@@ -451,46 +503,6 @@ public class NotificationService {
     }
 
     /**
-     * Injects a "View your subscriptions" link into the intro paragraph at the top of the
-     * HTML email body — right after the ticket-count sentence — so recipients can navigate
-     * to their workspace in one click without scrolling to the footer.
-     * Uses {@code replaceFirst} on the first {@code </p>} tag, which is always the intro line
-     * in our own generated HTML.
-     */
-    String prependWorkspaceLink(String html, String workspaceUrl) {
-        if (html == null) return html;
-        String link =
-            " <a href=\"" + escapeHtml(workspaceUrl) + "\" " +
-            "style=\"color:#1a73e8;text-decoration:none;font-size:12px;\">" +
-            "View your subscriptions &#8594;" +
-            "</a>";
-        // The first </p> in our generated body is always the intro sentence.
-        return html.replaceFirst("</p>", link + "</p>");
-    }
-
-    /**
-     * Injects a footer link into an HTML email body, pointing to the recipient's workspace
-     * subscription page in the VE Mailer frontend. The link is inserted just before the
-     * closing {@code </body></html>} tags so it appears at the bottom of every notification.
-     */
-    String appendWorkspaceFooter(String html, String workspaceUrl) {
-        if (html == null) return html;
-        String footer =
-            "<hr style=\"border:none;border-top:1px solid #e0e0e0;margin:24px 0 12px;\">" +
-            "<p style=\"font-size:12px;color:#666;margin:0;\">" +
-            "<a href=\"" + escapeHtml(workspaceUrl) + "\" " +
-            "style=\"color:#1a73e8;text-decoration:none;font-weight:bold;\">" +
-            "&#128279; View your subscriptions in VE Mailer" +
-            "</a>" +
-            "</p>" +
-            "<p style=\"font-size:11px;color:#999;margin:4px 0 0;\">" +
-            "You are receiving this email because you have an active subscription. " +
-            "To manage or unsubscribe, visit the link above." +
-            "</p>";
-        return html.replace("</body></html>", footer + "</body></html>");
-    }
-
-    /**
      * Builds an HTML anchor pointing to a ValueEdge ticket page.
      *
      * @param ctx      VE connection context (server URL, shared-space ID, workspace ID)
@@ -509,6 +521,6 @@ public class NotificationService {
                 + "/" + ctx.workspaceId()
                 + "#/entity-navigation?entityType=work_item&id="
                 + ticketId;
-        return "<a href=\"" + escapeHtml(href) + "\" style=\"color:#1a73e8;\">" + escapeHtml(label) + "</a>";
+        return "<a href=\"" + escapeHtml(href) + "\" style=\"color:#818cf8;\">" + escapeHtml(label) + "</a>";
     }
 }

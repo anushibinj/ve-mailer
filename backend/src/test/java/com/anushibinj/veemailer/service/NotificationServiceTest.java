@@ -14,6 +14,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.Collections;
 import java.util.List;
@@ -56,6 +57,7 @@ class NotificationServiceTest {
         lenient().when(dynamicMailSenderService.getFromAddress()).thenReturn("noreply@test.com");
         lenient().doNothing().when(dynamicMailSenderService).send(any(MimeMessage.class));
         notificationService = new NotificationService(dynamicMailSenderService, registry, aiSummaryService, mailAuditService);
+        ReflectionTestUtils.setField(notificationService, "frontendUrl", "http://localhost:5173");
     }
 
     // ── processAndSendNotifications ───────────────────────────────────────────
@@ -266,7 +268,7 @@ class NotificationServiceTest {
         ));
         String html = notificationService.buildHtmlTable(List.of(entity), List.of("name", "phase"), 25, false, null);
         assertTrue(html.contains("Some item"));
-        assertTrue(html.contains("<td style=\"padding:8px;\"></td>"),
+        assertTrue(html.contains("<td style=\"padding:10px 12px;font-size:13px;color:#e2e8f0;border-bottom:1px solid #253346;\"></td>"),
                 "Missing field should render as empty cell");
     }
 
@@ -369,9 +371,9 @@ class NotificationServiceTest {
                 summaries
         );
 
-        int idHeaderIndex = html.indexOf("<th style=\"text-align:left;padding:8px;\">Id</th>");
-        int aiHeaderIndex = html.indexOf("<th style=\"text-align:left;padding:8px;\">AI Summary</th>");
-        int phaseHeaderIndex = html.indexOf("<th style=\"text-align:left;padding:8px;\">Phase</th>");
+        int idHeaderIndex = html.indexOf("<th style=\"padding:10px 12px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#64748b;border-bottom:1px solid #334155;\">Id</th>");
+        int aiHeaderIndex = html.indexOf("<th style=\"padding:10px 12px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#64748b;border-bottom:1px solid #334155;\">AI Summary</th>");
+        int phaseHeaderIndex = html.indexOf("<th style=\"padding:10px 12px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#64748b;border-bottom:1px solid #334155;\">Phase</th>");
         assertTrue(idHeaderIndex >= 0, "Id header must be present");
         assertTrue(aiHeaderIndex > idHeaderIndex, "AI Summary header must appear after Id");
         assertTrue(phaseHeaderIndex > aiHeaderIndex, "Phase header must appear after AI Summary");
