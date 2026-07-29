@@ -252,6 +252,7 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
     expanded: boolean;
     aiSummaryGenerated: boolean;
   }>>({});
+  const filterCardRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -516,15 +517,23 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
   };
 
   const handleExecute = async (filterId: string) => {
+    const scrollToExecutedFilter = () => {
+      requestAnimationFrame(() => {
+        filterCardRefs.current[filterId]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    };
+
     setExecuteState(prev => ({ ...prev, [filterId]: { isExecuting: true, results: null, expanded: true, aiSummaryGenerated: false } }));
     try {
       const response: PreviewResponse = await previewFilter(workspaceId, filterId, 10);
       setExecuteState(prev => ({ ...prev, [filterId]: { isExecuting: false, results: response.records, expanded: true, aiSummaryGenerated: response.aiSummaryGenerated } }));
       toast.success(`Preview returned ${response.records.length} result(s).`);
+      scrollToExecutedFilter();
     } catch (err: unknown) {
       setExecuteState(prev => ({ ...prev, [filterId]: { isExecuting: false, results: [], expanded: true, aiSummaryGenerated: false } }));
       const axiosErr = err as { response?: { data?: { message?: string } } };
       toast.error(axiosErr.response?.data?.message ? `Preview failed: ${axiosErr.response.data.message}` : 'Failed to preview filter.');
+      scrollToExecutedFilter();
     }
   };
 
@@ -1109,6 +1118,7 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
             return (
               <div
                 key={f.id}
+                ref={(el) => { filterCardRefs.current[f.id] = el; }}
                 style={{ animationDelay: `${idx * 50}ms` }}
                 className="animate-slide-up bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-md dark:hover:shadow-slate-900/50 hover:border-slate-200 dark:hover:border-slate-700 transition-all overflow-hidden"
               >
