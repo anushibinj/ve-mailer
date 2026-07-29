@@ -70,7 +70,7 @@ function SortableHeader({
 const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({
   workspaceId, onBack, onOpenFilterBuilder, onOpenGroupManager
 }) => {
-  const { isAdmin, isWorkspaceAdmin } = useAuth();
+  const { isAdmin, isWorkspaceAdmin, user } = useAuth();
   const canManage = isAdmin || isWorkspaceAdmin;
 
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
@@ -87,7 +87,7 @@ const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({
   const [search, setSearch] = useState('');
   const [sortKey, setSortKey] = useState<SortKey>('filter');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'disabled'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'disabled' | 'mine'>('all');
 
   const handleRunSubscription = async (sub: Subscription) => {
     setRunningIds(prev => new Set(prev).add(sub.id));
@@ -161,6 +161,7 @@ const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({
     // Status filter
     if (statusFilter === 'active')   result = result.filter(s => s.status !== 'DISABLED');
     if (statusFilter === 'disabled') result = result.filter(s => s.status === 'DISABLED');
+    if (statusFilter === 'mine')     result = result.filter(s => s.recipientEmail?.toLowerCase() === user?.email?.toLowerCase());
 
     // Search
     if (search.trim()) {
@@ -183,7 +184,7 @@ const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({
     });
 
     return result;
-  }, [subscriptions, search, sortKey, sortDir, statusFilter]);
+  }, [subscriptions, search, sortKey, sortDir, statusFilter, user]);
 
   const activeCount   = subscriptions.filter(s => s.status !== 'DISABLED').length;
   const disabledCount = subscriptions.filter(s => s.status === 'DISABLED').length;
@@ -313,6 +314,19 @@ const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({
                     {f.charAt(0).toUpperCase() + f.slice(1)}
                   </button>
                 ))}
+                {canManage && (
+                  <button
+                    type="button"
+                    onClick={() => setStatusFilter('mine')}
+                    className={`px-2.5 py-1 rounded-lg font-medium transition-colors cursor-pointer ${
+                      statusFilter === 'mine'
+                        ? 'bg-violet-50 dark:bg-violet-500/10 text-violet-700 dark:text-violet-300'
+                        : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
+                    }`}
+                  >
+                    Mine
+                  </button>
+                )}
               </div>
               <SearchInput
                 value={search}
