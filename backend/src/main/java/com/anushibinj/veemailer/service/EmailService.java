@@ -148,32 +148,41 @@ public class EmailService {
 
     /**
      * Wraps a content block in the standard dark-themed VE Mailer email shell.
-     * All CSS is inline so it renders correctly in email clients that strip {@code <style>} blocks.
+     * Uses table-based layout with {@code bgcolor} attributes so Outlook Windows
+     * preserves dark backgrounds even in light mode (Outlook strips CSS backgrounds
+     * from {@code <div>} but respects {@code bgcolor} on {@code <td>}).
      */
     private String buildEmailShell(String title, String bodyHtml) {
-        return "<!DOCTYPE html><html><head>" +
+        return "<!DOCTYPE html><html lang=\"en\"><head>" +
                "<meta charset=\"UTF-8\">" +
                "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">" +
+               "<meta name=\"color-scheme\" content=\"dark\">" +
+               "<meta name=\"supported-color-schemes\" content=\"dark\">" +
                "</head>" +
                "<body style=\"margin:0;padding:0;background-color:#0f172a;" +
                "font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;\">" +
-               "<div style=\"background-color:#0f172a;padding:32px 16px;\">" +
-               "<div style=\"max-width:560px;margin:0 auto;background-color:#1e293b;" +
-               "border-radius:12px;border:1px solid #334155;overflow:hidden;\">" +
-               "<div style=\"background:linear-gradient(135deg,#4f46e5 0%,#7c3aed 100%);padding:18px 28px;\">" +
+               "<table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" bgcolor=\"#0f172a\" " +
+               "style=\"background-color:#0f172a;\"><tr>" +
+               "<td align=\"center\" bgcolor=\"#0f172a\" style=\"padding:32px 16px;background-color:#0f172a;\">" +
+               "<table cellpadding=\"0\" cellspacing=\"0\" border=\"0\" width=\"560\" bgcolor=\"#1e293b\" " +
+               "style=\"max-width:560px;width:100%;background-color:#1e293b;" +
+               "border-radius:12px;border:1px solid #334155;\">" +
+               "<tr><td bgcolor=\"#4f46e5\" " +
+               "style=\"background:linear-gradient(135deg,#4f46e5 0%,#7c3aed 100%);" +
+               "padding:18px 28px;border-radius:12px 12px 0 0;\">" +
                "<span style=\"color:#ffffff;font-size:16px;font-weight:700;letter-spacing:-0.3px;\">" +
-               "&#9993;&nbsp;&nbsp;VE Mailer</span>" +
-               "</div>" +
-               "<div style=\"padding:28px;\">" +
+               "&#9993;&nbsp;&nbsp;VE Mailer</span></td></tr>" +
+               "<tr><td bgcolor=\"#1e293b\" style=\"background-color:#1e293b;padding:28px;\">" +
                "<h2 style=\"margin:0 0 20px;font-size:18px;font-weight:700;color:#f1f5f9;" +
                "letter-spacing:-0.3px;\">" + esc(title) + "</h2>" +
                bodyHtml +
-               "</div>" +
-               "<div style=\"background-color:#0f172a;padding:12px 28px;" +
+               "</td></tr>" +
+               "<tr><td bgcolor=\"#0f172a\" style=\"background-color:#0f172a;padding:12px 28px;" +
                "border-top:1px solid #334155;text-align:center;\">" +
                "<span style=\"font-size:11px;color:#475569;\">VE Mailer &middot; Automated notification system</span>" +
-               "</div>" +
-               "</div></div></body></html>";
+               "</td></tr>" +
+               "</table></td></tr></table>" +
+               "</body></html>";
     }
 
     /** Minimal HTML escaping to prevent broken markup when interpolating untrusted strings. */

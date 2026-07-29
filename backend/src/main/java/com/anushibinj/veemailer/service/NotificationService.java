@@ -273,13 +273,14 @@ public class NotificationService {
     /**
      * Builds a dark-themed, professional HTML email body with the given ticket data.
      *
-     * <p>The table uses alternating row colours and all CSS is inline so it renders correctly
-     * in email clients that strip {@code <style>} blocks. When {@code workspaceUrl} is provided,
-     * a "View subscriptions" link appears in the intro line and in the email footer.
+     * <p>All CSS is inline and the outer layout uses {@code <table>} elements with
+     * {@code bgcolor} attributes so that Outlook Windows — which strips {@code background-color}
+     * from {@code <div>} elements in light mode — still renders the dark shell correctly.
+     * {@code <meta name="color-scheme" content="dark">} tells Apple Mail and other
+     * supporting clients to render in dark mode.
      *
-     * <p>Layout rule: outer scaffolding uses only {@code <div>} elements so the
-     * {@code assertFalse(html.contains("<table"))} empty-state test continues to pass —
-     * {@code <table>} is used exclusively for the data grid.
+     * <p>Layout rule: the data grid uses {@code <thead>}; the empty-state path produces no
+     * {@code <thead>}, which the empty-state test asserts on.
      */
     String buildHtmlTable(List<EntityModel> results, List<String> fields, int limit,
                           boolean aiSummaryEnabled, String[] aiSummaries,
@@ -294,25 +295,36 @@ public class NotificationService {
 
         StringBuilder sb = new StringBuilder();
 
-        // ── Email wrapper ────────────────────────────────────────────────────
-        sb.append("<!DOCTYPE html><html><head>")
+        // ── Email shell ──────────────────────────────────────────────────────
+        sb.append("<!DOCTYPE html><html lang=\"en\"><head>")
           .append("<meta charset=\"UTF-8\">")
           .append("<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">")
+          // Signal dark intent to Apple Mail, iOS, Samsung Mail, and Gmail app.
+          // Outlook Windows ignores this — bgcolor attributes on <td> handle it instead.
+          .append("<meta name=\"color-scheme\" content=\"dark\">")
+          .append("<meta name=\"supported-color-schemes\" content=\"dark\">")
           .append("</head>")
           .append("<body style=\"margin:0;padding:0;background-color:#0f172a;")
           .append("font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;\">")
-          .append("<div style=\"background-color:#0f172a;padding:32px 16px;\">")
-          .append("<div style=\"max-width:680px;margin:0 auto;background-color:#1e293b;")
-          .append("border-radius:12px;border:1px solid #334155;overflow:hidden;\">");
-
-        // ── Gradient header bar ──────────────────────────────────────────────
-        sb.append("<div style=\"background:linear-gradient(135deg,#4f46e5 0%,#7c3aed 100%);padding:18px 28px;\">")
+          // Outer wrapper — bgcolor attribute forces background in Outlook which strips CSS backgrounds from <div>
+          .append("<table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" ")
+          .append("bgcolor=\"#0f172a\" style=\"background-color:#0f172a;\"><tr>")
+          .append("<td align=\"center\" bgcolor=\"#0f172a\" ")
+          .append("style=\"padding:32px 16px;background-color:#0f172a;\">")
+          // Card — bgcolor on <td> is the Outlook-safe way to set backgrounds
+          .append("<table cellpadding=\"0\" cellspacing=\"0\" border=\"0\" width=\"680\" bgcolor=\"#1e293b\" ")
+          .append("style=\"max-width:680px;width:100%;background-color:#1e293b;")
+          .append("border-radius:12px;border:1px solid #334155;\">")
+          // Gradient header — bgcolor flat fallback for Outlook (MSO ignores CSS gradients)
+          .append("<tr><td bgcolor=\"#4f46e5\" ")
+          .append("style=\"background:linear-gradient(135deg,#4f46e5 0%,#7c3aed 100%);")
+          .append("padding:18px 28px;border-radius:12px 12px 0 0;\">")
           .append("<span style=\"color:#ffffff;font-size:16px;font-weight:700;letter-spacing:-0.3px;\">")
-          .append("&#9993;&nbsp;&nbsp;VE Mailer</span>")
-          .append("</div>");
+          .append("&#9993;&nbsp;&nbsp;VE Mailer</span></td></tr>");
 
-        // ── Content area ─────────────────────────────────────────────────────
-        sb.append("<div style=\"padding:24px 28px 20px;\">");
+        // ── Content row ──────────────────────────────────────────────────────
+        sb.append("<tr><td bgcolor=\"#1e293b\" ")
+          .append("style=\"background-color:#1e293b;padding:24px 28px 20px;\">");
 
         // Intro paragraph
         sb.append("<p style=\"margin:0 0 20px;font-size:14px;line-height:1.6;color:#cbd5e1;\">");
@@ -340,11 +352,12 @@ public class NotificationService {
         }
         sb.append("</p>");
 
-        // Data table (only when there are results — keeps <table absent from empty-state HTML)
+        // Data grid — only present when there are results.
+        // The empty-state test asserts absence of <thead>, which only appears here.
         if (!results.isEmpty()) {
             sb.append("<table border=\"0\" cellpadding=\"0\" cellspacing=\"0\" ")
               .append("style=\"border-collapse:collapse;width:100%;border:1px solid #334155;\">")
-              .append("<thead><tr style=\"background-color:#0f172a;\">");
+              .append("<thead><tr bgcolor=\"#0f172a\" style=\"background-color:#0f172a;\">");
             for (String field : orderedFields) {
                 String label = AiSummaryService.AI_SUMMARY_FIELD.equals(field) ? "AI Summary" : humanise(field);
                 sb.append("<th style=\"padding:10px 12px;text-align:left;font-size:11px;font-weight:600;")
@@ -358,7 +371,8 @@ public class NotificationService {
             for (int i = 0; i < results.size(); i++) {
                 EntityModel entity = results.get(i);
                 String rowBg = (i % 2 == 0) ? "#1e293b" : "#162032";
-                sb.append("<tr style=\"background-color:").append(rowBg).append(";\">");
+                sb.append("<tr bgcolor=\"").append(rowBg)
+                  .append("\" style=\"background-color:").append(rowBg).append(";\">");
                 for (String field : orderedFields) {
                     sb.append("<td style=\"padding:10px 12px;font-size:13px;color:#e2e8f0;border-bottom:1px solid #253346;\">");
                     if (AiSummaryService.AI_SUMMARY_FIELD.equals(field)) {
@@ -392,27 +406,30 @@ public class NotificationService {
               .append("This list is limited to ").append(limit).append(" items.")
               .append("</p>");
         }
-        sb.append("</div>"); // end content area
+        sb.append("</td></tr>"); // end content row
 
-        // ── Workspace footer ─────────────────────────────────────────────────
+        // ── Workspace footer row ──────────────────────────────────────────────
         if (workspaceUrl != null) {
-            sb.append("<div style=\"border-top:1px solid #334155;padding:16px 28px;background-color:#162032;\">")
+            sb.append("<tr><td bgcolor=\"#162032\" style=\"background-color:#162032;")
+              .append("border-top:1px solid #334155;padding:16px 28px;\">")
               .append("<a href=\"").append(escapeHtml(workspaceUrl))
               .append("\" style=\"color:#818cf8;text-decoration:none;font-weight:600;font-size:13px;\">")
               .append("&#8599; Manage your subscriptions in VE Mailer</a>")
               .append("<p style=\"margin:6px 0 0;font-size:11px;color:#475569;\">")
               .append("You received this email because you have an active subscription. ")
               .append("Visit the link above to adjust or disable notifications.")
-              .append("</p></div>");
+              .append("</p></td></tr>");
         }
 
-        // ── Bottom strip ─────────────────────────────────────────────────────
-        sb.append("<div style=\"background-color:#0f172a;padding:12px 28px;")
-          .append("border-top:1px solid #334155;text-align:center;\">")
+        // ── Bottom strip row ─────────────────────────────────────────────────
+        sb.append("<tr><td bgcolor=\"#0f172a\" style=\"background-color:#0f172a;")
+          .append("padding:12px 28px;border-top:1px solid #334155;text-align:center;\">")
           .append("<span style=\"font-size:11px;color:#475569;\">")
           .append("VE Mailer &middot; Automated notification system</span>")
-          .append("</div>")
-          .append("</div></div></body></html>");
+          .append("</td></tr>")
+          .append("</table>")         // end card table
+          .append("</td></tr></table>") // end outer wrapper table
+          .append("</body></html>");
 
         return sb.toString();
     }

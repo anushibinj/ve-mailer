@@ -206,7 +206,7 @@ class NotificationServiceTest {
     void testBuildHtmlTable_EmptyResults_ShowsNoItemsMessage() {
         String html = notificationService.buildHtmlTable(Collections.emptyList(), List.of("name", "phase"), 25, false, null);
         assertTrue(html.contains("No items matched"), "Should show empty-state message");
-        assertFalse(html.contains("<table"), "Should not render a table for empty results");
+        assertFalse(html.contains("<thead>"), "Should not render a data table for empty results");
     }
 
     @Test
