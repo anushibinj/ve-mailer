@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { login as loginApi } from '../services/authService';
 import type { ApiErrorResponse } from '../types/auth';
@@ -9,6 +9,7 @@ import AuthShell from '../components/AuthShell';
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { login, isAuthenticated } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -16,8 +17,14 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
+  // Read the returnTo param set by ProtectedRoute when redirecting unauthenticated visitors.
+  const params = new URLSearchParams(location.search);
+  const returnTo = params.get('returnTo') ?? '/';
+  // Only honour same-origin relative paths to prevent open-redirect attacks.
+  const safeReturnTo = returnTo.startsWith('/') ? returnTo : '/';
+
   if (isAuthenticated) {
-    navigate('/', { replace: true });
+    navigate(safeReturnTo, { replace: true });
     return null;
   }
 
@@ -33,7 +40,7 @@ export default function LoginPage() {
         navigate('/accept-invite', { state: { email }, replace: true });
       } else {
         toast.success('Logged in successfully!');
-        navigate('/', { replace: true });
+        navigate(safeReturnTo, { replace: true });
       }
     } catch (err: unknown) {
       const axiosError = err as { response?: { data?: ApiErrorResponse } };

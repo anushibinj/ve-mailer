@@ -1,4 +1,4 @@
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 
 interface ProtectedRouteProps {
@@ -9,6 +9,7 @@ interface ProtectedRouteProps {
 
 export default function ProtectedRoute({ children, requiredRole, requiredRoles }: ProtectedRouteProps) {
   const { isAuthenticated, isLoading, hasRole } = useAuth();
+  const location = useLocation();
 
   if (isLoading) {
     return (
@@ -19,7 +20,9 @@ export default function ProtectedRoute({ children, requiredRole, requiredRoles }
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    // Pass the current path as `returnTo` so the login page can redirect back after auth.
+    const returnTo = location.pathname + location.search;
+    return <Navigate to={`/login?returnTo=${encodeURIComponent(returnTo)}`} replace />;
   }
 
   if (requiredRole && !hasRole(requiredRole)) {

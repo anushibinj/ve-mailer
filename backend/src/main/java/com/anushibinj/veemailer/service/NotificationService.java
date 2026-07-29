@@ -47,6 +47,9 @@ public class NotificationService {
     private final AiSummaryService aiSummaryService;
     private final MailAuditService mailAuditService;
 
+    @org.springframework.beans.factory.annotation.Value("${app.frontend.url:http://localhost:5173}")
+    private String frontendUrl;
+
     /**
      * Builds a standardised email subject including the ticket count.
      * Format: "[ve-mailer] 5 tickets – {filterTitle}"
@@ -97,6 +100,9 @@ public class NotificationService {
                 workspace.getSharedSpaceId(),
                 workspace.getWorkspaceId());
         String htmlBody = buildHtmlTable(results, fields, limit, aiSummaryEnabled, aiSummaries, linkContext, filterTitle);
+        // Append a footer link so recipients can jump directly to their workspace subscriptions.
+        String workspaceUrl = frontendUrl.stripTrailing() + "/workspace/" + workspace.getId();
+        htmlBody = appendWorkspaceFooter(htmlBody, workspaceUrl);
         String subject = buildMailSubject(filterTitle, results.size());
         // Each subscriber is handled independently so one failure cannot affect the others.
         for (EmailSubscriber subscriber : subscribers) {
@@ -441,6 +447,28 @@ public class NotificationService {
     String sanitizeAiHtml(String html) {
         if (html == null || html.isEmpty()) return "";
         return Jsoup.clean(html, Safelist.basic());
+    }
+
+    /**
+     * Injects a footer link into an HTML email body, pointing to the recipient's workspace
+     * subscription page in the VE Mailer frontend. The link is inserted just before the
+     * closing {@code </body></html>} tags so it appears at the bottom of every notification.
+     */
+    String appendWorkspaceFooter(String html, String workspaceUrl) {
+        if (html == null) return html;
+        String footer =
+            "<hr style=\"border:none;border-top:1px solid #e0e0e0;margin:24px 0 12px;\">" +
+            "<p style=\"font-size:12px;color:#666;margin:0;\">" +
+            "<a href=\"" + escapeHtml(workspaceUrl) + "\" " +
+            "style=\"color:#1a73e8;text-decoration:none;font-weight:bold;\">" +
+            "&#128279; View your subscriptions in VE Mailer" +
+            "</a>" +
+            "</p>" +
+            "<p style=\"font-size:11px;color:#999;margin:4px 0 0;\">" +
+            "You are receiving this email because you have an active subscription. " +
+            "To manage or unsubscribe, visit the link above." +
+            "</p>";
+        return html.replace("</body></html>", footer + "</body></html>");
     }
 
     /**
