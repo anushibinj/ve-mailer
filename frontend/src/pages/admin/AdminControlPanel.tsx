@@ -23,7 +23,7 @@ const allTabs: { key: AdminTab; label: string; icon: React.ReactNode; descriptio
   { key: 'ai-preferences',            label: 'AI',            icon: <Sparkles className="h-4 w-4" />,     description: 'AI configuration',       adminOnly: true },
   { key: 'mail-analytics',            label: 'Analytics',     icon: <BarChart2 className="h-4 w-4" />,    description: 'Mail statistics',        adminOnly: true },
   { key: 'users',                     label: 'Users',         icon: <Users className="h-4 w-4" />,        description: 'User management',        adminOnly: true },
-  { key: 'issues',                    label: 'Issues',        icon: <TriangleAlert className="h-4 w-4" />,description: 'Issue reports',          adminOnly: true },
+  { key: 'issues',                    label: 'User-reported issues', icon: <TriangleAlert className="h-4 w-4" />,description: 'Issue reports',          adminOnly: true },
 ];
 
 export default function AdminControlPanel() {
