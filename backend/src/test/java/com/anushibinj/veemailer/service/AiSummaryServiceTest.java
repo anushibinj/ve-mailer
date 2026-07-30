@@ -5,6 +5,7 @@ import com.anushibinj.veemailer.model.Workspace;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.ai.chat.client.ChatClient;
@@ -59,13 +60,19 @@ class AiSummaryServiceTest {
         when(requestSpec.call()).thenReturn(callResponseSpec);
         when(callResponseSpec.content()).thenReturn("This ticket addresses a login defect.");
 
-        String summary = aiSummaryService.generateSummary("Fix login bug", "Users cannot log in", "Confirmed by QA", null);
+        String summary = aiSummaryService.generateSummary("1001", "Fix login bug", "Users cannot log in", "Confirmed by QA", null);
 
         assertEquals("This ticket addresses a login defect.", summary);
         verify(requestSpec).system(anyString());
-        // User prompt now only contains the {comments} placeholder; name/description
-        // are no longer in the user prompt template.
-        verify(requestSpec).user(contains("Confirmed by QA"));
+        // User prompt must include ticket id, name, description and comments so the
+        // AI model has full context about what the ticket is asking for.
+        ArgumentCaptor<String> userPromptCaptor = ArgumentCaptor.forClass(String.class);
+        verify(requestSpec).user(userPromptCaptor.capture());
+        String capturedUserPrompt = userPromptCaptor.getValue();
+        assertTrue(capturedUserPrompt.contains("1001"));
+        assertTrue(capturedUserPrompt.contains("Fix login bug"));
+        assertTrue(capturedUserPrompt.contains("Users cannot log in"));
+        assertTrue(capturedUserPrompt.contains("Confirmed by QA"));
     }
 
     @Test
@@ -76,17 +83,17 @@ class AiSummaryServiceTest {
         when(requestSpec.call()).thenReturn(callResponseSpec);
         when(callResponseSpec.content()).thenReturn(null);
 
-        String summary = aiSummaryService.generateSummary("Some ticket", "desc", "User comment here", null);
+        String summary = aiSummaryService.generateSummary("1002", "Some ticket", "desc", "User comment here", null);
 
         assertEquals("AI summary unavailable.", summary);
     }
 
     @Test
     void testGenerateSummary_BlankComments_ReturnsEarlyFallback() {
-        String summary = aiSummaryService.generateSummary("Ticket", "Desc", "", null);
+        String summary = aiSummaryService.generateSummary("1003", "Ticket", "Desc", "", null);
         assertEquals("There is not enough comment data to understand the context of the ticket.", summary);
 
-        String summaryNull = aiSummaryService.generateSummary("Ticket", "Desc", null, null);
+        String summaryNull = aiSummaryService.generateSummary("1003", "Ticket", "Desc", null, null);
         assertEquals("There is not enough comment data to understand the context of the ticket.", summaryNull);
 
         verifyNoInteractions(chatClient);
@@ -96,7 +103,7 @@ class AiSummaryServiceTest {
     void testGenerateSummary_ExceptionThrown_ReturnsFallback() {
         when(chatClient.prompt()).thenThrow(new RuntimeException("API error"));
 
-        String summary = aiSummaryService.generateSummary("Some ticket", "desc", "User comment here", null);
+        String summary = aiSummaryService.generateSummary("1002", "Some ticket", "desc", "User comment here", null);
 
         assertEquals("AI summary unavailable.", summary);
     }
@@ -109,7 +116,7 @@ class AiSummaryServiceTest {
         when(requestSpec.call()).thenReturn(callResponseSpec);
         when(callResponseSpec.content()).thenReturn("Summary with null inputs");
 
-        String summary = aiSummaryService.generateSummary(null, null, "Some comment", null);
+        String summary = aiSummaryService.generateSummary(null, null, null, "Some comment", null);
 
         assertEquals("Summary with null inputs", summary);
     }
@@ -122,7 +129,7 @@ class AiSummaryServiceTest {
         when(requestSpec.call()).thenReturn(callResponseSpec);
         when(callResponseSpec.content()).thenReturn("  Summary with spaces  \n");
 
-        String summary = aiSummaryService.generateSummary("Ticket", "Desc", "User comment", null);
+        String summary = aiSummaryService.generateSummary("1004", "Ticket", "Desc", "User comment", null);
 
         assertEquals("Summary with spaces", summary);
     }
@@ -135,7 +142,7 @@ class AiSummaryServiceTest {
         when(requestSpec.call()).thenReturn(callResponseSpec);
         when(callResponseSpec.content()).thenReturn("Summary");
 
-        aiSummaryService.generateSummary("Ticket", "Desc", "User comment", 7);
+        aiSummaryService.generateSummary("1004", "Ticket", "Desc", "User comment", 7);
 
         verify(requestSpec).system(contains("7 days"));
     }
@@ -148,7 +155,7 @@ class AiSummaryServiceTest {
         when(requestSpec.call()).thenReturn(callResponseSpec);
         when(callResponseSpec.content()).thenReturn("Summary");
 
-        aiSummaryService.generateSummary("Ticket", "Desc", "User comment", null);
+        aiSummaryService.generateSummary("1004", "Ticket", "Desc", "User comment", null);
 
         verify(requestSpec).system(contains("unknown days"));
     }
@@ -215,7 +222,7 @@ class AiSummaryServiceTest {
         when(requestSpec.call()).thenReturn(callResponseSpec);
         when(callResponseSpec.content()).thenReturn("Works");
 
-        String result = service.generateSummary("Test", "Desc", "Some comment", null);
+        String result = service.generateSummary("1005", "Test", "Desc", "Some comment", null);
         assertEquals("Works", result);
     }
 }

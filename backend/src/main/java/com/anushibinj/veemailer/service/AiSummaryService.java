@@ -38,6 +38,7 @@ public class AiSummaryService {
     /**
      * Generates an AI-powered summary for a single ticket.
      *
+     * @param ticketId    the numeric ID of the ticket, given to the AI as context
      * @param name        ticket title/name
      * @param description ticket description (may be null or empty)
      * @param comments    concatenated comments text (may be null or empty)
@@ -46,7 +47,7 @@ public class AiSummaryService {
      *                    report waiting time; may be null if unavailable
      * @return a concise summary string, or a fallback message on failure
      */
-    public String generateSummary(String name, String description, String comments, Integer phaseAge) {
+    public String generateSummary(String ticketId, String name, String description, String comments, Integer phaseAge) {
 
         if(comments == null || comments.isBlank()) {
             log.debug("Ticket '{}' has no comments; skipping AI summary generation.", name);
@@ -57,6 +58,7 @@ public class AiSummaryService {
             ChatClient chatClient = dynamicAiClientService.getChatClient();
 
             String userPrompt = userPromptTemplate
+                    .replace("{id}", nullSafe(ticketId))
                     .replace("{name}", nullSafe(name))
                     .replace("{description}", nullSafe(description))
                     .replace("{comments}", nullSafe(comments));

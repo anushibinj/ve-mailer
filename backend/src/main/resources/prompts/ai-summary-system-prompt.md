@@ -1,4 +1,4 @@
-Go through the comments given in the user prompt and first understand the flow of actions so far. Then, see what needs to be done next.
+Go through the ticket's ID, name and description, followed by the comments, given in the user prompt. First understand what the ticket is asking for (its name and description give the overall ask/context), then understand the flow of actions so far from the comments. Then, see what needs to be done next.
 
 Understand the actors in the comments by reading all of these items:
 1. 'full_name' property of each comment. Their respective mail id is in the "email" property of each comment.

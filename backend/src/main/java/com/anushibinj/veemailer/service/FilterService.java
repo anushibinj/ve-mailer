@@ -425,7 +425,7 @@ public class FilterService {
                     String phaseAgeStr = extractFieldValue("phase_age", entity.getValue("phase_age"));
                     Integer phaseAge = parsePhaseAge(phaseAgeStr);
                     String comments = aiSummaryService.fetchComments(ticketId, workspace);
-                    aiSummaries[i] = aiSummaryService.generateSummary(name, description, comments, phaseAge);
+                    aiSummaries[i] = aiSummaryService.generateSummary(ticketId, name, description, comments, phaseAge);
                 }
             }
 

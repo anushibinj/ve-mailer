@@ -164,7 +164,7 @@ class NotificationServiceTest {
     @Test
     void testProcessAndSendNotifications_AiSummaryEnabled_GeneratesSummaries() {
         when(aiSummaryService.fetchComments(any(), any())).thenReturn("Some comment");
-        when(aiSummaryService.generateSummary(any(), any(), any(), any())).thenReturn("AI generated summary");
+        when(aiSummaryService.generateSummary(any(), any(), any(), any(), any())).thenReturn("AI generated summary");
 
         EntityModel entity = new EntityModel(Set.of(
                 new StringFieldModel("id", "1001"),
@@ -181,7 +181,7 @@ class NotificationServiceTest {
         notificationService.processAndSendNotifications(
                 List.of(sub), List.of(entity), fields, 25, testWorkspace, "AI Filter");
 
-        verify(aiSummaryService).generateSummary("Fix bug", "A bug needs fixing", "Some comment", null);
+        verify(aiSummaryService).generateSummary("1001", "Fix bug", "A bug needs fixing", "Some comment", null);
         verify(dynamicMailSenderService).send(any(MimeMessage.class));
     }
 
@@ -422,7 +422,7 @@ class NotificationServiceTest {
         // Verifies decoupled architecture: backend fetches name/description internally for AI
         // generation even when the user did not select them as display fields.
         when(aiSummaryService.fetchComments(any(), any())).thenReturn("");
-        when(aiSummaryService.generateSummary(any(), any(), any(), any())).thenReturn("AI generated summary");
+        when(aiSummaryService.generateSummary(any(), any(), any(), any(), any())).thenReturn("AI generated summary");
 
         // Entity contains name and description because effectiveFetchFields in FilterService
         // added them silently — even though the user only selected id and phase for display.
@@ -443,7 +443,7 @@ class NotificationServiceTest {
                 List.of(sub), List.of(entity), fields, 25, testWorkspace, "AI Filter");
 
         // AI summary must still be generated using the entity data fetched internally
-        verify(aiSummaryService).generateSummary("Fix bug", "A bug needs fixing", "", null);
+        verify(aiSummaryService).generateSummary("2001", "Fix bug", "A bug needs fixing", "", null);
         verify(dynamicMailSenderService).send(any(MimeMessage.class));
     }
 
