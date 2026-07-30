@@ -41,9 +41,12 @@ public class AiSummaryService {
      * @param name        ticket title/name
      * @param description ticket description (may be null or empty)
      * @param comments    concatenated comments text (may be null or empty)
+     * @param phaseAge    number of days the ticket has spent in its current phase
+     *                    (Octane {@code phase_age} field), used by the AI prompt to
+     *                    report waiting time; may be null if unavailable
      * @return a concise summary string, or a fallback message on failure
      */
-    public String generateSummary(String name, String description, String comments) {
+    public String generateSummary(String name, String description, String comments, Integer phaseAge) {
 
         if(comments == null || comments.isBlank()) {
             log.debug("Ticket '{}' has no comments; skipping AI summary generation.", name);
@@ -59,7 +62,8 @@ public class AiSummaryService {
                     .replace("{comments}", nullSafe(comments));
 
             String systemPrompt = systemPromptTemplate
-                    .replace("{todaydatetime}", nullSafe(java.time.ZonedDateTime.now().toString()));
+                    .replace("{todaydatetime}", nullSafe(java.time.ZonedDateTime.now().toString()))
+                    .replace("{phaseAge}", phaseAge != null ? phaseAge.toString() : "unknown");
 
             String result = chatClient.prompt()
                     .system(systemPrompt)

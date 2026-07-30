@@ -74,30 +74,34 @@ class FilterServiceTest {
 
     @Test
     void testComputeEffectiveFetchFields_AiSummaryAddsNameAndDescription() {
-        // When AI Summary is enabled, name and description must be silently added.
+        // When AI Summary is enabled, name, description and phase_age must be silently added.
         List<String> result = filterService.computeEffectiveFetchFields(
                 List.of(AiSummaryService.AI_SUMMARY_FIELD, "phase"));
         assertTrue(result.contains("name"), "name must be added when AI Summary is enabled");
         assertTrue(result.contains("description"), "description must be added when AI Summary is enabled");
+        assertTrue(result.contains("phase_age"), "phase_age must be added when AI Summary is enabled");
     }
 
     @Test
     void testComputeEffectiveFetchFields_AiSummary_DeduplicatesNameAndDescription() {
-        // name and description must not be duplicated if user already selected them.
+        // name, description and phase_age must not be duplicated if user already selected them.
         List<String> result = filterService.computeEffectiveFetchFields(
-                List.of(AiSummaryService.AI_SUMMARY_FIELD, "name", "description", "phase"));
+                List.of(AiSummaryService.AI_SUMMARY_FIELD, "name", "description", "phase_age", "phase"));
         assertEquals(1, result.stream().filter("name"::equals).count(),
                 "name must appear exactly once");
         assertEquals(1, result.stream().filter("description"::equals).count(),
                 "description must appear exactly once");
+        assertEquals(1, result.stream().filter("phase_age"::equals).count(),
+                "phase_age must appear exactly once");
     }
 
     @Test
     void testComputeEffectiveFetchFields_NoAiSummary_DoesNotAddNameDescription() {
-        // Without AI Summary, name and description are not silently added.
+        // Without AI Summary, name, description and phase_age are not silently added.
         List<String> result = filterService.computeEffectiveFetchFields(List.of("phase", "owner"));
         assertFalse(result.contains("name"), "name must not be added when AI Summary is not enabled");
         assertFalse(result.contains("description"), "description must not be added when AI Summary is not enabled");
+        assertFalse(result.contains("phase_age"), "phase_age must not be added when AI Summary is not enabled");
         // id is still always added
         assertTrue(result.contains("id"), "id must still be present");
     }

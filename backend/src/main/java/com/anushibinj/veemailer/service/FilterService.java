@@ -315,7 +315,7 @@ public class FilterService {
             String orderByDirection = normalizeOrderByDirection(filter.getOrderByDirection(), orderByField);
 
             // Compute the effective fields to fetch — strips pseudo-fields, adds silent
-            // dependencies (AI Summary → name+description, Triage SLA → creation_time, always → id).
+            // dependencies (AI Summary → name+description+phase_age, Triage SLA → creation_time, always → id).
             List<String> effectiveFetchFields = computeEffectiveFetchFields(fields);
             if (orderByField != null && !effectiveFetchFields.contains(orderByField)) {
                 effectiveFetchFields.add(orderByField);
@@ -422,8 +422,10 @@ public class FilterService {
                     String name = extractFieldValue("name", entity.getValue("name"));
                     String description = extractFieldValue("description", entity.getValue("description"));
                     String ticketId = extractFieldValue("id", entity.getValue("id"));
+                    String phaseAgeStr = extractFieldValue("phase_age", entity.getValue("phase_age"));
+                    Integer phaseAge = parsePhaseAge(phaseAgeStr);
                     String comments = aiSummaryService.fetchComments(ticketId, workspace);
-                    aiSummaries[i] = aiSummaryService.generateSummary(name, description, comments);
+                    aiSummaries[i] = aiSummaryService.generateSummary(name, description, comments, phaseAge);
                 }
             }
 
@@ -479,8 +481,9 @@ public class FilterService {
      * <ol>
      *   <li>The AI Summary pseudo-field is stripped — it is never a real Octane field.</li>
      *   <li>The Triage SLA pseudo-field is stripped and mapped to {@code creation_time}.</li>
-     *   <li>When AI Summary is enabled, {@code name} and {@code description} are added as
-     *       silent internal dependencies for AI generation, even if not chosen for display.</li>
+     *   <li>When AI Summary is enabled, {@code name}, {@code description} and {@code phase_age}
+     *       are added as silent internal dependencies for AI generation, even if not chosen
+     *       for display.</li>
      *   <li>{@code id} is always added for ticket hyperlink generation, regardless of whether
      *       the user selected it as a visible column.</li>
      * </ol>
@@ -493,9 +496,10 @@ public class FilterService {
                 .filter(f -> !TriageSlaPolicy.TRIAGE_SLA_FIELD.equals(f))
                 .collect(Collectors.toList());
         if (fields.contains(AiSummaryService.AI_SUMMARY_FIELD)) {
-            // name and description are fetched silently for AI generation
+            // name, description and phase_age are fetched silently for AI generation
             // regardless of what the user chose to show in the final email output.
-            for (String dep : List.of("name", "description")) {
+            // phase_age (days in current phase) is used by the AI prompt to describe waiting time.
+            for (String dep : List.of("name", "description", "phase_age")) {
                 if (!effectiveFetchFields.contains(dep)) {
                     effectiveFetchFields.add(dep);
                 }
@@ -722,6 +726,21 @@ public class FilterService {
             return fieldExtractorRegistry.forField(fieldName).extract(fm);
         }
         return fm.getValue().toString();
+    }
+
+    /**
+     * Parses the display string produced by {@link #extractFieldValue} for the
+     * {@code phase_age} field into an Integer, tolerating blank/unparseable values.
+     */
+    private Integer parsePhaseAge(String phaseAgeStr) {
+        if (phaseAgeStr == null || phaseAgeStr.isBlank()) {
+            return null;
+        }
+        try {
+            return (int) Double.parseDouble(phaseAgeStr.trim());
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
     /**

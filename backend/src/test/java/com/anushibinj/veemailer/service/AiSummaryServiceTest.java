@@ -59,7 +59,7 @@ class AiSummaryServiceTest {
         when(requestSpec.call()).thenReturn(callResponseSpec);
         when(callResponseSpec.content()).thenReturn("This ticket addresses a login defect.");
 
-        String summary = aiSummaryService.generateSummary("Fix login bug", "Users cannot log in", "Confirmed by QA");
+        String summary = aiSummaryService.generateSummary("Fix login bug", "Users cannot log in", "Confirmed by QA", null);
 
         assertEquals("This ticket addresses a login defect.", summary);
         verify(requestSpec).system(anyString());
@@ -76,17 +76,17 @@ class AiSummaryServiceTest {
         when(requestSpec.call()).thenReturn(callResponseSpec);
         when(callResponseSpec.content()).thenReturn(null);
 
-        String summary = aiSummaryService.generateSummary("Some ticket", "desc", "User comment here");
+        String summary = aiSummaryService.generateSummary("Some ticket", "desc", "User comment here", null);
 
         assertEquals("AI summary unavailable.", summary);
     }
 
     @Test
     void testGenerateSummary_BlankComments_ReturnsEarlyFallback() {
-        String summary = aiSummaryService.generateSummary("Ticket", "Desc", "");
+        String summary = aiSummaryService.generateSummary("Ticket", "Desc", "", null);
         assertEquals("There is not enough comment data to understand the context of the ticket.", summary);
 
-        String summaryNull = aiSummaryService.generateSummary("Ticket", "Desc", null);
+        String summaryNull = aiSummaryService.generateSummary("Ticket", "Desc", null, null);
         assertEquals("There is not enough comment data to understand the context of the ticket.", summaryNull);
 
         verifyNoInteractions(chatClient);
@@ -96,7 +96,7 @@ class AiSummaryServiceTest {
     void testGenerateSummary_ExceptionThrown_ReturnsFallback() {
         when(chatClient.prompt()).thenThrow(new RuntimeException("API error"));
 
-        String summary = aiSummaryService.generateSummary("Some ticket", "desc", "User comment here");
+        String summary = aiSummaryService.generateSummary("Some ticket", "desc", "User comment here", null);
 
         assertEquals("AI summary unavailable.", summary);
     }
@@ -109,7 +109,7 @@ class AiSummaryServiceTest {
         when(requestSpec.call()).thenReturn(callResponseSpec);
         when(callResponseSpec.content()).thenReturn("Summary with null inputs");
 
-        String summary = aiSummaryService.generateSummary(null, null, "Some comment");
+        String summary = aiSummaryService.generateSummary(null, null, "Some comment", null);
 
         assertEquals("Summary with null inputs", summary);
     }
@@ -122,9 +122,35 @@ class AiSummaryServiceTest {
         when(requestSpec.call()).thenReturn(callResponseSpec);
         when(callResponseSpec.content()).thenReturn("  Summary with spaces  \n");
 
-        String summary = aiSummaryService.generateSummary("Ticket", "Desc", "User comment");
+        String summary = aiSummaryService.generateSummary("Ticket", "Desc", "User comment", null);
 
         assertEquals("Summary with spaces", summary);
+    }
+
+    @Test
+    void testGenerateSummary_PhaseAgeSubstitutedIntoSystemPrompt() {
+        when(chatClient.prompt()).thenReturn(requestSpec);
+        when(requestSpec.system(anyString())).thenReturn(requestSpec);
+        when(requestSpec.user(anyString())).thenReturn(requestSpec);
+        when(requestSpec.call()).thenReturn(callResponseSpec);
+        when(callResponseSpec.content()).thenReturn("Summary");
+
+        aiSummaryService.generateSummary("Ticket", "Desc", "User comment", 7);
+
+        verify(requestSpec).system(contains("7 days"));
+    }
+
+    @Test
+    void testGenerateSummary_NullPhaseAgeRendersAsUnknown() {
+        when(chatClient.prompt()).thenReturn(requestSpec);
+        when(requestSpec.system(anyString())).thenReturn(requestSpec);
+        when(requestSpec.user(anyString())).thenReturn(requestSpec);
+        when(requestSpec.call()).thenReturn(callResponseSpec);
+        when(callResponseSpec.content()).thenReturn("Summary");
+
+        aiSummaryService.generateSummary("Ticket", "Desc", "User comment", null);
+
+        verify(requestSpec).system(contains("unknown days"));
     }
 
     @Test
@@ -189,7 +215,7 @@ class AiSummaryServiceTest {
         when(requestSpec.call()).thenReturn(callResponseSpec);
         when(callResponseSpec.content()).thenReturn("Works");
 
-        String result = service.generateSummary("Test", "Desc", "Some comment");
+        String result = service.generateSummary("Test", "Desc", "Some comment", null);
         assertEquals("Works", result);
     }
 }

@@ -117,8 +117,10 @@ public class NotificationService {
                 String name = extractFieldValue("name", entity.getValue("name"));
                 String description = extractFieldValue("description", entity.getValue("description"));
                 String ticketId = extractFieldValue("id", entity.getValue("id"));
+                String phaseAgeStr = extractFieldValue("phase_age", entity.getValue("phase_age"));
+                Integer phaseAge = parsePhaseAge(phaseAgeStr);
                 String comments = aiSummaryService.fetchComments(ticketId, workspace);
-                aiSummaries[i] = aiSummaryService.generateSummary(name, description, comments);
+                aiSummaries[i] = aiSummaryService.generateSummary(name, description, comments, phaseAge);
             }
         }
 
@@ -500,6 +502,21 @@ public class NotificationService {
             return fieldExtractorRegistry.forField(fieldName).extract(fm);
         }
         return fm.getValue().toString();
+    }
+
+    /**
+     * Parses the display string produced by {@link #extractFieldValue} for the
+     * {@code phase_age} field into an Integer, tolerating blank/unparseable values.
+     */
+    private Integer parsePhaseAge(String phaseAgeStr) {
+        if (phaseAgeStr == null || phaseAgeStr.isBlank()) {
+            return null;
+        }
+        try {
+            return (int) Double.parseDouble(phaseAgeStr.trim());
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
     /**
