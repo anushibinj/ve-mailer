@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { Plus, Trash2, Loader2, Shield } from 'lucide-react';
 import toast from 'react-hot-toast';
 import type { WorkspaceAdminEntry, UserSummary } from '../../services/apiService';
-import { fetchWorkspaceAdmins, assignWorkspaceAdmin, removeWorkspaceAdmin, adminGetUsers } from '../../services/apiService';
+import { fetchWorkspaceAdmins, assignWorkspaceAdmin, removeWorkspaceAdmin, fetchWorkspaceUsers } from '../../services/apiService';
+import { useAuth } from '../../hooks/useAuth';
 
 interface WorkspaceAdminManagerProps {
   workspaceId: string;
@@ -10,6 +11,7 @@ interface WorkspaceAdminManagerProps {
 }
 
 const WorkspaceAdminManager: React.FC<WorkspaceAdminManagerProps> = ({ workspaceId, workspaceTitle }) => {
+  const { isAdmin } = useAuth();
   const [admins, setAdmins] = useState<WorkspaceAdminEntry[]>([]);
   const [users, setUsers] = useState<UserSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -24,7 +26,7 @@ const WorkspaceAdminManager: React.FC<WorkspaceAdminManagerProps> = ({ workspace
       try {
         const [adminsData, usersData] = await Promise.all([
           fetchWorkspaceAdmins(workspaceId),
-          adminGetUsers(),
+          fetchWorkspaceUsers(workspaceId),
         ]);
         if (!cancelled) {
           setAdmins(adminsData);
@@ -69,10 +71,14 @@ const WorkspaceAdminManager: React.FC<WorkspaceAdminManagerProps> = ({ workspace
     }
   };
 
-  // Users who are not already admins of this workspace (exclude global ADMINs too)
-  const availableUsers = users.filter(
-    u => !admins.some(a => a.userId === u.id) && !u.roles.includes('ADMIN')
-  );
+  // Users who are not already admins of this workspace (exclude global ADMINs too).
+  // WORKSPACE_ADMIN actors may only pick users who already carry the WORKSPACE_ADMIN role —
+  // only a global ADMIN can promote a plain USER/MEMBER into an admin.
+  const availableUsers = users.filter(u => {
+    if (admins.some(a => a.userId === u.id) || u.roles.includes('ADMIN')) return false;
+    if (!isAdmin && !u.roles.includes('WORKSPACE_ADMIN')) return false;
+    return true;
+  });
 
   if (isLoading) {
     return (
@@ -92,6 +98,11 @@ const WorkspaceAdminManager: React.FC<WorkspaceAdminManagerProps> = ({ workspace
       </div>
 
       {/* Assign form */}
+      {!isAdmin && (
+        <p className="text-xs text-gray-500 mb-2">
+          As a workspace admin, you can only assign other users who already have the WORKSPACE_ADMIN role.
+        </p>
+      )}
       <div className="flex items-center gap-2 mb-4">
         <select
           value={selectedUserId}

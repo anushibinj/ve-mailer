@@ -282,31 +282,47 @@ public class WorkspaceController {
         }
     }
 
-    // --- Workspace Admin management (ADMIN only) ---
+    // --- Workspace Admin management (global ADMIN, or WORKSPACE_ADMIN for their own workspace) ---
 
     @GetMapping("/{workspaceId}/admins")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'WORKSPACE_ADMIN')")
     public ResponseEntity<List<WorkspaceAdminResponseDto>> getWorkspaceAdmins(
-            @PathVariable UUID workspaceId) {
+            @PathVariable UUID workspaceId, Authentication authentication) {
+        if (!workspaceAdminService.canManageWorkspace(authentication, workspaceId)) {
+            throw new AccessDeniedException("You are not authorized to manage admins for this workspace");
+        }
         return ResponseEntity.ok(workspaceAdminService.getWorkspaceAdmins(workspaceId));
     }
 
+    /**
+     * Assigns a workspace admin. Global ADMINs may promote any user; WORKSPACE_ADMINs may only
+     * add other users who already hold the WORKSPACE_ADMIN role (see WorkspaceAdminService).
+     */
     @PostMapping("/{workspaceId}/admins")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'WORKSPACE_ADMIN')")
     public ResponseEntity<WorkspaceAdminResponseDto> assignWorkspaceAdmin(
             @PathVariable UUID workspaceId,
             @RequestBody @Valid WorkspaceAdminAssignRequestDto request,
-            @AuthenticationPrincipal UserDetails userDetails) {
+            @AuthenticationPrincipal UserDetails userDetails,
+            Authentication authentication) {
+        if (!workspaceAdminService.canManageWorkspace(authentication, workspaceId)) {
+            throw new AccessDeniedException("You are not authorized to manage admins for this workspace");
+        }
+        boolean isGlobalAdmin = workspaceAdminService.isGlobalAdmin(authentication);
         WorkspaceAdminResponseDto result = workspaceAdminService.assignWorkspaceAdmin(
-                workspaceId, request, userDetails.getUsername());
+                workspaceId, request, userDetails.getUsername(), isGlobalAdmin);
         return ResponseEntity.status(HttpStatus.CREATED).body(result);
     }
 
     @DeleteMapping("/{workspaceId}/admins/{userId}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'WORKSPACE_ADMIN')")
     public ResponseEntity<Void> removeWorkspaceAdmin(
             @PathVariable UUID workspaceId,
-            @PathVariable UUID userId) {
+            @PathVariable UUID userId,
+            Authentication authentication) {
+        if (!workspaceAdminService.canManageWorkspace(authentication, workspaceId)) {
+            throw new AccessDeniedException("You are not authorized to manage admins for this workspace");
+        }
         workspaceAdminService.removeWorkspaceAdmin(workspaceId, userId);
         return ResponseEntity.noContent().build();
     }

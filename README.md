@@ -249,7 +249,7 @@ ve-mailer/
     │   │       ├── NotificationPreferencesPage.tsx # SMTP config form
     │   │       ├── RecipientGroupsPage.tsx        # Recipient group management with workspace selector
     │   │       ├── UsersPage.tsx                  # All registered users with sortable columns + role badges
-    │   │       ├── WorkspaceAdminManager.tsx      # Assign/remove workspace admins per workspace
+    │   │       ├── WorkspaceAdminManager.tsx      # Assign/remove workspace admins per workspace (available to ADMIN and WORKSPACE_ADMIN)
     │   │       └── WorkspaceManagementPage.tsx    # Workspace CRUD
     │   ├── services/
     │   │   ├── apiService.ts         # All backend API calls (workspaces, filters, subscriptions)
@@ -448,6 +448,9 @@ All workspace endpoints require authentication. `POST` and `DELETE` require `ADM
 | `PUT`    | `/workspaces/{id}`        | ADMIN / WORKSPACE_ADMIN | Update a workspace (`WORKSPACE_ADMIN` can update connection fields + workspace shortcode; cannot change title/status) |
 | `DELETE` | `/workspaces/{id}`        | ADMIN         | Delete a workspace                                                 |
 | `POST`   | `/workspaces/test-connection` | ADMIN / WORKSPACE_ADMIN | Validate workspace connectivity via Octane SDK by reading `stories` with `limit=1`; returns success-with-warning when connection works but no data is returned |
+| `GET`    | `/workspaces/{id}/admins` | ADMIN / WORKSPACE_ADMIN | List workspace admins for a workspace (`WORKSPACE_ADMIN` restricted to workspaces they administer) |
+| `POST`   | `/workspaces/{id}/admins` | ADMIN / WORKSPACE_ADMIN | Assign a user as workspace admin. Global `ADMIN` may promote any user (auto-grants the `WORKSPACE_ADMIN` role). A `WORKSPACE_ADMIN` may only add other users who **already** hold the `WORKSPACE_ADMIN` role — plain `MEMBER`/`USER` accounts cannot be elevated this way |
+| `DELETE` | `/workspaces/{id}/admins/{userId}` | ADMIN / WORKSPACE_ADMIN | Remove a workspace admin (`WORKSPACE_ADMIN` restricted to workspaces they administer). Multiple workspace admins per workspace are supported |
 
 **Workspace Status Lifecycle:**
 

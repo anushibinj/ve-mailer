@@ -16,7 +16,8 @@ const WorkspaceFormModal = lazy(() => import('../../components/WorkspaceFormModa
 const WorkspaceAdminManager = lazy(() => import('./WorkspaceAdminManager'));
 
 const WorkspaceManagementPage: React.FC = () => {
-  const { isAdmin } = useAuth();
+  const { isAdmin, isWorkspaceAdmin } = useAuth();
+  const canManageAdmins = isAdmin || isWorkspaceAdmin;
   const [workspaces, setWorkspaces] = useState<WorkspaceAdmin[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -29,7 +30,7 @@ const WorkspaceManagementPage: React.FC = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [testingWorkspaceId, setTestingWorkspaceId] = useState<string | null>(null);
 
-  // Workspace admin management (ADMIN only)
+  // Workspace admin management (global ADMIN, or WORKSPACE_ADMIN for their own workspaces)
   const [adminManageTarget, setAdminManageTarget] = useState<WorkspaceAdmin | null>(null);
 
   const loadWorkspaces = useCallback(async () => {
@@ -273,23 +274,23 @@ const WorkspaceManagementPage: React.FC = () => {
                           )}
                           Test connection
                         </button>
+                        {canManageAdmins && (
+                          <button
+                            onClick={() => setAdminManageTarget(adminManageTarget?.id === ws.id ? null : ws)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-violet-200 rounded-md text-xs font-medium text-violet-600 bg-white dark:bg-gray-700 hover:bg-violet-50 dark:hover:bg-gray-600 hover:border-violet-400 transition-colors"
+                          >
+                            <Shield className="h-3.5 w-3.5" />
+                            Admins
+                          </button>
+                        )}
                         {isAdmin && (
-                          <>
-                            <button
-                              onClick={() => setAdminManageTarget(adminManageTarget?.id === ws.id ? null : ws)}
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-violet-200 rounded-md text-xs font-medium text-violet-600 bg-white dark:bg-gray-700 hover:bg-violet-50 dark:hover:bg-gray-600 hover:border-violet-400 transition-colors"
-                            >
-                              <Shield className="h-3.5 w-3.5" />
-                              Admins
-                            </button>
-                            <button
-                              onClick={() => setDeleteTarget(ws)}
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-red-200 rounded-md text-xs font-medium text-red-600 bg-white dark:bg-gray-700 hover:bg-red-50 dark:hover:bg-gray-600 hover:border-red-400 transition-colors"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                              Delete
-                            </button>
-                          </>
+                          <button
+                            onClick={() => setDeleteTarget(ws)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-red-200 rounded-md text-xs font-medium text-red-600 bg-white dark:bg-gray-700 hover:bg-red-50 dark:hover:bg-gray-600 hover:border-red-400 transition-colors"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                            Delete
+                          </button>
                         )}
                       </div>
                     </td>
@@ -314,8 +315,8 @@ const WorkspaceManagementPage: React.FC = () => {
         />
       </Suspense>
 
-      {/* Workspace Admin Manager (shown below table when ADMIN clicks "Admins") */}
-      {isAdmin && adminManageTarget && (
+      {/* Workspace Admin Manager (shown below table when an admin clicks "Admins") */}
+      {canManageAdmins && adminManageTarget && (
         <Suspense fallback={<LoadingPlaceholder message="Loading workspace admins..." />}>
           <WorkspaceAdminManager
             workspaceId={adminManageTarget.id}

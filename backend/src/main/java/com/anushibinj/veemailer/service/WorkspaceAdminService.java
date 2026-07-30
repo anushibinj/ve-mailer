@@ -94,8 +94,15 @@ public class WorkspaceAdminService {
 
     // ── Workspace admin CRUD ──────────────────────────────────────────────────
 
+    /**
+     * Assigns a workspace admin. Global ADMINs may promote any user (auto-granting the
+     * WORKSPACE_ADMIN role if the user doesn't already have it). WORKSPACE_ADMINs acting on
+     * their own workspace may only add other users who already hold the WORKSPACE_ADMIN role —
+     * they cannot elevate a plain USER/MEMBER into an admin themselves.
+     */
     @Transactional
-    public WorkspaceAdminResponseDto assignWorkspaceAdmin(UUID workspaceId, WorkspaceAdminAssignRequestDto request, String assignedBy) {
+    public WorkspaceAdminResponseDto assignWorkspaceAdmin(UUID workspaceId, WorkspaceAdminAssignRequestDto request,
+                                                           String assignedBy, boolean actingAsGlobalAdmin) {
         Workspace workspace = workspaceRepository.findById(workspaceId)
                 .orElseThrow(() -> new IllegalArgumentException("Workspace not found: " + workspaceId));
         AppUser user = appUserRepository.findById(request.getUserId())
@@ -105,10 +112,17 @@ public class WorkspaceAdminService {
             throw new IllegalArgumentException("User is already a workspace admin for this workspace");
         }
 
-        // Ensure the user has the WORKSPACE_ADMIN role
         boolean hasRole = user.getRoles().stream()
                 .anyMatch(r -> "WORKSPACE_ADMIN".equals(r.getRoleName()));
         if (!hasRole) {
+            if (!actingAsGlobalAdmin) {
+                // Workspace admins may only add other users who already carry the WORKSPACE_ADMIN
+                // role; plain USER/MEMBER accounts must first be promoted by a global ADMIN.
+                throw new IllegalArgumentException(
+                        "Only users who already have the WORKSPACE_ADMIN role can be assigned as workspace admins. "
+                                + "Ask a super admin to grant this user the WORKSPACE_ADMIN role first.");
+            }
+            // Global ADMIN: grant the WORKSPACE_ADMIN role to the user being promoted.
             Role workspaceAdminRole = roleRepository.findByRoleName("WORKSPACE_ADMIN")
                     .orElseThrow(() -> new IllegalStateException("WORKSPACE_ADMIN role not found in database"));
             user.getRoles().add(workspaceAdminRole);
