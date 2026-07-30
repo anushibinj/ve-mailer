@@ -42,6 +42,19 @@ public class UserQueryService {
                 .collect(Collectors.toList());
     }
 
+    /** Returns a single user's summary (used after a mutation like a global role change). */
+    public UserSummaryDto getUserSummary(java.util.UUID userId) {
+        AppUser user = appUserRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
+        long subscribedFilterCount = emailSubscriberRepository.countActiveSubscriptionsGroupedByEmail()
+                .stream()
+                .filter(row -> user.getEmail().equals(row[0]))
+                .map(row -> (Long) row[1])
+                .findFirst()
+                .orElse(0L);
+        return toDto(user, subscribedFilterCount);
+    }
+
     private UserSummaryDto toDto(AppUser user, long subscribedFilterCount) {
         List<String> roleNames = user.getRoles()
                 .stream()

@@ -2,6 +2,7 @@ package com.anushibinj.veemailer.controller;
 
 import com.anushibinj.veemailer.dto.AdminOnboardUserRequestDto;
 import com.anushibinj.veemailer.dto.ApiResponseWrapper;
+import com.anushibinj.veemailer.dto.UserGlobalRoleUpdateRequestDto;
 import com.anushibinj.veemailer.dto.UserSummaryDto;
 import com.anushibinj.veemailer.service.AuthService;
 import com.anushibinj.veemailer.service.UserQueryService;
@@ -13,6 +14,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -82,5 +84,23 @@ public class UserManagementController {
     @GetMapping("/non-app-users")
     public ResponseEntity<List<String>> getNonAppUsers() {
         return ResponseEntity.ok(userQueryService.getNonAppUserEmails());
+    }
+
+    /**
+     * Promotes or demotes a user's global role between MEMBER (plain user) and WORKSPACE_ADMIN.
+     * Demotion does not remove any existing workspace admin assignments — it only revokes the
+     * global WORKSPACE_ADMIN role, which is required (in addition to the workspace-level mapping)
+     * for any workspace administration action. See {@code AuthService#updateGlobalRole}.
+     */
+    @PatchMapping("/{userId}/role")
+    public ResponseEntity<UserSummaryDto> updateGlobalRole(
+            @PathVariable java.util.UUID userId,
+            @Valid @RequestBody UserGlobalRoleUpdateRequestDto request) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || authentication.getName() == null) {
+            throw new IllegalArgumentException("Authentication is required.");
+        }
+        UserSummaryDto updated = authService.updateGlobalRole(authentication.getName(), userId, request.getRole());
+        return ResponseEntity.ok(updated);
     }
 }

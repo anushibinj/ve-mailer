@@ -40,6 +40,7 @@ public class AuthService {
     private final InviteMagicLinkRepository inviteMagicLinkRepository;
     private final NotificationPreferencesService notificationPreferencesService;
     private final EmailService emailService;
+    private final UserQueryService userQueryService;
 
     @Value("${app.auth.allowed-domains}")
     private String allowedDomains;
@@ -374,6 +375,53 @@ public class AuthService {
         appUserRepository.delete(user);
 
         return "User " + user.getEmail() + " deleted successfully.";
+    }
+
+    /**
+     * Promotes or demotes a user's global role between MEMBER (plain user) and WORKSPACE_ADMIN.
+     * <p>
+     * Demoting a WORKSPACE_ADMIN to MEMBER intentionally does NOT touch any
+     * {@code WorkspaceAdminMapping} rows — existing workspace-level admin assignments are
+     * preserved untouched in the database. Authorization checks (see
+     * {@link WorkspaceAdminService#canManageWorkspace}) require both the global WORKSPACE_ADMIN
+     * role AND a workspace-level mapping, so a demoted user immediately loses admin access even
+     * though their workspace mappings still exist. Re-promoting the user instantly restores their
+     * prior workspace admin access with no migration needed.
+     */
+    @Transactional
+    public UserSummaryDto updateGlobalRole(String currentSuperAdminEmail, java.util.UUID userId, String targetRoleName) {
+        if (!"MEMBER".equals(targetRoleName) && !"WORKSPACE_ADMIN".equals(targetRoleName)) {
+            throw new IllegalArgumentException("Role must be either MEMBER or WORKSPACE_ADMIN.");
+        }
+
+        AppUser user = appUserRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found."));
+
+        String currentEmail = normalizeEmail(currentSuperAdminEmail);
+        if (currentEmail != null && currentEmail.equalsIgnoreCase(user.getEmail())) {
+            throw new IllegalArgumentException("You cannot change your own role.");
+        }
+        if (user.getRoles().stream().anyMatch(r -> "ADMIN".equals(r.getRoleName()))) {
+            throw new IllegalArgumentException("Cannot change the role of a super admin account.");
+        }
+
+        boolean isCurrentlyWorkspaceAdmin = user.getRoles().stream()
+                .anyMatch(r -> "WORKSPACE_ADMIN".equals(r.getRoleName()));
+        boolean promoteToWorkspaceAdmin = "WORKSPACE_ADMIN".equals(targetRoleName);
+
+        if (promoteToWorkspaceAdmin && !isCurrentlyWorkspaceAdmin) {
+            Role workspaceAdminRole = roleRepository.findByRoleName("WORKSPACE_ADMIN")
+                    .orElseThrow(() -> new IllegalStateException("WORKSPACE_ADMIN role not found in database"));
+            user.getRoles().add(workspaceAdminRole);
+            appUserRepository.save(user);
+        } else if (!promoteToWorkspaceAdmin && isCurrentlyWorkspaceAdmin) {
+            // Demote: strip only the WORKSPACE_ADMIN role. Existing workspace admin mapping
+            // rows are deliberately left untouched — see method javadoc above.
+            user.getRoles().removeIf(r -> "WORKSPACE_ADMIN".equals(r.getRoleName()));
+            appUserRepository.save(user);
+        }
+
+        return userQueryService.getUserSummary(user.getId());
     }
 
     public AuthResponseDto.UserProfileDto getCurrentUser(String email) {

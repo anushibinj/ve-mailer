@@ -1,9 +1,9 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
-import { Loader2, Search, ChevronUp, ChevronDown, ChevronsUpDown, Users, UserPlus, X, AlertCircle, Trash2, RotateCcw, AlertTriangle, ArrowLeft, Mail } from 'lucide-react';
+import { Loader2, Search, ChevronUp, ChevronDown, ChevronsUpDown, Users, UserPlus, X, AlertCircle, Trash2, RotateCcw, AlertTriangle, ArrowLeft, Mail, ShieldCheck, ShieldOff } from 'lucide-react';
 import toast from 'react-hot-toast';
 import type { ApiErrorResponse } from '../../types/auth';
 import type { UserSummary } from '../../services/apiService';
-import { adminDeleteUser, adminGetNonAppUsers, adminGetUsers, adminOnboardUser, adminResendInvite } from '../../services/apiService';
+import { adminDeleteUser, adminGetNonAppUsers, adminGetUsers, adminOnboardUser, adminResendInvite, adminUpdateUserGlobalRole } from '../../services/apiService';
 import ConfirmDialog from '../../components/ConfirmDialog';
 import { useAuth } from '../../hooks/useAuth';
 
@@ -54,6 +54,7 @@ export default function UsersPage() {
   const [userToDelete, setUserToDelete] = useState<UserSummary | null>(null);
   const [isDeletingUser, setIsDeletingUser] = useState(false);
   const [resendingInviteUserId, setResendingInviteUserId] = useState<string | null>(null);
+  const [changingRoleUserId, setChangingRoleUserId] = useState<string | null>(null);
 
   const loadNonAppUsers = useCallback(async () => {
     setNonAppUsersLoading(true);
@@ -162,6 +163,31 @@ export default function UsersPage() {
       toast.error(axiosError.response?.data?.message || 'Failed to resend invite.');
     } finally {
       setResendingInviteUserId(null);
+    }
+  };
+
+  /**
+   * Promotes a plain USER/MEMBER to WORKSPACE_ADMIN, or demotes a WORKSPACE_ADMIN back to
+   * MEMBER. Demotion does not touch existing workspace admin assignments in the backend —
+   * it only revokes the global role required for workspace administration actions.
+   */
+  const handleToggleWorkspaceAdminRole = async (user: UserSummary) => {
+    const isCurrentlyWorkspaceAdmin = user.roles.some(r => formatRole(r) === 'WORKSPACE_ADMIN');
+    const targetRole = isCurrentlyWorkspaceAdmin ? 'MEMBER' : 'WORKSPACE_ADMIN';
+    setChangingRoleUserId(user.id);
+    try {
+      const updated = await adminUpdateUserGlobalRole(user.id, targetRole);
+      setUsers(prev => prev.map(u => (u.id === updated.id ? updated : u)));
+      toast.success(
+        targetRole === 'WORKSPACE_ADMIN'
+          ? `${user.name || user.email} promoted to Workspace Admin.`
+          : `${user.name || user.email} demoted to User.`
+      );
+    } catch (err: unknown) {
+      const axiosError = err as { response?: { data?: ApiErrorResponse } };
+      toast.error(axiosError.response?.data?.message || 'Failed to change user role.');
+    } finally {
+      setChangingRoleUserId(null);
     }
   };
 
@@ -449,10 +475,36 @@ export default function UsersPage() {
                               Resend Invite
                             </button>
                           )}
+                          {!user.roles.some(r => formatRole(r) === 'ADMIN') && user.email !== currentUser?.email && (
+                            <button
+                              type="button"
+                              onClick={() => handleToggleWorkspaceAdminRole(user)}
+                              disabled={changingRoleUserId === user.id || isDeletingUser}
+                              className={
+                                user.roles.some(r => formatRole(r) === 'WORKSPACE_ADMIN')
+                                  ? 'inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-amber-200 text-amber-600 hover:bg-amber-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
+                                  : 'inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-violet-200 text-violet-600 hover:bg-violet-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
+                              }
+                              title={
+                                user.roles.some(r => formatRole(r) === 'WORKSPACE_ADMIN')
+                                  ? `Demote ${user.email} to User`
+                                  : `Promote ${user.email} to Workspace Admin`
+                              }
+                            >
+                              {changingRoleUserId === user.id ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : user.roles.some(r => formatRole(r) === 'WORKSPACE_ADMIN') ? (
+                                <ShieldOff className="h-3.5 w-3.5" />
+                              ) : (
+                                <ShieldCheck className="h-3.5 w-3.5" />
+                              )}
+                              {user.roles.some(r => formatRole(r) === 'WORKSPACE_ADMIN') ? 'Demote' : 'Make Workspace Admin'}
+                            </button>
+                          )}
                           <button
                             type="button"
                             onClick={() => setUserToDelete(user)}
-                            disabled={isDeletingUser || user.email === currentUser?.email || !!resendingInviteUserId}
+                            disabled={isDeletingUser || user.email === currentUser?.email || !!resendingInviteUserId || !!changingRoleUserId}
                             className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-rose-200 text-rose-600 hover:bg-rose-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                             title={user.email === currentUser?.email ? 'You cannot delete your own account' : `Delete ${user.email}`}
                           >

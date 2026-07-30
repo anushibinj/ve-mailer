@@ -657,7 +657,8 @@ All mail analytics endpoints require the `ADMIN` role. They provide aggregated s
 
 ### Admin — User Management (`/api/admin/users`)
 
-Superadmins can list all users, onboard users, resend pending invites, and delete accounts.
+Superadmins can list all users, onboard users, resend pending invites, delete accounts, and
+promote/demote a user's global role between `MEMBER` (plain user) and `WORKSPACE_ADMIN`.
 
 | Method | Path              | Role required | Description                                                        |
 |--------|-------------------|:-------------:|--------------------------------------------------------------------|
@@ -665,6 +666,15 @@ Superadmins can list all users, onboard users, resend pending invites, and delet
 | `POST` | `/admin/users`    | ADMIN         | Onboard a new user (creates account + sends invite magic link to email) |
 | `POST` | `/admin/users/{userId}/resend-invite` | ADMIN | Resend a magic-link invite for a user who has not completed onboarding |
 | `DELETE` | `/admin/users/{userId}` | ADMIN   | Permanently delete a user account (self-delete is blocked)         |
+| `PATCH` | `/admin/users/{userId}/role` | ADMIN | Promote/demote a user's global role (`{ "role": "WORKSPACE_ADMIN" }` or `{ "role": "MEMBER" }`); self and other super admins cannot be changed |
+
+**Promote/demote semantics:** Demoting a `WORKSPACE_ADMIN` to `MEMBER` only revokes the global
+`WORKSPACE_ADMIN` role — it deliberately does **not** delete any `WorkspaceAdminMapping` rows, so
+existing per-workspace admin assignments are preserved untouched. All workspace administration
+checks (`WorkspaceAdminService.canManageWorkspace`) require **both** the global `WORKSPACE_ADMIN`
+role **and** a workspace-level mapping, so a demoted user immediately loses admin access even
+though their workspace mappings still exist in the DB. Re-promoting the user instantly restores
+their prior workspace admin access with no migration needed.
 
 **Onboard user request body:** `{ "name": "Jane Smith", "email": "jane@company.com" }`
 

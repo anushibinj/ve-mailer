@@ -647,6 +647,20 @@ export const adminGetNonAppUsers = async (): Promise<string[]> => {
   return response.data;
 };
 
+/**
+ * Promotes or demotes a user's global role between MEMBER (plain user) and WORKSPACE_ADMIN.
+ * Super-admin only. Demotion does not remove existing workspace admin assignments — it only
+ * revokes the global WORKSPACE_ADMIN role required (alongside the workspace-level mapping) for
+ * any workspace administration action.
+ */
+export const adminUpdateUserGlobalRole = async (
+  userId: string,
+  role: 'MEMBER' | 'WORKSPACE_ADMIN'
+): Promise<UserSummary> => {
+  const response = await api.patch(`/api/admin/users/${userId}/role`, { role });
+  return response.data;
+};
+
 export const fetchAllowedDomains = async (): Promise<string[]> => {
   const response = await api.get('/api/auth/allowed-domains');
   return response.data;

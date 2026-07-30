@@ -73,10 +73,15 @@ class AuthServiceTest {
     @Mock
     private EmailService emailService;
 
+    @Mock
+    private UserQueryService userQueryService;
+
     @InjectMocks
     private AuthService authService;
 
     private Role memberRole;
+    private Role workspaceAdminRole;
+    private Role globalAdminRole;
     private AppUser testUser;
 
     @BeforeEach
@@ -84,6 +89,8 @@ class AuthServiceTest {
         ReflectionTestUtils.setField(authService, "allowedDomains", "company.com,int-company.com");
 
         memberRole = Role.builder().id(UUID.randomUUID()).roleName("MEMBER").build();
+        workspaceAdminRole = Role.builder().id(UUID.randomUUID()).roleName("WORKSPACE_ADMIN").build();
+        globalAdminRole = Role.builder().id(UUID.randomUUID()).roleName("ADMIN").build();
         testUser = AppUser.builder()
                 .id(UUID.randomUUID())
                 .name("Test User")
@@ -513,5 +520,106 @@ class AuthServiceTest {
                 IllegalArgumentException.class,
                 () -> authService.deleteUserBySuperAdmin("admin@company.com", target.getId()));
         assertTrue(ex.getMessage().contains("cannot delete your own"));
+    }
+
+    @Test
+    void updateGlobalRole_PromotesMemberToWorkspaceAdmin() {
+        AppUser target = AppUser.builder()
+                .id(UUID.randomUUID())
+                .name("Plain User")
+                .email("plain.user@company.com")
+                .passwordHash("hash")
+                .enabled(true)
+                .roles(new java.util.HashSet<>(Set.of(memberRole)))
+                .build();
+        UserSummaryDto expectedSummary = UserSummaryDto.builder().id(target.getId()).build();
+
+        when(appUserRepository.findById(target.getId())).thenReturn(Optional.of(target));
+        when(roleRepository.findByRoleName("WORKSPACE_ADMIN")).thenReturn(Optional.of(workspaceAdminRole));
+        when(userQueryService.getUserSummary(target.getId())).thenReturn(expectedSummary);
+
+        UserSummaryDto result = authService.updateGlobalRole("admin@company.com", target.getId(), "WORKSPACE_ADMIN");
+
+        assertEquals(expectedSummary, result);
+        assertTrue(target.getRoles().contains(workspaceAdminRole));
+        verify(appUserRepository).save(target);
+    }
+
+    @Test
+    void updateGlobalRole_DemotesWorkspaceAdminToMember_WithoutTouchingWorkspaceMappings() {
+        AppUser target = AppUser.builder()
+                .id(UUID.randomUUID())
+                .name("Workspace Admin")
+                .email("ws.admin@company.com")
+                .passwordHash("hash")
+                .enabled(true)
+                .roles(new java.util.HashSet<>(Set.of(memberRole, workspaceAdminRole)))
+                .build();
+        UserSummaryDto expectedSummary = UserSummaryDto.builder().id(target.getId()).build();
+
+        when(appUserRepository.findById(target.getId())).thenReturn(Optional.of(target));
+        when(userQueryService.getUserSummary(target.getId())).thenReturn(expectedSummary);
+
+        UserSummaryDto result = authService.updateGlobalRole("admin@company.com", target.getId(), "MEMBER");
+
+        assertEquals(expectedSummary, result);
+        assertFalse(target.getRoles().contains(workspaceAdminRole));
+        assertTrue(target.getRoles().contains(memberRole));
+        verify(appUserRepository).save(target);
+        // Demotion must never touch workspace-level admin mapping rows.
+        verifyNoInteractions(workspaceAdminRepository);
+    }
+
+    @Test
+    void updateGlobalRole_RejectsSelfChange() {
+        AppUser target = AppUser.builder()
+                .id(UUID.randomUUID())
+                .name("Admin")
+                .email("admin@company.com")
+                .passwordHash("hash")
+                .enabled(true)
+                .roles(new java.util.HashSet<>(Set.of(memberRole)))
+                .build();
+        when(appUserRepository.findById(target.getId())).thenReturn(Optional.of(target));
+
+        IllegalArgumentException ex = assertThrows(
+                IllegalArgumentException.class,
+                () -> authService.updateGlobalRole("admin@company.com", target.getId(), "WORKSPACE_ADMIN"));
+        assertTrue(ex.getMessage().contains("cannot change your own role"));
+    }
+
+    @Test
+    void updateGlobalRole_RejectsChangingSuperAdminAccount() {
+        AppUser target = AppUser.builder()
+                .id(UUID.randomUUID())
+                .name("Other Super Admin")
+                .email("other.admin@company.com")
+                .passwordHash("hash")
+                .enabled(true)
+                .roles(new java.util.HashSet<>(Set.of(globalAdminRole)))
+                .build();
+        when(appUserRepository.findById(target.getId())).thenReturn(Optional.of(target));
+
+        IllegalArgumentException ex = assertThrows(
+                IllegalArgumentException.class,
+                () -> authService.updateGlobalRole("admin@company.com", target.getId(), "MEMBER"));
+        assertTrue(ex.getMessage().contains("super admin"));
+    }
+
+    @Test
+    void updateGlobalRole_RejectsInvalidRole() {
+        AppUser target = AppUser.builder()
+                .id(UUID.randomUUID())
+                .name("Plain User")
+                .email("plain.user@company.com")
+                .passwordHash("hash")
+                .enabled(true)
+                .roles(new java.util.HashSet<>(Set.of(memberRole)))
+                .build();
+
+        IllegalArgumentException ex = assertThrows(
+                IllegalArgumentException.class,
+                () -> authService.updateGlobalRole("admin@company.com", target.getId(), "ADMIN"));
+        assertTrue(ex.getMessage().contains("MEMBER or WORKSPACE_ADMIN"));
     }
 }
