@@ -26,6 +26,8 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -36,6 +38,31 @@ public class NotificationService {
 
     /** Fields that are rendered as clickable hyperlinks to the ValueEdge ticket page. */
     static final Set<String> HYPERLINK_FIELDS = Set.of("id", "global_id_udf");
+    private static final Map<String, String> PHASE_CATEGORY_BY_KEY = Map.ofEntries(
+            // To Do
+            Map.entry("new", "todo"),
+            Map.entry("ready", "todo"),
+            Map.entry("planned", "todo"),
+            // In Progress
+            Map.entry("in progress", "in_progress"),
+            Map.entry("code review", "in_progress"),
+            Map.entry("in testing", "in_progress"),
+            Map.entry("pending support", "in_progress"),
+            Map.entry("awaiting decision", "in_progress"),
+            // Done
+            Map.entry("implemented", "done"),
+            Map.entry("fixed", "done"),
+            Map.entry("tested", "done"),
+            Map.entry("done", "done"),
+            Map.entry("completed", "done"),
+            // Cancelled
+            Map.entry("cancelled", "cancelled"),
+            Map.entry("deferred", "cancelled"),
+            // Rejected
+            Map.entry("proposed rejected", "rejected"),
+            Map.entry("rejected", "rejected"),
+            Map.entry("duplicate", "rejected")
+    );
 
     /**
      * Carries the ValueEdge connection details needed to generate ticket hyperlinks.
@@ -381,7 +408,9 @@ public class NotificationService {
                         String cellValue = TriageSlaPolicy.TRIAGE_SLA_FIELD.equals(field)
                                 ? TriageSlaPolicy.toDisplayLabel(entity)
                                 : extractFieldValue(field, entity.getValue(field));
-                        if (linkContext != null && HYPERLINK_FIELDS.contains(field)) {
+                        if ("phase".equals(field)) {
+                            sb.append(buildPhaseBadgeHtml(cellValue));
+                        } else if (linkContext != null && HYPERLINK_FIELDS.contains(field)) {
                             // Hyperlink-eligible field: render as anchor to the VE ticket page.
                             String ticketId = extractFieldValue("id", entity.getValue("id"));
                             sb.append(buildTicketLink(linkContext, ticketId, cellValue));
@@ -513,6 +542,36 @@ public class NotificationService {
     String sanitizeAiHtml(String html) {
         if (html == null || html.isEmpty()) return "";
         return Jsoup.clean(html, Safelist.basic());
+    }
+
+    private String buildPhaseBadgeHtml(String phase) {
+        String text = phase == null ? "" : phase.strip();
+        if (text.isEmpty()) {
+            return "";
+        }
+
+        String category = PHASE_CATEGORY_BY_KEY.get(normalizePhaseKey(text));
+        String palette = switch (category == null ? "unknown" : category) {
+            case "todo" -> "background-color:#e0f2fe;color:#075985;border:1px solid #bae6fd;";
+            case "in_progress" -> "background-color:#ffedd5;color:#9a3412;border:1px solid #fed7aa;";
+            case "done" -> "background-color:#dcfce7;color:#166534;border:1px solid #bbf7d0;";
+            case "cancelled" -> "background-color:#f1f5f9;color:#334155;border:1px solid #cbd5e1;";
+            case "rejected" -> "background-color:#ffe4e6;color:#9f1239;border:1px solid #fecdd3;";
+            default -> "background-color:#f1f5f9;color:#334155;border:1px solid #e2e8f0;";
+        };
+
+        return "<span style=\"display:inline-block;padding:2px 10px;border-radius:9999px;"
+                + "font-size:11px;line-height:1.35;font-weight:600;white-space:nowrap;" + palette + "\">"
+                + escapeHtml(text)
+                + "</span>";
+    }
+
+    private String normalizePhaseKey(String phase) {
+        return phase.toLowerCase(Locale.ROOT)
+                .replace('_', ' ')
+                .replace('-', ' ')
+                .replaceAll("\\s+", " ")
+                .strip();
     }
 
     /**

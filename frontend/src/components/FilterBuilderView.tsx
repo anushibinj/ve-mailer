@@ -40,6 +40,52 @@ const ENTITY_TYPES = [
 const AI_SUMMARY_FIELD = '✨ AI Summary';
 const TRIAGE_SLA_FIELD = 'Triage SLA';
 const CUSTOM_PSEUDO_FIELDS = [AI_SUMMARY_FIELD, TRIAGE_SLA_FIELD];
+const PHASE_CATEGORY_BY_KEY: Record<string, 'todo' | 'inProgress' | 'done' | 'cancelled' | 'rejected'> = {
+  // To Do
+  new: 'todo',
+  ready: 'todo',
+  planned: 'todo',
+  // In Progress
+  'in progress': 'inProgress',
+  'code review': 'inProgress',
+  'in testing': 'inProgress',
+  'pending support': 'inProgress',
+  'awaiting decision': 'inProgress',
+  // Done
+  implemented: 'done',
+  fixed: 'done',
+  tested: 'done',
+  done: 'done',
+  completed: 'done',
+  // Cancelled
+  cancelled: 'cancelled',
+  deferred: 'cancelled',
+  // Rejected
+  'proposed rejected': 'rejected',
+  rejected: 'rejected',
+  duplicate: 'rejected',
+};
+
+const normalizePhaseKey = (phase: string): string =>
+  phase.toLowerCase().replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim();
+
+const phaseChipClassName = (phase: string): string => {
+  const category = PHASE_CATEGORY_BY_KEY[normalizePhaseKey(phase)] ?? 'unknown';
+  const base = 'inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-semibold whitespace-nowrap';
+  if (category === 'todo') {
+    return `${base} border-sky-200 bg-sky-100 text-sky-800 dark:border-sky-500/30 dark:bg-sky-500/15 dark:text-sky-300`;
+  }
+  if (category === 'inProgress') {
+    return `${base} border-orange-200 bg-orange-100 text-orange-800 dark:border-orange-500/30 dark:bg-orange-500/15 dark:text-orange-300`;
+  }
+  if (category === 'done') {
+    return `${base} border-emerald-200 bg-emerald-100 text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/15 dark:text-emerald-300`;
+  }
+  if (category === 'rejected') {
+    return `${base} border-rose-200 bg-rose-100 text-rose-800 dark:border-rose-500/30 dark:bg-rose-500/15 dark:text-rose-300`;
+  }
+  return `${base} border-slate-200 bg-slate-100 text-slate-700 dark:border-slate-500/30 dark:bg-slate-500/15 dark:text-slate-300`;
+};
 
 const emptyCriterion = (): FilterCriteriaClause => ({ field: '', operator: 'IN', values: [], logicalOperator: 'AND' });
 const isEmptyOperator = (operator?: string): boolean => operator === 'IS_EMPTY' || operator === 'IS_NOT_EMPTY';
@@ -1303,6 +1349,17 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
                                       >
                                         {String(display)}
                                       </a>
+                                    </td>
+                                  );
+                                }
+                                if (col === 'phase' && display !== '—') {
+                                  return (
+                                    <td
+                                      key={col}
+                                      className="px-4 py-2 text-slate-600 dark:text-slate-300 whitespace-normal break-words"
+                                      style={{ overflowWrap: 'anywhere' }}
+                                    >
+                                      <span className={phaseChipClassName(String(display))}>{String(display)}</span>
                                     </td>
                                   );
                                 }

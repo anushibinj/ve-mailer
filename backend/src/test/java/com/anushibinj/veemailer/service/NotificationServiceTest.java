@@ -252,6 +252,22 @@ class NotificationServiceTest {
     }
 
     @Test
+    void testBuildHtmlTable_PhaseRenderedAsBadge() {
+        EntityModel entity = new EntityModel(Set.of(
+                new StringFieldModel("phase", "Ready")
+        ));
+
+        String html = notificationService.buildHtmlTable(List.of(entity), List.of("phase"), 25, false, null);
+
+        assertTrue(html.contains("border-radius:9999px"),
+                "Phase cell should render as a badge/chip");
+        assertTrue(html.contains("background-color:#e0f2fe"),
+                "Ready and Planned should use the To Do palette");
+        assertTrue(html.contains(">Ready</span>"),
+                "Badge label should include the phase text");
+    }
+
+    @Test
     void testBuildHtmlTable_HtmlSpecialCharsEscaped() {
         EntityModel entity = new EntityModel(Set.of(
                 new StringFieldModel("name", "<script>alert('xss')</script>")
