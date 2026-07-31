@@ -1,25 +1,31 @@
 import React, { useEffect, useState } from 'react';
-import { X, Eye, EyeOff, Loader2, Building2, Plug, AlertTriangle, ExternalLink } from 'lucide-react';
+import { X, Eye, EyeOff, Loader2, Building2, Plug } from 'lucide-react';
 import type {
   WorkspaceAdmin,
   WorkspaceConflictErrorData,
-  WorkspaceCreatePayload,
   WorkspaceUpdatePayload,
   WorkspaceStatus,
 } from '../services/apiService';
 import {
-  adminCreateWorkspace,
   adminTestWorkspaceConnection,
   adminUpdateWorkspace,
 } from '../services/apiService';
-import { useAuth } from '../hooks/useAuth';
 import toast from 'react-hot-toast';
+import {
+  CLIENT_KEY_PLACEHOLDER,
+  SHORTCODE_UNKNOWN_ENABLE_BLOCKED_MESSAGE,
+  isShortcodeUnknown,
+  fieldInputClass,
+  DuplicateWorkspaceConflictBanner,
+  type ExistingWorkspaceConflict,
+} from './workspaceFormShared';
 
-const CLIENT_KEY_PLACEHOLDER = '(unchanged)';
-
+// Workspace creation now happens exclusively through the WorkspaceCreationWizard, which
+// auto-discovers the Title and Shortcode from the ValueEdge REST API. This modal is
+// edit-only — the Title and Shortcode are system-derived and shown as read-only here.
 interface WorkspaceFormModalProps {
   isOpen: boolean;
-  workspace?: WorkspaceAdmin | null;
+  workspace: WorkspaceAdmin;
   onClose: () => void;
   onSuccess: (saved: WorkspaceAdmin) => void;
 }
@@ -46,28 +52,13 @@ interface FormErrors {
   status?: string;
 }
 
-const inputClass =
-  'w-full px-3.5 py-2.5 border rounded-xl text-sm transition-all ' +
-  'placeholder:text-slate-400 dark:placeholder:text-slate-500 ' +
-  'focus:outline-none focus:ring-2';
-
-const fieldInputClass = (hasError: boolean, readOnly = false) =>
-  `${inputClass} ${readOnly
-    ? 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 cursor-not-allowed'
-    : 'text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800/60'
-  } ${hasError
-    ? 'border-red-400 dark:border-red-500/50 bg-red-50 dark:bg-red-500/5 focus:border-red-500 focus:ring-red-500/20'
-    : 'border-slate-200 dark:border-slate-600 focus:border-indigo-500 dark:focus:border-indigo-400 focus:ring-indigo-500/15 dark:focus:ring-indigo-400/15'
-  }`;
-
 const WorkspaceFormModal: React.FC<WorkspaceFormModalProps> = ({
   isOpen, workspace, onClose, onSuccess,
 }) => {
-  const isEditing = !!workspace;
-  const { isAdmin } = useAuth();
-  // WORKSPACE_ADMIN can edit connection fields and workspace status (visibility), but not the title —
-  // renaming a workspace remains a super admin operation.
-  const isTitleReadOnly = isEditing && !isAdmin;
+  // Title and Shortcode are always read-only in this modal — they are system-derived during
+  // creation by the workspace creation wizard and can only be corrected by editing the
+  // discovery result (a Super Admin operation handled outside this form).
+  const shortcodeUnknown = isShortcodeUnknown(workspace.workspaceShortcode);
 
   const [values, setValues] = useState<FormValues>({
     title: '', workspaceShortcode: '', sharedSpaceId: '', workspaceId: '', clientId: '', clientKey: '', rootUrl: '', status: 'DRAFT',
@@ -78,25 +69,21 @@ const WorkspaceFormModal: React.FC<WorkspaceFormModalProps> = ({
   const [isTesting, setIsTesting] = useState(false);
   // Populated when the backend rejects the submission as a duplicate (409 Conflict) —
   // keeps the modal open, preserves entered values, and lets the user jump to the existing workspace.
-  const [duplicateConflict, setDuplicateConflict] = useState<WorkspaceConflictErrorData['existingWorkspace'] | null>(null);
+  const [duplicateConflict, setDuplicateConflict] = useState<ExistingWorkspaceConflict | null>(null);
 
   useEffect(() => {
     if (isOpen) {
-      if (workspace) {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-        setValues({
-          title: workspace.title,
-          workspaceShortcode: workspace.workspaceShortcode,
-          sharedSpaceId: workspace.sharedSpaceId,
-          workspaceId: workspace.workspaceId,
-          clientId: workspace.clientId,
-          clientKey: CLIENT_KEY_PLACEHOLDER,
-          rootUrl: workspace.rootUrl,
-          status: workspace.status,
-        });
-      } else {
-        setValues({ title: '', workspaceShortcode: '', sharedSpaceId: '', workspaceId: '', clientId: '', clientKey: '', rootUrl: '', status: 'DRAFT' });
-      }
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setValues({
+        title: workspace.title,
+        workspaceShortcode: workspace.workspaceShortcode,
+        sharedSpaceId: workspace.sharedSpaceId,
+        workspaceId: workspace.workspaceId,
+        clientId: workspace.clientId,
+        clientKey: CLIENT_KEY_PLACEHOLDER,
+        rootUrl: workspace.rootUrl,
+        status: workspace.status,
+      });
       setErrors({});
       setShowKey(false);
       setDuplicateConflict(null);
@@ -105,12 +92,9 @@ const WorkspaceFormModal: React.FC<WorkspaceFormModalProps> = ({
 
   const validate = (): boolean => {
     const errs: FormErrors = {};
-    if (!values.title.trim()) errs.title = 'Title is required';
-    if (!values.workspaceShortcode.trim()) errs.workspaceShortcode = 'Workspace shortcode is required';
     if (!values.sharedSpaceId.trim()) errs.sharedSpaceId = 'Shared Space ID is required';
     if (!values.workspaceId.trim()) errs.workspaceId = 'Workspace ID is required';
     if (!values.clientId.trim()) errs.clientId = 'Client ID is required';
-    if (!isEditing && !values.clientKey.trim()) errs.clientKey = 'Client Key is required';
     if (!values.rootUrl.trim()) errs.rootUrl = 'Root URL is required';
     setErrors(errs);
     return Object.keys(errs).length === 0;
@@ -123,7 +107,7 @@ const WorkspaceFormModal: React.FC<WorkspaceFormModalProps> = ({
   };
 
   const handleKeyFocus = () => {
-    if (isEditing && values.clientKey === CLIENT_KEY_PLACEHOLDER) {
+    if (values.clientKey === CLIENT_KEY_PLACEHOLDER) {
       setValues(prev => ({ ...prev, clientKey: '' }));
     }
   };
@@ -137,10 +121,6 @@ const WorkspaceFormModal: React.FC<WorkspaceFormModalProps> = ({
       clientKey: undefined,
     };
 
-    if (!isEditing && !values.clientKey.trim()) {
-      connectionErrors.clientKey = 'Client Key is required';
-    }
-
     setErrors(prev => ({ ...prev, ...connectionErrors }));
     return Object.values(connectionErrors).every(err => !err);
   };
@@ -151,7 +131,7 @@ const WorkspaceFormModal: React.FC<WorkspaceFormModalProps> = ({
     setIsTesting(true);
     try {
       const response = await adminTestWorkspaceConnection({
-        workspaceRecordId: workspace?.id,
+        workspaceRecordId: workspace.id,
         sharedSpaceId: values.sharedSpaceId.trim(),
         workspaceId: values.workspaceId.trim(),
         clientId: values.clientId.trim(),
@@ -180,28 +160,15 @@ const WorkspaceFormModal: React.FC<WorkspaceFormModalProps> = ({
     if (!validate()) return;
     setIsSubmitting(true);
     try {
-      let saved: WorkspaceAdmin;
-      if (isEditing && workspace) {
-        const payload: WorkspaceUpdatePayload = {
-          title: values.title.trim(), sharedSpaceId: values.sharedSpaceId.trim(),
-          workspaceShortcode: values.workspaceShortcode.trim(),
-          workspaceId: values.workspaceId.trim(), clientId: values.clientId.trim(),
-          clientKey: values.clientKey.trim() || CLIENT_KEY_PLACEHOLDER, rootUrl: values.rootUrl.trim(),
-          status: values.status,
-        };
-        saved = await adminUpdateWorkspace(workspace.id, payload);
-        toast.success('Workspace updated successfully');
-      } else {
-        const payload: WorkspaceCreatePayload = {
-          title: values.title.trim(), sharedSpaceId: values.sharedSpaceId.trim(),
-          workspaceShortcode: values.workspaceShortcode.trim(),
-          workspaceId: values.workspaceId.trim(), clientId: values.clientId.trim(),
-          clientKey: values.clientKey.trim(), rootUrl: values.rootUrl.trim(),
-          status: values.status,
-        };
-        saved = await adminCreateWorkspace(payload);
-        toast.success('Workspace created successfully');
-      }
+      const payload: WorkspaceUpdatePayload = {
+        title: values.title.trim(), sharedSpaceId: values.sharedSpaceId.trim(),
+        workspaceShortcode: values.workspaceShortcode.trim(),
+        workspaceId: values.workspaceId.trim(), clientId: values.clientId.trim(),
+        clientKey: values.clientKey.trim() || CLIENT_KEY_PLACEHOLDER, rootUrl: values.rootUrl.trim(),
+        status: values.status,
+      };
+      const saved = await adminUpdateWorkspace(workspace.id, payload);
+      toast.success('Workspace updated successfully');
       onSuccess(saved);
     } catch (err: unknown) {
       const axiosErr = err as {
@@ -217,7 +184,7 @@ const WorkspaceFormModal: React.FC<WorkspaceFormModalProps> = ({
       const msg =
         dataErr?.message ??
         dataErr?.errors?.[0]?.message ??
-        (isEditing ? 'Failed to update workspace' : 'Failed to create workspace');
+        'Failed to update workspace';
       toast.error(msg);
     } finally {
       setIsSubmitting(false);
@@ -244,7 +211,7 @@ const WorkspaceFormModal: React.FC<WorkspaceFormModalProps> = ({
               <Building2 className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
             </div>
             <h2 className="text-base font-semibold text-slate-900 dark:text-white">
-              {isEditing ? 'Edit Workspace' : 'Create Workspace'}
+              Edit Workspace
             </h2>
           </div>
           <button
@@ -259,45 +226,21 @@ const WorkspaceFormModal: React.FC<WorkspaceFormModalProps> = ({
         {/* Form */}
         <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4 max-h-[70vh] overflow-y-auto">
           {/* Duplicate workspace conflict banner (409 from backend) */}
-          {duplicateConflict && (
-            <div className="flex gap-3 rounded-xl border border-amber-300 dark:border-amber-600/50 bg-amber-50 dark:bg-amber-900/20 px-4 py-3">
-              <AlertTriangle className="h-5 w-5 flex-shrink-0 text-amber-500 dark:text-amber-400 mt-0.5" />
-              <div className="text-sm text-amber-800 dark:text-amber-200">
-                <p className="font-medium">
-                  A workspace with the same Root URL, Shared Space ID, and Workspace ID already exists.
-                </p>
-                <p className="mt-1">
-                  Existing workspace: <span className="font-semibold">{duplicateConflict.name}</span>
-                </p>
-                <a
-                  href={`/workspace/${duplicateConflict.id}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-1.5 inline-flex items-center gap-1 font-medium text-amber-900 dark:text-amber-100 underline hover:no-underline"
-                >
-                  Open existing workspace
-                  <ExternalLink className="h-3.5 w-3.5" />
-                </a>
-              </div>
-            </div>
-          )}
+          {duplicateConflict && <DuplicateWorkspaceConflictBanner existingWorkspace={duplicateConflict} />}
 
-          {/* Title field */}
+          {/* Title field — system-derived during creation, always read-only */}
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
-              Title <span className="text-red-500">*</span>
-              {isTitleReadOnly && <span className="ml-1 text-xs text-slate-400 dark:text-slate-500 font-normal">(read-only)</span>}
+              Title
+              <span className="ml-1 text-xs text-slate-400 dark:text-slate-500 font-normal">(system-derived, read-only)</span>
             </label>
             <input
               type="text"
               value={values.title}
-              onChange={handleChange('title')}
-              placeholder="e.g. ALM Octane — Team Alpha"
-              className={fieldInputClass(!!errors.title, isTitleReadOnly)}
-              readOnly={isTitleReadOnly}
-              disabled={isTitleReadOnly}
+              readOnly
+              disabled
+              className={fieldInputClass(false, true)}
             />
-            {errors.title && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.title}</p>}
           </div>
 
           {/* Workspace Status */}
@@ -313,28 +256,35 @@ const WorkspaceFormModal: React.FC<WorkspaceFormModalProps> = ({
               }}
               className={fieldInputClass(!!errors.status)}
             >
-              <option value="ENABLED">Enabled</option>
+              <option value="ENABLED" disabled={shortcodeUnknown}>Enabled</option>
               <option value="DRAFT">Draft</option>
               <option value="DISABLED">Disabled</option>
             </select>
             {errors.status && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.status}</p>}
-            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-              Draft workspaces are only visible to admins. Disabled workspaces are hidden from all views.
-            </p>
+            {shortcodeUnknown ? (
+              <p className="mt-1.5 text-xs text-amber-700 dark:text-amber-400">
+                {SHORTCODE_UNKNOWN_ENABLE_BLOCKED_MESSAGE}
+              </p>
+            ) : (
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                Draft workspaces are only visible to admins. Disabled workspaces are hidden from all views.
+              </p>
+            )}
           </div>
 
+          {/* Workspace Shortcode — system-derived during creation, always read-only */}
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
-              Workspace Shortcode <span className="text-red-500">*</span>
+              Workspace Shortcode
+              <span className="ml-1 text-xs text-slate-400 dark:text-slate-500 font-normal">(system-derived, read-only)</span>
             </label>
             <input
               type="text"
               value={values.workspaceShortcode}
-              onChange={handleChange('workspaceShortcode')}
-              placeholder="e.g. 77BD"
-              className={fieldInputClass(!!errors.workspaceShortcode)}
+              readOnly
+              disabled
+              className={fieldInputClass(false, true)}
             />
-            {errors.workspaceShortcode && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.workspaceShortcode}</p>}
           </div>
 
           {/* Root URL field */}
@@ -377,12 +327,9 @@ const WorkspaceFormModal: React.FC<WorkspaceFormModalProps> = ({
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
               Client Key{' '}
-              {!isEditing && <span className="text-red-500">*</span>}
-              {isEditing && (
-                <span className="ml-1 text-xs text-slate-400 dark:text-slate-500 font-normal">
-                  — leave unchanged to keep existing
-                </span>
-              )}
+              <span className="ml-1 text-xs text-slate-400 dark:text-slate-500 font-normal">
+                — leave unchanged to keep existing
+              </span>
             </label>
             <div className="relative">
               <input
@@ -390,7 +337,7 @@ const WorkspaceFormModal: React.FC<WorkspaceFormModalProps> = ({
                 value={values.clientKey}
                 onChange={handleChange('clientKey')}
                 onFocus={handleKeyFocus}
-                placeholder={isEditing ? '(unchanged)' : 'Enter client key'}
+                placeholder="(unchanged)"
                 className={`${fieldInputClass(!!errors.clientKey)} pr-10`}
               />
               <button
@@ -404,7 +351,7 @@ const WorkspaceFormModal: React.FC<WorkspaceFormModalProps> = ({
               </button>
             </div>
             {errors.clientKey && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.clientKey}</p>}
-            {isEditing && !errors.clientKey && (
+            {!errors.clientKey && (
               <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                 Enter a new value to replace the existing key, or leave as-is to keep it.
               </p>
@@ -436,7 +383,7 @@ const WorkspaceFormModal: React.FC<WorkspaceFormModalProps> = ({
               className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-500 dark:bg-indigo-500 dark:hover:bg-indigo-400 rounded-xl disabled:opacity-50 transition-all cursor-pointer"
             >
               {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
-              {isEditing ? 'Save Changes' : 'Create Workspace'}
+              Save Changes
             </button>
           </div>
         </form>

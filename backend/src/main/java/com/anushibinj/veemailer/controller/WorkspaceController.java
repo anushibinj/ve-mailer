@@ -9,11 +9,15 @@ import com.anushibinj.veemailer.dto.WorkspaceAdminResponseDto;
 import com.anushibinj.veemailer.dto.WorkspaceConnectionTestRequestDto;
 import com.anushibinj.veemailer.dto.WorkspaceConnectionTestResponseDto;
 import com.anushibinj.veemailer.dto.WorkspaceCreateRequestDto;
+import com.anushibinj.veemailer.dto.WorkspaceDiscoveryRequestDto;
+import com.anushibinj.veemailer.dto.WorkspaceDiscoveryResponseDto;
+import com.anushibinj.veemailer.dto.WorkspaceDuplicateCheckResponseDto;
 import com.anushibinj.veemailer.dto.WorkspaceResponseDto;
 import com.anushibinj.veemailer.dto.WorkspaceUpdateRequestDto;
 import com.anushibinj.veemailer.service.SubscriptionService;
 import com.anushibinj.veemailer.service.UserQueryService;
 import com.anushibinj.veemailer.service.WorkspaceAdminService;
+import com.anushibinj.veemailer.service.WorkspaceDiscoveryService;
 import com.anushibinj.veemailer.service.WorkspaceService;
 import com.anushibinj.veemailer.model.TriageSlaThreshold;
 import jakarta.validation.Valid;
@@ -34,6 +38,7 @@ import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -45,6 +50,7 @@ import java.util.UUID;
 public class WorkspaceController {
 
     private final WorkspaceService workspaceService;
+    private final WorkspaceDiscoveryService workspaceDiscoveryService;
     private final SubscriptionService subscriptionService;
     private final WorkspaceAdminService workspaceAdminService;
     private final UserQueryService userQueryService;
@@ -94,12 +100,40 @@ public class WorkspaceController {
     public ResponseEntity<WorkspaceResponseDto> createWorkspace(
             @RequestBody @Valid WorkspaceCreateRequestDto request) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        WorkspaceResponseDto created = workspaceService.create(request);
+        WorkspaceResponseDto created = workspaceService.create(request, authentication.getName());
         if (!workspaceAdminService.isGlobalAdmin(authentication)
                 && workspaceAdminService.hasWorkspaceAdminRole(authentication)) {
             workspaceAdminService.autoAssignCreatorAsAdmin(created.getId(), authentication.getName());
         }
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
+    }
+
+    /**
+     * Step 1 of the workspace creation wizard: checks whether a workspace already exists with
+     * the exact same (Root URL, Shared Space ID, Workspace ID) combination, without creating
+     * anything. Returns 200 with {@code duplicate=false} when clear, or 409 with the existing
+     * workspace's details (via {@link com.anushibinj.veemailer.exception.DuplicateWorkspaceException}).
+     */
+    @GetMapping("/check-duplicate")
+    @PreAuthorize("hasAnyRole('ADMIN', 'WORKSPACE_ADMIN')")
+    public ResponseEntity<WorkspaceDuplicateCheckResponseDto> checkDuplicateWorkspace(
+            @RequestParam String rootUrl,
+            @RequestParam String sharedSpaceId,
+            @RequestParam String workspaceId) {
+        return ResponseEntity.ok(workspaceService.checkDuplicate(rootUrl, sharedSpaceId, workspaceId));
+    }
+
+    /**
+     * Step 2 of the workspace creation wizard: the frontend never calls the ValueEdge REST API
+     * directly, so this endpoint signs in with the supplied credentials, retrieves the shared
+     * space's workspace list, matches the requested Workspace ID, and returns the parsed
+     * Title/Shortcode (or a 404 with the raw response when no match is found).
+     */
+    @PostMapping("/discover-metadata")
+    @PreAuthorize("hasAnyRole('ADMIN', 'WORKSPACE_ADMIN')")
+    public ResponseEntity<WorkspaceDiscoveryResponseDto> discoverWorkspaceMetadata(
+            @RequestBody @Valid WorkspaceDiscoveryRequestDto request) {
+        return ResponseEntity.ok(workspaceDiscoveryService.discover(request));
     }
 
     @PutMapping("/{id}")

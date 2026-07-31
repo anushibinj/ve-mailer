@@ -444,8 +444,10 @@ All workspace endpoints require authentication. `DELETE` requires global `ADMIN`
 | `GET`    | `/workspaces`             | Any           | List workspaces (role-aware: normal users see ENABLED only, admins see ENABLED+DRAFT) |
 | `GET`    | `/workspaces/all`         | ADMIN         | List ALL workspaces including DISABLED (management view)           |
 | `GET`    | `/workspaces/{id}`        | Any           | Get workspace details                                              |
-| `POST`   | `/workspaces`             | ADMIN / WORKSPACE_ADMIN | Create a workspace (defaults to DRAFT status). `WORKSPACE_ADMIN` users may create an unlimited number of workspaces and are **automatically assigned as workspace admin** of the workspace they just created (no additional action required) |
-| `PUT`    | `/workspaces/{id}`        | ADMIN / WORKSPACE_ADMIN | Update a workspace (`WORKSPACE_ADMIN` restricted to workspaces they administer; can update connection fields, workspace shortcode, and `status` (visibility); cannot change `title`) |
+| `GET`    | `/workspaces/check-duplicate` | ADMIN / WORKSPACE_ADMIN | Step 1 of the creation wizard — pre-checks the (`rootUrl`, `sharedSpaceId`, `workspaceId`) combination without creating anything; returns `200 {duplicate:false}` or `409` with the conflicting workspace (same body shape as the `POST`/`PUT` conflict below) |
+| `POST`   | `/workspaces/discover-metadata` | ADMIN / WORKSPACE_ADMIN | Step 2 of the creation wizard — backend calls the ValueEdge REST API server-side (frontend never calls ValueEdge directly) to discover the workspace's Title/Shortcode; returns `404` with the raw ValueEdge response when the Workspace ID isn't found |
+| `POST`   | `/workspaces`             | ADMIN / WORKSPACE_ADMIN | Create a workspace using the auto-discovered `title`/`workspaceShortcode` from Step 2 (status auto-determined — see below). `WORKSPACE_ADMIN` users may create an unlimited number of workspaces and are **automatically assigned as workspace admin** of the workspace they just created (no additional action required) |
+| `PUT`    | `/workspaces/{id}`        | ADMIN / WORKSPACE_ADMIN | Update a workspace (`WORKSPACE_ADMIN` restricted to workspaces they administer; can update connection fields and `status` (visibility); `title` and `workspaceShortcode` are system-derived and read-only for everyone — set once during creation by the discovery wizard) |
 | `DELETE` | `/workspaces/{id}`        | ADMIN (Super Admin only) | Delete a workspace. `WORKSPACE_ADMIN` users can never delete a workspace, even one they created or administer — enforced on both backend (`@PreAuthorize("hasRole('ADMIN')")`) and frontend (Delete action hidden/disabled for non-`ADMIN` users) |
 | `POST`   | `/workspaces/test-connection` | ADMIN / WORKSPACE_ADMIN | Validate workspace connectivity via Octane SDK by reading `stories` with `limit=1`; returns success-with-warning when connection works but no data is returned |
 | `GET`    | `/workspaces/{id}/admins` | ADMIN / WORKSPACE_ADMIN | List workspace admins for a workspace (`WORKSPACE_ADMIN` restricted to workspaces they administer) |
@@ -456,11 +458,13 @@ All workspace endpoints require authentication. `DELETE` requires global `ADMIN`
 of workspaces; on creation, `WorkspaceAdminService.autoAssignCreatorAsAdmin(...)` immediately creates a
 `WorkspaceAdminMapping` linking the creator to the new workspace, so they can administer it right away
 without any extra step. `WORKSPACE_ADMIN`s may change the `status` (visibility: `ENABLED`/`DRAFT`/`DISABLED`)
-of workspaces they administer via `PUT /workspaces/{id}`, but not the `title` (renaming remains
-`ADMIN`-only). Workspace deletion is intentionally restricted to global `ADMIN` (Super Admin) —
-`WorkspaceController.deleteWorkspace` is annotated `@PreAuthorize("hasRole('ADMIN')")` and the frontend
-hides/disables the Delete action for `WORKSPACE_ADMIN` users, so a `WORKSPACE_ADMIN` can never delete a
-workspace even one they created or currently administer.
+of workspaces they administer via `PUT /workspaces/{id}`, but never `title` or `workspaceShortcode` —
+both are system-derived by the creation wizard's ValueEdge discovery step and are read-only for **every**
+role, including global `ADMIN`, from that point on. Workspace deletion is intentionally restricted to
+global `ADMIN` (Super Admin) — `WorkspaceController.deleteWorkspace` is annotated
+`@PreAuthorize("hasRole('ADMIN')")` and the frontend hides/disables the Delete action for
+`WORKSPACE_ADMIN` users, so a `WORKSPACE_ADMIN` can never delete a workspace even one they created or
+currently administer.
 
 **Duplicate workspace validation (Root URL + Shared Space ID + Workspace ID):** Workspace uniqueness is
 enforced on the **combination** of `rootUrl` + `sharedSpaceId` + `workspaceId`, not on any single field.
@@ -472,10 +476,53 @@ URL) before comparing, pre-checks via
 `WorkspaceRepository.findFirstByRootUrlAndSharedSpaceIdAndWorkspaceId(...)`, and the DB enforces the same
 rule via the `uq_workspaces_root_url_shared_space_id_workspace_id` unique index (Flyway `V27`) so
 concurrent requests can never both succeed. The 409 body includes the conflicting workspace's `id`,
-`name`, `rootUrl`, `sharedSpaceId`, and `workspaceId` so the frontend `WorkspaceFormModal` can keep the
-form open (preserving all entered values), show an inline error message naming the existing workspace,
-and link to it (`/workspace/{id}`, opened in a new tab) so the user can review it without losing their
-in-progress edits.
+`name`, `rootUrl`, `sharedSpaceId`, and `workspaceId` so the frontend `WorkspaceCreationWizard` (Step 1)
+and `WorkspaceFormModal` (edit) can keep the form/wizard open (preserving all entered values), show an
+inline error message naming the existing workspace, and link to it (`/workspace/{id}`, opened in a new
+tab) so the user can review it without losing their in-progress edits. The wizard also calls this same
+check as `GET /workspaces/check-duplicate` before the user enters credentials, and re-checks it on the
+final `POST /workspaces` — if a race lets another request win in between, the wizard jumps back to Step
+1 with the same conflict banner rather than losing any entered data.
+
+**Workspace creation wizard — automatic Title/Shortcode discovery (no manual entry):** Creating a
+workspace is a 3-step wizard (`WorkspaceCreationWizard.tsx`) instead of a single form, and the Workspace
+Admin never types the Title or Shortcode:
+
+1. **Workspace Identification** — Root URL, Shared Space ID, Workspace ID. Runs the duplicate check above;
+   blocks progression on a 409.
+2. **Authentication** — Client ID, Client Key. On continue, the frontend calls
+   `POST /workspaces/discover-metadata`, and `WorkspaceDiscoveryService` (backend-only — the frontend never
+   calls ValueEdge directly) signs in to ValueEdge, calls
+   `GET {rootUrl}/api/shared_spaces/{sharedSpaceId}/workspaces?fields=name`, and finds the entry whose
+   `id` matches the Workspace ID from Step 1. If no entry matches, the request fails with `404` and the raw
+   ValueEdge JSON response (shown in a collapsible troubleshooting panel); the user stays on Step 2 to
+   retry with different credentials/IDs.
+3. **Review & Create** — read-only summary of all entered values plus the discovered Workspace Title and
+   Shortcode, and the auto-determined `status`.
+
+   **Title/Shortcode parsing:** the matched workspace's `name` (e.g. `"Portfolio-Hyd - 77BD"`) is split into
+   `<title><separator><shortcode>`, where the shortcode is the trailing alphanumeric token (e.g. title
+   `Portfolio-Hyd`, shortcode `77BD`). If the name can't be confidently split this way, the entire name is
+   used as the title and the shortcode is stored as the literal string `"UNKNOWN"`.
+
+   **Status auto-determination (no manual choice):** a shortcode successfully parsed → workspace is created
+   `ENABLED`. Shortcode `"UNKNOWN"` → workspace is created `DRAFT` and **cannot** be moved to `ENABLED`
+   (enforced on both frontend, via a disabled `<option>`, and backend, via
+   `IllegalArgumentException`/`400`) until a Super Admin corrects the shortcode by editing the workspace
+   directly in the database/admin tooling. Whenever a workspace is created with shortcode `UNKNOWN`,
+   `EmailService.sendWorkspaceDraftReviewNotificationToAdmins(...)` emails the configured Super Admin
+   notification addresses (`NotificationPreferencesService.getAdminNotificationEmails()` — the admin email
+   list configured under Admin → Notifications, the same recipient list used for the existing
+   onboarding-completed notification) with the workspace title, Root URL, Shared Space ID, Workspace ID,
+   creator, and creation time, asking for manual review — this email is never sent when the shortcode was
+   parsed successfully.
+
+   Separately (unrelated to the shortcode outcome), whenever a `WORKSPACE_ADMIN` (not a global `ADMIN`)
+   creates **any** workspace with a successfully-detected shortcode,
+   `EmailService.sendWorkspaceCreatedNotificationToAdmins(...)` sends a purely informational FYI email to
+   the same configured Super Admin notification addresses with the same workspace details — no action is
+   required, and this email is mutually exclusive with the draft-review email above (a single workspace
+   creation never triggers both).
 
 **Workspace Status Lifecycle:**
 

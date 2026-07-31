@@ -2,7 +2,9 @@ package com.anushibinj.veemailer.config;
 
 import com.anushibinj.veemailer.dto.ApiErrorResponse;
 import com.anushibinj.veemailer.dto.WorkspaceConflictErrorResponse;
+import com.anushibinj.veemailer.dto.WorkspaceDiscoveryErrorResponse;
 import com.anushibinj.veemailer.exception.DuplicateWorkspaceException;
+import com.anushibinj.veemailer.exception.WorkspaceDiscoveryNotFoundException;
 import com.anushibinj.veemailer.model.Workspace;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -48,6 +50,19 @@ public class GlobalExceptionHandler {
                         .build())
                 .build();
         return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
+    }
+
+    @ExceptionHandler(WorkspaceDiscoveryNotFoundException.class)
+    public ResponseEntity<WorkspaceDiscoveryErrorResponse> handleWorkspaceDiscoveryNotFound(
+            WorkspaceDiscoveryNotFoundException ex) {
+        log.warn("Workspace metadata discovery: {}", ex.getMessage());
+        WorkspaceDiscoveryErrorResponse error = WorkspaceDiscoveryErrorResponse.builder()
+                .status(HttpStatus.NOT_FOUND.value())
+                .error("Not Found")
+                .message(ex.getMessage())
+                .rawResponse(ex.getRawResponse())
+                .build();
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
     }
 
     @ExceptionHandler(IllegalArgumentException.class)

@@ -147,6 +147,136 @@ public class EmailService {
     }
 
     /**
+     * Notifies all Super Admins (users holding the ADMIN role) that a newly created workspace
+     * needs manual review because its shortcode could not be determined automatically during
+     * creation (workspaceShortcode == "UNKNOWN"). The workspace is created as DRAFT and cannot
+     * be enabled until a Super Admin corrects the shortcode. Never sent when the shortcode was
+     * successfully parsed.
+     */
+    @Async
+    public void sendWorkspaceDraftReviewNotificationToAdmins(
+            String workspaceTitle, String rootUrl, String sharedSpaceId, String workspaceId,
+            String creatorEmail, java.time.Instant createdAt, List<String> adminEmails) {
+        if (adminEmails == null || adminEmails.isEmpty()) {
+            return;
+        }
+        try {
+            Session session = dynamicMailSenderService.getSession();
+            String from = dynamicMailSenderService.getFromAddress();
+            String recipientList = String.join(",", adminEmails);
+            String createdAtDisplay = createdAt != null
+                    ? java.time.format.DateTimeFormatter.ofPattern("MMM d, yyyy 'at' h:mm a 'UTC'")
+                        .withZone(java.time.ZoneOffset.UTC).format(createdAt)
+                    : "Unknown";
+
+            String body =
+                "<p style=\"margin:0 0 20px;font-size:14px;line-height:1.6;color:#334155;\">" +
+                "A workspace was just created with a shortcode that could not be determined automatically. " +
+                "It has been created as <strong style=\"color:#1e293b;\">Draft</strong> and cannot be enabled " +
+                "until the shortcode is corrected." +
+                "</p>" +
+                "<div style=\"background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;" +
+                "padding:16px 20px;margin:0 0 20px;\">" +
+                "<table border=\"0\" cellpadding=\"0\" cellspacing=\"0\" style=\"border-collapse:collapse;width:100%;\">" +
+                tableRow("Workspace Title", workspaceTitle) +
+                tableRow("Root URL", rootUrl) +
+                tableRow("Shared Space ID", sharedSpaceId) +
+                tableRow("Workspace ID", workspaceId) +
+                tableRow("Creator", creatorEmail) +
+                tableRow("Creation Time", createdAtDisplay) +
+                "</table>" +
+                "</div>" +
+                "<p style=\"margin:0;font-size:12px;color:#64748b;\">" +
+                "Review and correct the workspace shortcode in the admin panel: " +
+                "<a href=\"" + esc(frontendUrl) + "/admin?tab=workspaces\" style=\"color:#4f46e5;\">" +
+                esc(frontendUrl) + "/admin?tab=workspaces</a>" +
+                "</p>";
+
+            MimeMessage message = new MimeMessage(session);
+            message.setFrom(new InternetAddress(from));
+            message.addRecipients(Message.RecipientType.TO, InternetAddress.parse(recipientList));
+            message.setSubject("[ve-mailer] Workspace pending review: " + workspaceTitle, "UTF-8");
+            message.setContent(buildEmailShell("Workspace pending review", body), "text/html; charset=UTF-8");
+            message.saveChanges();
+
+            dynamicMailSenderService.send(message);
+        } catch (MessagingException e) {
+            log.error("Failed to send workspace draft review notification for '{}' to admins: {}",
+                    workspaceTitle, e.getMessage());
+            // Non-critical — workspace creation should not fail because of this
+        }
+    }
+
+    /**
+     * Notifies all Super Admins (users holding the ADMIN role) that a Workspace Admin created a
+     * new workspace. Unlike {@link #sendWorkspaceDraftReviewNotificationToAdmins}, this is a
+     * purely informational FYI (no action required) and is only sent when the workspace was
+     * created with a successfully-detected shortcode — if the shortcode is UNKNOWN, the draft
+     * review notification already covers the same creator/workspace details plus a call to action,
+     * so both emails are never sent for the same workspace.
+     */
+    @Async
+    public void sendWorkspaceCreatedNotificationToAdmins(
+            String workspaceTitle, String rootUrl, String sharedSpaceId, String workspaceId,
+            String creatorEmail, java.time.Instant createdAt, List<String> adminEmails) {
+        if (adminEmails == null || adminEmails.isEmpty()) {
+            return;
+        }
+        try {
+            Session session = dynamicMailSenderService.getSession();
+            String from = dynamicMailSenderService.getFromAddress();
+            String recipientList = String.join(",", adminEmails);
+            String createdAtDisplay = createdAt != null
+                    ? java.time.format.DateTimeFormatter.ofPattern("MMM d, yyyy 'at' h:mm a 'UTC'")
+                        .withZone(java.time.ZoneOffset.UTC).format(createdAt)
+                    : "Unknown";
+
+            String body =
+                "<p style=\"margin:0 0 20px;font-size:14px;line-height:1.6;color:#334155;\">" +
+                "A Workspace Admin created a new workspace on VE Mailer." +
+                "</p>" +
+                "<div style=\"background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;" +
+                "padding:16px 20px;margin:0 0 20px;\">" +
+                "<table border=\"0\" cellpadding=\"0\" cellspacing=\"0\" style=\"border-collapse:collapse;width:100%;\">" +
+                tableRow("Workspace Title", workspaceTitle) +
+                tableRow("Root URL", rootUrl) +
+                tableRow("Shared Space ID", sharedSpaceId) +
+                tableRow("Workspace ID", workspaceId) +
+                tableRow("Creator", creatorEmail) +
+                tableRow("Creation Time", createdAtDisplay) +
+                "</table>" +
+                "</div>" +
+                "<p style=\"margin:0;font-size:12px;color:#64748b;\">" +
+                "View the workspace in the admin panel: " +
+                "<a href=\"" + esc(frontendUrl) + "/admin?tab=workspaces\" style=\"color:#4f46e5;\">" +
+                esc(frontendUrl) + "/admin?tab=workspaces</a>" +
+                "</p>";
+
+            MimeMessage message = new MimeMessage(session);
+            message.setFrom(new InternetAddress(from));
+            message.addRecipients(Message.RecipientType.TO, InternetAddress.parse(recipientList));
+            message.setSubject("[ve-mailer] New workspace created: " + workspaceTitle, "UTF-8");
+            message.setContent(buildEmailShell("New workspace created", body), "text/html; charset=UTF-8");
+            message.saveChanges();
+
+            dynamicMailSenderService.send(message);
+        } catch (MessagingException e) {
+            log.error("Failed to send workspace created notification for '{}' to admins: {}",
+                    workspaceTitle, e.getMessage());
+            // Non-critical — workspace creation should not fail because of this
+        }
+    }
+
+    /** Renders a single label/value row for the summary tables used by admin notification emails. */
+    private String tableRow(String label, String value) {
+        return "<tr><td style=\"padding:4px 16px 4px 0;font-size:12px;font-weight:600;color:#64748b;" +
+                "text-transform:uppercase;letter-spacing:0.05em;white-space:nowrap;vertical-align:top;\">" +
+                esc(label) + "</td>" +
+                "<td style=\"padding:4px 0;font-size:14px;color:#1e293b;word-break:break-all;\">" +
+                esc(value) + "</td></tr>";
+    }
+
+    /**
      * Wraps a content block in the standard light-themed VE Mailer email shell.
      * Light mode by default — email clients apply their own dark mode conversion if enabled.
      * Table-based layout with {@code bgcolor} attributes ensures backgrounds survive across

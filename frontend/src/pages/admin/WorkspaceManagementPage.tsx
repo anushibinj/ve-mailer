@@ -14,6 +14,7 @@ import LoadingPlaceholder from '../../components/LoadingPlaceholder';
 import { TableActionButton } from '../../components/ui';
 
 const WorkspaceFormModal = lazy(() => import('../../components/WorkspaceFormModal'));
+const WorkspaceCreationWizard = lazy(() => import('../../components/WorkspaceCreationWizard'));
 const WorkspaceAdminManager = lazy(() => import('./WorkspaceAdminManager'));
 
 const WorkspaceManagementPage: React.FC = () => {
@@ -300,18 +301,29 @@ const WorkspaceManagementPage: React.FC = () => {
         </div>
       )}
 
-      {/* Create / Edit Modal */}
-      <Suspense fallback={<LoadingPlaceholder message="Loading workspace editor..." />}>
-        <WorkspaceFormModal
-          isOpen={formOpen}
-          workspace={editTarget}
-          onClose={() => {
-            setFormOpen(false);
-            setEditTarget(null);
-          }}
+      {/* Create wizard — replaces manual Title/Shortcode entry with ValueEdge auto-discovery */}
+      <Suspense fallback={<LoadingPlaceholder message="Loading workspace creation wizard..." />}>
+        <WorkspaceCreationWizard
+          isOpen={formOpen && editTarget === null}
+          onClose={() => setFormOpen(false)}
           onSuccess={handleFormSuccess}
         />
       </Suspense>
+
+      {/* Edit Modal — Title and Shortcode are system-derived and shown read-only */}
+      {editTarget && (
+        <Suspense fallback={<LoadingPlaceholder message="Loading workspace editor..." />}>
+          <WorkspaceFormModal
+            isOpen={formOpen}
+            workspace={editTarget}
+            onClose={() => {
+              setFormOpen(false);
+              setEditTarget(null);
+            }}
+            onSuccess={handleFormSuccess}
+          />
+        </Suspense>
+      )}
 
       {/* Workspace Admin Manager (shown below table when an admin clicks "Admins") */}
       {canManageAdmins && adminManageTarget && (

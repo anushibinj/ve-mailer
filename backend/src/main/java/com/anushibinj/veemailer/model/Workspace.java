@@ -48,4 +48,8 @@ public class Workspace {
 
     private Instant connectivityCheckedAt;
     private String connectivityMessage;
+
+    /** Audit fields — when/who created this workspace. Null for legacy rows predating this tracking. */
+    private Instant createdAt;
+    private String createdBy;
 }

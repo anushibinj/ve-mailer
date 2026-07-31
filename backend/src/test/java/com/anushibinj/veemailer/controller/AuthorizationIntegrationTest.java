@@ -203,7 +203,7 @@ class AuthorizationIntegrationTest {
         WorkspaceResponseDto secondDto = WorkspaceResponseDto.builder()
                 .id(secondId).title("Second WS").workspaceShortcode("77BD").sharedSpaceId("s1")
                 .workspaceId("w2").clientId("c1").clientKey("(unchanged)").clientKeyConfigured(true).build();
-        when(workspaceService.create(any())).thenReturn(firstDto, secondDto);
+        when(workspaceService.create(any(), any())).thenReturn(firstDto, secondDto);
 
         // WORKSPACE_ADMIN may create any number of workspaces — no limit enforced
         mockMvc.perform(post("/api/v1/workspaces")
@@ -413,7 +413,7 @@ class AuthorizationIntegrationTest {
         WorkspaceResponseDto dto = WorkspaceResponseDto.builder()
                 .id(WORKSPACE_ID).title("x").workspaceShortcode("77BD").sharedSpaceId("s").workspaceId("w")
                 .clientId("c").clientKey("(unchanged)").clientKeyConfigured(true).build();
-        when(workspaceService.create(any())).thenReturn(dto);
+        when(workspaceService.create(any(), any())).thenReturn(dto);
 
         mockMvc.perform(post("/api/v1/workspaces")
                         .contentType(MediaType.APPLICATION_JSON)

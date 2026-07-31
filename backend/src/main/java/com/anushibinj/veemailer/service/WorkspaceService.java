@@ -3,13 +3,16 @@ package com.anushibinj.veemailer.service;
 import com.anushibinj.veemailer.dto.WorkspaceCreateRequestDto;
 import com.anushibinj.veemailer.dto.WorkspaceConnectionTestRequestDto;
 import com.anushibinj.veemailer.dto.WorkspaceConnectionTestResponseDto;
+import com.anushibinj.veemailer.dto.WorkspaceDuplicateCheckResponseDto;
 import com.anushibinj.veemailer.dto.WorkspaceResponseDto;
 import com.anushibinj.veemailer.dto.WorkspaceUpdateRequestDto;
 import com.anushibinj.veemailer.exception.DuplicateWorkspaceException;
 import com.anushibinj.veemailer.model.WorkspaceConnectivityStatus;
 import com.anushibinj.veemailer.model.Workspace;
 import com.anushibinj.veemailer.model.WorkspaceStatus;
+import com.anushibinj.veemailer.repository.AppUserRepository;
 import com.anushibinj.veemailer.repository.WorkspaceRepository;
+import com.anushibinj.veemailer.util.UrlNormalizer;
 import com.hpe.adm.nga.sdk.Octane;
 import com.hpe.adm.nga.sdk.entities.OctaneCollection;
 import com.hpe.adm.nga.sdk.model.EntityModel;
@@ -30,9 +33,19 @@ import java.util.stream.Collectors;
 public class WorkspaceService {
 
     static final String CLIENT_KEY_PLACEHOLDER = "(unchanged)";
+    static final String UNKNOWN_SHORTCODE = "UNKNOWN";
+    static final String SUPER_ADMIN_ROLE = "ADMIN";
+
+    static final String SHORTCODE_UNKNOWN_ENABLE_BLOCKED_MESSAGE =
+            "This workspace cannot be moved to the Enabled state because the workspace shortcode "
+                    + "could not be identified automatically during creation. Please contact a Super "
+                    + "Admin to review and correct the workspace metadata.";
 
     private final WorkspaceRepository workspaceRepository;
+    private final AppUserRepository appUserRepository;
     private final OctaneCacheService octaneCacheService;
+    private final EmailService emailService;
+    private final NotificationPreferencesService notificationPreferencesService;
 
     /**
      * Returns workspaces visible to normal (non-admin) users: only ENABLED.
@@ -81,14 +94,28 @@ public class WorkspaceService {
         return toResponseDto(workspace);
     }
 
-    public WorkspaceResponseDto create(WorkspaceCreateRequestDto request) {
+    /**
+     * Runs the same (Root URL, Shared Space ID, Workspace ID) duplicate check used by
+     * {@link #create}, without creating anything. Used by Step 1 of the workspace creation
+     * wizard so the administrator is warned about a conflict before entering credentials.
+     * Throws {@link DuplicateWorkspaceException} (mapped to 409) when a duplicate is found.
+     */
+    public WorkspaceDuplicateCheckResponseDto checkDuplicate(String rootUrl, String sharedSpaceId, String workspaceId) {
+        String normalizedRootUrl = normalizeRootUrl(rootUrl);
+        String normalizedSharedSpaceId = sharedSpaceId.trim();
+        String normalizedWorkspaceId = workspaceId.trim();
+        rejectIfDuplicateCombination(normalizedRootUrl, normalizedSharedSpaceId, normalizedWorkspaceId, null);
+        return WorkspaceDuplicateCheckResponseDto.builder().duplicate(false).build();
+    }
+
+    public WorkspaceResponseDto create(WorkspaceCreateRequestDto request, String createdByEmail) {
         String normalizedRootUrl = normalizeRootUrl(request.getRootUrl());
         String normalizedSharedSpaceId = request.getSharedSpaceId().trim();
         String normalizedWorkspaceId = request.getWorkspaceId().trim();
 
         rejectIfDuplicateCombination(normalizedRootUrl, normalizedSharedSpaceId, normalizedWorkspaceId, null);
 
-        WorkspaceStatus status = request.getStatus() != null ? request.getStatus() : WorkspaceStatus.DRAFT;
+        WorkspaceStatus status = resolveStatusForCreate(request.getStatus(), request.getWorkspaceShortcode());
         Workspace workspace = Workspace.builder()
                 .title(request.getTitle())
                 .workspaceShortcode(request.getWorkspaceShortcode())
@@ -98,6 +125,8 @@ public class WorkspaceService {
                 .clientKey(request.getClientKey())
                 .rootUrl(normalizedRootUrl)
                 .status(status)
+                .createdAt(Instant.now())
+                .createdBy(createdByEmail)
                 .build();
         Workspace saved;
         try {
@@ -106,6 +135,11 @@ public class WorkspaceService {
             // Guards against a race where two concurrent requests pass the pre-check at the
             // same time; the DB-level unique constraint is the ultimate source of truth.
             throw duplicateExceptionFromRace(normalizedRootUrl, normalizedSharedSpaceId, normalizedWorkspaceId, ex);
+        }
+        if (isShortcodeUnknown(saved.getWorkspaceShortcode())) {
+            notifySuperAdminsOfDraftWorkspace(saved);
+        } else if (isWorkspaceAdminCreator(createdByEmail)) {
+            notifySuperAdminsOfWorkspaceCreatedByWorkspaceAdmin(saved);
         }
         return toResponseDto(refreshConnectivityForWorkspace(saved));
     }
@@ -118,6 +152,7 @@ public class WorkspaceService {
         String normalizedSharedSpaceId = request.getSharedSpaceId().trim();
         String normalizedWorkspaceId = request.getWorkspaceId().trim();
         rejectIfDuplicateCombination(normalizedRootUrl, normalizedSharedSpaceId, normalizedWorkspaceId, id);
+        validateStatusChange(request.getStatus(), request.getWorkspaceShortcode());
 
         workspace.setTitle(request.getTitle());
         workspace.setWorkspaceShortcode(request.getWorkspaceShortcode());
@@ -155,6 +190,7 @@ public class WorkspaceService {
         String normalizedSharedSpaceId = request.getSharedSpaceId().trim();
         String normalizedWorkspaceId = request.getWorkspaceId().trim();
         rejectIfDuplicateCombination(normalizedRootUrl, normalizedSharedSpaceId, normalizedWorkspaceId, id);
+        validateStatusChange(request.getStatus(), request.getWorkspaceShortcode());
 
         // WORKSPACE_ADMIN can only update these fields
         workspace.setRootUrl(normalizedRootUrl);
@@ -353,11 +389,96 @@ public class WorkspaceService {
      * and "https://ve.example.com" are treated as the same Root URL for duplicate detection.
      */
     private String normalizeRootUrl(String rootUrl) {
-        String trimmed = rootUrl.trim();
-        while (trimmed.endsWith("/")) {
-            trimmed = trimmed.substring(0, trimmed.length() - 1);
+        return UrlNormalizer.normalizeRootUrl(rootUrl);
+    }
+
+    /**
+     * True when a workspace shortcode is missing/blank or is the literal placeholder "UNKNOWN"
+     * (case-insensitive) — meaning the wizard could not confidently parse it from the ValueEdge
+     * workspace name during discovery.
+     */
+    private boolean isShortcodeUnknown(String workspaceShortcode) {
+        return workspaceShortcode == null
+                || workspaceShortcode.isBlank()
+                || UNKNOWN_SHORTCODE.equalsIgnoreCase(workspaceShortcode.trim());
+    }
+
+    /**
+     * Determines the status to persist for a newly created workspace. Defaults to DRAFT when
+     * no status is requested. A workspace whose shortcode is unknown can never be created as
+     * ENABLED — the backend is the source of truth for this rule even though the wizard never
+     * lets the user pick ENABLED in that case.
+     */
+    private WorkspaceStatus resolveStatusForCreate(WorkspaceStatus requestedStatus, String workspaceShortcode) {
+        WorkspaceStatus status = requestedStatus != null ? requestedStatus : WorkspaceStatus.DRAFT;
+        if (status == WorkspaceStatus.ENABLED && isShortcodeUnknown(workspaceShortcode)) {
+            throw new IllegalArgumentException(SHORTCODE_UNKNOWN_ENABLE_BLOCKED_MESSAGE);
         }
-        return trimmed;
+        return status;
+    }
+
+    /**
+     * Guards updates: a workspace whose shortcode is (or is being set to) unknown may never be
+     * moved to ENABLED. The frontend disables the option, but the backend enforces it too.
+     */
+    private void validateStatusChange(WorkspaceStatus requestedStatus, String workspaceShortcode) {
+        if (requestedStatus == WorkspaceStatus.ENABLED && isShortcodeUnknown(workspaceShortcode)) {
+            throw new IllegalArgumentException(SHORTCODE_UNKNOWN_ENABLE_BLOCKED_MESSAGE);
+        }
+    }
+
+    /**
+     * Emails the configured Super Admin notification addresses (Admin Panel → Notifications →
+     * "admin@company.com"-style system notification recipients — see
+     * {@link NotificationPreferencesService#getAdminNotificationEmails()}) that a newly created
+     * workspace has an unknown shortcode and needs manual review. Best-effort — failures are
+     * logged by {@link EmailService} and never propagate back to the caller.
+     */
+    private void notifySuperAdminsOfDraftWorkspace(Workspace workspace) {
+        List<String> superAdminEmails = notificationPreferencesService.getAdminNotificationEmails();
+        emailService.sendWorkspaceDraftReviewNotificationToAdmins(
+                workspace.getTitle(),
+                workspace.getRootUrl(),
+                workspace.getSharedSpaceId(),
+                workspace.getWorkspaceId(),
+                workspace.getCreatedBy(),
+                workspace.getCreatedAt(),
+                superAdminEmails);
+    }
+
+    /**
+     * True when the given creator email belongs to a user who does NOT hold the Super Admin
+     * (ADMIN) role — i.e. a Workspace Admin. Unknown/missing users are treated as non-admin so a
+     * notification is still sent rather than silently swallowed.
+     */
+    private boolean isWorkspaceAdminCreator(String createdByEmail) {
+        if (createdByEmail == null || createdByEmail.isBlank()) {
+            return false;
+        }
+        return appUserRepository.findByEmail(createdByEmail)
+                .map(user -> user.getRoles().stream()
+                        .noneMatch(role -> SUPER_ADMIN_ROLE.equals(role.getRoleName())))
+                .orElse(false);
+    }
+
+    /**
+     * Emails the configured Super Admin notification addresses (same recipient list as
+     * {@link #notifySuperAdminsOfDraftWorkspace}) that a Workspace Admin created a new workspace
+     * (informational — no action required). Only sent when the shortcode was successfully
+     * detected; when it is UNKNOWN, {@link #notifySuperAdminsOfDraftWorkspace} already covers the
+     * same details plus a call to action, so the two notifications are mutually exclusive per
+     * workspace creation.
+     */
+    private void notifySuperAdminsOfWorkspaceCreatedByWorkspaceAdmin(Workspace workspace) {
+        List<String> superAdminEmails = notificationPreferencesService.getAdminNotificationEmails();
+        emailService.sendWorkspaceCreatedNotificationToAdmins(
+                workspace.getTitle(),
+                workspace.getRootUrl(),
+                workspace.getSharedSpaceId(),
+                workspace.getWorkspaceId(),
+                workspace.getCreatedBy(),
+                workspace.getCreatedAt(),
+                superAdminEmails);
     }
 
     /**

@@ -13,7 +13,8 @@ flowchart TD
         ACP[Admin Control Panel<br/>URL-based tab routing (?tab=)]
         NPP[Notification Preferences Page]
         AIPP[AI Preferences Page]
-        WMP[Workspace Management Page<br/>CRUD incl workspace shortcode]
+        WMP[Workspace Management Page<br/>table: edit workspace only (title/shortcode read-only)]
+        WCW[Workspace Creation Wizard<br/>3-step: identify → authenticate → review<br/>duplicate check + ValueEdge metadata auto-discovery]
         WAM[Workspace Admin Manager]
         MAP[Mail Analytics Page]
         UP[Users Page]
@@ -64,7 +65,8 @@ flowchart TD
             FS[Filter Service<br/>query + optional order-by]
             RGCtrl[Recipient Group Controller]
             SS[Subscription Service<br/>threshold-aware persistence]
-            WSS[Workspace Service]
+            WSS[Workspace Service<br/>composite duplicate check + auto Enabled/Draft status]
+            WDS[Workspace Discovery Service<br/>ValueEdge sign-in + workspaces list<br/>parses Title/Shortcode, falls back to UNKNOWN]
             WAS[Workspace Admin Service]
             WCPS[Workspace Connectivity Polling Service]
             RGS[Recipient Group Service]
@@ -95,7 +97,7 @@ flowchart TD
             OTPR[OtpRequest Repository]
             IMLR[InviteMagicLink Repository]
             FR[Filter Repository]
-            WR[Workspace Repository<br/>persists workspace shortcode]
+            WR[Workspace Repository<br/>persists workspace shortcode<br/>unique index: rootUrl+sharedSpaceId+workspaceId]
             WAR[WorkspaceAdmin Repository]
             ESR[EmailSubscriber Repository]
             NPR[NotificationPreferences Repository]
@@ -130,6 +132,7 @@ flowchart TD
     ACP --> NPP
     ACP --> AIPP
     ACP --> WMP
+    WMP --> WCW
     ACP --> MAP
     ACP --> UP
     ACP --> GSP
@@ -138,6 +141,7 @@ flowchart TD
     NPP --> AI
     AIPP --> AI
     WMP --> AI
+    WCW --> AI
     WAM --> AI
     MAP --> AI
     UP --> AI
@@ -206,8 +210,12 @@ flowchart TD
     FCtrl --> WAS
     WCtrl --> WAS
     WCtrl --> WSS
+    WCtrl --> WDS
+    WDS --> VE
     WSS --> WR
     WSS --> VE
+    WSS --> DMS
+    WSS --> NPS
     WCPS --> WSS
     WAS --> WAR
     SCtrl --> SS

@@ -10,6 +10,7 @@ import com.anushibinj.veemailer.service.JwtService;
 import com.anushibinj.veemailer.service.SubscriptionService;
 import com.anushibinj.veemailer.service.UserQueryService;
 import com.anushibinj.veemailer.service.WorkspaceAdminService;
+import com.anushibinj.veemailer.service.WorkspaceDiscoveryService;
 import com.anushibinj.veemailer.service.WorkspaceService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
@@ -54,6 +55,9 @@ class SubscriptionControllerTest {
 
     @MockBean
     private WorkspaceService workspaceService;
+
+    @MockBean
+    private WorkspaceDiscoveryService workspaceDiscoveryService;
 
     @MockBean
     private JwtService jwtService;

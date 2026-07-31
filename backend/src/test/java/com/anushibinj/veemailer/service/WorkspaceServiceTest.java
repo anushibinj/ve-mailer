@@ -6,8 +6,11 @@ import com.anushibinj.veemailer.dto.WorkspaceConnectionTestResponseDto;
 import com.anushibinj.veemailer.dto.WorkspaceResponseDto;
 import com.anushibinj.veemailer.dto.WorkspaceUpdateRequestDto;
 import com.anushibinj.veemailer.exception.DuplicateWorkspaceException;
+import com.anushibinj.veemailer.model.AppUser;
+import com.anushibinj.veemailer.model.Role;
 import com.anushibinj.veemailer.model.Workspace;
 import com.anushibinj.veemailer.model.WorkspaceStatus;
+import com.anushibinj.veemailer.repository.AppUserRepository;
 import com.anushibinj.veemailer.repository.WorkspaceRepository;
 import com.hpe.adm.nga.sdk.Octane;
 import com.hpe.adm.nga.sdk.entities.OctaneCollection;
@@ -38,7 +41,16 @@ class WorkspaceServiceTest {
     private WorkspaceRepository workspaceRepository;
 
     @Mock
+    private AppUserRepository appUserRepository;
+
+    @Mock
     private OctaneCacheService octaneCacheService;
+
+    @Mock
+    private EmailService emailService;
+
+    @Mock
+    private NotificationPreferencesService notificationPreferencesService;
 
     @InjectMocks
     private WorkspaceService workspaceService;
@@ -89,7 +101,7 @@ class WorkspaceServiceTest {
         WorkspaceCreateRequestDto req =
                 new WorkspaceCreateRequestDto("T", "77BD", "sp-1", "ws-2", "cid", "key", "https://ve.example.com", null);
 
-        assertThat(workspaceService.create(req)).isNotNull();
+        assertThat(workspaceService.create(req, "creator@test.com")).isNotNull();
     }
 
     @Test
@@ -102,7 +114,7 @@ class WorkspaceServiceTest {
         WorkspaceCreateRequestDto req =
                 new WorkspaceCreateRequestDto("T", "77BD", "sp-2", "ws-1", "cid", "key", "https://ve.example.com", null);
 
-        assertThat(workspaceService.create(req)).isNotNull();
+        assertThat(workspaceService.create(req, "creator@test.com")).isNotNull();
     }
 
     @Test
@@ -115,7 +127,7 @@ class WorkspaceServiceTest {
         WorkspaceCreateRequestDto req =
                 new WorkspaceCreateRequestDto("T", "77BD", "sp-1", "ws-1", "cid", "key", "https://another.example.com", null);
 
-        assertThat(workspaceService.create(req)).isNotNull();
+        assertThat(workspaceService.create(req, "creator@test.com")).isNotNull();
     }
 
     @Test
@@ -128,7 +140,7 @@ class WorkspaceServiceTest {
         WorkspaceCreateRequestDto req =
                 new WorkspaceCreateRequestDto("T", "77BD", "sp-1", "ws-1", "cid", "key", "  https://ve.example.com/  ", null);
 
-        assertThatThrownBy(() -> workspaceService.create(req))
+        assertThatThrownBy(() -> workspaceService.create(req, "creator@test.com"))
                 .isInstanceOf(DuplicateWorkspaceException.class);
     }
 
@@ -141,7 +153,7 @@ class WorkspaceServiceTest {
         WorkspaceCreateRequestDto req =
                 new WorkspaceCreateRequestDto("T", "77BD", "sp-1", "ws-1", "cid", "key", "https://ve.example.com", null);
 
-        assertThatThrownBy(() -> workspaceService.create(req))
+        assertThatThrownBy(() -> workspaceService.create(req, "creator@test.com"))
                 .isInstanceOf(DuplicateWorkspaceException.class)
                 .hasMessageContaining("already exists");
     }
@@ -156,7 +168,7 @@ class WorkspaceServiceTest {
         WorkspaceCreateRequestDto req =
                 new WorkspaceCreateRequestDto("T", "77BD", "sp-1", "ws-1", "cid", "key", "https://other.example.com", null);
 
-        WorkspaceResponseDto result = workspaceService.create(req);
+        WorkspaceResponseDto result = workspaceService.create(req, "creator@test.com");
 
         assertThat(result).isNotNull();
     }
@@ -171,7 +183,7 @@ class WorkspaceServiceTest {
         WorkspaceCreateRequestDto req =
                 new WorkspaceCreateRequestDto("My WS", "77BD", "sp-1", "ws-1", "cid-1", "real-secret", "https://ve.example.com", null);
 
-        WorkspaceResponseDto result = workspaceService.create(req);
+        WorkspaceResponseDto result = workspaceService.create(req, "creator@test.com");
 
         assertThat(result.getClientKey()).isEqualTo(WorkspaceService.CLIENT_KEY_PLACEHOLDER);
         assertThat(result.isClientKeyConfigured()).isTrue();
@@ -191,8 +203,214 @@ class WorkspaceServiceTest {
         WorkspaceCreateRequestDto req =
                 new WorkspaceCreateRequestDto("My WS", "77BD", "sp-1", "ws-1", "cid-1", "real-secret", "https://ve.example.com", null);
 
-        assertThatThrownBy(() -> workspaceService.create(req))
+        assertThatThrownBy(() -> workspaceService.create(req, "creator@test.com"))
                 .isInstanceOf(DuplicateWorkspaceException.class);
+    }
+
+    // --- Workspace creation wizard: duplicate pre-check (Step 1) ---
+
+    @Test
+    void checkDuplicate_NoExistingCombination_ReturnsNotDuplicate() {
+        when(workspaceRepository.findFirstByRootUrlAndSharedSpaceIdAndWorkspaceId(
+                "https://ve.example.com", "sp-1", "ws-1")).thenReturn(Optional.empty());
+
+        var result = workspaceService.checkDuplicate("https://ve.example.com", "sp-1", "ws-1");
+
+        assertThat(result.isDuplicate()).isFalse();
+    }
+
+    @Test
+    void checkDuplicate_ExistingCombination_Throws() {
+        Workspace existing = buildWorkspace(UUID.randomUUID());
+        when(workspaceRepository.findFirstByRootUrlAndSharedSpaceIdAndWorkspaceId(
+                "https://ve.example.com", "sp-1", "ws-1")).thenReturn(Optional.of(existing));
+
+        assertThatThrownBy(() -> workspaceService.checkDuplicate("https://ve.example.com", "sp-1", "ws-1"))
+                .isInstanceOf(DuplicateWorkspaceException.class);
+    }
+
+    // --- Workspace status auto-determination + Super Admin email notification ---
+
+    @Test
+    void create_ShortcodeKnown_AutoEnabled_NoEmailSent() {
+        when(workspaceRepository.findFirstByRootUrlAndSharedSpaceIdAndWorkspaceId(
+                "https://ve.example.com", "sp-1", "ws-1")).thenReturn(Optional.empty());
+        Workspace saved = buildWorkspace(UUID.randomUUID());
+        saved.setWorkspaceShortcode("77BD");
+        when(workspaceRepository.save(any())).thenReturn(saved);
+
+        WorkspaceCreateRequestDto req =
+                new WorkspaceCreateRequestDto("My WS", "77BD", "sp-1", "ws-1", "cid-1", "real-secret",
+                        "https://ve.example.com", null);
+
+        WorkspaceResponseDto result = workspaceService.create(req, "creator@test.com");
+
+        assertThat(result.getStatus()).isEqualTo(WorkspaceStatus.ENABLED);
+        org.mockito.Mockito.verifyNoInteractions(emailService);
+        org.mockito.Mockito.verifyNoInteractions(notificationPreferencesService);
+    }
+
+    @Test
+    void create_ShortcodeUnknown_AutoDraft_EmailSentToSuperAdmins() {
+        when(workspaceRepository.findFirstByRootUrlAndSharedSpaceIdAndWorkspaceId(
+                "https://ve.example.com", "sp-1", "ws-1")).thenReturn(Optional.empty());
+        Workspace saved = buildWorkspace(UUID.randomUUID());
+        saved.setWorkspaceShortcode("UNKNOWN");
+        saved.setStatus(WorkspaceStatus.DRAFT);
+        saved.setCreatedBy("creator@test.com");
+        saved.setCreatedAt(java.time.Instant.now());
+        when(workspaceRepository.save(any())).thenReturn(saved);
+
+        when(notificationPreferencesService.getAdminNotificationEmails())
+                .thenReturn(List.of("admin1@test.com", "admin2@test.com"));
+
+        WorkspaceCreateRequestDto req =
+                new WorkspaceCreateRequestDto("My WS", "UNKNOWN", "sp-1", "ws-1", "cid-1", "real-secret",
+                        "https://ve.example.com", null);
+
+        WorkspaceResponseDto result = workspaceService.create(req, "creator@test.com");
+
+        assertThat(result.getStatus()).isEqualTo(WorkspaceStatus.DRAFT);
+        verify(emailService).sendWorkspaceDraftReviewNotificationToAdmins(
+                eq(saved.getTitle()), eq(saved.getRootUrl()), eq(saved.getSharedSpaceId()), eq(saved.getWorkspaceId()),
+                eq("creator@test.com"), any(), eq(List.of("admin1@test.com", "admin2@test.com")));
+    }
+
+    // --- Super Admin "workspace created by a Workspace Admin" notification (TODO.md) ---
+
+    @Test
+    void create_ShortcodeKnown_CreatorIsWorkspaceAdmin_EmailSentToSuperAdmins() {
+        when(workspaceRepository.findFirstByRootUrlAndSharedSpaceIdAndWorkspaceId(
+                "https://ve.example.com", "sp-1", "ws-1")).thenReturn(Optional.empty());
+        Workspace saved = buildWorkspace(UUID.randomUUID());
+        saved.setWorkspaceShortcode("77BD");
+        saved.setCreatedBy("wsadmin@test.com");
+        saved.setCreatedAt(java.time.Instant.now());
+        when(workspaceRepository.save(any())).thenReturn(saved);
+
+        Role workspaceAdminRole = Role.builder().roleName("WORKSPACE_ADMIN").build();
+        AppUser creator = AppUser.builder().name("WS Admin").email("wsadmin@test.com")
+                .passwordHash("x").roles(java.util.Set.of(workspaceAdminRole)).build();
+        when(appUserRepository.findByEmail("wsadmin@test.com")).thenReturn(Optional.of(creator));
+
+        when(notificationPreferencesService.getAdminNotificationEmails())
+                .thenReturn(List.of("admin1@test.com"));
+
+        WorkspaceCreateRequestDto req =
+                new WorkspaceCreateRequestDto("My WS", "77BD", "sp-1", "ws-1", "cid-1", "real-secret",
+                        "https://ve.example.com", null);
+
+        WorkspaceResponseDto result = workspaceService.create(req, "wsadmin@test.com");
+
+        assertThat(result.getStatus()).isEqualTo(WorkspaceStatus.ENABLED);
+        verify(emailService).sendWorkspaceCreatedNotificationToAdmins(
+                eq(saved.getTitle()), eq(saved.getRootUrl()), eq(saved.getSharedSpaceId()), eq(saved.getWorkspaceId()),
+                eq("wsadmin@test.com"), any(), eq(List.of("admin1@test.com")));
+        org.mockito.Mockito.verify(emailService, org.mockito.Mockito.never())
+                .sendWorkspaceDraftReviewNotificationToAdmins(any(), any(), any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void create_ShortcodeKnown_CreatorIsSuperAdmin_NoEmailSent() {
+        when(workspaceRepository.findFirstByRootUrlAndSharedSpaceIdAndWorkspaceId(
+                "https://ve.example.com", "sp-1", "ws-1")).thenReturn(Optional.empty());
+        Workspace saved = buildWorkspace(UUID.randomUUID());
+        saved.setWorkspaceShortcode("77BD");
+        saved.setCreatedBy("superadmin@test.com");
+        when(workspaceRepository.save(any())).thenReturn(saved);
+
+        Role globalAdminRole = Role.builder().roleName("ADMIN").build();
+        AppUser creator = AppUser.builder().name("Super Admin").email("superadmin@test.com")
+                .passwordHash("x").roles(java.util.Set.of(globalAdminRole)).build();
+        when(appUserRepository.findByEmail("superadmin@test.com")).thenReturn(Optional.of(creator));
+
+        WorkspaceCreateRequestDto req =
+                new WorkspaceCreateRequestDto("My WS", "77BD", "sp-1", "ws-1", "cid-1", "real-secret",
+                        "https://ve.example.com", null);
+
+        workspaceService.create(req, "superadmin@test.com");
+
+        org.mockito.Mockito.verifyNoInteractions(emailService);
+        org.mockito.Mockito.verifyNoInteractions(notificationPreferencesService);
+    }
+
+    @Test
+    void create_ShortcodeUnknown_CreatorIsWorkspaceAdmin_OnlyDraftReviewEmailSent_NotBoth() {
+        when(workspaceRepository.findFirstByRootUrlAndSharedSpaceIdAndWorkspaceId(
+                "https://ve.example.com", "sp-1", "ws-1")).thenReturn(Optional.empty());
+        Workspace saved = buildWorkspace(UUID.randomUUID());
+        saved.setWorkspaceShortcode("UNKNOWN");
+        saved.setStatus(WorkspaceStatus.DRAFT);
+        saved.setCreatedBy("wsadmin@test.com");
+        saved.setCreatedAt(java.time.Instant.now());
+        when(workspaceRepository.save(any())).thenReturn(saved);
+
+        AppUser admin1 = AppUser.builder().name("Admin One").email("admin1@test.com").passwordHash("x").build();
+        when(notificationPreferencesService.getAdminNotificationEmails()).thenReturn(List.of(admin1.getEmail()));
+
+        WorkspaceCreateRequestDto req =
+                new WorkspaceCreateRequestDto("My WS", "UNKNOWN", "sp-1", "ws-1", "cid-1", "real-secret",
+                        "https://ve.example.com", null);
+
+        workspaceService.create(req, "wsadmin@test.com");
+
+        verify(emailService).sendWorkspaceDraftReviewNotificationToAdmins(
+                any(), any(), any(), any(), any(), any(), any());
+        org.mockito.Mockito.verify(emailService, org.mockito.Mockito.never())
+                .sendWorkspaceCreatedNotificationToAdmins(any(), any(), any(), any(), any(), any(), any());
+        // isWorkspaceAdminCreator() must never even be consulted once the shortcode-unknown branch is taken
+        org.mockito.Mockito.verify(appUserRepository, org.mockito.Mockito.never()).findByEmail(any());
+    }
+
+    @Test
+    void create_EnabledRequestedWithUnknownShortcode_Throws() {
+        when(workspaceRepository.findFirstByRootUrlAndSharedSpaceIdAndWorkspaceId(
+                "https://ve.example.com", "sp-1", "ws-1")).thenReturn(Optional.empty());
+
+        WorkspaceCreateRequestDto req =
+                new WorkspaceCreateRequestDto("My WS", "UNKNOWN", "sp-1", "ws-1", "cid-1", "real-secret",
+                        "https://ve.example.com", WorkspaceStatus.ENABLED);
+
+        assertThatThrownBy(() -> workspaceService.create(req, "creator@test.com"))
+                .isInstanceOf(IllegalArgumentException.class);
+        org.mockito.Mockito.verify(workspaceRepository, org.mockito.Mockito.never()).save(any());
+    }
+
+    @Test
+    void update_EnabledRequestedWithUnknownShortcode_Throws() {
+        UUID id = UUID.randomUUID();
+        Workspace existing = buildWorkspace(id);
+        existing.setWorkspaceShortcode("UNKNOWN");
+        when(workspaceRepository.findById(id)).thenReturn(Optional.of(existing));
+        when(workspaceRepository.findFirstByRootUrlAndSharedSpaceIdAndWorkspaceId(
+                "https://ve.example.com", "sp-1", "ws-1")).thenReturn(Optional.of(existing));
+
+        WorkspaceUpdateRequestDto req =
+                new WorkspaceUpdateRequestDto("Updated", "UNKNOWN", "sp-1", "ws-1", "cid-1",
+                        WorkspaceService.CLIENT_KEY_PLACEHOLDER, "https://ve.example.com", WorkspaceStatus.ENABLED);
+
+        assertThatThrownBy(() -> workspaceService.update(id, req))
+                .isInstanceOf(IllegalArgumentException.class);
+        org.mockito.Mockito.verify(workspaceRepository, org.mockito.Mockito.never()).save(any());
+    }
+
+    @Test
+    void updateAsWorkspaceAdmin_EnabledRequestedWithUnknownShortcode_Throws() {
+        UUID id = UUID.randomUUID();
+        Workspace existing = buildWorkspace(id);
+        existing.setWorkspaceShortcode("UNKNOWN");
+        existing.setStatus(WorkspaceStatus.DRAFT);
+        when(workspaceRepository.findById(id)).thenReturn(Optional.of(existing));
+        when(workspaceRepository.findFirstByRootUrlAndSharedSpaceIdAndWorkspaceId(
+                "https://ve.example.com", "sp-1", "ws-1")).thenReturn(Optional.of(existing));
+
+        WorkspaceUpdateRequestDto req =
+                new WorkspaceUpdateRequestDto(null, "UNKNOWN", "sp-1", "ws-1", "cid-1",
+                        WorkspaceService.CLIENT_KEY_PLACEHOLDER, "https://ve.example.com", WorkspaceStatus.ENABLED);
+
+        assertThatThrownBy(() -> workspaceService.updateAsWorkspaceAdmin(id, req))
+                .isInstanceOf(IllegalArgumentException.class);
+        org.mockito.Mockito.verify(workspaceRepository, org.mockito.Mockito.never()).save(any());
     }
 
     @Test

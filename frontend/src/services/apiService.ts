@@ -87,6 +87,58 @@ export interface WorkspaceConflictErrorData {
   };
 }
 
+// --- Workspace creation wizard: duplicate pre-check + ValueEdge metadata discovery ---
+
+export interface WorkspaceDuplicateCheckResult {
+  duplicate: boolean;
+}
+
+export interface WorkspaceDiscoveryPayload {
+  rootUrl: string;
+  sharedSpaceId: string;
+  workspaceId: string;
+  clientId: string;
+  clientKey: string;
+}
+
+export interface WorkspaceDiscoveryResult {
+  workspaceTitle: string;
+  workspaceShortcode: string;
+  shortcodeDetected: boolean;
+  warning?: string;
+}
+
+// Shape of the 404 error body returned when the Workspace ID entered in Step 1 isn't
+// present in the ValueEdge shared space's workspace list — includes the raw JSON response
+// so the wizard can show it in a troubleshooting panel.
+export interface WorkspaceDiscoveryErrorData {
+  status: number;
+  error: string;
+  message: string;
+  rawResponse: string;
+  timestamp?: string;
+}
+
+/** Backend is the source of truth here — the same duplicate check used by workspace creation. */
+export const adminCheckDuplicateWorkspace = async (
+  rootUrl: string,
+  sharedSpaceId: string,
+  workspaceId: string
+): Promise<WorkspaceDuplicateCheckResult> => {
+  const response = await api.get('/api/v1/workspaces/check-duplicate', {
+    params: { rootUrl, sharedSpaceId, workspaceId },
+  });
+  return response.data;
+};
+
+/** The frontend never calls the ValueEdge REST API directly — this endpoint does it server-side. */
+export const adminDiscoverWorkspaceMetadata = async (
+  payload: WorkspaceDiscoveryPayload
+): Promise<WorkspaceDiscoveryResult> => {
+  const response = await api.post('/api/v1/workspaces/discover-metadata', payload);
+  return response.data;
+};
+
 export interface FilterCriteriaClause {
   field: string;
   operator: string;

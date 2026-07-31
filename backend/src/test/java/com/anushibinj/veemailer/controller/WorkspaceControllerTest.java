@@ -4,6 +4,9 @@ import com.anushibinj.veemailer.dto.ScheduleDto;
 import com.anushibinj.veemailer.dto.SubscriptionResponseDTO;
 import com.anushibinj.veemailer.dto.WorkspaceConnectionTestResponseDto;
 import com.anushibinj.veemailer.dto.WorkspaceCreateRequestDto;
+import com.anushibinj.veemailer.dto.WorkspaceDiscoveryRequestDto;
+import com.anushibinj.veemailer.dto.WorkspaceDiscoveryResponseDto;
+import com.anushibinj.veemailer.dto.WorkspaceDuplicateCheckResponseDto;
 import com.anushibinj.veemailer.dto.WorkspaceResponseDto;
 import com.anushibinj.veemailer.model.ScheduleType;
 import com.anushibinj.veemailer.model.Status;
@@ -13,6 +16,7 @@ import com.anushibinj.veemailer.service.JwtService;
 import com.anushibinj.veemailer.service.SubscriptionService;
 import com.anushibinj.veemailer.service.UserQueryService;
 import com.anushibinj.veemailer.service.WorkspaceAdminService;
+import com.anushibinj.veemailer.service.WorkspaceDiscoveryService;
 import com.anushibinj.veemailer.service.WorkspaceService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -58,6 +62,9 @@ class WorkspaceControllerTest {
 
     @MockBean
     private WorkspaceService workspaceService;
+
+    @MockBean
+    private WorkspaceDiscoveryService workspaceDiscoveryService;
 
     @MockBean
     private SubscriptionService subscriptionService;
@@ -113,6 +120,7 @@ class WorkspaceControllerTest {
     }
 
     @Test
+    @WithMockUser(username = "admin@test.com", roles = "ADMIN")
     void testCreateWorkspace_ReturnsCreated() throws Exception {
         UUID id = UUID.randomUUID();
         WorkspaceCreateRequestDto request =
@@ -130,7 +138,7 @@ class WorkspaceControllerTest {
                 .status(WorkspaceStatus.DRAFT)
                 .build();
 
-        when(workspaceService.create(any())).thenReturn(dto);
+        when(workspaceService.create(any(), any())).thenReturn(dto);
 
         mockMvc.perform(post("/api/v1/workspaces")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -143,6 +151,7 @@ class WorkspaceControllerTest {
     }
 
     @Test
+    @WithMockUser(username = "admin@test.com", roles = "ADMIN")
     void testCreateWorkspace_Duplicate_Returns409WithExistingWorkspaceDetails() throws Exception {
         UUID existingId = UUID.randomUUID();
         WorkspaceCreateRequestDto request =
@@ -155,7 +164,7 @@ class WorkspaceControllerTest {
         existing.setSharedSpaceId("sp-1");
         existing.setWorkspaceId("ws-1");
 
-        when(workspaceService.create(any()))
+        when(workspaceService.create(any(), any()))
                 .thenThrow(new com.anushibinj.veemailer.exception.DuplicateWorkspaceException(existing));
 
         mockMvc.perform(post("/api/v1/workspaces")
@@ -183,7 +192,7 @@ class WorkspaceControllerTest {
 
         when(workspaceAdminService.isGlobalAdmin(any())).thenReturn(false);
         when(workspaceAdminService.hasWorkspaceAdminRole(any())).thenReturn(true);
-        when(workspaceService.create(any())).thenReturn(dto);
+        when(workspaceService.create(any(), any())).thenReturn(dto);
 
         mockMvc.perform(post("/api/v1/workspaces")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -204,7 +213,7 @@ class WorkspaceControllerTest {
                 .clientId("cid-1").clientKey("(unchanged)").clientKeyConfigured(true)
                 .rootUrl("https://ve.example.com").status(WorkspaceStatus.DRAFT).build();
 
-        when(workspaceService.create(any())).thenReturn(dto);
+        when(workspaceService.create(any(), any())).thenReturn(dto);
 
         mockMvc.perform(post("/api/v1/workspaces")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -228,7 +237,7 @@ class WorkspaceControllerTest {
                     .id(id).title("WS " + i).workspaceShortcode("77BD").sharedSpaceId("sp-1").workspaceId("ws-" + i)
                     .clientId("cid-1").clientKey("(unchanged)").clientKeyConfigured(true)
                     .rootUrl("https://ve.example.com").status(WorkspaceStatus.DRAFT).build();
-            when(workspaceService.create(any())).thenReturn(dto);
+            when(workspaceService.create(any(), any())).thenReturn(dto);
 
             mockMvc.perform(post("/api/v1/workspaces")
                             .contentType(MediaType.APPLICATION_JSON)
@@ -236,7 +245,7 @@ class WorkspaceControllerTest {
                     .andExpect(status().isCreated());
         }
 
-        verify(workspaceService, times(3)).create(any());
+        verify(workspaceService, times(3)).create(any(), any());
         verify(workspaceAdminService, times(3)).autoAssignCreatorAsAdmin(any(), any());
     }
 
@@ -402,4 +411,85 @@ class WorkspaceControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("DISABLED"));
     }
+
+    // --- Workspace creation wizard: duplicate pre-check (Step 1) ---
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void testCheckDuplicateWorkspace_NoConflict_ReturnsOkFalse() throws Exception {
+        when(workspaceService.checkDuplicate("https://ve.example.com", "sp-1", "ws-1"))
+                .thenReturn(WorkspaceDuplicateCheckResponseDto.builder().duplicate(false).build());
+
+        mockMvc.perform(get("/api/v1/workspaces/check-duplicate")
+                        .param("rootUrl", "https://ve.example.com")
+                        .param("sharedSpaceId", "sp-1")
+                        .param("workspaceId", "ws-1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.duplicate").value(false));
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void testCheckDuplicateWorkspace_Conflict_Returns409() throws Exception {
+        com.anushibinj.veemailer.model.Workspace existing = new com.anushibinj.veemailer.model.Workspace();
+        existing.setId(UUID.randomUUID());
+        existing.setTitle("Finance Production");
+        existing.setRootUrl("https://ve.example.com");
+        existing.setSharedSpaceId("sp-1");
+        existing.setWorkspaceId("ws-1");
+
+        when(workspaceService.checkDuplicate("https://ve.example.com", "sp-1", "ws-1"))
+                .thenThrow(new com.anushibinj.veemailer.exception.DuplicateWorkspaceException(existing));
+
+        mockMvc.perform(get("/api/v1/workspaces/check-duplicate")
+                        .param("rootUrl", "https://ve.example.com")
+                        .param("sharedSpaceId", "sp-1")
+                        .param("workspaceId", "ws-1"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.existingWorkspace.name").value("Finance Production"));
+    }
+
+    // --- Workspace creation wizard: metadata discovery (Step 2) ---
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void testDiscoverWorkspaceMetadata_ShortcodeDetected_ReturnsOk() throws Exception {
+        WorkspaceDiscoveryRequestDto request = new WorkspaceDiscoveryRequestDto(
+                "https://ot-internal.saas.microfocus.com", "4001", "5015", "cid-1", "secret");
+        WorkspaceDiscoveryResponseDto responseDto = WorkspaceDiscoveryResponseDto.builder()
+                .workspaceTitle("Portfolio-Hyd")
+                .workspaceShortcode("77BD")
+                .shortcodeDetected(true)
+                .build();
+
+        when(workspaceDiscoveryService.discover(any())).thenReturn(responseDto);
+
+        mockMvc.perform(post("/api/v1/workspaces/discover-metadata")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.workspaceTitle").value("Portfolio-Hyd"))
+                .andExpect(jsonPath("$.workspaceShortcode").value("77BD"))
+                .andExpect(jsonPath("$.shortcodeDetected").value(true));
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void testDiscoverWorkspaceMetadata_NoMatch_Returns404WithRawResponse() throws Exception {
+        WorkspaceDiscoveryRequestDto request = new WorkspaceDiscoveryRequestDto(
+                "https://ot-internal.saas.microfocus.com", "4001", "5015", "cid-1", "secret");
+        String rawJson = "{\"total_count\":1,\"data\":[{\"id\":\"5009\",\"name\":\"Other - AB12\"}]}";
+
+        when(workspaceDiscoveryService.discover(any()))
+                .thenThrow(new com.anushibinj.veemailer.exception.WorkspaceDiscoveryNotFoundException(
+                        "No workspace with ID 5015 was found in the ValueEdge response.", rawJson));
+
+        mockMvc.perform(post("/api/v1/workspaces/discover-metadata")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("No workspace with ID 5015 was found in the ValueEdge response."))
+                .andExpect(jsonPath("$.rawResponse").value(rawJson));
+    }
 }
+
