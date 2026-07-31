@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { X, Eye, EyeOff, Loader2, Building2, Plug } from 'lucide-react';
+import { X, Eye, EyeOff, Loader2, Building2, Plug, CheckCircle, Pencil, PowerOff } from 'lucide-react';
 import type {
   WorkspaceAdmin,
   WorkspaceConflictErrorData,
@@ -23,6 +23,39 @@ import {
 // Workspace creation now happens exclusively through the WorkspaceCreationWizard, which
 // auto-discovers the Title and Shortcode from the ValueEdge REST API. This modal is
 // edit-only — the Title and Shortcode are system-derived and shown as read-only here.
+// Workspace Status options, styled as a color-coded segmented control (rather than a plain
+// <select>) so each state is instantly recognizable — colors match the status badges used in
+// the Workspace Management table (green = Enabled, amber = Draft, slate = Disabled).
+const STATUS_OPTIONS: {
+  value: WorkspaceStatus;
+  label: string;
+  icon: typeof CheckCircle;
+  idleClass: string;
+  selectedClass: string;
+}[] = [
+  {
+    value: 'ENABLED',
+    label: 'Enabled',
+    icon: CheckCircle,
+    idleClass: 'text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-500/10',
+    selectedClass: 'bg-emerald-600 text-white shadow-sm',
+  },
+  {
+    value: 'DRAFT',
+    label: 'Draft',
+    icon: Pencil,
+    idleClass: 'text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-500/10',
+    selectedClass: 'bg-amber-500 text-white shadow-sm',
+  },
+  {
+    value: 'DISABLED',
+    label: 'Disabled',
+    icon: PowerOff,
+    idleClass: 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700',
+    selectedClass: 'bg-slate-600 text-white shadow-sm',
+  },
+];
+
 interface WorkspaceFormModalProps {
   isOpen: boolean;
   workspace: WorkspaceAdmin;
@@ -243,35 +276,6 @@ const WorkspaceFormModal: React.FC<WorkspaceFormModalProps> = ({
             />
           </div>
 
-          {/* Workspace Status */}
-          <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
-              Workspace Status <span className="text-red-500">*</span>
-            </label>
-            <select
-              value={values.status}
-              onChange={(e) => {
-                setValues(prev => ({ ...prev, status: e.target.value as WorkspaceStatus }));
-                if (errors.status) setErrors(prev => ({ ...prev, status: undefined }));
-              }}
-              className={fieldInputClass(!!errors.status)}
-            >
-              <option value="ENABLED" disabled={shortcodeUnknown}>Enabled</option>
-              <option value="DRAFT">Draft</option>
-              <option value="DISABLED">Disabled</option>
-            </select>
-            {errors.status && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.status}</p>}
-            {shortcodeUnknown ? (
-              <p className="mt-1.5 text-xs text-amber-700 dark:text-amber-400">
-                {SHORTCODE_UNKNOWN_ENABLE_BLOCKED_MESSAGE}
-              </p>
-            ) : (
-              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                Draft workspaces are only visible to admins. Disabled workspaces are hidden from all views.
-              </p>
-            )}
-          </div>
-
           {/* Workspace Shortcode — system-derived during creation, always read-only */}
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
@@ -285,6 +289,53 @@ const WorkspaceFormModal: React.FC<WorkspaceFormModalProps> = ({
               disabled
               className={fieldInputClass(false, true)}
             />
+          </div>
+
+          {/* Workspace Status — color-coded segmented control instead of a plain dropdown */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+              Workspace Status <span className="text-red-500">*</span>
+            </label>
+            <div
+              role="group"
+              aria-label="Workspace Status"
+              className="flex rounded-xl border border-slate-200 dark:border-slate-700 divide-x divide-slate-200 dark:divide-slate-700 overflow-hidden bg-white dark:bg-slate-800"
+            >
+              {STATUS_OPTIONS.map(option => {
+                const isSelected = values.status === option.value;
+                const isOptionDisabled = option.value === 'ENABLED' && shortcodeUnknown;
+                const Icon = option.icon;
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    disabled={isOptionDisabled}
+                    aria-pressed={isSelected}
+                    title={isOptionDisabled ? SHORTCODE_UNKNOWN_ENABLE_BLOCKED_MESSAGE : undefined}
+                    onClick={() => {
+                      setValues(prev => ({ ...prev, status: option.value }));
+                      if (errors.status) setErrors(prev => ({ ...prev, status: undefined }));
+                    }}
+                    className={`flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-semibold transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent ${
+                      isSelected ? option.selectedClass : option.idleClass
+                    }`}
+                  >
+                    <Icon className="h-3.5 w-3.5" />
+                    {option.label}
+                  </button>
+                );
+              })}
+            </div>
+            {errors.status && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.status}</p>}
+            {shortcodeUnknown ? (
+              <p className="mt-1.5 text-xs text-amber-700 dark:text-amber-400">
+                {SHORTCODE_UNKNOWN_ENABLE_BLOCKED_MESSAGE}
+              </p>
+            ) : (
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                Draft workspaces are only visible to admins. Disabled workspaces are hidden from all views.
+              </p>
+            )}
           </div>
 
           {/* Root URL field */}
