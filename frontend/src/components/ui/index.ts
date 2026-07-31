@@ -4,6 +4,9 @@ export type { ButtonVariant, ButtonSize } from './Button';
 export { TableActionButton } from './TableActionButton';
 export type { TableActionButtonVariant } from './TableActionButton';
 
+export { Tooltip } from './Tooltip';
+export type { TooltipPosition } from './Tooltip';
+
 
 export { Badge, ConnectivityBadge } from './Badge';
 export type { BadgeVariant } from './Badge';

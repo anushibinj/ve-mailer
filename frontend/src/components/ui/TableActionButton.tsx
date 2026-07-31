@@ -1,5 +1,6 @@
 import React from 'react';
 import { Loader2 } from 'lucide-react';
+import { Tooltip, type TooltipPosition } from './Tooltip';
 
 export type TableActionButtonVariant = 'primary' | 'secondary' | 'danger' | 'success' | 'warning';
 
@@ -8,12 +9,14 @@ export interface TableActionButtonProps extends Omit<React.ButtonHTMLAttributes<
   icon: React.ReactNode;
   /**
    * Accessible label describing the action (e.g. "Edit Workspace", "Delete User").
-   * Used both as the native `title` tooltip (hover) and the `aria-label` (screen readers/keyboard focus),
-   * reusing the app's existing title-attribute tooltip convention instead of introducing a new component.
+   * Rendered inside the shared `Tooltip` popover on hover/focus, and mirrored as the
+   * button's `aria-label` for assistive technology.
    */
   label: string;
   variant?: TableActionButtonVariant;
   loading?: boolean;
+  /** Side of the button the popover should appear on. Defaults to 'top'. */
+  tooltipPosition?: TooltipPosition;
 }
 
 const variantClasses: Record<TableActionButtonVariant, string> = {
@@ -32,9 +35,9 @@ const variantClasses: Record<TableActionButtonVariant, string> = {
 /**
  * Compact, icon-only button for row-level actions in management tables (Edit, Delete,
  * Test Connection, Promote/Demote, etc.). Standardizes size/spacing/color-coding across
- * all tables and surfaces its action via a native `title` tooltip (the pattern already
- * used throughout the app) plus a matching `aria-label`, so the action is discoverable
- * on hover and by assistive technology/keyboard focus without any extra tooltip library.
+ * all tables and surfaces its action via the shared `Tooltip` popover (shown on hover
+ * *and* keyboard focus) plus a matching `aria-label`, so the action is discoverable
+ * without relying on the browser's native `title` attribute.
  */
 export const TableActionButton: React.FC<TableActionButtonProps> = ({
   icon,
@@ -43,27 +46,29 @@ export const TableActionButton: React.FC<TableActionButtonProps> = ({
   loading = false,
   disabled,
   className = '',
+  tooltipPosition = 'top',
   ...rest
 }) => {
   return (
-    <button
-      type="button"
-      title={label}
-      aria-label={label}
-      disabled={disabled || loading}
-      className={`
-        inline-flex items-center justify-center h-8 w-8 rounded-lg border
-        transition-colors cursor-pointer flex-shrink-0
-        focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2
-        dark:focus-visible:ring-offset-slate-900
-        disabled:opacity-50 disabled:cursor-not-allowed
-        ${variantClasses[variant]}
-        ${className}
-      `.replace(/\s+/g, ' ').trim()}
-      {...rest}
-    >
-      {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : icon}
-    </button>
+    <Tooltip content={label} position={tooltipPosition} disabled={disabled || loading}>
+      <button
+        type="button"
+        aria-label={label}
+        disabled={disabled || loading}
+        className={`
+          inline-flex items-center justify-center h-8 w-8 rounded-lg border
+          transition-colors cursor-pointer flex-shrink-0
+          focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2
+          dark:focus-visible:ring-offset-slate-900
+          disabled:opacity-50 disabled:cursor-not-allowed
+          ${variantClasses[variant]}
+          ${className}
+        `.replace(/\s+/g, ' ').trim()}
+        {...rest}
+      >
+        {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : icon}
+      </button>
+    </Tooltip>
   );
 };
 
