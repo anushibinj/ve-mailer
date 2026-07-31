@@ -445,7 +445,7 @@ All workspace endpoints require authentication. `DELETE` requires global `ADMIN`
 | `GET`    | `/workspaces/all`         | ADMIN         | List ALL workspaces including DISABLED (management view)           |
 | `GET`    | `/workspaces/{id}`        | Any           | Get workspace details                                              |
 | `GET`    | `/workspaces/check-duplicate` | ADMIN / WORKSPACE_ADMIN | Step 1 of the creation wizard — pre-checks the (`rootUrl`, `sharedSpaceId`, `workspaceId`) combination without creating anything; returns `200 {duplicate:false}` or `409` with the conflicting workspace (same body shape as the `POST`/`PUT` conflict below) |
-| `POST`   | `/workspaces/discover-metadata` | ADMIN / WORKSPACE_ADMIN | Step 2 of the creation wizard — backend calls the ValueEdge REST API server-side (frontend never calls ValueEdge directly) to discover the workspace's Title/Shortcode; returns `404` with the raw ValueEdge response when the Workspace ID isn't found |
+| `POST`   | `/workspaces/discover-metadata` | ADMIN / WORKSPACE_ADMIN | Step 2 of the creation wizard — backend calls the ValueEdge REST API server-side (frontend never calls ValueEdge directly) to discover the workspace's Title/Shortcode; returns `404` with the raw ValueEdge response when the Workspace ID isn't found, or `400` with the raw ValueEdge response (when available) when the sign-in/workspace-list call itself fails |
 | `POST`   | `/workspaces`             | ADMIN / WORKSPACE_ADMIN | Create a workspace using the auto-discovered `title`/`workspaceShortcode` from Step 2 (status auto-determined — see below). `WORKSPACE_ADMIN` users may create an unlimited number of workspaces and are **automatically assigned as workspace admin** of the workspace they just created (no additional action required) |
 | `PUT`    | `/workspaces/{id}`        | ADMIN / WORKSPACE_ADMIN | Update a workspace (`WORKSPACE_ADMIN` restricted to workspaces they administer; can update connection fields and `status` (visibility); `title` and `workspaceShortcode` are system-derived and read-only for everyone — set once during creation by the discovery wizard) |
 | `DELETE` | `/workspaces/{id}`        | ADMIN (Super Admin only) | Delete a workspace. `WORKSPACE_ADMIN` users can never delete a workspace, even one they created or administer — enforced on both backend (`@PreAuthorize("hasRole('ADMIN')")`) and frontend (Delete action hidden/disabled for non-`ADMIN` users) |
@@ -496,7 +496,11 @@ Admin never types the Title or Shortcode:
    `GET {rootUrl}/api/shared_spaces/{sharedSpaceId}/workspaces?fields=name`, and finds the entry whose
    `id` matches the Workspace ID from Step 1. If no entry matches, the request fails with `404` and the raw
    ValueEdge JSON response (shown in a collapsible troubleshooting panel); the user stays on Step 2 to
-   retry with different credentials/IDs.
+   retry with different credentials/IDs. If the ValueEdge sign-in or workspace-list call itself fails with
+   an HTTP error (e.g. an invalid Shared Space ID, or rejected credentials), the request fails with `400`
+   and a short, clean message plus — whenever ValueEdge returned one — the same raw-response troubleshooting
+   panel (`WorkspaceDiscoveryFailedException`); the raw ValueEdge error body is always kept separate from
+   the human-readable message so it never gets embedded inline in the error banner.
 3. **Review & Create** — read-only summary of all entered values plus the discovered Workspace Title and
    Shortcode, and the auto-determined `status`.
 

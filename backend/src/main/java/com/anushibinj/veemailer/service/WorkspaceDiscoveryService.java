@@ -2,6 +2,7 @@ package com.anushibinj.veemailer.service;
 
 import com.anushibinj.veemailer.dto.WorkspaceDiscoveryRequestDto;
 import com.anushibinj.veemailer.dto.WorkspaceDiscoveryResponseDto;
+import com.anushibinj.veemailer.exception.WorkspaceDiscoveryFailedException;
 import com.anushibinj.veemailer.exception.WorkspaceDiscoveryNotFoundException;
 import com.anushibinj.veemailer.util.UrlNormalizer;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -14,6 +15,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
@@ -80,6 +82,12 @@ public class WorkspaceDiscoveryService {
         ResponseEntity<String> response;
         try {
             response = restTemplate.exchange(url, HttpMethod.POST, new HttpEntity<>(body, headers), String.class);
+        } catch (HttpStatusCodeException ex) {
+            log.warn("ValueEdge sign-in failed [rootUrl={}, clientId={}]: {}", rootUrl, clientId, ex.getMessage());
+            throw new WorkspaceDiscoveryFailedException(
+                    "Unable to authenticate with ValueEdge (" + describeStatus(ex) + "). Please check the Root "
+                            + "URL, Client ID and Client Key, or see the raw response below for details.",
+                    ex.getResponseBodyAsString());
         } catch (RestClientException ex) {
             log.warn("ValueEdge sign-in failed [rootUrl={}, clientId={}]: {}", rootUrl, clientId, ex.getMessage());
             throw new IllegalArgumentException(
@@ -107,6 +115,13 @@ public class WorkspaceDiscoveryService {
             ResponseEntity<String> response =
                     restTemplate.exchange(url, HttpMethod.GET, new HttpEntity<>(headers), String.class);
             return response.getBody();
+        } catch (HttpStatusCodeException ex) {
+            log.warn("ValueEdge workspace list request failed [rootUrl={}, sharedSpaceId={}]: {}",
+                    rootUrl, sharedSpaceId, ex.getMessage());
+            throw new WorkspaceDiscoveryFailedException(
+                    "Unable to retrieve workspaces from ValueEdge for Shared Space " + sharedSpaceId
+                            + " (" + describeStatus(ex) + "). See the raw response below for details.",
+                    ex.getResponseBodyAsString());
         } catch (RestClientException ex) {
             log.warn("ValueEdge workspace list request failed [rootUrl={}, sharedSpaceId={}]: {}",
                     rootUrl, sharedSpaceId, ex.getMessage());
@@ -176,6 +191,11 @@ public class WorkspaceDiscoveryService {
                 .shortcodeDetected(false)
                 .warning(SHORTCODE_UNDETECTED_WARNING)
                 .build();
+    }
+
+    /** Short "404 Not Found"-style description of an HTTP error status for use in user-facing messages. */
+    private String describeStatus(HttpStatusCodeException ex) {
+        return ex.getStatusCode().value() + " " + ex.getStatusText();
     }
 
     private String safeMessage(Exception ex) {

@@ -4,6 +4,7 @@ import com.anushibinj.veemailer.dto.ApiErrorResponse;
 import com.anushibinj.veemailer.dto.WorkspaceConflictErrorResponse;
 import com.anushibinj.veemailer.dto.WorkspaceDiscoveryErrorResponse;
 import com.anushibinj.veemailer.exception.DuplicateWorkspaceException;
+import com.anushibinj.veemailer.exception.WorkspaceDiscoveryFailedException;
 import com.anushibinj.veemailer.exception.WorkspaceDiscoveryNotFoundException;
 import com.anushibinj.veemailer.model.Workspace;
 import lombok.extern.slf4j.Slf4j;
@@ -63,6 +64,19 @@ public class GlobalExceptionHandler {
                 .rawResponse(ex.getRawResponse())
                 .build();
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+    }
+
+    @ExceptionHandler(WorkspaceDiscoveryFailedException.class)
+    public ResponseEntity<WorkspaceDiscoveryErrorResponse> handleWorkspaceDiscoveryFailed(
+            WorkspaceDiscoveryFailedException ex) {
+        log.warn("Workspace metadata discovery failed: {}", ex.getMessage());
+        WorkspaceDiscoveryErrorResponse error = WorkspaceDiscoveryErrorResponse.builder()
+                .status(HttpStatus.BAD_REQUEST.value())
+                .error("Bad Request")
+                .message(ex.getMessage())
+                .rawResponse(ex.getRawResponse())
+                .build();
+        return ResponseEntity.badRequest().body(error);
     }
 
     @ExceptionHandler(IllegalArgumentException.class)

@@ -158,6 +158,49 @@ class WorkspaceDiscoveryServiceTest {
     }
 
     @Test
+    void discover_WorkspaceListRequestFailsWithHttpError_ThrowsCleanMessageWithRawResponseSeparate() {
+        stubSuccessfulSignIn();
+        String rawErrorBody = "{\"type\":\"platform.general_error\",\"correlation_id\":\"abc123\","
+                + "\"description\":\"General error occurred\","
+                + "\"stack_trace\":\"com.hp.mqm.bl.platform.exception.SharedSpaceNotFoundException: shared space "
+                + "not found\"}";
+        when(restTemplate.exchange(eq(WORKSPACES_URL), eq(HttpMethod.GET), any(HttpEntity.class), eq(String.class)))
+                .thenThrow(org.springframework.web.client.HttpClientErrorException.create(
+                        HttpStatus.NOT_FOUND, "Not Found", new HttpHeaders(),
+                        rawErrorBody.getBytes(java.nio.charset.StandardCharsets.UTF_8),
+                        java.nio.charset.StandardCharsets.UTF_8));
+
+        assertThatThrownBy(() -> discoveryService.discover(buildRequest("5015")))
+                .isInstanceOf(com.anushibinj.veemailer.exception.WorkspaceDiscoveryFailedException.class)
+                .satisfies(ex -> {
+                    var failed = (com.anushibinj.veemailer.exception.WorkspaceDiscoveryFailedException) ex;
+                    // The human-readable message must stay short and must NOT embed the raw JSON body inline —
+                    // the raw body belongs only in getRawResponse(), for the frontend's troubleshooting panel.
+                    assertThat(failed.getMessage()).doesNotContain("stack_trace").doesNotContain("correlation_id");
+                    assertThat(failed.getMessage()).contains("4001").contains("404");
+                    assertThat(failed.getRawResponse()).isEqualTo(rawErrorBody);
+                });
+    }
+
+    @Test
+    void discover_SignInFailsWithHttpError_ThrowsCleanMessageWithRawResponseSeparate() {
+        String rawErrorBody = "{\"description\":\"Invalid client credentials\"}";
+        when(restTemplate.exchange(eq(SIGN_IN_URL), eq(HttpMethod.POST), any(HttpEntity.class), eq(String.class)))
+                .thenThrow(org.springframework.web.client.HttpClientErrorException.create(
+                        HttpStatus.UNAUTHORIZED, "Unauthorized", new HttpHeaders(),
+                        rawErrorBody.getBytes(java.nio.charset.StandardCharsets.UTF_8),
+                        java.nio.charset.StandardCharsets.UTF_8));
+
+        assertThatThrownBy(() -> discoveryService.discover(buildRequest("5015")))
+                .isInstanceOf(com.anushibinj.veemailer.exception.WorkspaceDiscoveryFailedException.class)
+                .satisfies(ex -> {
+                    var failed = (com.anushibinj.veemailer.exception.WorkspaceDiscoveryFailedException) ex;
+                    assertThat(failed.getMessage()).doesNotContain("description");
+                    assertThat(failed.getRawResponse()).isEqualTo(rawErrorBody);
+                });
+    }
+
+    @Test
     void discover_AlwaysSignsOut_EvenWhenNotFoundThrown() {
         stubSuccessfulSignIn();
         stubWorkspacesResponse("{\"total_count\":0,\"data\":[]}");

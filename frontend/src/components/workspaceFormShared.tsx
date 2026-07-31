@@ -49,11 +49,11 @@ export const DuplicateWorkspaceConflictBanner: React.FC<{ existingWorkspace: Exi
 }) => (
   <div className="flex gap-3 rounded-xl border border-amber-300 dark:border-amber-600/50 bg-amber-50 dark:bg-amber-900/20 px-4 py-3 animate-fade-in">
     <AlertTriangle className="h-5 w-5 flex-shrink-0 text-amber-500 dark:text-amber-400 mt-0.5" />
-    <div className="text-sm text-amber-800 dark:text-amber-200">
-      <p className="font-medium">
+    <div className="min-w-0 flex-1 text-sm text-amber-800 dark:text-amber-200">
+      <p className="font-medium break-words">
         A workspace with the same Root URL, Shared Space ID, and Workspace ID already exists.
       </p>
-      <p className="mt-1">
+      <p className="mt-1 break-words">
         Existing workspace: <span className="font-semibold">{existingWorkspace.name}</span>
       </p>
       <a

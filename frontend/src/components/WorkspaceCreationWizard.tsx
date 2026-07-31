@@ -235,15 +235,14 @@ const WorkspaceCreationWizard: React.FC<WorkspaceCreationWizardProps> = ({ isOpe
       const axiosErr = err as {
         response?: { status?: number; data?: WorkspaceDiscoveryErrorData | { message?: string } };
       };
-      if (axiosErr.response?.status === 404) {
-        const data = axiosErr.response.data as WorkspaceDiscoveryErrorData;
-        setDiscoveryError({ message: data.message, rawResponse: data.rawResponse });
-      } else {
-        const data = axiosErr.response?.data as { message?: string } | undefined;
-        setDiscoveryError({
-          message: data?.message ?? 'Failed to discover workspace metadata. Please check your credentials and try again.',
-        });
-      }
+      // Both the 404 (Workspace ID not in the returned list) and 400 (ValueEdge call itself
+      // failed, e.g. invalid Shared Space ID or rejected credentials) error shapes may carry a
+      // `rawResponse` — show it whenever present rather than gating on a specific status code.
+      const data = axiosErr.response?.data as (WorkspaceDiscoveryErrorData & { message?: string }) | undefined;
+      setDiscoveryError({
+        message: data?.message ?? 'Failed to discover workspace metadata. Please check your credentials and try again.',
+        rawResponse: data?.rawResponse,
+      });
     } finally {
       setIsDiscovering(false);
     }
@@ -382,8 +381,8 @@ const WorkspaceCreationWizard: React.FC<WorkspaceCreationWizardProps> = ({ isOpe
                 <div className="rounded-xl border border-red-300 dark:border-red-600/50 bg-red-50 dark:bg-red-900/20 px-4 py-3 animate-fade-in">
                   <div className="flex gap-3">
                     <AlertTriangle className="h-5 w-5 flex-shrink-0 text-red-500 dark:text-red-400 mt-0.5" />
-                    <div className="text-sm text-red-800 dark:text-red-200">
-                      <p className="font-medium">{discoveryError.message}</p>
+                    <div className="min-w-0 flex-1 text-sm text-red-800 dark:text-red-200">
+                      <p className="font-medium break-words">{discoveryError.message}</p>
                       <p className="mt-1 text-xs text-red-700/80 dark:text-red-300/80">
                         Double-check the credentials and Workspace ID, then try again.
                       </p>
@@ -487,7 +486,7 @@ const WorkspaceCreationWizard: React.FC<WorkspaceCreationWizardProps> = ({ isOpe
                 {shortcodeDetected ? (
                   <div className="flex items-center gap-2 rounded-xl border border-green-200 dark:border-green-700/50 bg-green-50 dark:bg-green-900/20 px-4 py-3">
                     <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0" />
-                    <div className="text-sm text-green-800 dark:text-green-200">
+                    <div className="min-w-0 flex-1 text-sm text-green-800 dark:text-green-200">
                       <p className="font-medium">Enabled</p>
                       <p className="text-xs mt-0.5 text-green-700/80 dark:text-green-300/80">
                         The workspace shortcode was detected automatically, so this workspace will be created as Enabled.
@@ -497,14 +496,14 @@ const WorkspaceCreationWizard: React.FC<WorkspaceCreationWizardProps> = ({ isOpe
                 ) : (
                   <div className="flex items-start gap-3 rounded-xl border border-amber-300 dark:border-amber-600/50 bg-amber-50 dark:bg-amber-900/20 px-4 py-3">
                     <AlertTriangle className="h-5 w-5 flex-shrink-0 text-amber-500 dark:text-amber-400 mt-0.5" />
-                    <div className="text-sm text-amber-800 dark:text-amber-200">
+                    <div className="min-w-0 flex-1 text-sm text-amber-800 dark:text-amber-200">
                       <p className="font-medium">Draft</p>
-                      <p className="mt-1">
+                      <p className="mt-1 break-words">
                         This workspace has been created as a Draft because the workspace shortcode could not be
                         determined automatically.
                       </p>
                       {discoveryResult?.warning && (
-                        <p className="mt-1 text-xs text-amber-700/80 dark:text-amber-300/80">{discoveryResult.warning}</p>
+                        <p className="mt-1 text-xs text-amber-700/80 dark:text-amber-300/80 break-words">{discoveryResult.warning}</p>
                       )}
                     </div>
                   </div>

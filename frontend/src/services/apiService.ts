@@ -108,14 +108,18 @@ export interface WorkspaceDiscoveryResult {
   warning?: string;
 }
 
-// Shape of the 404 error body returned when the Workspace ID entered in Step 1 isn't
-// present in the ValueEdge shared space's workspace list — includes the raw JSON response
-// so the wizard can show it in a troubleshooting panel.
+// Shape of the error body returned when workspace metadata discovery fails — either the
+// Workspace ID entered in Step 1 isn't present in the ValueEdge shared space's workspace list
+// (404), or the ValueEdge sign-in / workspace-list call itself failed with an HTTP error (400,
+// e.g. an invalid Shared Space ID or rejected credentials). Either way, `rawResponse` carries
+// the raw ValueEdge response body (when one was available) separately from the short,
+// human-readable `message`, so the wizard can show it in a collapsible troubleshooting panel
+// instead of embedding it inline.
 export interface WorkspaceDiscoveryErrorData {
   status: number;
   error: string;
   message: string;
-  rawResponse: string;
+  rawResponse?: string;
   timestamp?: string;
 }
 
