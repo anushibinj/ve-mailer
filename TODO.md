@@ -56,3 +56,4 @@
 - [x] When previewing a filter in the "Manage filters" page, the view should scroll to the filter result that just got executed. Otherwise, there is no visual indication of a filter being executed (other than the toast - which is not very helpful as of now).
 - [x] Change the title of the "Issues" tab in the admin panel to "User-reported issues"
 - [x] Whenever a new workspace is created by a workspace admin, the super admins should receive an e-mail. Super admin e-mail IDs are configured in the admin config's notification settings.
+- [ ] When inside a workspace in the frontend, there is a button to edit the workspace. Rename it to "Edit workspace" instead of just "Edit". This button is visible only to workspace admins who own that workspace.
