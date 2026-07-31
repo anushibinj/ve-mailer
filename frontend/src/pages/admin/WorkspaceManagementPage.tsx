@@ -82,6 +82,20 @@ const WorkspaceManagementPage: React.FC = () => {
     });
   };
 
+  // Fired after "Refetch workspace metadata" — updates the table row and the modal's own
+  // `workspace` prop (so its Enabled/Draft/Disabled logic reflects the freshly discovered
+  // shortcode) without closing the modal.
+  const handleRefetchSuccess = (saved: WorkspaceAdmin) => {
+    setWorkspaces(prev => {
+      const idx = prev.findIndex(w => w.id === saved.id);
+      if (idx < 0) return prev;
+      const next = [...prev];
+      next[idx] = saved;
+      return next;
+    });
+    setEditTarget(saved);
+  };
+
   const handleDeleteConfirm = async () => {
     if (!deleteTarget) return;
     setIsDeleting(true);
@@ -321,6 +335,7 @@ const WorkspaceManagementPage: React.FC = () => {
               setEditTarget(null);
             }}
             onSuccess={handleFormSuccess}
+            onRefetched={handleRefetchSuccess}
           />
         </Suspense>
       )}

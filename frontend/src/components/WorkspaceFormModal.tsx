@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { X, Eye, EyeOff, Loader2, Building2, Plug, CheckCircle, Pencil, PowerOff } from 'lucide-react';
+import { X, Eye, EyeOff, Loader2, Building2, Plug, CheckCircle, Pencil, PowerOff, RefreshCw } from 'lucide-react';
 import type {
   WorkspaceAdmin,
   WorkspaceConflictErrorData,
@@ -9,8 +9,10 @@ import type {
 import {
   adminTestWorkspaceConnection,
   adminUpdateWorkspace,
+  adminRefetchWorkspaceMetadata,
 } from '../services/apiService';
 import toast from 'react-hot-toast';
+import { useAuth } from '../hooks/useAuth';
 import {
   CLIENT_KEY_PLACEHOLDER,
   SHORTCODE_UNKNOWN_ENABLE_BLOCKED_MESSAGE,
@@ -61,6 +63,12 @@ interface WorkspaceFormModalProps {
   workspace: WorkspaceAdmin;
   onClose: () => void;
   onSuccess: (saved: WorkspaceAdmin) => void;
+  /**
+   * Fired after a successful "Refetch workspace metadata" action (Super Admin only) — lets the
+   * parent update its own copy of the workspace (e.g. the management table row) without closing
+   * this modal, since the admin may want to keep reviewing the refreshed values.
+   */
+  onRefetched?: (saved: WorkspaceAdmin) => void;
 }
 
 interface FormValues {
@@ -86,8 +94,9 @@ interface FormErrors {
 }
 
 const WorkspaceFormModal: React.FC<WorkspaceFormModalProps> = ({
-  isOpen, workspace, onClose, onSuccess,
+  isOpen, workspace, onClose, onSuccess, onRefetched,
 }) => {
+  const { isAdmin } = useAuth();
   // Title and Shortcode are always read-only in this modal — they are system-derived during
   // creation by the workspace creation wizard and can only be corrected by editing the
   // discovery result (a Super Admin operation handled outside this form).
@@ -100,6 +109,7 @@ const WorkspaceFormModal: React.FC<WorkspaceFormModalProps> = ({
   const [showKey, setShowKey] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
+  const [isRefetching, setIsRefetching] = useState(false);
   // Populated when the backend rejects the submission as a duplicate (409 Conflict) —
   // keeps the modal open, preserves entered values, and lets the user jump to the existing workspace.
   const [duplicateConflict, setDuplicateConflict] = useState<ExistingWorkspaceConflict | null>(null);
@@ -185,6 +195,45 @@ const WorkspaceFormModal: React.FC<WorkspaceFormModalProps> = ({
       toast.error(msg);
     } finally {
       setIsTesting(false);
+    }
+  };
+
+  /**
+   * Super Admin-only: re-runs ValueEdge metadata discovery using the workspace's already-stored
+   * credentials and overwrites Title/Shortcode with the freshly discovered values, using the
+   * same parsing logic as the workspace creation wizard. Updates the form in place (does not
+   * close the modal) so the admin can review the refreshed values before saving/closing.
+   */
+  const handleRefetchMetadata = async () => {
+    setIsRefetching(true);
+    try {
+      const response = await adminRefetchWorkspaceMetadata(workspace.id);
+      setValues(prev => ({
+        ...prev,
+        title: response.workspace.title,
+        workspaceShortcode: response.workspace.workspaceShortcode,
+        status: response.workspace.status,
+      }));
+      onRefetched?.(response.workspace);
+
+      if (response.shortcodeDetected) {
+        toast.success(`Workspace metadata refreshed: "${response.workspace.title}" (${response.workspace.workspaceShortcode})`);
+      } else {
+        toast(
+          response.warning ||
+            'Workspace metadata refreshed, but the shortcode could not be identified automatically. The workspace has been set to Draft.',
+          { icon: '⚠️' }
+        );
+      }
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { data?: { message?: string; errors?: { message?: string }[] } } };
+      const msg =
+        axiosErr.response?.data?.message ??
+        axiosErr.response?.data?.errors?.[0]?.message ??
+        'Failed to refetch workspace metadata';
+      toast.error(msg);
+    } finally {
+      setIsRefetching(false);
     }
   };
 
@@ -414,15 +463,27 @@ const WorkspaceFormModal: React.FC<WorkspaceFormModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              disabled={isSubmitting || isTesting}
+              disabled={isSubmitting || isTesting || isRefetching}
               className="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700/60 disabled:opacity-50 transition-colors cursor-pointer"
             >
               Cancel
             </button>
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={handleRefetchMetadata}
+                disabled={isSubmitting || isTesting || isRefetching}
+                title="Re-discover this workspace's Title and Shortcode from ValueEdge using its stored credentials"
+                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-violet-700 dark:text-violet-300 bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-700 rounded-xl hover:bg-violet-100 dark:hover:bg-violet-900/40 disabled:opacity-50 transition-all cursor-pointer"
+              >
+                {isRefetching ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                Refetch workspace metadata
+              </button>
+            )}
             <button
               type="button"
               onClick={handleTestConnection}
-              disabled={isSubmitting || isTesting}
+              disabled={isSubmitting || isTesting || isRefetching}
               className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-700 rounded-xl hover:bg-indigo-100 dark:hover:bg-indigo-900/40 disabled:opacity-50 transition-all cursor-pointer"
             >
               {isTesting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plug className="h-4 w-4" />}
@@ -430,7 +491,7 @@ const WorkspaceFormModal: React.FC<WorkspaceFormModalProps> = ({
             </button>
             <button
               type="submit"
-              disabled={isSubmitting || isTesting}
+              disabled={isSubmitting || isTesting || isRefetching}
               className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-500 dark:bg-indigo-500 dark:hover:bg-indigo-400 rounded-xl disabled:opacity-50 transition-all cursor-pointer"
             >
               {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}

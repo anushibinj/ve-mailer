@@ -12,6 +12,7 @@ import com.anushibinj.veemailer.dto.WorkspaceCreateRequestDto;
 import com.anushibinj.veemailer.dto.WorkspaceDiscoveryRequestDto;
 import com.anushibinj.veemailer.dto.WorkspaceDiscoveryResponseDto;
 import com.anushibinj.veemailer.dto.WorkspaceDuplicateCheckResponseDto;
+import com.anushibinj.veemailer.dto.WorkspaceRefetchMetadataResponseDto;
 import com.anushibinj.veemailer.dto.WorkspaceResponseDto;
 import com.anushibinj.veemailer.dto.WorkspaceUpdateRequestDto;
 import com.anushibinj.veemailer.service.SubscriptionService;
@@ -161,6 +162,17 @@ public class WorkspaceController {
     public ResponseEntity<Void> deleteWorkspace(@PathVariable UUID id) {
         workspaceService.delete(id);
         return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Super Admin-only: re-runs ValueEdge metadata discovery for an existing workspace using its
+     * already-stored credentials, and overwrites its Title and Shortcode with the freshly
+     * discovered values (reusing the same parsing logic as the workspace creation wizard).
+     */
+    @PostMapping("/{id}/refetch-metadata")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<WorkspaceRefetchMetadataResponseDto> refetchWorkspaceMetadata(@PathVariable UUID id) {
+        return ResponseEntity.ok(workspaceService.refetchMetadata(id));
     }
 
     @PostMapping("/test-connection")

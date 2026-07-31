@@ -123,6 +123,19 @@ export interface WorkspaceDiscoveryErrorData {
   timestamp?: string;
 }
 
+// Response of the Super Admin "Refetch workspace metadata" action — re-runs the same ValueEdge
+// discovery + Title/Shortcode parsing logic used by the creation wizard, using the workspace's
+// already-stored credentials, and returns the workspace with its refreshed Title/Shortcode.
+export interface WorkspaceRefetchMetadataResult {
+  workspace: WorkspaceAdmin;
+  shortcodeDetected: boolean;
+  warning?: string;
+  /** True when the workspace had to be auto-downgraded from ENABLED to DRAFT because the
+   *  refreshed shortcode came back UNKNOWN (an ENABLED workspace may never have an unknown
+   *  shortcode). */
+  statusDowngradedToDraft: boolean;
+}
+
 /** Backend is the source of truth here — the same duplicate check used by workspace creation. */
 export const adminCheckDuplicateWorkspace = async (
   rootUrl: string,
@@ -275,6 +288,17 @@ export const adminUpdateWorkspace = async (
 
 export const adminDeleteWorkspace = async (id: string): Promise<void> => {
   await api.delete(`/api/v1/workspaces/${id}`);
+};
+
+/**
+ * Super Admin-only: re-runs ValueEdge metadata discovery for an existing workspace using its
+ * already-stored credentials, and persists the freshly discovered Title/Shortcode.
+ */
+export const adminRefetchWorkspaceMetadata = async (
+  id: string
+): Promise<WorkspaceRefetchMetadataResult> => {
+  const response = await api.post(`/api/v1/workspaces/${id}/refetch-metadata`);
+  return response.data;
 };
 
 export const adminTestWorkspaceConnection = async (

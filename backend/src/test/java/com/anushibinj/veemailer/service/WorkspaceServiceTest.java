@@ -3,6 +3,9 @@ package com.anushibinj.veemailer.service;
 import com.anushibinj.veemailer.dto.WorkspaceCreateRequestDto;
 import com.anushibinj.veemailer.dto.WorkspaceConnectionTestRequestDto;
 import com.anushibinj.veemailer.dto.WorkspaceConnectionTestResponseDto;
+import com.anushibinj.veemailer.dto.WorkspaceDiscoveryRequestDto;
+import com.anushibinj.veemailer.dto.WorkspaceDiscoveryResponseDto;
+import com.anushibinj.veemailer.dto.WorkspaceRefetchMetadataResponseDto;
 import com.anushibinj.veemailer.dto.WorkspaceResponseDto;
 import com.anushibinj.veemailer.dto.WorkspaceUpdateRequestDto;
 import com.anushibinj.veemailer.exception.DuplicateWorkspaceException;
@@ -51,6 +54,9 @@ class WorkspaceServiceTest {
 
     @Mock
     private NotificationPreferencesService notificationPreferencesService;
+
+    @Mock
+    private WorkspaceDiscoveryService workspaceDiscoveryService;
 
     @InjectMocks
     private WorkspaceService workspaceService;
@@ -595,5 +601,116 @@ class WorkspaceServiceTest {
         assertThat(response.isSuccess()).isTrue();
         assertThat(response.isHasData()).isFalse();
         assertThat(response.getMessage()).contains("no data");
+    }
+
+    // --- Super Admin "Refetch workspace metadata" action (TODO.md) ---
+
+    @Test
+    void refetchMetadata_ShortcodeDetected_UpdatesTitleAndShortcode_NoStatusChangeNoEmail() {
+        UUID id = UUID.randomUUID();
+        Workspace existing = buildWorkspace(id); // ENABLED, shortcode 77BD
+        when(workspaceRepository.findById(id)).thenReturn(Optional.of(existing));
+        when(workspaceDiscoveryService.discover(new WorkspaceDiscoveryRequestDto(
+                "https://ve.example.com", "sp-1", "ws-1", "cid-1", "real-secret")))
+                .thenReturn(WorkspaceDiscoveryResponseDto.builder()
+                        .workspaceTitle("Portfolio-Hyd")
+                        .workspaceShortcode("99ZZ")
+                        .shortcodeDetected(true)
+                        .build());
+        when(workspaceRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        WorkspaceRefetchMetadataResponseDto result = workspaceService.refetchMetadata(id);
+
+        assertThat(result.getWorkspace().getTitle()).isEqualTo("Portfolio-Hyd");
+        assertThat(result.getWorkspace().getWorkspaceShortcode()).isEqualTo("99ZZ");
+        assertThat(result.getWorkspace().getStatus()).isEqualTo(WorkspaceStatus.ENABLED);
+        assertThat(result.isShortcodeDetected()).isTrue();
+        assertThat(result.isStatusDowngradedToDraft()).isFalse();
+        org.mockito.Mockito.verifyNoInteractions(emailService);
+    }
+
+    @Test
+    void refetchMetadata_ShortcodeUnknown_WasEnabled_DowngradesToDraftAndEmailsSuperAdmins() {
+        UUID id = UUID.randomUUID();
+        Workspace existing = buildWorkspace(id); // ENABLED, shortcode 77BD
+        existing.setCreatedBy("creator@test.com");
+        existing.setCreatedAt(java.time.Instant.now());
+        when(workspaceRepository.findById(id)).thenReturn(Optional.of(existing));
+        when(workspaceDiscoveryService.discover(any())).thenReturn(WorkspaceDiscoveryResponseDto.builder()
+                .workspaceTitle("Portfolio-Hyd - 77BD")
+                .workspaceShortcode("UNKNOWN")
+                .shortcodeDetected(false)
+                .warning("Workspace shortcode could not be determined.")
+                .build());
+        when(workspaceRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(notificationPreferencesService.getAdminNotificationEmails())
+                .thenReturn(List.of("admin1@test.com"));
+
+        WorkspaceRefetchMetadataResponseDto result = workspaceService.refetchMetadata(id);
+
+        assertThat(result.getWorkspace().getWorkspaceShortcode()).isEqualTo("UNKNOWN");
+        assertThat(result.getWorkspace().getStatus()).isEqualTo(WorkspaceStatus.DRAFT);
+        assertThat(result.isShortcodeDetected()).isFalse();
+        assertThat(result.isStatusDowngradedToDraft()).isTrue();
+        verify(emailService).sendWorkspaceDraftReviewNotificationToAdmins(
+                any(), any(), any(), any(), eq("creator@test.com"), any(), eq(List.of("admin1@test.com")));
+    }
+
+    @Test
+    void refetchMetadata_ShortcodeUnknown_AlreadyDraft_NoDowngradeNoEmail() {
+        UUID id = UUID.randomUUID();
+        Workspace existing = buildWorkspace(id);
+        existing.setStatus(WorkspaceStatus.DRAFT);
+        when(workspaceRepository.findById(id)).thenReturn(Optional.of(existing));
+        when(workspaceDiscoveryService.discover(any())).thenReturn(WorkspaceDiscoveryResponseDto.builder()
+                .workspaceTitle("Some Name")
+                .workspaceShortcode("UNKNOWN")
+                .shortcodeDetected(false)
+                .warning("Workspace shortcode could not be determined.")
+                .build());
+        when(workspaceRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        WorkspaceRefetchMetadataResponseDto result = workspaceService.refetchMetadata(id);
+
+        assertThat(result.getWorkspace().getStatus()).isEqualTo(WorkspaceStatus.DRAFT);
+        assertThat(result.isStatusDowngradedToDraft()).isFalse();
+        org.mockito.Mockito.verifyNoInteractions(emailService);
+    }
+
+    @Test
+    void refetchMetadata_ClientKeyNotConfigured_Throws() {
+        UUID id = UUID.randomUUID();
+        Workspace existing = buildWorkspace(id);
+        existing.setClientKey(null);
+        when(workspaceRepository.findById(id)).thenReturn(Optional.of(existing));
+
+        assertThatThrownBy(() -> workspaceService.refetchMetadata(id))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Client Key is not configured");
+        org.mockito.Mockito.verifyNoInteractions(workspaceDiscoveryService);
+    }
+
+    @Test
+    void refetchMetadata_WorkspaceNotFound_Throws() {
+        UUID id = UUID.randomUUID();
+        when(workspaceRepository.findById(id)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> workspaceService.refetchMetadata(id))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Workspace not found");
+    }
+
+    @Test
+    void refetchMetadata_DiscoveryFails_PropagatesException() {
+        UUID id = UUID.randomUUID();
+        Workspace existing = buildWorkspace(id);
+        when(workspaceRepository.findById(id)).thenReturn(Optional.of(existing));
+        when(workspaceDiscoveryService.discover(any()))
+                .thenThrow(new com.anushibinj.veemailer.exception.WorkspaceDiscoveryNotFoundException(
+                        "No workspace with ID ws-1 was found in the ValueEdge response.", "{\"data\":[]}"));
+
+        assertThatThrownBy(() -> workspaceService.refetchMetadata(id))
+                .isInstanceOf(com.anushibinj.veemailer.exception.WorkspaceDiscoveryNotFoundException.class);
+        org.mockito.Mockito.verify(workspaceRepository, org.mockito.Mockito.never()).save(any());
     }
 }

@@ -491,5 +491,74 @@ class WorkspaceControllerTest {
                 .andExpect(jsonPath("$.message").value("No workspace with ID 5015 was found in the ValueEdge response."))
                 .andExpect(jsonPath("$.rawResponse").value(rawJson));
     }
+
+    // --- Super Admin "Refetch workspace metadata" action (TODO.md) ---
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void testRefetchWorkspaceMetadata_ReturnsUpdatedWorkspace() throws Exception {
+        UUID id = UUID.randomUUID();
+        WorkspaceResponseDto updatedWorkspace = WorkspaceResponseDto.builder()
+                .id(id)
+                .title("Portfolio-Hyd")
+                .workspaceShortcode("77BD")
+                .sharedSpaceId("sp-1")
+                .workspaceId("ws-1")
+                .clientId("cid-1")
+                .clientKey("(unchanged)")
+                .clientKeyConfigured(true)
+                .rootUrl("https://ve.example.com")
+                .status(WorkspaceStatus.ENABLED)
+                .build();
+        com.anushibinj.veemailer.dto.WorkspaceRefetchMetadataResponseDto responseDto =
+                com.anushibinj.veemailer.dto.WorkspaceRefetchMetadataResponseDto.builder()
+                        .workspace(updatedWorkspace)
+                        .shortcodeDetected(true)
+                        .statusDowngradedToDraft(false)
+                        .build();
+
+        when(workspaceService.refetchMetadata(id)).thenReturn(responseDto);
+
+        mockMvc.perform(post("/api/v1/workspaces/" + id + "/refetch-metadata"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.workspace.title").value("Portfolio-Hyd"))
+                .andExpect(jsonPath("$.workspace.workspaceShortcode").value("77BD"))
+                .andExpect(jsonPath("$.shortcodeDetected").value(true))
+                .andExpect(jsonPath("$.statusDowngradedToDraft").value(false));
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void testRefetchWorkspaceMetadata_ShortcodeUnknown_ReturnsDowngradedFlagAndWarning() throws Exception {
+        UUID id = UUID.randomUUID();
+        WorkspaceResponseDto updatedWorkspace = WorkspaceResponseDto.builder()
+                .id(id)
+                .title("Portfolio-Hyd - 77BD")
+                .workspaceShortcode("UNKNOWN")
+                .sharedSpaceId("sp-1")
+                .workspaceId("ws-1")
+                .clientId("cid-1")
+                .clientKey("(unchanged)")
+                .clientKeyConfigured(true)
+                .rootUrl("https://ve.example.com")
+                .status(WorkspaceStatus.DRAFT)
+                .build();
+        com.anushibinj.veemailer.dto.WorkspaceRefetchMetadataResponseDto responseDto =
+                com.anushibinj.veemailer.dto.WorkspaceRefetchMetadataResponseDto.builder()
+                        .workspace(updatedWorkspace)
+                        .shortcodeDetected(false)
+                        .warning("Workspace shortcode could not be determined.")
+                        .statusDowngradedToDraft(true)
+                        .build();
+
+        when(workspaceService.refetchMetadata(id)).thenReturn(responseDto);
+
+        mockMvc.perform(post("/api/v1/workspaces/" + id + "/refetch-metadata"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.shortcodeDetected").value(false))
+                .andExpect(jsonPath("$.statusDowngradedToDraft").value(true))
+                .andExpect(jsonPath("$.warning").value("Workspace shortcode could not be determined."));
+    }
 }
+
 

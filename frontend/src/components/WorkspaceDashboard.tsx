@@ -207,6 +207,7 @@ const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({
             workspace={workspaceData}
             onClose={() => setIsEditWorkspaceOpen(false)}
             onSuccess={(saved) => { setWorkspaceData(saved); setIsEditWorkspaceOpen(false); }}
+            onRefetched={(saved) => setWorkspaceData(saved)}
           />
         </Suspense>
       )}

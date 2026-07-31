@@ -3,7 +3,10 @@ package com.anushibinj.veemailer.service;
 import com.anushibinj.veemailer.dto.WorkspaceCreateRequestDto;
 import com.anushibinj.veemailer.dto.WorkspaceConnectionTestRequestDto;
 import com.anushibinj.veemailer.dto.WorkspaceConnectionTestResponseDto;
+import com.anushibinj.veemailer.dto.WorkspaceDiscoveryRequestDto;
+import com.anushibinj.veemailer.dto.WorkspaceDiscoveryResponseDto;
 import com.anushibinj.veemailer.dto.WorkspaceDuplicateCheckResponseDto;
+import com.anushibinj.veemailer.dto.WorkspaceRefetchMetadataResponseDto;
 import com.anushibinj.veemailer.dto.WorkspaceResponseDto;
 import com.anushibinj.veemailer.dto.WorkspaceUpdateRequestDto;
 import com.anushibinj.veemailer.exception.DuplicateWorkspaceException;
@@ -46,6 +49,7 @@ public class WorkspaceService {
     private final OctaneCacheService octaneCacheService;
     private final EmailService emailService;
     private final NotificationPreferencesService notificationPreferencesService;
+    private final WorkspaceDiscoveryService workspaceDiscoveryService;
 
     /**
      * Returns workspaces visible to normal (non-admin) users: only ENABLED.
@@ -215,6 +219,56 @@ public class WorkspaceService {
             throw duplicateExceptionFromRace(normalizedRootUrl, normalizedSharedSpaceId, normalizedWorkspaceId, ex);
         }
         return toResponseDto(refreshConnectivityForWorkspace(saved));
+    }
+
+    /**
+     * Super Admin-only action: re-runs the ValueEdge metadata discovery (the same call and
+     * Title/Shortcode parsing logic used by Step 2 of the workspace creation wizard) using the
+     * workspace's already-stored Root URL, Shared Space ID, Workspace ID and credentials, and
+     * overwrites the workspace's Title and Shortcode with the freshly discovered values. Useful
+     * when the workspace was renamed in ValueEdge, or was created with an UNKNOWN shortcode that
+     * a Super Admin has since corrected on the ValueEdge side.
+     *
+     * If the refreshed shortcode comes back UNKNOWN and the workspace is currently ENABLED, it is
+     * automatically downgraded to DRAFT (an ENABLED workspace may never have an unknown
+     * shortcode) and the same Super Admin review notification used at creation time is sent.
+     */
+    public WorkspaceRefetchMetadataResponseDto refetchMetadata(UUID id) {
+        Workspace workspace = workspaceRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Workspace not found: " + id));
+
+        if (workspace.getClientKey() == null || workspace.getClientKey().isBlank()) {
+            throw new IllegalArgumentException("Client Key is not configured for this workspace");
+        }
+
+        WorkspaceDiscoveryRequestDto discoveryRequest = new WorkspaceDiscoveryRequestDto(
+                workspace.getRootUrl(),
+                workspace.getSharedSpaceId(),
+                workspace.getWorkspaceId(),
+                workspace.getClientId(),
+                workspace.getClientKey());
+        WorkspaceDiscoveryResponseDto discovery = workspaceDiscoveryService.discover(discoveryRequest);
+
+        workspace.setTitle(discovery.getWorkspaceTitle());
+        workspace.setWorkspaceShortcode(discovery.getWorkspaceShortcode());
+
+        boolean downgradedToDraft = !discovery.isShortcodeDetected()
+                && workspace.getStatus() == WorkspaceStatus.ENABLED;
+        if (downgradedToDraft) {
+            workspace.setStatus(WorkspaceStatus.DRAFT);
+        }
+
+        Workspace saved = workspaceRepository.save(workspace);
+        if (downgradedToDraft) {
+            notifySuperAdminsOfDraftWorkspace(saved);
+        }
+
+        return WorkspaceRefetchMetadataResponseDto.builder()
+                .workspace(toResponseDto(refreshConnectivityForWorkspace(saved)))
+                .shortcodeDetected(discovery.isShortcodeDetected())
+                .warning(discovery.getWarning())
+                .statusDowngradedToDraft(downgradedToDraft)
+                .build();
     }
 
     public void delete(UUID id) {
