@@ -57,4 +57,3 @@
 - [x] Change the title of the "Issues" tab in the admin panel to "User-reported issues"
 - [x] Whenever a new workspace is created by a workspace admin, the super admins should receive an e-mail. Super admin e-mail IDs are configured in the admin config's notification settings.
 - [ ] When inside a workspace in the frontend, there is a button to edit the workspace. Rename it to "Edit workspace" instead of just "Edit". This button is visible only to workspace admins who own that workspace.
-- [ ] Bug - when I was creating a workspace, in the creation wizard, it parsed the workspace title correctly. But after the workspace creation, when I am in the workspace edit view, I see that the title and Shortcode are the same. That is, somehow, the shortcode is being set as the title as well. The shortcode is correct but the title got messed up.
