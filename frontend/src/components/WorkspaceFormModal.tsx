@@ -34,11 +34,11 @@ const STATUS_OPTIONS: {
   selectedClass: string;
 }[] = [
   {
-    value: 'ENABLED',
-    label: 'Enabled',
-    icon: CheckCircle,
-    idleClass: 'text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-500/10',
-    selectedClass: 'bg-emerald-600 text-white shadow-sm',
+    value: 'DISABLED',
+    label: 'Disabled',
+    icon: PowerOff,
+    idleClass: 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700',
+    selectedClass: 'bg-slate-600 text-white shadow-sm',
   },
   {
     value: 'DRAFT',
@@ -48,11 +48,11 @@ const STATUS_OPTIONS: {
     selectedClass: 'bg-amber-500 text-white shadow-sm',
   },
   {
-    value: 'DISABLED',
-    label: 'Disabled',
-    icon: PowerOff,
-    idleClass: 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700',
-    selectedClass: 'bg-slate-600 text-white shadow-sm',
+    value: 'ENABLED',
+    label: 'Enabled',
+    icon: CheckCircle,
+    idleClass: 'text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-500/10',
+    selectedClass: 'bg-emerald-600 text-white shadow-sm',
   },
 ];
 
