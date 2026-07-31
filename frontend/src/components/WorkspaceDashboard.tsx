@@ -254,7 +254,7 @@ const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({
             <>
               {canManage && (
                 <Button variant="secondary" size="sm" icon={<Settings2 className="h-4 w-4" />} onClick={() => setIsEditWorkspaceOpen(true)}>
-                  Edit
+                  Edit workspace
                 </Button>
               )}
               {canManage && (

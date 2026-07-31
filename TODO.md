@@ -56,7 +56,7 @@
 - [x] When previewing a filter in the "Manage filters" page, the view should scroll to the filter result that just got executed. Otherwise, there is no visual indication of a filter being executed (other than the toast - which is not very helpful as of now).
 - [x] Change the title of the "Issues" tab in the admin panel to "User-reported issues"
 - [x] Whenever a new workspace is created by a workspace admin, the super admins should receive an e-mail. Super admin e-mail IDs are configured in the admin config's notification settings.
-- [ ] When inside a workspace in the frontend, there is a button to edit the workspace. Rename it to "Edit workspace" instead of just "Edit". This button is visible only to workspace admins who own that workspace.
+- [x] When inside a workspace in the frontend, there is a button to edit the workspace. Rename it to "Edit workspace" instead of just "Edit". This button is visible only to workspace admins who own that workspace.
 - [x] Add a new button in the workspace edit modal that is called "Refetch workspace metadata". This button should be visible only to the super admin. When clicking that button, it should use the credentials of that workspace and fetch the workspace metadata from octane and update the workspace title and shortcode using the existing parsing logic for the same.
 - [ ] In the landing page, where there is an "avatar" for every workspace, make the shortcode appear as text in all each avatar. The shortcode is a max 4-character string. so make enough space (or shrink the text size) to neatly fit the shortcode within the avatar circle.
 - [ ] Draft workpsaces should be visible only to super admins (ADMIN role) and workspace admins (WORKSPACE_ADMIN role) of that workspace.
