@@ -15,6 +15,7 @@ import com.anushibinj.veemailer.dto.WorkspaceDuplicateCheckResponseDto;
 import com.anushibinj.veemailer.dto.WorkspaceRefetchMetadataResponseDto;
 import com.anushibinj.veemailer.dto.WorkspaceResponseDto;
 import com.anushibinj.veemailer.dto.WorkspaceUpdateRequestDto;
+import com.anushibinj.veemailer.model.WorkspaceStatus;
 import com.anushibinj.veemailer.service.SubscriptionService;
 import com.anushibinj.veemailer.service.UserQueryService;
 import com.anushibinj.veemailer.service.WorkspaceAdminService;
@@ -84,9 +85,20 @@ public class WorkspaceController {
         return ResponseEntity.ok(workspaceService.findAll());
     }
 
+    /**
+     * Fetches a single workspace by ID. DRAFT workspaces are only visible to global ADMINs and
+     * to WORKSPACE_ADMINs who administer that specific workspace; everyone else only ever sees
+     * ENABLED workspaces here (mirroring the visibility rules already applied to the list endpoint).
+     */
     @GetMapping("/{id}")
     public ResponseEntity<WorkspaceResponseDto> getWorkspace(@PathVariable UUID id) {
-        return ResponseEntity.ok(workspaceService.findById(id));
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        WorkspaceResponseDto workspace = workspaceService.findById(id);
+        if (workspace.getStatus() == WorkspaceStatus.DRAFT
+                && !workspaceAdminService.canManageWorkspace(authentication, id)) {
+            throw new AccessDeniedException("You are not authorized to view this workspace");
+        }
+        return ResponseEntity.ok(workspace);
     }
 
     // --- Workspace mutations ---

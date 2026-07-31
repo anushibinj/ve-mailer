@@ -250,6 +250,68 @@ class WorkspaceControllerTest {
     }
 
     @Test
+    @WithMockUser(username = "admin@test.com", roles = "ADMIN")
+    void testGetWorkspace_DraftWorkspace_VisibleToGlobalAdmin() throws Exception {
+        UUID id = UUID.randomUUID();
+        WorkspaceResponseDto dto = WorkspaceResponseDto.builder()
+                .id(id).title("Draft WS").status(WorkspaceStatus.DRAFT).build();
+
+        when(workspaceService.findById(id)).thenReturn(dto);
+        when(workspaceAdminService.canManageWorkspace(any(), any())).thenReturn(true);
+
+        mockMvc.perform(get("/api/v1/workspaces/" + id).contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.title").value("Draft WS"));
+    }
+
+    @Test
+    @WithMockUser(username = "wsadmin@test.com", roles = "WORKSPACE_ADMIN")
+    void testGetWorkspace_DraftWorkspace_VisibleToItsWorkspaceAdmin() throws Exception {
+        UUID id = UUID.randomUUID();
+        WorkspaceResponseDto dto = WorkspaceResponseDto.builder()
+                .id(id).title("Draft WS").status(WorkspaceStatus.DRAFT).build();
+
+        when(workspaceService.findById(id)).thenReturn(dto);
+        when(workspaceAdminService.isGlobalAdmin(any())).thenReturn(false);
+        when(workspaceAdminService.canManageWorkspace(any(), any())).thenReturn(true);
+
+        mockMvc.perform(get("/api/v1/workspaces/" + id).contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.title").value("Draft WS"));
+    }
+
+    @Test
+    @WithMockUser(username = "user@test.com", roles = "USER")
+    void testGetWorkspace_DraftWorkspace_ForbiddenForRegularUser() throws Exception {
+        UUID id = UUID.randomUUID();
+        WorkspaceResponseDto dto = WorkspaceResponseDto.builder()
+                .id(id).title("Draft WS").status(WorkspaceStatus.DRAFT).build();
+
+        when(workspaceService.findById(id)).thenReturn(dto);
+        when(workspaceAdminService.isGlobalAdmin(any())).thenReturn(false);
+        when(workspaceAdminService.canManageWorkspace(any(), any())).thenReturn(false);
+
+        mockMvc.perform(get("/api/v1/workspaces/" + id).contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(username = "user@test.com", roles = "USER")
+    void testGetWorkspace_EnabledWorkspace_VisibleToRegularUser() throws Exception {
+        UUID id = UUID.randomUUID();
+        WorkspaceResponseDto dto = WorkspaceResponseDto.builder()
+                .id(id).title("Enabled WS").status(WorkspaceStatus.ENABLED).build();
+
+        when(workspaceService.findById(id)).thenReturn(dto);
+        when(workspaceAdminService.isGlobalAdmin(any())).thenReturn(false);
+        when(workspaceAdminService.canManageWorkspace(any(), any())).thenReturn(false);
+
+        mockMvc.perform(get("/api/v1/workspaces/" + id).contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.title").value("Enabled WS"));
+    }
+
+    @Test
     void testUpdateWorkspace_ReturnsOk() throws Exception {
         UUID id = UUID.randomUUID();
         WorkspaceResponseDto dto = WorkspaceResponseDto.builder()
