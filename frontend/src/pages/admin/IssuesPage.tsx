@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
-import { AlertCircle, Loader2 } from 'lucide-react';
+import { AlertCircle, Eye, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import type { IssueReport, IssueStatus } from '../../services/apiService';
 import { adminGetIssues, adminUpdateIssueStatus } from '../../services/apiService';
+import { TableActionButton } from '../../components/ui';
 
 const ISSUE_STATUSES: IssueStatus[] = ['OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'];
 
@@ -79,33 +80,34 @@ export default function IssuesPage() {
           <table className="min-w-full divide-y divide-slate-100 text-sm">
             <thead className="bg-slate-50/70 dark:bg-gray-700/40">
               <tr>
+                <th className="px-4 py-3 text-left font-semibold text-slate-600 dark:text-gray-300">Actions</th>
                 <th className="px-4 py-3 text-left font-semibold text-slate-600 dark:text-gray-300">Raised At</th>
                 <th className="px-4 py-3 text-left font-semibold text-slate-600 dark:text-gray-300">Email</th>
                 <th className="px-4 py-3 text-left font-semibold text-slate-600 dark:text-gray-300">Message</th>
-                <th className="px-4 py-3 text-left font-semibold text-slate-600 dark:text-gray-300">Screenshot</th>
                 <th className="px-4 py-3 text-left font-semibold text-slate-600 dark:text-gray-300">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-gray-700/50">
               {issues.map(issue => (
                 <tr key={issue.id} className="hover:bg-slate-50/60 dark:hover:bg-gray-700/30">
+                  <td className="px-4 py-3">
+                    {issue.hasScreenshot ? (
+                      <TableActionButton
+                        icon={<Eye className="h-3.5 w-3.5" />}
+                        label="View Screenshot"
+                        variant="secondary"
+                        onClick={() => setPreviewIssue(issue)}
+                      />
+                    ) : (
+                      <span className="text-slate-300 dark:text-gray-600">—</span>
+                    )}
+                  </td>
                   <td className="px-4 py-3 text-slate-600 dark:text-gray-300 whitespace-nowrap">
                     {new Date(issue.createdAt).toLocaleString()}
                   </td>
                   <td className="px-4 py-3 text-slate-600 dark:text-gray-300">{issue.reporterEmail || '—'}</td>
                   <td className="px-4 py-3 text-slate-700 dark:text-gray-200 max-w-md">
                     <p className="whitespace-pre-wrap break-words">{issue.message || '—'}</p>
-                  </td>
-                  <td className="px-4 py-3 text-slate-600 dark:text-gray-300">
-                    {issue.hasScreenshot ? (
-                      <button
-                        type="button"
-                        onClick={() => setPreviewIssue(issue)}
-                        className="text-indigo-600 hover:text-indigo-500 font-medium"
-                      >
-                        View
-                      </button>
-                    ) : '—'}
                   </td>
                   <td className="px-4 py-3">
                     <select

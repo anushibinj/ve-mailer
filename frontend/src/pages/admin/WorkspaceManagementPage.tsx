@@ -11,6 +11,7 @@ import {
 import ConfirmDialog from '../../components/ConfirmDialog';
 import { useAuth } from '../../hooks/useAuth';
 import LoadingPlaceholder from '../../components/LoadingPlaceholder';
+import { TableActionButton } from '../../components/ui';
 
 const WorkspaceFormModal = lazy(() => import('../../components/WorkspaceFormModal'));
 const WorkspaceAdminManager = lazy(() => import('./WorkspaceAdminManager'));
@@ -172,6 +173,9 @@ const WorkspaceManagementPage: React.FC = () => {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50 dark:bg-gray-700/40">
                 <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Actions
+                  </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Title
                   </th>
@@ -196,14 +200,47 @@ const WorkspaceManagementPage: React.FC = () => {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Status
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Actions
-                  </th>
                 </tr>
               </thead>
               <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                 {workspaces.map(ws => (
                   <tr key={ws.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                    <td className="px-4 py-4 whitespace-nowrap">
+                      <div className="inline-flex items-center gap-1.5">
+                        <TableActionButton
+                          icon={<Pencil className="h-3.5 w-3.5" />}
+                          label="Edit Workspace"
+                          variant="secondary"
+                          onClick={() => handleOpenEdit(ws)}
+                        />
+                        <TableActionButton
+                          icon={<Plug className="h-3.5 w-3.5" />}
+                          label="Test Connection"
+                          variant="primary"
+                          loading={testingWorkspaceId === ws.id}
+                          onClick={() => handleTestConnection(ws)}
+                        />
+                        {canManageAdmins && (
+                          <TableActionButton
+                            icon={<Shield className="h-3.5 w-3.5" />}
+                            label="Manage Workspace Admins"
+                            variant="secondary"
+                            className={adminManageTarget?.id === ws.id
+                              ? 'text-violet-600 dark:text-violet-400 border-violet-300 dark:border-violet-600 bg-violet-50 dark:bg-violet-500/10'
+                              : ''}
+                            onClick={() => setAdminManageTarget(adminManageTarget?.id === ws.id ? null : ws)}
+                          />
+                        )}
+                        {isAdmin && (
+                          <TableActionButton
+                            icon={<Trash2 className="h-3.5 w-3.5" />}
+                            label="Delete Workspace"
+                            variant="danger"
+                            onClick={() => setDeleteTarget(ws)}
+                          />
+                        )}
+                      </div>
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
                       {ws.title}
                     </td>
@@ -254,47 +291,6 @@ const WorkspaceManagementPage: React.FC = () => {
                           Disabled
                         </span>
                       )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right">
-                      <div className="inline-flex items-center gap-2">
-                        <button
-                          onClick={() => handleOpenEdit(ws)}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md text-xs font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 hover:border-blue-300 transition-colors"
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleTestConnection(ws)}
-                          disabled={testingWorkspaceId === ws.id}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-indigo-200 rounded-md text-xs font-medium text-indigo-600 bg-white dark:bg-gray-700 hover:bg-indigo-50 dark:hover:bg-gray-600 hover:border-indigo-400 disabled:opacity-50 transition-colors"
-                        >
-                          {testingWorkspaceId === ws.id ? (
-                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          ) : (
-                            <Plug className="h-3.5 w-3.5" />
-                          )}
-                          Test connection
-                        </button>
-                        {canManageAdmins && (
-                          <button
-                            onClick={() => setAdminManageTarget(adminManageTarget?.id === ws.id ? null : ws)}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-violet-200 rounded-md text-xs font-medium text-violet-600 bg-white dark:bg-gray-700 hover:bg-violet-50 dark:hover:bg-gray-600 hover:border-violet-400 transition-colors"
-                          >
-                            <Shield className="h-3.5 w-3.5" />
-                            Admins
-                          </button>
-                        )}
-                        {isAdmin && (
-                          <button
-                            onClick={() => setDeleteTarget(ws)}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-red-200 rounded-md text-xs font-medium text-red-600 bg-white dark:bg-gray-700 hover:bg-red-50 dark:hover:bg-gray-600 hover:border-red-400 transition-colors"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                            Delete
-                          </button>
-                        )}
-                      </div>
                     </td>
                   </tr>
                 ))}

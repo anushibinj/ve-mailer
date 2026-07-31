@@ -20,7 +20,7 @@ import toast from 'react-hot-toast';
 import LoadingPlaceholder from './LoadingPlaceholder';
 import {
   Button, Badge, ConnectivityBadge, Card, CardHeader,
-  SkeletonDashboard, EmptyState, SearchInput, PageHeader, SectionHeader
+  SkeletonDashboard, EmptyState, SearchInput, PageHeader, SectionHeader, TableActionButton
 } from './ui';
 
 const EditSubscriptionModal = lazy(() => import('./EditSubscriptionModal'));
@@ -357,13 +357,13 @@ const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({
             <table className="min-w-full">
               <thead>
                 <tr className="bg-slate-50/80 dark:bg-slate-800/40 border-b border-slate-100 dark:border-slate-800">
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Actions</th>
                   {canManage && (
                     <SortableHeader label="Recipient" sortKey="recipient" currentKey={sortKey} currentDir={sortDir} onSort={handleSort} />
                   )}
                   <SortableHeader label="Filter" sortKey="filter" currentKey={sortKey} currentDir={sortDir} onSort={handleSort} />
                   <SortableHeader label="Schedule" sortKey="schedule" currentKey={sortKey} currentDir={sortDir} onSort={handleSort} />
                   <SortableHeader label="Status" sortKey="status" currentKey={sortKey} currentDir={sortDir} onSort={handleSort} />
-                  <th className="px-4 py-3" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50 dark:divide-slate-800/60">
@@ -377,6 +377,36 @@ const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({
                         : 'hover:bg-slate-50/60 dark:hover:bg-slate-800/30'
                     }`}
                   >
+                    <td className="px-4 py-3.5 whitespace-nowrap">
+                      <div className="inline-flex items-center gap-1.5">
+                        {canManage && sub.status !== 'DISABLED' && (
+                          <TableActionButton
+                            variant="success"
+                            loading={runningIds.has(sub.id)}
+                            icon={<Play className="h-3.5 w-3.5" />}
+                            onClick={() => handleRunSubscription(sub)}
+                            label="Send email now"
+                          />
+                        )}
+                        <TableActionButton
+                          variant={sub.status === 'DISABLED' ? 'success' : 'secondary'}
+                          loading={togglingIds.has(sub.id)}
+                          icon={sub.status === 'DISABLED' ? <Power className="h-3.5 w-3.5" /> : <PowerOff className="h-3.5 w-3.5" />}
+                          disabled={!canManage && !!sub.groupId}
+                          onClick={() => handleToggleSubscription(sub)}
+                          label={!canManage && sub.groupId
+                            ? 'Only workspace admins can manage group subscriptions'
+                            : sub.status === 'DISABLED' ? 'Enable subscription' : 'Disable subscription'
+                          }
+                        />
+                        <TableActionButton
+                          variant="secondary"
+                          icon={!canManage && sub.groupId ? <Eye className="h-3.5 w-3.5" /> : <Pencil className="h-3.5 w-3.5" />}
+                          onClick={() => setEditingSubscription(sub)}
+                          label={!canManage && sub.groupId ? 'View Subscription' : 'Edit Subscription'}
+                        />
+                      </div>
+                    </td>
                     {canManage && (
                       <td className="px-4 py-3.5 whitespace-nowrap">
                         {sub.groupId ? (
@@ -414,44 +444,6 @@ const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({
                       ) : (
                         <Badge variant="neutral">{sub.status ?? 'Unknown'}</Badge>
                       )}
-                    </td>
-                    <td className="px-4 py-3.5 whitespace-nowrap">
-                      <div className="inline-flex items-center gap-1.5 justify-end">
-                        {canManage && sub.status !== 'DISABLED' && (
-                          <Button
-                            variant="success"
-                            size="sm"
-                            loading={runningIds.has(sub.id)}
-                            icon={<Play className="h-3.5 w-3.5" />}
-                            onClick={() => handleRunSubscription(sub)}
-                            title="Send email now"
-                          >
-                            Run
-                          </Button>
-                        )}
-                        <Button
-                          variant={sub.status === 'DISABLED' ? 'success' : 'secondary'}
-                          size="sm"
-                          loading={togglingIds.has(sub.id)}
-                          icon={sub.status === 'DISABLED' ? <Power className="h-3.5 w-3.5" /> : <PowerOff className="h-3.5 w-3.5" />}
-                          disabled={!canManage && !!sub.groupId}
-                          onClick={() => handleToggleSubscription(sub)}
-                          title={!canManage && sub.groupId
-                            ? 'Only workspace admins can manage group subscriptions'
-                            : sub.status === 'DISABLED' ? 'Enable subscription' : 'Disable subscription'
-                          }
-                        >
-                          {sub.status === 'DISABLED' ? 'Enable' : 'Disable'}
-                        </Button>
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          icon={!canManage && sub.groupId ? <Eye className="h-3.5 w-3.5" /> : <Pencil className="h-3.5 w-3.5" />}
-                          onClick={() => setEditingSubscription(sub)}
-                        >
-                          {!canManage && sub.groupId ? 'View' : 'Edit'}
-                        </Button>
-                      </div>
                     </td>
                   </tr>
                 ))}

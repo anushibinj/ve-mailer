@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import type { WorkspaceAdminEntry, UserSummary } from '../../services/apiService';
 import { fetchWorkspaceAdmins, assignWorkspaceAdmin, removeWorkspaceAdmin, fetchWorkspaceUsers } from '../../services/apiService';
 import { useAuth } from '../../hooks/useAuth';
+import { TableActionButton } from '../../components/ui';
 
 interface WorkspaceAdminManagerProps {
   workspaceId: string;
@@ -137,16 +138,13 @@ const WorkspaceAdminManager: React.FC<WorkspaceAdminManagerProps> = ({ workspace
                 <span className="text-sm font-medium text-gray-900">{admin.userName}</span>
                 <span className="ml-2 text-xs text-gray-500">{admin.userEmail}</span>
               </div>
-              <button
+              <TableActionButton
+                icon={<Trash2 className="h-3.5 w-3.5" />}
+                label={`Remove ${admin.userName} as Workspace Admin`}
+                variant="danger"
+                loading={removingId === admin.userId}
                 onClick={() => handleRemove(admin.userId)}
-                disabled={removingId === admin.userId}
-                className="inline-flex items-center gap-1 px-2.5 py-1 border border-red-200 rounded-md text-xs font-medium text-red-600 bg-white hover:bg-red-50 disabled:opacity-50 transition-colors"
-              >
-                {removingId === admin.userId
-                  ? <Loader2 className="h-3 w-3 animate-spin" />
-                  : <Trash2 className="h-3 w-3" />}
-                Remove
-              </button>
+              />
             </li>
           ))}
         </ul>

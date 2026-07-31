@@ -6,6 +6,7 @@ import type { UserSummary } from '../../services/apiService';
 import { adminDeleteUser, adminGetNonAppUsers, adminGetUsers, adminOnboardUser, adminResendInvite, adminUpdateUserGlobalRole } from '../../services/apiService';
 import ConfirmDialog from '../../components/ConfirmDialog';
 import { useAuth } from '../../hooks/useAuth';
+import { TableActionButton } from '../../components/ui';
 
 type SortKey = 'name' | 'email' | 'subscribedFilterCount';
 type SortDir = 'asc' | 'desc';
@@ -255,16 +256,24 @@ export default function UsersPage() {
                 <thead>
                   <tr className="bg-slate-50/60">
                     <th scope="col" className="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                      Email
-                    </th>
-                    <th scope="col" className="px-5 py-3 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">
                       Action
+                    </th>
+                    <th scope="col" className="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                      Email
                     </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
                   {nonAppUsers.map(email => (
                     <tr key={email} className="hover:bg-slate-50/70 transition-colors">
+                      <td className="px-5 py-3.5">
+                        <TableActionButton
+                          icon={<UserPlus className="h-3.5 w-3.5" />}
+                          label={`Send Invite to ${email}`}
+                          variant="primary"
+                          onClick={() => openNonAppInviteModal(email)}
+                        />
+                      </td>
                       <td className="px-5 py-3.5 text-slate-700">
                         <div className="flex items-center gap-2.5">
                           <div className="h-7 w-7 rounded-full bg-gradient-to-br from-amber-300 to-orange-400 flex items-center justify-center flex-shrink-0">
@@ -272,16 +281,6 @@ export default function UsersPage() {
                           </div>
                           {email}
                         </div>
-                      </td>
-                      <td className="px-5 py-3.5 text-right">
-                        <button
-                          type="button"
-                          onClick={() => openNonAppInviteModal(email)}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-100 hover:bg-indigo-100 transition-colors"
-                        >
-                          <UserPlus className="h-3.5 w-3.5" />
-                          Send Invite
-                        </button>
                       </td>
                     </tr>
                   ))}
@@ -386,6 +385,11 @@ export default function UsersPage() {
             <table className="min-w-full divide-y divide-slate-100 dark:divide-slate-800 text-sm">
               <thead>
                 <tr className="bg-slate-50/60 dark:bg-slate-800/40">
+                  {isSuperAdmin && (
+                    <th scope="col" className="px-5 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider whitespace-nowrap">
+                      Actions
+                    </th>
+                  )}
                   <th
                     scope="col"
                     className="px-5 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider whitespace-nowrap cursor-pointer select-none hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
@@ -410,16 +414,49 @@ export default function UsersPage() {
                   >
                     Subscriptions <SortIcon active={sortKey === 'subscribedFilterCount'} dir={sortDir} />
                   </th>
-                  {isSuperAdmin && (
-                    <th scope="col" className="px-5 py-3 text-right text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider whitespace-nowrap">
-                      Actions
-                    </th>
-                  )}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50 dark:divide-slate-800/60">
                 {sorted.map((user) => (
                   <tr key={user.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors">
+                    {isSuperAdmin && (
+                      <td className="px-5 py-3.5">
+                        <div className="inline-flex items-center gap-1.5">
+                          {user.mustSetPassword && (
+                            <TableActionButton
+                              icon={<RotateCcw className="h-3.5 w-3.5" />}
+                              label={`Resend Invite to ${user.email}`}
+                              variant="primary"
+                              loading={resendingInviteUserId === user.id}
+                              disabled={!!resendingInviteUserId || isDeletingUser}
+                              onClick={() => handleResendInvite(user)}
+                            />
+                          )}
+                          {!user.roles.some(r => formatRole(r) === 'ADMIN') && user.email !== currentUser?.email && (
+                            <TableActionButton
+                              icon={user.roles.some(r => formatRole(r) === 'WORKSPACE_ADMIN') ? <ShieldOff className="h-3.5 w-3.5" /> : <ShieldCheck className="h-3.5 w-3.5" />}
+                              label={
+                                user.roles.some(r => formatRole(r) === 'WORKSPACE_ADMIN')
+                                  ? `Demote ${user.email} to User`
+                                  : `Promote ${user.email} to Workspace Admin`
+                              }
+                              variant={user.roles.some(r => formatRole(r) === 'WORKSPACE_ADMIN') ? 'warning' : 'primary'}
+                              loading={changingRoleUserId === user.id}
+                              disabled={changingRoleUserId === user.id || isDeletingUser}
+                              onClick={() => handleToggleWorkspaceAdminRole(user)}
+                            />
+                          )}
+                          <TableActionButton
+                            icon={<Trash2 className="h-3.5 w-3.5" />}
+                            label={user.email === currentUser?.email ? 'You cannot delete your own account' : `Delete ${user.email}`}
+                            variant="danger"
+                            loading={isDeletingUser && userToDelete?.id === user.id}
+                            disabled={isDeletingUser || user.email === currentUser?.email || !!resendingInviteUserId || !!changingRoleUserId}
+                            onClick={() => setUserToDelete(user)}
+                          />
+                        </div>
+                      </td>
+                    )}
                     <td className="px-5 py-3.5 font-medium text-slate-900 dark:text-white whitespace-nowrap">
                       <div className="flex items-center gap-2.5">
                         <div className="h-7 w-7 rounded-full bg-gradient-to-br from-indigo-400 to-violet-500 flex items-center justify-center flex-shrink-0">
@@ -460,60 +497,6 @@ export default function UsersPage() {
                         {user.subscribedFilterCount}
                       </span>
                     </td>
-                    {isSuperAdmin && (
-                      <td className="px-5 py-3.5 text-right">
-                        <div className="inline-flex items-center gap-2">
-                          {user.mustSetPassword && (
-                            <button
-                              type="button"
-                              onClick={() => handleResendInvite(user)}
-                              disabled={!!resendingInviteUserId || isDeletingUser}
-                              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-indigo-200 text-indigo-600 hover:bg-indigo-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                              title={`Resend invite to ${user.email}`}
-                            >
-                              {resendingInviteUserId === user.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" />}
-                              Resend Invite
-                            </button>
-                          )}
-                          {!user.roles.some(r => formatRole(r) === 'ADMIN') && user.email !== currentUser?.email && (
-                            <button
-                              type="button"
-                              onClick={() => handleToggleWorkspaceAdminRole(user)}
-                              disabled={changingRoleUserId === user.id || isDeletingUser}
-                              className={
-                                user.roles.some(r => formatRole(r) === 'WORKSPACE_ADMIN')
-                                  ? 'inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-amber-200 text-amber-600 hover:bg-amber-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
-                                  : 'inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-violet-200 text-violet-600 hover:bg-violet-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
-                              }
-                              title={
-                                user.roles.some(r => formatRole(r) === 'WORKSPACE_ADMIN')
-                                  ? `Demote ${user.email} to User`
-                                  : `Promote ${user.email} to Workspace Admin`
-                              }
-                            >
-                              {changingRoleUserId === user.id ? (
-                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                              ) : user.roles.some(r => formatRole(r) === 'WORKSPACE_ADMIN') ? (
-                                <ShieldOff className="h-3.5 w-3.5" />
-                              ) : (
-                                <ShieldCheck className="h-3.5 w-3.5" />
-                              )}
-                              {user.roles.some(r => formatRole(r) === 'WORKSPACE_ADMIN') ? 'Demote' : 'Make Workspace Admin'}
-                            </button>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => setUserToDelete(user)}
-                            disabled={isDeletingUser || user.email === currentUser?.email || !!resendingInviteUserId || !!changingRoleUserId}
-                            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-rose-200 text-rose-600 hover:bg-rose-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                            title={user.email === currentUser?.email ? 'You cannot delete your own account' : `Delete ${user.email}`}
-                          >
-                            {isDeletingUser && userToDelete?.id === user.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
-                            Delete
-                          </button>
-                        </div>
-                      </td>
-                    )}
                   </tr>
                 ))}
               </tbody>

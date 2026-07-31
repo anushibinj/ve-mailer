@@ -28,6 +28,7 @@ import {
 import toast from 'react-hot-toast';
 import ConfirmDialog from '../../components/ConfirmDialog';
 import { useAuth } from '../../hooks/useAuth';
+import { TableActionButton } from '../../components/ui';
 
 // ── Shared input class ────────────────────────────────────────────────────────
 
@@ -585,18 +586,18 @@ export default function RecipientGroupsPage() {
                   </div>
 
                   <div className="flex items-center gap-2 flex-shrink-0">
-                    <button
+                    <TableActionButton
+                      icon={<Pencil className="h-3.5 w-3.5" />}
+                      label={`Edit ${group.name}`}
+                      variant="secondary"
                       onClick={() => setEditTarget(group)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/60 hover:border-indigo-200 dark:hover:border-indigo-700 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors cursor-pointer"
-                    >
-                      <Pencil className="h-3.5 w-3.5" /> Edit
-                    </button>
-                    <button
+                    />
+                    <TableActionButton
+                      icon={<Trash2 className="h-3.5 w-3.5" />}
+                      label={`Delete ${group.name}`}
+                      variant="danger"
                       onClick={() => setDeleteTarget(group)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-500/10 border border-rose-100 dark:border-rose-500/20 hover:bg-rose-100 dark:hover:bg-rose-500/20 transition-colors cursor-pointer"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" /> Delete
-                    </button>
+                    />
                   </div>
                 </div>
 
