@@ -59,8 +59,9 @@ const WorkspaceFormModal: React.FC<WorkspaceFormModalProps> = ({
 }) => {
   const isEditing = !!workspace;
   const { isAdmin } = useAuth();
-  // WORKSPACE_ADMIN can only edit connection fields (not title/status)
-  const isRestrictedEdit = isEditing && !isAdmin;
+  // WORKSPACE_ADMIN can edit connection fields and workspace status (visibility), but not the title —
+  // renaming a workspace remains a super admin operation.
+  const isTitleReadOnly = isEditing && !isAdmin;
 
   const [values, setValues] = useState<FormValues>({
     title: '', workspaceShortcode: '', sharedSpaceId: '', workspaceId: '', clientId: '', clientKey: '', rootUrl: '', status: 'DRAFT',
@@ -241,16 +242,16 @@ const WorkspaceFormModal: React.FC<WorkspaceFormModalProps> = ({
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
               Title <span className="text-red-500">*</span>
-              {isRestrictedEdit && <span className="ml-1 text-xs text-slate-400 dark:text-slate-500 font-normal">(read-only)</span>}
+              {isTitleReadOnly && <span className="ml-1 text-xs text-slate-400 dark:text-slate-500 font-normal">(read-only)</span>}
             </label>
             <input
               type="text"
               value={values.title}
               onChange={handleChange('title')}
               placeholder="e.g. ALM Octane — Team Alpha"
-              className={fieldInputClass(!!errors.title, isRestrictedEdit)}
-              readOnly={isRestrictedEdit}
-              disabled={isRestrictedEdit}
+              className={fieldInputClass(!!errors.title, isTitleReadOnly)}
+              readOnly={isTitleReadOnly}
+              disabled={isTitleReadOnly}
             />
             {errors.title && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.title}</p>}
           </div>
@@ -259,7 +260,6 @@ const WorkspaceFormModal: React.FC<WorkspaceFormModalProps> = ({
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
               Workspace Status <span className="text-red-500">*</span>
-              {isRestrictedEdit && <span className="ml-1 text-xs text-slate-400 dark:text-slate-500 font-normal">(read-only)</span>}
             </label>
             <select
               value={values.status}
@@ -267,8 +267,7 @@ const WorkspaceFormModal: React.FC<WorkspaceFormModalProps> = ({
                 setValues(prev => ({ ...prev, status: e.target.value as WorkspaceStatus }));
                 if (errors.status) setErrors(prev => ({ ...prev, status: undefined }));
               }}
-              className={fieldInputClass(!!errors.status, isRestrictedEdit)}
-              disabled={isRestrictedEdit}
+              className={fieldInputClass(!!errors.status)}
             >
               <option value="ENABLED">Enabled</option>
               <option value="DRAFT">Draft</option>

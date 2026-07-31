@@ -32,6 +32,9 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -137,6 +140,76 @@ class WorkspaceControllerTest {
                 .andExpect(jsonPath("$.workspaceShortcode").value("77BD"))
                 .andExpect(jsonPath("$.clientKey").value("(unchanged)"))
                 .andExpect(jsonPath("$.clientKeyConfigured").value(true));
+    }
+
+    @Test
+    @WithMockUser(username = "wsadmin@test.com", roles = "WORKSPACE_ADMIN")
+    void testCreateWorkspace_WorkspaceAdmin_AutoAssignsCreatorAsAdmin() throws Exception {
+        UUID id = UUID.randomUUID();
+        WorkspaceCreateRequestDto request =
+                new WorkspaceCreateRequestDto("New WS", "77BD", "sp-1", "ws-1", "cid-1", "secret-key", "https://ve.example.com", null);
+        WorkspaceResponseDto dto = WorkspaceResponseDto.builder()
+                .id(id).title("New WS").workspaceShortcode("77BD").sharedSpaceId("sp-1").workspaceId("ws-1")
+                .clientId("cid-1").clientKey("(unchanged)").clientKeyConfigured(true)
+                .rootUrl("https://ve.example.com").status(WorkspaceStatus.DRAFT).build();
+
+        when(workspaceAdminService.isGlobalAdmin(any())).thenReturn(false);
+        when(workspaceAdminService.hasWorkspaceAdminRole(any())).thenReturn(true);
+        when(workspaceService.create(any())).thenReturn(dto);
+
+        mockMvc.perform(post("/api/v1/workspaces")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated());
+
+        verify(workspaceAdminService).autoAssignCreatorAsAdmin(id, "wsadmin@test.com");
+    }
+
+    @Test
+    @WithMockUser(username = "admin@test.com", roles = "ADMIN")
+    void testCreateWorkspace_GlobalAdmin_DoesNotAutoAssign() throws Exception {
+        UUID id = UUID.randomUUID();
+        WorkspaceCreateRequestDto request =
+                new WorkspaceCreateRequestDto("New WS", "77BD", "sp-1", "ws-1", "cid-1", "secret-key", "https://ve.example.com", null);
+        WorkspaceResponseDto dto = WorkspaceResponseDto.builder()
+                .id(id).title("New WS").workspaceShortcode("77BD").sharedSpaceId("sp-1").workspaceId("ws-1")
+                .clientId("cid-1").clientKey("(unchanged)").clientKeyConfigured(true)
+                .rootUrl("https://ve.example.com").status(WorkspaceStatus.DRAFT).build();
+
+        when(workspaceService.create(any())).thenReturn(dto);
+
+        mockMvc.perform(post("/api/v1/workspaces")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated());
+
+        verify(workspaceAdminService, never()).autoAssignCreatorAsAdmin(any(), any());
+    }
+
+    @Test
+    @WithMockUser(username = "wsadmin@test.com", roles = "WORKSPACE_ADMIN")
+    void testCreateWorkspace_WorkspaceAdmin_CanCreateMultipleWorkspaces() throws Exception {
+        when(workspaceAdminService.isGlobalAdmin(any())).thenReturn(false);
+        when(workspaceAdminService.hasWorkspaceAdminRole(any())).thenReturn(true);
+
+        for (int i = 0; i < 3; i++) {
+            UUID id = UUID.randomUUID();
+            WorkspaceCreateRequestDto request =
+                    new WorkspaceCreateRequestDto("WS " + i, "77BD", "sp-1", "ws-" + i, "cid-1", "secret-key", "https://ve.example.com", null);
+            WorkspaceResponseDto dto = WorkspaceResponseDto.builder()
+                    .id(id).title("WS " + i).workspaceShortcode("77BD").sharedSpaceId("sp-1").workspaceId("ws-" + i)
+                    .clientId("cid-1").clientKey("(unchanged)").clientKeyConfigured(true)
+                    .rootUrl("https://ve.example.com").status(WorkspaceStatus.DRAFT).build();
+            when(workspaceService.create(any())).thenReturn(dto);
+
+            mockMvc.perform(post("/api/v1/workspaces")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isCreated());
+        }
+
+        verify(workspaceService, times(3)).create(any());
+        verify(workspaceAdminService, times(3)).autoAssignCreatorAsAdmin(any(), any());
     }
 
     @Test

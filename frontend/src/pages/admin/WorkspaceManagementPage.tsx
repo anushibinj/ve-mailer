@@ -130,7 +130,7 @@ const WorkspaceManagementPage: React.FC = () => {
             {isAdmin ? 'Create and manage ValueEdge workspace connections.' : 'Manage your assigned workspaces.'}
           </p>
         </div>
-        {isAdmin && (
+        {(isAdmin || isWorkspaceAdmin) && (
           <button
             onClick={handleOpenCreate}
             className="inline-flex items-center gap-2 px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all"
@@ -156,13 +156,15 @@ const WorkspaceManagementPage: React.FC = () => {
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-5">
             Add your first ValueEdge workspace to get started.
           </p>
-          <button
-            onClick={handleOpenCreate}
-            className="inline-flex items-center gap-2 px-4 py-2 border border-transparent rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors"
-          >
-            <Plus className="h-4 w-4" />
-            Add Workspace
-          </button>
+          {(isAdmin || isWorkspaceAdmin) && (
+            <button
+              onClick={handleOpenCreate}
+              className="inline-flex items-center gap-2 px-4 py-2 border border-transparent rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors"
+            >
+              <Plus className="h-4 w-4" />
+              Add Workspace
+            </button>
+          )}
         </div>
       ) : (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">

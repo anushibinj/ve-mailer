@@ -120,8 +120,9 @@ public class WorkspaceService {
     }
 
     /**
-     * Restricted update for WORKSPACE_ADMIN — can only edit: rootUrl, sharedSpaceId,
-     * workspaceId, workspaceShortcode, clientId, clientKey. Cannot change title or status.
+     * Restricted update for WORKSPACE_ADMIN — can edit: rootUrl, sharedSpaceId, workspaceId,
+     * workspaceShortcode, clientId, clientKey, and status (workspace visibility). Cannot change
+     * the workspace title.
      */
     public WorkspaceResponseDto updateAsWorkspaceAdmin(UUID id, WorkspaceUpdateRequestDto request) {
         Workspace workspace = workspaceRepository.findById(id)
@@ -133,6 +134,8 @@ public class WorkspaceService {
         workspace.setSharedSpaceId(request.getSharedSpaceId());
         workspace.setWorkspaceId(request.getWorkspaceId());
         workspace.setClientId(request.getClientId());
+        // Visibility (status) may be changed by workspace admins for workspaces they administer
+        workspace.setStatus(request.getStatus());
 
         // Only replace clientKey when the caller provides a real new value
         String newKey = request.getClientKey();
@@ -140,7 +143,7 @@ public class WorkspaceService {
             workspace.setClientKey(newKey);
         }
 
-        // title and status are intentionally NOT updated
+        // title is intentionally NOT updated — renaming a workspace remains a super admin operation
         Workspace saved = workspaceRepository.save(workspace);
         return toResponseDto(refreshConnectivityForWorkspace(saved));
     }

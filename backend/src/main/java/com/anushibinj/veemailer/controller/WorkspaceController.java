@@ -84,11 +84,22 @@ public class WorkspaceController {
 
     // --- Workspace mutations ---
 
+    /**
+     * Creates a workspace. Global ADMINs and WORKSPACE_ADMINs may both create workspaces
+     * (no limit on the number of workspaces a WORKSPACE_ADMIN may own). When a WORKSPACE_ADMIN
+     * creates a workspace, they are automatically assigned as its workspace admin.
+     */
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'WORKSPACE_ADMIN')")
     public ResponseEntity<WorkspaceResponseDto> createWorkspace(
             @RequestBody @Valid WorkspaceCreateRequestDto request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(workspaceService.create(request));
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        WorkspaceResponseDto created = workspaceService.create(request);
+        if (!workspaceAdminService.isGlobalAdmin(authentication)
+                && workspaceAdminService.hasWorkspaceAdminRole(authentication)) {
+            workspaceAdminService.autoAssignCreatorAsAdmin(created.getId(), authentication.getName());
+        }
+        return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
     @PutMapping("/{id}")

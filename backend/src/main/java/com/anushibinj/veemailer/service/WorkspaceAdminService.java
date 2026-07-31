@@ -140,6 +140,33 @@ public class WorkspaceAdminService {
         return toResponseDto(saved);
     }
 
+    /**
+     * Automatically assigns the creator of a newly created workspace as its workspace admin.
+     * Used only when the creator holds the WORKSPACE_ADMIN role (global ADMINs are not
+     * auto-assigned since they can already administer any workspace). No-op if a mapping
+     * already exists.
+     */
+    @Transactional
+    public void autoAssignCreatorAsAdmin(UUID workspaceId, String creatorEmail) {
+        AppUser creator = appUserRepository.findByEmail(creatorEmail)
+                .orElseThrow(() -> new IllegalArgumentException("User not found: " + creatorEmail));
+
+        if (workspaceAdminRepository.existsByWorkspace_IdAndUser_Id(workspaceId, creator.getId())) {
+            return;
+        }
+
+        Workspace workspace = workspaceRepository.findById(workspaceId)
+                .orElseThrow(() -> new IllegalArgumentException("Workspace not found: " + workspaceId));
+
+        WorkspaceAdminMapping mapping = WorkspaceAdminMapping.builder()
+                .workspace(workspace)
+                .user(creator)
+                .createdAt(LocalDateTime.now())
+                .createdBy(creatorEmail)
+                .build();
+        workspaceAdminRepository.save(mapping);
+    }
+
     @Transactional
     public void removeWorkspaceAdmin(UUID workspaceId, UUID userId) {
         if (!workspaceAdminRepository.existsByWorkspace_IdAndUser_Id(workspaceId, userId)) {

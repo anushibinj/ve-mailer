@@ -437,20 +437,30 @@ All endpoints are prefixed with `/api/v1` for business APIs, `/api/auth` for aut
 
 ### Workspaces
 
-All workspace endpoints require authentication. `POST` and `DELETE` require `ADMIN`; `PUT` is allowed for both `ADMIN` and `WORKSPACE_ADMIN` (with workspace-admin field restrictions enforced in backend service).
+All workspace endpoints require authentication. `DELETE` requires global `ADMIN` only; `POST` and `PUT` are allowed for both `ADMIN` and `WORKSPACE_ADMIN` (with workspace-admin field restrictions enforced in backend service).
 
 | Method   | Path                      | Role required | Description                                                        |
 |----------|---------------------------|:-------------:|--------------------------------------------------------------------|
 | `GET`    | `/workspaces`             | Any           | List workspaces (role-aware: normal users see ENABLED only, admins see ENABLED+DRAFT) |
 | `GET`    | `/workspaces/all`         | ADMIN         | List ALL workspaces including DISABLED (management view)           |
 | `GET`    | `/workspaces/{id}`        | Any           | Get workspace details                                              |
-| `POST`   | `/workspaces`             | ADMIN         | Create a workspace (defaults to DRAFT status)                      |
-| `PUT`    | `/workspaces/{id}`        | ADMIN / WORKSPACE_ADMIN | Update a workspace (`WORKSPACE_ADMIN` can update connection fields + workspace shortcode; cannot change title/status) |
-| `DELETE` | `/workspaces/{id}`        | ADMIN         | Delete a workspace                                                 |
+| `POST`   | `/workspaces`             | ADMIN / WORKSPACE_ADMIN | Create a workspace (defaults to DRAFT status). `WORKSPACE_ADMIN` users may create an unlimited number of workspaces and are **automatically assigned as workspace admin** of the workspace they just created (no additional action required) |
+| `PUT`    | `/workspaces/{id}`        | ADMIN / WORKSPACE_ADMIN | Update a workspace (`WORKSPACE_ADMIN` restricted to workspaces they administer; can update connection fields, workspace shortcode, and `status` (visibility); cannot change `title`) |
+| `DELETE` | `/workspaces/{id}`        | ADMIN (Super Admin only) | Delete a workspace. `WORKSPACE_ADMIN` users can never delete a workspace, even one they created or administer — enforced on both backend (`@PreAuthorize("hasRole('ADMIN')")`) and frontend (Delete action hidden/disabled for non-`ADMIN` users) |
 | `POST`   | `/workspaces/test-connection` | ADMIN / WORKSPACE_ADMIN | Validate workspace connectivity via Octane SDK by reading `stories` with `limit=1`; returns success-with-warning when connection works but no data is returned |
 | `GET`    | `/workspaces/{id}/admins` | ADMIN / WORKSPACE_ADMIN | List workspace admins for a workspace (`WORKSPACE_ADMIN` restricted to workspaces they administer) |
 | `POST`   | `/workspaces/{id}/admins` | ADMIN / WORKSPACE_ADMIN | Assign a user as workspace admin. Global `ADMIN` may promote any user (auto-grants the `WORKSPACE_ADMIN` role). A `WORKSPACE_ADMIN` may only add other users who **already** hold the `WORKSPACE_ADMIN` role — plain `MEMBER`/`USER` accounts cannot be elevated this way |
 | `DELETE` | `/workspaces/{id}/admins/{userId}` | ADMIN / WORKSPACE_ADMIN | Remove a workspace admin (`WORKSPACE_ADMIN` restricted to workspaces they administer). Multiple workspace admins per workspace are supported |
+
+**Workspace creation, visibility, and deletion semantics:** A `WORKSPACE_ADMIN` may create any number
+of workspaces; on creation, `WorkspaceAdminService.autoAssignCreatorAsAdmin(...)` immediately creates a
+`WorkspaceAdminMapping` linking the creator to the new workspace, so they can administer it right away
+without any extra step. `WORKSPACE_ADMIN`s may change the `status` (visibility: `ENABLED`/`DRAFT`/`DISABLED`)
+of workspaces they administer via `PUT /workspaces/{id}`, but not the `title` (renaming remains
+`ADMIN`-only). Workspace deletion is intentionally restricted to global `ADMIN` (Super Admin) —
+`WorkspaceController.deleteWorkspace` is annotated `@PreAuthorize("hasRole('ADMIN')")` and the frontend
+hides/disables the Delete action for `WORKSPACE_ADMIN` users, so a `WORKSPACE_ADMIN` can never delete a
+workspace even one they created or currently administer.
 
 **Workspace Status Lifecycle:**
 

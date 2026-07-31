@@ -154,6 +154,41 @@ class WorkspaceServiceTest {
     }
 
     @Test
+    void updateAsWorkspaceAdmin_ChangesStatus_ButNotTitle() {
+        UUID id = UUID.randomUUID();
+        Workspace existing = buildWorkspace(id);
+        existing.setStatus(WorkspaceStatus.DRAFT);
+        when(workspaceRepository.findById(id)).thenReturn(Optional.of(existing));
+        when(workspaceRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        WorkspaceUpdateRequestDto req =
+                new WorkspaceUpdateRequestDto("Attempted Rename", "77BD", "sp-1", "ws-1", "cid-1",
+                        WorkspaceService.CLIENT_KEY_PLACEHOLDER, "https://ve.example.com", WorkspaceStatus.ENABLED);
+
+        WorkspaceResponseDto result = workspaceService.updateAsWorkspaceAdmin(id, req);
+
+        // Visibility (status) change is allowed for workspace admins
+        assertThat(existing.getStatus()).isEqualTo(WorkspaceStatus.ENABLED);
+        assertThat(result.getStatus()).isEqualTo(WorkspaceStatus.ENABLED);
+        // Title remains unchanged — workspace admins cannot rename a workspace
+        assertThat(existing.getTitle()).isEqualTo("My WS");
+    }
+
+    @Test
+    void updateAsWorkspaceAdmin_NotFound_Throws() {
+        UUID id = UUID.randomUUID();
+        when(workspaceRepository.findById(id)).thenReturn(Optional.empty());
+
+        WorkspaceUpdateRequestDto req =
+                new WorkspaceUpdateRequestDto("x", "77BD", "sp-1", "ws-1", "cid-1",
+                        WorkspaceService.CLIENT_KEY_PLACEHOLDER, "https://ve.example.com", WorkspaceStatus.ENABLED);
+
+        assertThatThrownBy(() -> workspaceService.updateAsWorkspaceAdmin(id, req))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Workspace not found");
+    }
+
+    @Test
     void delete_NotFound_Throws() {
         UUID id = UUID.randomUUID();
         when(workspaceRepository.existsById(id)).thenReturn(false);
