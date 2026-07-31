@@ -55,3 +55,4 @@
 - [x] Wherever a user is shown in the system, show only their full name. Hovering on the name should show their e-mail ID (use the 'title' HTML attribute). But don't do this strictly. If there are places where e-mail IDs are relevant, show the e-mail IDs. Also, if there are places where names are shown but that user doesn't have a name set (in very rare cases), then gracefully handle by showing the e-mail ID of that user.
 - [x] When previewing a filter in the "Manage filters" page, the view should scroll to the filter result that just got executed. Otherwise, there is no visual indication of a filter being executed (other than the toast - which is not very helpful as of now).
 - [x] Change the title of the "Issues" tab in the admin panel to "User-reported issues"
+- [ ] Whenever a new workspace is created by a workspace admin, the super admins should receive an e-mail. Super admin e-mail IDs are configured in the admin config's notification settings.
