@@ -441,7 +441,7 @@ All workspace endpoints require authentication. `DELETE` requires global `ADMIN`
 
 | Method   | Path                      | Role required | Description                                                        |
 |----------|---------------------------|:-------------:|--------------------------------------------------------------------|
-| `GET`    | `/workspaces`             | Any           | List workspaces (role-aware: normal users see ENABLED only, admins see ENABLED+DRAFT) |
+| `GET`    | `/workspaces`             | Any           | List workspaces (role-aware: global `ADMIN` sees ENABLED+DRAFT for all workspaces; `WORKSPACE_ADMIN` sees ALL ENABLED workspaces in the system — same base visibility every user has — **plus** any DRAFT workspaces they personally administer; everyone else sees ENABLED only) |
 | `GET`    | `/workspaces/all`         | ADMIN         | List ALL workspaces including DISABLED (management view)           |
 | `GET`    | `/workspaces/{id}`        | Any           | Get workspace details. `DRAFT` workspaces are only returned to global `ADMIN`s or the `WORKSPACE_ADMIN`(s) who administer that workspace — everyone else gets `403` (enforced server-side; mirrors the `DRAFT` filtering already applied to the `/workspaces` list endpoint) |
 | `GET`    | `/workspaces/check-duplicate` | ADMIN / WORKSPACE_ADMIN | Step 1 of the creation wizard — pre-checks the (`rootUrl`, `sharedSpaceId`, `workspaceId`) combination without creating anything; returns `200 {duplicate:false}` or `409` with the conflicting workspace (same body shape as the `POST`/`PUT` conflict below) |

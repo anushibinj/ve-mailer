@@ -98,6 +98,56 @@ class WorkspaceServiceTest {
     }
 
     @Test
+    void findAllForWorkspaceAdmin_ReturnsAllEnabledWorkspaces_PlusAdministeredDraftOnes() {
+        UUID enabledOtherId = UUID.randomUUID();
+        UUID administeredDraftId = UUID.randomUUID();
+
+        Workspace enabledOther = buildWorkspace(enabledOtherId); // ENABLED, not administered by this user
+
+        Workspace administeredDraft = buildWorkspace(administeredDraftId);
+        administeredDraft.setStatus(WorkspaceStatus.DRAFT);
+
+        when(workspaceRepository.findByStatusIn(List.of(WorkspaceStatus.ENABLED)))
+                .thenReturn(List.of(enabledOther));
+        when(workspaceRepository.findByIdInAndStatusIn(List.of(administeredDraftId),
+                List.of(WorkspaceStatus.ENABLED, WorkspaceStatus.DRAFT)))
+                .thenReturn(List.of(administeredDraft));
+
+        List<WorkspaceResponseDto> result =
+                workspaceService.findAllForWorkspaceAdmin(List.of(administeredDraftId));
+
+        assertThat(result).extracting(WorkspaceResponseDto::getId)
+                .containsExactlyInAnyOrder(enabledOtherId, administeredDraftId);
+    }
+
+    @Test
+    void findAllForWorkspaceAdmin_DeduplicatesWhenAdministeredWorkspaceIsAlsoEnabled() {
+        UUID sharedId = UUID.randomUUID();
+        Workspace enabledAndAdministered = buildWorkspace(sharedId); // ENABLED
+
+        when(workspaceRepository.findByStatusIn(List.of(WorkspaceStatus.ENABLED)))
+                .thenReturn(List.of(enabledAndAdministered));
+        when(workspaceRepository.findByIdInAndStatusIn(List.of(sharedId),
+                List.of(WorkspaceStatus.ENABLED, WorkspaceStatus.DRAFT)))
+                .thenReturn(List.of(enabledAndAdministered));
+
+        List<WorkspaceResponseDto> result = workspaceService.findAllForWorkspaceAdmin(List.of(sharedId));
+
+        assertThat(result).extracting(WorkspaceResponseDto::getId).containsExactly(sharedId);
+    }
+
+    @Test
+    void findAllForWorkspaceAdmin_NoAdministeredWorkspaces_StillReturnsAllEnabled() {
+        UUID enabledId = UUID.randomUUID();
+        when(workspaceRepository.findByStatusIn(List.of(WorkspaceStatus.ENABLED)))
+                .thenReturn(List.of(buildWorkspace(enabledId)));
+
+        List<WorkspaceResponseDto> result = workspaceService.findAllForWorkspaceAdmin(List.of());
+
+        assertThat(result).extracting(WorkspaceResponseDto::getId).containsExactly(enabledId);
+    }
+
+    @Test
     void create_SharesRootUrlAndSharedSpaceId_DifferentWorkspaceId_Allowed() {
         when(workspaceRepository.findFirstByRootUrlAndSharedSpaceIdAndWorkspaceId(
                 "https://ve.example.com", "sp-1", "ws-2")).thenReturn(Optional.empty());

@@ -70,15 +70,24 @@ public class WorkspaceService {
     }
 
     /**
-     * Returns workspaces visible to workspace admins: only those in the given list of IDs
-     * that are ENABLED or DRAFT.
+     * Returns workspaces visible to workspace admins: the union of ALL ENABLED workspaces
+     * (every user — including a WORKSPACE_ADMIN — always retains base MEMBER-level visibility
+     * of every enabled workspace in the system, so they can browse/subscribe to any of them) and
+     * the workspaces they personally administer (which may additionally include DRAFT ones they
+     * own, so they can configure them before enabling). Without this union, a WORKSPACE_ADMIN who
+     * doesn't yet administer any workspace — or only administers a few — would incorrectly lose
+     * visibility into every other enabled workspace in the system.
      */
     public List<WorkspaceResponseDto> findAllForWorkspaceAdmin(List<UUID> workspaceIds) {
-        if (workspaceIds.isEmpty()) {
-            return List.of();
-        }
-        return workspaceRepository.findByIdInAndStatusIn(workspaceIds,
-                List.of(WorkspaceStatus.ENABLED, WorkspaceStatus.DRAFT)).stream()
+        List<Workspace> enabledWorkspaces = workspaceRepository.findByStatusIn(List.of(WorkspaceStatus.ENABLED));
+        List<Workspace> administeredWorkspaces = workspaceIds.isEmpty()
+                ? List.of()
+                : workspaceRepository.findByIdInAndStatusIn(workspaceIds,
+                        List.of(WorkspaceStatus.ENABLED, WorkspaceStatus.DRAFT));
+
+        return java.util.stream.Stream.concat(enabledWorkspaces.stream(), administeredWorkspaces.stream())
+                .collect(Collectors.toMap(Workspace::getId, ws -> ws, (a, b) -> a, java.util.LinkedHashMap::new))
+                .values().stream()
                 .map(this::toResponseDto)
                 .collect(Collectors.toList());
     }
