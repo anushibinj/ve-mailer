@@ -1,6 +1,9 @@
 package com.anushibinj.veemailer.config;
 
 import com.anushibinj.veemailer.dto.ApiErrorResponse;
+import com.anushibinj.veemailer.dto.WorkspaceConflictErrorResponse;
+import com.anushibinj.veemailer.exception.DuplicateWorkspaceException;
+import com.anushibinj.veemailer.model.Workspace;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -26,6 +29,25 @@ public class GlobalExceptionHandler {
                 .message(ex.getMessage())
                 .build();
         return ResponseEntity.status(429).body(error);
+    }
+
+    @ExceptionHandler(DuplicateWorkspaceException.class)
+    public ResponseEntity<WorkspaceConflictErrorResponse> handleDuplicateWorkspace(DuplicateWorkspaceException ex) {
+        log.warn("Rejected duplicate workspace creation/update: {}", ex.getMessage());
+        Workspace existing = ex.getExistingWorkspace();
+        WorkspaceConflictErrorResponse error = WorkspaceConflictErrorResponse.builder()
+                .status(HttpStatus.CONFLICT.value())
+                .error("Conflict")
+                .message("A workspace with the same Root URL, Shared Space ID, and Workspace ID already exists.")
+                .existingWorkspace(WorkspaceConflictErrorResponse.ExistingWorkspaceRef.builder()
+                        .id(existing.getId())
+                        .name(existing.getTitle())
+                        .rootUrl(existing.getRootUrl())
+                        .sharedSpaceId(existing.getSharedSpaceId())
+                        .workspaceId(existing.getWorkspaceId())
+                        .build())
+                .build();
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
     }
 
     @ExceptionHandler(IllegalArgumentException.class)

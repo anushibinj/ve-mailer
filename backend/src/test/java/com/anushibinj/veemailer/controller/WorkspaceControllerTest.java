@@ -143,6 +143,34 @@ class WorkspaceControllerTest {
     }
 
     @Test
+    void testCreateWorkspace_Duplicate_Returns409WithExistingWorkspaceDetails() throws Exception {
+        UUID existingId = UUID.randomUUID();
+        WorkspaceCreateRequestDto request =
+                new WorkspaceCreateRequestDto("New WS", "77BD", "sp-1", "ws-1", "cid-1", "secret-key", "https://ve.example.com", null);
+
+        com.anushibinj.veemailer.model.Workspace existing = new com.anushibinj.veemailer.model.Workspace();
+        existing.setId(existingId);
+        existing.setTitle("Finance Production");
+        existing.setRootUrl("https://ve.example.com");
+        existing.setSharedSpaceId("sp-1");
+        existing.setWorkspaceId("ws-1");
+
+        when(workspaceService.create(any()))
+                .thenThrow(new com.anushibinj.veemailer.exception.DuplicateWorkspaceException(existing));
+
+        mockMvc.perform(post("/api/v1/workspaces")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.status").value(409))
+                .andExpect(jsonPath("$.existingWorkspace.id").value(existingId.toString()))
+                .andExpect(jsonPath("$.existingWorkspace.name").value("Finance Production"))
+                .andExpect(jsonPath("$.existingWorkspace.rootUrl").value("https://ve.example.com"))
+                .andExpect(jsonPath("$.existingWorkspace.sharedSpaceId").value("sp-1"))
+                .andExpect(jsonPath("$.existingWorkspace.workspaceId").value("ws-1"));
+    }
+
+    @Test
     @WithMockUser(username = "wsadmin@test.com", roles = "WORKSPACE_ADMIN")
     void testCreateWorkspace_WorkspaceAdmin_AutoAssignsCreatorAsAdmin() throws Exception {
         UUID id = UUID.randomUUID();

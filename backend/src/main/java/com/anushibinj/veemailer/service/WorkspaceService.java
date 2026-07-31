@@ -5,6 +5,7 @@ import com.anushibinj.veemailer.dto.WorkspaceConnectionTestRequestDto;
 import com.anushibinj.veemailer.dto.WorkspaceConnectionTestResponseDto;
 import com.anushibinj.veemailer.dto.WorkspaceResponseDto;
 import com.anushibinj.veemailer.dto.WorkspaceUpdateRequestDto;
+import com.anushibinj.veemailer.exception.DuplicateWorkspaceException;
 import com.anushibinj.veemailer.model.WorkspaceConnectivityStatus;
 import com.anushibinj.veemailer.model.Workspace;
 import com.anushibinj.veemailer.model.WorkspaceStatus;
@@ -14,9 +15,11 @@ import com.hpe.adm.nga.sdk.entities.OctaneCollection;
 import com.hpe.adm.nga.sdk.model.EntityModel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.time.Instant;
 import java.util.stream.Collectors;
@@ -79,21 +82,31 @@ public class WorkspaceService {
     }
 
     public WorkspaceResponseDto create(WorkspaceCreateRequestDto request) {
-        if (workspaceRepository.existsByWorkspaceId(request.getWorkspaceId())) {
-            throw new IllegalArgumentException("Workspace ID already exists: " + request.getWorkspaceId());
-        }
+        String normalizedRootUrl = normalizeRootUrl(request.getRootUrl());
+        String normalizedSharedSpaceId = request.getSharedSpaceId().trim();
+        String normalizedWorkspaceId = request.getWorkspaceId().trim();
+
+        rejectIfDuplicateCombination(normalizedRootUrl, normalizedSharedSpaceId, normalizedWorkspaceId, null);
+
         WorkspaceStatus status = request.getStatus() != null ? request.getStatus() : WorkspaceStatus.DRAFT;
         Workspace workspace = Workspace.builder()
                 .title(request.getTitle())
                 .workspaceShortcode(request.getWorkspaceShortcode())
-                .sharedSpaceId(request.getSharedSpaceId())
-                .workspaceId(request.getWorkspaceId())
+                .sharedSpaceId(normalizedSharedSpaceId)
+                .workspaceId(normalizedWorkspaceId)
                 .clientId(request.getClientId())
                 .clientKey(request.getClientKey())
-                .rootUrl(request.getRootUrl())
+                .rootUrl(normalizedRootUrl)
                 .status(status)
                 .build();
-        Workspace saved = workspaceRepository.save(workspace);
+        Workspace saved;
+        try {
+            saved = workspaceRepository.save(workspace);
+        } catch (DataIntegrityViolationException ex) {
+            // Guards against a race where two concurrent requests pass the pre-check at the
+            // same time; the DB-level unique constraint is the ultimate source of truth.
+            throw duplicateExceptionFromRace(normalizedRootUrl, normalizedSharedSpaceId, normalizedWorkspaceId, ex);
+        }
         return toResponseDto(refreshConnectivityForWorkspace(saved));
     }
 
@@ -101,12 +114,17 @@ public class WorkspaceService {
         Workspace workspace = workspaceRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Workspace not found: " + id));
 
+        String normalizedRootUrl = normalizeRootUrl(request.getRootUrl());
+        String normalizedSharedSpaceId = request.getSharedSpaceId().trim();
+        String normalizedWorkspaceId = request.getWorkspaceId().trim();
+        rejectIfDuplicateCombination(normalizedRootUrl, normalizedSharedSpaceId, normalizedWorkspaceId, id);
+
         workspace.setTitle(request.getTitle());
         workspace.setWorkspaceShortcode(request.getWorkspaceShortcode());
-        workspace.setSharedSpaceId(request.getSharedSpaceId());
-        workspace.setWorkspaceId(request.getWorkspaceId());
+        workspace.setSharedSpaceId(normalizedSharedSpaceId);
+        workspace.setWorkspaceId(normalizedWorkspaceId);
         workspace.setClientId(request.getClientId());
-        workspace.setRootUrl(request.getRootUrl());
+        workspace.setRootUrl(normalizedRootUrl);
         workspace.setStatus(request.getStatus());
 
         // Only replace clientKey when the caller provides a real new value
@@ -115,7 +133,12 @@ public class WorkspaceService {
             workspace.setClientKey(newKey);
         }
 
-        Workspace saved = workspaceRepository.save(workspace);
+        Workspace saved;
+        try {
+            saved = workspaceRepository.save(workspace);
+        } catch (DataIntegrityViolationException ex) {
+            throw duplicateExceptionFromRace(normalizedRootUrl, normalizedSharedSpaceId, normalizedWorkspaceId, ex);
+        }
         return toResponseDto(refreshConnectivityForWorkspace(saved));
     }
 
@@ -128,11 +151,16 @@ public class WorkspaceService {
         Workspace workspace = workspaceRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Workspace not found: " + id));
 
+        String normalizedRootUrl = normalizeRootUrl(request.getRootUrl());
+        String normalizedSharedSpaceId = request.getSharedSpaceId().trim();
+        String normalizedWorkspaceId = request.getWorkspaceId().trim();
+        rejectIfDuplicateCombination(normalizedRootUrl, normalizedSharedSpaceId, normalizedWorkspaceId, id);
+
         // WORKSPACE_ADMIN can only update these fields
-        workspace.setRootUrl(request.getRootUrl());
+        workspace.setRootUrl(normalizedRootUrl);
         workspace.setWorkspaceShortcode(request.getWorkspaceShortcode());
-        workspace.setSharedSpaceId(request.getSharedSpaceId());
-        workspace.setWorkspaceId(request.getWorkspaceId());
+        workspace.setSharedSpaceId(normalizedSharedSpaceId);
+        workspace.setWorkspaceId(normalizedWorkspaceId);
         workspace.setClientId(request.getClientId());
         // Visibility (status) may be changed by workspace admins for workspaces they administer
         workspace.setStatus(request.getStatus());
@@ -144,7 +172,12 @@ public class WorkspaceService {
         }
 
         // title is intentionally NOT updated — renaming a workspace remains a super admin operation
-        Workspace saved = workspaceRepository.save(workspace);
+        Workspace saved;
+        try {
+            saved = workspaceRepository.save(workspace);
+        } catch (DataIntegrityViolationException ex) {
+            throw duplicateExceptionFromRace(normalizedRootUrl, normalizedSharedSpaceId, normalizedWorkspaceId, ex);
+        }
         return toResponseDto(refreshConnectivityForWorkspace(saved));
     }
 
@@ -313,6 +346,52 @@ public class WorkspaceService {
         } catch (NumberFormatException ex) {
             throw new IllegalArgumentException(fieldName + " must be a valid integer");
         }
+    }
+
+    /**
+     * Trims the URL and strips any trailing slash(es) so that e.g. "https://ve.example.com/"
+     * and "https://ve.example.com" are treated as the same Root URL for duplicate detection.
+     */
+    private String normalizeRootUrl(String rootUrl) {
+        String trimmed = rootUrl.trim();
+        while (trimmed.endsWith("/")) {
+            trimmed = trimmed.substring(0, trimmed.length() - 1);
+        }
+        return trimmed;
+    }
+
+    /**
+     * Throws {@link DuplicateWorkspaceException} if a workspace already exists with the exact
+     * same (Root URL, Shared Space ID, Workspace ID) combination. Sharing only one or two of
+     * the three fields with another workspace is allowed — only an exact match of all three is
+     * rejected. When {@code excludeId} is provided (updates), a match on that same workspace is
+     * not considered a duplicate.
+     */
+    private void rejectIfDuplicateCombination(
+            String rootUrl, String sharedSpaceId, String workspaceId, UUID excludeId) {
+        workspaceRepository
+                .findFirstByRootUrlAndSharedSpaceIdAndWorkspaceId(rootUrl, sharedSpaceId, workspaceId)
+                .filter(existing -> excludeId == null || !existing.getId().equals(excludeId))
+                .ifPresent(existing -> {
+                    throw new DuplicateWorkspaceException(existing);
+                });
+    }
+
+    /**
+     * Recovers from a {@link DataIntegrityViolationException} raised by the DB-level unique
+     * constraint (a concurrent request won the race to insert/update first). Re-fetches the
+     * now-existing workspace so the caller can still report which workspace it collided with.
+     */
+    private DuplicateWorkspaceException duplicateExceptionFromRace(
+            String rootUrl, String sharedSpaceId, String workspaceId, DataIntegrityViolationException cause) {
+        Workspace existing = workspaceRepository
+                .findFirstByRootUrlAndSharedSpaceIdAndWorkspaceId(rootUrl, sharedSpaceId, workspaceId)
+                .orElse(null);
+        if (existing == null) {
+            // Constraint violation wasn't the workspace uniqueness one after all — surface as-is.
+            throw cause;
+        }
+        return new DuplicateWorkspaceException(existing);
     }
 
     private WorkspaceResponseDto toResponseDto(Workspace workspace) {

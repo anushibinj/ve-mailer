@@ -5,6 +5,7 @@ import com.anushibinj.veemailer.dto.WorkspaceConnectionTestRequestDto;
 import com.anushibinj.veemailer.dto.WorkspaceConnectionTestResponseDto;
 import com.anushibinj.veemailer.dto.WorkspaceResponseDto;
 import com.anushibinj.veemailer.dto.WorkspaceUpdateRequestDto;
+import com.anushibinj.veemailer.exception.DuplicateWorkspaceException;
 import com.anushibinj.veemailer.model.Workspace;
 import com.anushibinj.veemailer.model.WorkspaceStatus;
 import com.anushibinj.veemailer.repository.WorkspaceRepository;
@@ -79,20 +80,91 @@ class WorkspaceServiceTest {
     }
 
     @Test
-    void create_DuplicateWorkspaceId_Throws() {
-        when(workspaceRepository.existsByWorkspaceId("ws-1")).thenReturn(true);
+    void create_SharesRootUrlAndSharedSpaceId_DifferentWorkspaceId_Allowed() {
+        when(workspaceRepository.findFirstByRootUrlAndSharedSpaceIdAndWorkspaceId(
+                "https://ve.example.com", "sp-1", "ws-2")).thenReturn(Optional.empty());
+        Workspace saved = buildWorkspace(UUID.randomUUID());
+        when(workspaceRepository.save(any())).thenReturn(saved);
 
         WorkspaceCreateRequestDto req =
-                new WorkspaceCreateRequestDto("T", "77BD", "sp", "ws-1", "cid", "key", "https://ve.example.com", null);
+                new WorkspaceCreateRequestDto("T", "77BD", "sp-1", "ws-2", "cid", "key", "https://ve.example.com", null);
+
+        assertThat(workspaceService.create(req)).isNotNull();
+    }
+
+    @Test
+    void create_SharesRootUrl_DifferentSharedSpaceId_Allowed() {
+        when(workspaceRepository.findFirstByRootUrlAndSharedSpaceIdAndWorkspaceId(
+                "https://ve.example.com", "sp-2", "ws-1")).thenReturn(Optional.empty());
+        Workspace saved = buildWorkspace(UUID.randomUUID());
+        when(workspaceRepository.save(any())).thenReturn(saved);
+
+        WorkspaceCreateRequestDto req =
+                new WorkspaceCreateRequestDto("T", "77BD", "sp-2", "ws-1", "cid", "key", "https://ve.example.com", null);
+
+        assertThat(workspaceService.create(req)).isNotNull();
+    }
+
+    @Test
+    void create_SharesSharedSpaceId_DifferentRootUrl_Allowed() {
+        when(workspaceRepository.findFirstByRootUrlAndSharedSpaceIdAndWorkspaceId(
+                "https://another.example.com", "sp-1", "ws-1")).thenReturn(Optional.empty());
+        Workspace saved = buildWorkspace(UUID.randomUUID());
+        when(workspaceRepository.save(any())).thenReturn(saved);
+
+        WorkspaceCreateRequestDto req =
+                new WorkspaceCreateRequestDto("T", "77BD", "sp-1", "ws-1", "cid", "key", "https://another.example.com", null);
+
+        assertThat(workspaceService.create(req)).isNotNull();
+    }
+
+    @Test
+    void create_NormalizesTrailingSlashInRootUrl_BeforeDuplicateCheck() {
+        Workspace existing = buildWorkspace(UUID.randomUUID());
+        when(workspaceRepository.findFirstByRootUrlAndSharedSpaceIdAndWorkspaceId(
+                "https://ve.example.com", "sp-1", "ws-1")).thenReturn(Optional.of(existing));
+
+        // Trailing slash + surrounding whitespace should normalize to the same root URL
+        WorkspaceCreateRequestDto req =
+                new WorkspaceCreateRequestDto("T", "77BD", "sp-1", "ws-1", "cid", "key", "  https://ve.example.com/  ", null);
 
         assertThatThrownBy(() -> workspaceService.create(req))
-                .isInstanceOf(IllegalArgumentException.class)
+                .isInstanceOf(DuplicateWorkspaceException.class);
+    }
+
+    @Test
+    void create_DuplicateCombination_Throws() {
+        Workspace existing = buildWorkspace(UUID.randomUUID());
+        when(workspaceRepository.findFirstByRootUrlAndSharedSpaceIdAndWorkspaceId(
+                "https://ve.example.com", "sp-1", "ws-1")).thenReturn(Optional.of(existing));
+
+        WorkspaceCreateRequestDto req =
+                new WorkspaceCreateRequestDto("T", "77BD", "sp-1", "ws-1", "cid", "key", "https://ve.example.com", null);
+
+        assertThatThrownBy(() -> workspaceService.create(req))
+                .isInstanceOf(DuplicateWorkspaceException.class)
                 .hasMessageContaining("already exists");
     }
 
     @Test
+    void create_SharesOnlyWorkspaceId_DifferentRootUrl_Allowed() {
+        when(workspaceRepository.findFirstByRootUrlAndSharedSpaceIdAndWorkspaceId(
+                "https://other.example.com", "sp-1", "ws-1")).thenReturn(Optional.empty());
+        Workspace saved = buildWorkspace(UUID.randomUUID());
+        when(workspaceRepository.save(any())).thenReturn(saved);
+
+        WorkspaceCreateRequestDto req =
+                new WorkspaceCreateRequestDto("T", "77BD", "sp-1", "ws-1", "cid", "key", "https://other.example.com", null);
+
+        WorkspaceResponseDto result = workspaceService.create(req);
+
+        assertThat(result).isNotNull();
+    }
+
+    @Test
     void create_Success_MasksClientKey() {
-        when(workspaceRepository.existsByWorkspaceId("ws-1")).thenReturn(false);
+        when(workspaceRepository.findFirstByRootUrlAndSharedSpaceIdAndWorkspaceId(
+                "https://ve.example.com", "sp-1", "ws-1")).thenReturn(Optional.empty());
         Workspace saved = buildWorkspace(UUID.randomUUID());
         when(workspaceRepository.save(any())).thenReturn(saved);
 
@@ -104,6 +176,23 @@ class WorkspaceServiceTest {
         assertThat(result.getClientKey()).isEqualTo(WorkspaceService.CLIENT_KEY_PLACEHOLDER);
         assertThat(result.isClientKeyConfigured()).isTrue();
         assertThat(result.getWorkspaceShortcode()).isEqualTo("77BD");
+    }
+
+    @Test
+    void create_RaceCondition_DataIntegrityViolation_ThrowsDuplicateWithExistingWorkspace() {
+        Workspace existing = buildWorkspace(UUID.randomUUID());
+        when(workspaceRepository.findFirstByRootUrlAndSharedSpaceIdAndWorkspaceId(
+                "https://ve.example.com", "sp-1", "ws-1"))
+                .thenReturn(Optional.empty()) // pre-check passes
+                .thenReturn(Optional.of(existing)); // re-check after race loss finds the winner
+        when(workspaceRepository.save(any()))
+                .thenThrow(new org.springframework.dao.DataIntegrityViolationException("duplicate key"));
+
+        WorkspaceCreateRequestDto req =
+                new WorkspaceCreateRequestDto("My WS", "77BD", "sp-1", "ws-1", "cid-1", "real-secret", "https://ve.example.com", null);
+
+        assertThatThrownBy(() -> workspaceService.create(req))
+                .isInstanceOf(DuplicateWorkspaceException.class);
     }
 
     @Test

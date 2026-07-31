@@ -462,6 +462,21 @@ of workspaces they administer via `PUT /workspaces/{id}`, but not the `title` (r
 hides/disables the Delete action for `WORKSPACE_ADMIN` users, so a `WORKSPACE_ADMIN` can never delete a
 workspace even one they created or currently administer.
 
+**Duplicate workspace validation (Root URL + Shared Space ID + Workspace ID):** Workspace uniqueness is
+enforced on the **combination** of `rootUrl` + `sharedSpaceId` + `workspaceId`, not on any single field.
+Creating (or updating) a workspace is rejected with `HTTP 409 Conflict` only when **all three** values
+exactly match an existing workspace; sharing just one or two of the fields with another workspace (e.g.
+same Root URL with a different Shared Space ID, or same Workspace ID pointing at a different server) is
+allowed. `WorkspaceService` normalizes inputs (trims whitespace, strips trailing slashes from the Root
+URL) before comparing, pre-checks via
+`WorkspaceRepository.findFirstByRootUrlAndSharedSpaceIdAndWorkspaceId(...)`, and the DB enforces the same
+rule via the `uq_workspaces_root_url_shared_space_id_workspace_id` unique index (Flyway `V27`) so
+concurrent requests can never both succeed. The 409 body includes the conflicting workspace's `id`,
+`name`, `rootUrl`, `sharedSpaceId`, and `workspaceId` so the frontend `WorkspaceFormModal` can keep the
+form open (preserving all entered values), show an inline error message naming the existing workspace,
+and link to it (`/workspace/{id}`, opened in a new tab) so the user can review it without losing their
+in-progress edits.
+
 **Workspace Status Lifecycle:**
 
 | Status     | Visible to Users | Visible to Admins | Participates in Jobs |

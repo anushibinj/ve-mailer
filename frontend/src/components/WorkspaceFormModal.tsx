@@ -1,6 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { X, Eye, EyeOff, Loader2, Building2, Plug } from 'lucide-react';
-import type { WorkspaceAdmin, WorkspaceCreatePayload, WorkspaceUpdatePayload, WorkspaceStatus } from '../services/apiService';
+import { X, Eye, EyeOff, Loader2, Building2, Plug, AlertTriangle, ExternalLink } from 'lucide-react';
+import type {
+  WorkspaceAdmin,
+  WorkspaceConflictErrorData,
+  WorkspaceCreatePayload,
+  WorkspaceUpdatePayload,
+  WorkspaceStatus,
+} from '../services/apiService';
 import {
   adminCreateWorkspace,
   adminTestWorkspaceConnection,
@@ -70,6 +76,9 @@ const WorkspaceFormModal: React.FC<WorkspaceFormModalProps> = ({
   const [showKey, setShowKey] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
+  // Populated when the backend rejects the submission as a duplicate (409 Conflict) —
+  // keeps the modal open, preserves entered values, and lets the user jump to the existing workspace.
+  const [duplicateConflict, setDuplicateConflict] = useState<WorkspaceConflictErrorData['existingWorkspace'] | null>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -90,6 +99,7 @@ const WorkspaceFormModal: React.FC<WorkspaceFormModalProps> = ({
       }
       setErrors({});
       setShowKey(false);
+      setDuplicateConflict(null);
     }
   }, [isOpen, workspace]);
 
@@ -109,6 +119,7 @@ const WorkspaceFormModal: React.FC<WorkspaceFormModalProps> = ({
   const handleChange = (field: keyof FormValues) => (e: React.ChangeEvent<HTMLInputElement>) => {
     setValues(prev => ({ ...prev, [field]: e.target.value }));
     if (errors[field]) setErrors(prev => ({ ...prev, [field]: undefined }));
+    if (duplicateConflict) setDuplicateConflict(null);
   };
 
   const handleKeyFocus = () => {
@@ -193,10 +204,19 @@ const WorkspaceFormModal: React.FC<WorkspaceFormModalProps> = ({
       }
       onSuccess(saved);
     } catch (err: unknown) {
-      const axiosErr = err as { response?: { data?: { message?: string; errors?: { message?: string }[] } } };
+      const axiosErr = err as {
+        response?: { status?: number; data?: WorkspaceConflictErrorData | { message?: string; errors?: { message?: string }[] } };
+      };
+      if (axiosErr.response?.status === 409) {
+        const conflictData = axiosErr.response.data as WorkspaceConflictErrorData;
+        setDuplicateConflict(conflictData?.existingWorkspace ?? null);
+        toast.error('A workspace with the same Root URL, Shared Space ID, and Workspace ID already exists.');
+        return;
+      }
+      const dataErr = axiosErr.response?.data as { message?: string; errors?: { message?: string }[] } | undefined;
       const msg =
-        axiosErr.response?.data?.message ??
-        axiosErr.response?.data?.errors?.[0]?.message ??
+        dataErr?.message ??
+        dataErr?.errors?.[0]?.message ??
         (isEditing ? 'Failed to update workspace' : 'Failed to create workspace');
       toast.error(msg);
     } finally {
@@ -238,6 +258,30 @@ const WorkspaceFormModal: React.FC<WorkspaceFormModalProps> = ({
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4 max-h-[70vh] overflow-y-auto">
+          {/* Duplicate workspace conflict banner (409 from backend) */}
+          {duplicateConflict && (
+            <div className="flex gap-3 rounded-xl border border-amber-300 dark:border-amber-600/50 bg-amber-50 dark:bg-amber-900/20 px-4 py-3">
+              <AlertTriangle className="h-5 w-5 flex-shrink-0 text-amber-500 dark:text-amber-400 mt-0.5" />
+              <div className="text-sm text-amber-800 dark:text-amber-200">
+                <p className="font-medium">
+                  A workspace with the same Root URL, Shared Space ID, and Workspace ID already exists.
+                </p>
+                <p className="mt-1">
+                  Existing workspace: <span className="font-semibold">{duplicateConflict.name}</span>
+                </p>
+                <a
+                  href={`/workspace/${duplicateConflict.id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-1.5 inline-flex items-center gap-1 font-medium text-amber-900 dark:text-amber-100 underline hover:no-underline"
+                >
+                  Open existing workspace
+                  <ExternalLink className="h-3.5 w-3.5" />
+                </a>
+              </div>
+            </div>
+          )}
+
           {/* Title field */}
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">

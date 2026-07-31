@@ -72,6 +72,21 @@ export interface WorkspaceConnectionTestResponse {
   message: string;
 }
 
+// Shape of the 409 error body returned when creating/updating a workspace whose
+// (Root URL, Shared Space ID, Workspace ID) combination already exists.
+export interface WorkspaceConflictErrorData {
+  status: number;
+  error: string;
+  message: string;
+  existingWorkspace: {
+    id: string;
+    name: string;
+    rootUrl: string;
+    sharedSpaceId: string;
+    workspaceId: string;
+  };
+}
+
 export interface FilterCriteriaClause {
   field: string;
   operator: string;
