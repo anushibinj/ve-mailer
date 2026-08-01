@@ -63,3 +63,23 @@
 - [ ] Don't allow workspace admins (WORKSPACE_ADMIN role) to edit the title and shortcode of workspaces they have access to. Only the super admin (ADMIN role) should be able to edit those values.
 - [x] Bug - All users with the "USER" role should be able to see all the enabled workspaces in the system. But editorial/management access for respective repositories should be available only to WORKSPACE_ADMIN role and ADMIN role users. As of now, if I am a WORKSPACE_ADMIN with the USER role as well, I am able to see only the workspaces I own. I lost the privelege of a USER role where any user should be able to see and create filter templates and subscribe to any filter in any workspaces
 - [x] Draft workpsaces should be visible only to super admins (ADMIN role) and workspace admins (WORKSPACE_ADMIN role) of that workspace.
+- [ ] Don't allow workspace admins (WORKSPACE_ADMIN role) to edit the title and shortcode of workspaces they have access to. Only the super admin (ADMIN role) should be able to edit those values.
+- [ ] Onboard flow should ask user role
+- [ ] Role change should send that user an email notifying the same. They should see in the e-mail from which role to which role they were changed. Example, MEMBER to WORKSPACE_ADMIN.
+- [ ] Landing page should say 'manage my workspaces' instead of '+ new workspace' for WORKSPACE_ADMIN
+- [ ] Add 'Back' Button in Admin's Panel.
+- [ ] Add a popover over the workspace status badge explaining what it is. (Add this tooltip to all other complex fields as well )
+- [ ] In the workspace page, when clicking on new subscription and there are no filters, immediately ask the user to create a filter first before subscribing
+- [ ] Moonshot: Make the "Entity Type" as a multiselect option instead of a dropdown in filter query builder
+- [ ] Reorder filter builder -> Name Desc FilterCriteria Fields Order Visibility
+- [ ] Change "IS" to "IN" in filter builder because it is always one-or-many instead of just one.
+- [ ] Bug in cycle time instead of weeks, it's showing looooong number.
+- [ ] In "New Subscription" modal, in the "Groups" tab, if there are no groups, just show only that message. No dropdowns or anything below that asking for filter name, frequency, etc.
+- [ ] The user selection dropdown in "New Group" modal gets cut off within the modal bounds instead of showing the full list
+- [ ] In new subscription modal, under "Notification hours" (the frequency), change it into a button group with all the 24 hours in the day. Users should be able to one-click select or deselect their desired times.
+- [ ] In new subscription modal, show what is mandatory. And show why the submit button is disabled.
+- [ ] Moonshot: Allow multi-filter subscription in a single subscription. And it should send a single e-mail with multiple tables iniside it.
+- [ ] Rename 'Unscubribe' to 'Delete subcription' in the 'Edit subscription' modal.
+- [ ] As a MEMBER, If I am part of a group, and I am subscribed to a filter, I need to see a read-only view of that subscription. As of now, I cannot see any subscription that I'm part of as a group. I can only see 'person level' subscriptions. In the Actions button column, add a 'i' button that shows a popover saying "Contact your Workspace Admin for changes to this Subscription"
+- [ ] In the Delete Group modal, currently it says "This does not affect existing subscriptions." and fails. Instead show a graceful error saying "This will delete all associated Subscriptions, do you want to continue?" and the buttons shown should be: "Cancel", "Delete group and associated subsriptions".
+- [ ] In the 'New Subscription' modal, Individual shows bell icon, but for groups it shows a group of people as icon. So, change individual to show a single person icon to align with 'Group'
