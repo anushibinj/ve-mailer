@@ -437,7 +437,7 @@ All endpoints are prefixed with `/api/v1` for business APIs, `/api/auth` for aut
 
 ### Workspaces
 
-All workspace endpoints require authentication. `DELETE` requires global `ADMIN` only; `POST` and `PUT` are allowed for both `ADMIN` and `WORKSPACE_ADMIN` (with workspace-admin field restrictions enforced in backend service).
+All workspace endpoints require authentication. `DELETE` requires global `ADMIN` only; `POST` and `PUT` are allowed for both `ADMIN` and `WORKSPACE_ADMIN` (with workspace-admin field restrictions enforced in backend service). Every `WorkspaceResponseDto` returned by `GET /workspaces`, `GET /workspaces/all`, and `GET /workspaces/{id}` includes a per-request `myWorkspaceAdmin` boolean (true only when the *currently authenticated* WORKSPACE_ADMIN personally administers that specific workspace) — the frontend uses this to show the "Edit workspace" action and a "Workspace Admin" badge only next to workspaces the caller actually administers, never for workspaces they merely have base ENABLED-visibility into.
 
 | Method   | Path                      | Role required | Description                                                        |
 |----------|---------------------------|:-------------:|--------------------------------------------------------------------|

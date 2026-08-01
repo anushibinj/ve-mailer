@@ -89,6 +89,46 @@ class WorkspaceControllerTest {
     }
 
     @Test
+    @WithMockUser(username = "wsadmin@test.com", roles = "WORKSPACE_ADMIN")
+    void testGetWorkspaces_MarksMyWorkspaceAdminFlag() throws Exception {
+        UUID administeredId = UUID.randomUUID();
+        UUID otherId = UUID.randomUUID();
+        WorkspaceResponseDto administered = WorkspaceResponseDto.builder()
+                .id(administeredId).title("Mine").status(WorkspaceStatus.ENABLED).build();
+        WorkspaceResponseDto other = WorkspaceResponseDto.builder()
+                .id(otherId).title("Not mine").status(WorkspaceStatus.ENABLED).build();
+
+        when(workspaceAdminService.isGlobalAdmin(any())).thenReturn(false);
+        when(workspaceAdminService.hasWorkspaceAdminRole(any())).thenReturn(true);
+        when(workspaceAdminService.getAdministeredWorkspaceIds("wsadmin@test.com"))
+                .thenReturn(List.of(administeredId));
+        when(workspaceService.findAllForWorkspaceAdmin(List.of(administeredId)))
+                .thenReturn(Arrays.asList(administered, other));
+
+        mockMvc.perform(get("/api/v1/workspaces").contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].myWorkspaceAdmin").value(true))
+                .andExpect(jsonPath("$[1].myWorkspaceAdmin").value(false));
+    }
+
+    @Test
+    @WithMockUser(username = "wsadmin@test.com", roles = "WORKSPACE_ADMIN")
+    void testGetWorkspace_SetsMyWorkspaceAdminFlag() throws Exception {
+        UUID id = UUID.randomUUID();
+        WorkspaceResponseDto dto = WorkspaceResponseDto.builder()
+                .id(id).title("Enabled WS").status(WorkspaceStatus.ENABLED).build();
+
+        when(workspaceService.findById(id)).thenReturn(dto);
+        when(workspaceAdminService.isGlobalAdmin(any())).thenReturn(false);
+        when(workspaceAdminService.canManageWorkspace(any(), any())).thenReturn(false);
+        when(workspaceAdminService.isWorkspaceAdmin("wsadmin@test.com", id)).thenReturn(true);
+
+        mockMvc.perform(get("/api/v1/workspaces/" + id).contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.myWorkspaceAdmin").value(true));
+    }
+
+    @Test
     @WithMockUser(roles = "ADMIN")
     void testGetWorkspaces_MasksClientKey() throws Exception {
         UUID id = UUID.randomUUID();
@@ -312,6 +352,7 @@ class WorkspaceControllerTest {
     }
 
     @Test
+    @WithMockUser(username = "admin@test.com", roles = "ADMIN")
     void testUpdateWorkspace_ReturnsOk() throws Exception {
         UUID id = UUID.randomUUID();
         WorkspaceResponseDto dto = WorkspaceResponseDto.builder()

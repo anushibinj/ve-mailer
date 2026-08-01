@@ -11,7 +11,7 @@ import {
 import ConfirmDialog from '../../components/ConfirmDialog';
 import { useAuth } from '../../hooks/useAuth';
 import LoadingPlaceholder from '../../components/LoadingPlaceholder';
-import { TableActionButton } from '../../components/ui';
+import { TableActionButton, Badge } from '../../components/ui';
 
 const WorkspaceFormModal = lazy(() => import('../../components/WorkspaceFormModal'));
 const WorkspaceCreationWizard = lazy(() => import('../../components/WorkspaceCreationWizard'));
@@ -218,16 +218,20 @@ const WorkspaceManagementPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                {workspaces.map(ws => (
+                {workspaces.map(ws => {
+                  const canEditThisWorkspace = isAdmin || !!ws.myWorkspaceAdmin;
+                  return (
                   <tr key={ws.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                     <td className="px-4 py-4 whitespace-nowrap">
                       <div className="inline-flex items-center gap-1.5">
-                        <TableActionButton
-                          icon={<Pencil className="h-3.5 w-3.5" />}
-                          label="Edit Workspace"
-                          variant="secondary"
-                          onClick={() => handleOpenEdit(ws)}
-                        />
+                        {canEditThisWorkspace && (
+                          <TableActionButton
+                            icon={<Pencil className="h-3.5 w-3.5" />}
+                            label="Edit Workspace"
+                            variant="secondary"
+                            onClick={() => handleOpenEdit(ws)}
+                          />
+                        )}
                         <TableActionButton
                           icon={<Plug className="h-3.5 w-3.5" />}
                           label="Test Connection"
@@ -257,7 +261,10 @@ const WorkspaceManagementPage: React.FC = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                      {ws.title}
+                      <div className="inline-flex items-center gap-2">
+                        {ws.title}
+                        {ws.myWorkspaceAdmin && <Badge variant="violet">Workspace Admin</Badge>}
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 font-mono">
                       {ws.workspaceShortcode || <span className="text-gray-300">—</span>}
@@ -308,7 +315,8 @@ const WorkspaceManagementPage: React.FC = () => {
                       )}
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>

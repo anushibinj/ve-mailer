@@ -29,4 +29,9 @@ public class WorkspaceResponseDto {
     private WorkspaceConnectivityStatus connectivityStatus;
     private Instant connectivityCheckedAt;
     private String connectivityMessage;
+    // True when the currently authenticated user is a WORKSPACE_ADMIN for this specific
+    // workspace (i.e. the "Edit workspace" action and workspace-admin badge should show for
+    // them). Populated per-request by the controller — never persisted, never role-checked here.
+    @Builder.Default
+    private boolean myWorkspaceAdmin = false;
 }

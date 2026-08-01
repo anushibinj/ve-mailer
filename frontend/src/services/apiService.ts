@@ -14,6 +14,9 @@ export interface Workspace {
   connectivityStatus: WorkspaceConnectivityStatus;
   connectivityCheckedAt?: string | null;
   connectivityMessage?: string | null;
+  // True when the current user personally administers this workspace (WORKSPACE_ADMIN role) —
+  // drives the "Edit workspace" action visibility and the "Workspace Admin" badge.
+  myWorkspaceAdmin?: boolean;
 }
 
 // Admin workspace type — includes clientId, masked clientKey, and a config flag
@@ -31,6 +34,9 @@ export interface WorkspaceAdmin {
   connectivityStatus: WorkspaceConnectivityStatus;
   connectivityCheckedAt?: string | null;
   connectivityMessage?: string | null;
+  // True when the current user personally administers this workspace (WORKSPACE_ADMIN role) —
+  // drives the "Edit workspace" action visibility and the "Workspace Admin" badge.
+  myWorkspaceAdmin?: boolean;
 }
 
 export interface WorkspaceCreatePayload {

@@ -82,6 +82,9 @@ const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({
   const [togglingIds, setTogglingIds] = useState<Set<string>>(new Set());
   const [workspaceData, setWorkspaceData] = useState<WorkspaceAdmin | null>(null);
   const [isEditWorkspaceOpen, setIsEditWorkspaceOpen] = useState(false);
+  // Only global ADMINs and the WORKSPACE_ADMIN(s) who administer this specific workspace may
+  // edit it — distinct from `canManage`, which governs broader dashboard actions.
+  const canEditThisWorkspace = isAdmin || !!workspaceData?.myWorkspaceAdmin;
 
   // Table controls
   const [search, setSearch] = useState('');
@@ -200,7 +203,7 @@ const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({
   return (
     <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
       {/* Modals */}
-      {canManage && workspaceData && (
+      {canEditThisWorkspace && workspaceData && (
         <Suspense fallback={null}>
           <WorkspaceFormModal
             isOpen={isEditWorkspaceOpen}
@@ -249,10 +252,15 @@ const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({
         <PageHeader
           title={workspaceData?.title ?? 'Dashboard'}
           description="Manage your email notification subscriptions"
-          badge={workspaceData && <ConnectivityBadge status={workspaceData.connectivityStatus} />}
+          badge={workspaceData && (
+            <>
+              <ConnectivityBadge status={workspaceData.connectivityStatus} />
+              {workspaceData.myWorkspaceAdmin && <Badge variant="violet">Workspace Admin</Badge>}
+            </>
+          )}
           actions={
             <>
-              {canManage && (
+              {canEditThisWorkspace && (
                 <Button variant="secondary" size="sm" icon={<Settings2 className="h-4 w-4" />} onClick={() => setIsEditWorkspaceOpen(true)}>
                   Edit workspace
                 </Button>

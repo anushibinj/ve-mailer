@@ -44,6 +44,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 
 @RestController
@@ -65,15 +67,18 @@ public class WorkspaceController {
         boolean isAdmin = workspaceAdminService.isGlobalAdmin(authentication);
         boolean isWsAdmin = workspaceAdminService.hasWorkspaceAdminRole(authentication);
 
+        List<WorkspaceResponseDto> result;
         if (isAdmin) {
-            return ResponseEntity.ok(workspaceService.findAllForAdmin());
+            result = workspaceService.findAllForAdmin();
         } else if (isWsAdmin) {
             // WORKSPACE_ADMIN sees their administered workspaces (including DRAFT)
             List<UUID> administeredIds = workspaceAdminService.getAdministeredWorkspaceIds(authentication.getName());
-            return ResponseEntity.ok(workspaceService.findAllForWorkspaceAdmin(administeredIds));
+            result = workspaceService.findAllForWorkspaceAdmin(administeredIds);
         } else {
-            return ResponseEntity.ok(workspaceService.findAllForUser());
+            result = workspaceService.findAllForUser();
         }
+        markMyWorkspaceAdmin(result, authentication);
+        return ResponseEntity.ok(result);
     }
 
     /**
@@ -82,7 +87,10 @@ public class WorkspaceController {
     @GetMapping("/all")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<WorkspaceResponseDto>> getAllWorkspaces() {
-        return ResponseEntity.ok(workspaceService.findAll());
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        List<WorkspaceResponseDto> result = workspaceService.findAll();
+        markMyWorkspaceAdmin(result, authentication);
+        return ResponseEntity.ok(result);
     }
 
     /**
@@ -98,7 +106,22 @@ public class WorkspaceController {
                 && !workspaceAdminService.canManageWorkspace(authentication, id)) {
             throw new AccessDeniedException("You are not authorized to view this workspace");
         }
+        workspace.setMyWorkspaceAdmin(workspaceAdminService.isWorkspaceAdmin(authentication.getName(), id));
         return ResponseEntity.ok(workspace);
+    }
+
+    /**
+     * Flags each workspace in the list with whether the currently authenticated user personally
+     * administers it, so the frontend can restrict the "Edit workspace" action — and show a
+     * "Workspace Admin" badge — to only the workspaces the user actually administers.
+     */
+    private void markMyWorkspaceAdmin(List<WorkspaceResponseDto> workspaces, Authentication authentication) {
+        if (!workspaceAdminService.hasWorkspaceAdminRole(authentication)) {
+            return;
+        }
+        Set<UUID> administeredIds =
+                new HashSet<>(workspaceAdminService.getAdministeredWorkspaceIds(authentication.getName()));
+        workspaces.forEach(ws -> ws.setMyWorkspaceAdmin(administeredIds.contains(ws.getId())));
     }
 
     // --- Workspace mutations ---
@@ -117,6 +140,7 @@ public class WorkspaceController {
         if (!workspaceAdminService.isGlobalAdmin(authentication)
                 && workspaceAdminService.hasWorkspaceAdminRole(authentication)) {
             workspaceAdminService.autoAssignCreatorAsAdmin(created.getId(), authentication.getName());
+            created.setMyWorkspaceAdmin(true);
         }
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
@@ -163,10 +187,14 @@ public class WorkspaceController {
                 throw new AccessDeniedException("You are not a workspace admin for this workspace");
             }
             // Use restricted update for workspace admins
-            return ResponseEntity.ok(workspaceService.updateAsWorkspaceAdmin(id, request));
+            WorkspaceResponseDto updated = workspaceService.updateAsWorkspaceAdmin(id, request);
+            updated.setMyWorkspaceAdmin(true);
+            return ResponseEntity.ok(updated);
         }
 
-        return ResponseEntity.ok(workspaceService.update(id, request));
+        WorkspaceResponseDto updated = workspaceService.update(id, request);
+        updated.setMyWorkspaceAdmin(workspaceAdminService.isWorkspaceAdmin(authentication.getName(), id));
+        return ResponseEntity.ok(updated);
     }
 
     @DeleteMapping("/{id}")

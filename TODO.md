@@ -62,3 +62,4 @@
 - [x] Draft workpsaces should be visible only to super admins (ADMIN role) and workspace admins (WORKSPACE_ADMIN role) of that workspace.
 - [ ] Don't allow workspace admins (WORKSPACE_ADMIN role) to edit the title and shortcode of workspaces they have access to. Only the super admin (ADMIN role) should be able to edit those values.
 - [x] Bug - All users with the "USER" role should be able to see all the enabled workspaces in the system. But editorial/management access for respective repositories should be available only to WORKSPACE_ADMIN role and ADMIN role users. As of now, if I am a WORKSPACE_ADMIN with the USER role as well, I am able to see only the workspaces I own. I lost the privelege of a USER role where any user should be able to see and create filter templates and subscribe to any filter in any workspaces
+- [x] Draft workpsaces should be visible only to super admins (ADMIN role) and workspace admins (WORKSPACE_ADMIN role) of that workspace.

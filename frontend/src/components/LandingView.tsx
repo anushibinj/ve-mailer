@@ -188,6 +188,9 @@ const LandingView: React.FC = () => {
                       {workspace.status === 'DRAFT' && (
                         <Badge variant="warning">Draft</Badge>
                       )}
+                      {workspace.myWorkspaceAdmin && (
+                        <Badge variant="violet">Workspace Admin</Badge>
+                      )}
                     </div>
                     <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
                       {viewMode === 'list' ? 'Open workspace' : 'Click to open'}
