@@ -47,10 +47,13 @@ class WorkspaceAdminServiceTest {
     @Mock
     private RoleRepository roleRepository;
 
+    @Mock
+    private EmailService emailService;
+
     private WorkspaceAdminService workspaceAdminService;
 
     private WorkspaceAdminService newService() {
-        return new WorkspaceAdminService(workspaceAdminRepository, workspaceRepository, appUserRepository, roleRepository);
+        return new WorkspaceAdminService(workspaceAdminRepository, workspaceRepository, appUserRepository, roleRepository, emailService);
     }
 
     private Authentication authFor(String email, String... roles) {
@@ -143,24 +146,34 @@ class WorkspaceAdminServiceTest {
     // ── assignWorkspaceAdmin restriction (regression coverage) ───────────────
 
     @Test
-    void assignWorkspaceAdmin_WorkspaceAdminActor_CannotPromotePlainUser() {
+    void assignWorkspaceAdmin_WorkspaceAdminActor_PromotesPlainUserToWorkspaceAdmin() {
         workspaceAdminService = newService();
         UUID workspaceId = UUID.randomUUID();
         UUID targetUserId = UUID.randomUUID();
         Workspace workspace = Workspace.builder().id(workspaceId).title("WS").build();
         AppUser target = AppUser.builder().id(targetUserId).name("Plain User").email("user@test.com")
-                .roles(Set.of(Role.builder().roleName("MEMBER").build())).build();
+                .roles(new java.util.HashSet<>(Set.of(Role.builder().roleName("MEMBER").build()))).build();
+        Role workspaceAdminRole = Role.builder().id(UUID.randomUUID()).roleName("WORKSPACE_ADMIN").build();
 
         when(workspaceRepository.findById(workspaceId)).thenReturn(Optional.of(workspace));
         when(appUserRepository.findById(targetUserId)).thenReturn(Optional.of(target));
         when(workspaceAdminRepository.existsByWorkspace_IdAndUser_Id(workspaceId, targetUserId)).thenReturn(false);
+        when(roleRepository.findByRoleName("WORKSPACE_ADMIN")).thenReturn(Optional.of(workspaceAdminRole));
+        when(workspaceAdminRepository.save(any())).thenAnswer(inv -> {
+            WorkspaceAdminMapping m = inv.getArgument(0);
+            m.setId(UUID.randomUUID());
+            return m;
+        });
 
         WorkspaceAdminAssignRequestDto request = new WorkspaceAdminAssignRequestDto(targetUserId);
 
-        assertThatThrownBy(() -> workspaceAdminService.assignWorkspaceAdmin(
-                workspaceId, request, "wsadmin@test.com", false))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("already have the WORKSPACE_ADMIN role");
+        WorkspaceAdminResponseDto result = workspaceAdminService.assignWorkspaceAdmin(
+                workspaceId, request, "wsadmin@test.com");
+
+        assertThat(result.getUserEmail()).isEqualTo("user@test.com");
+        assertThat(target.getRoles()).extracting(Role::getRoleName).contains("WORKSPACE_ADMIN");
+        verify(appUserRepository, times(1)).save(target);
+        verify(emailService, times(1)).sendRoleChangeNotification("Plain User", "user@test.com", "MEMBER", "WORKSPACE_ADMIN");
     }
 
     @Test
@@ -185,10 +198,38 @@ class WorkspaceAdminServiceTest {
 
         WorkspaceAdminAssignRequestDto request = new WorkspaceAdminAssignRequestDto(targetUserId);
         WorkspaceAdminResponseDto result = workspaceAdminService.assignWorkspaceAdmin(
-                workspaceId, request, "admin@test.com", true);
+                workspaceId, request, "admin@test.com");
 
         assertThat(result.getUserEmail()).isEqualTo("user@test.com");
         assertThat(target.getRoles()).extracting(Role::getRoleName).contains("WORKSPACE_ADMIN");
         verify(appUserRepository, times(1)).save(target);
+        verify(emailService, times(1)).sendRoleChangeNotification("Plain User", "user@test.com", "MEMBER", "WORKSPACE_ADMIN");
+    }
+
+    @Test
+    void assignWorkspaceAdmin_TargetAlreadyWorkspaceAdmin_NoRoleChangeOrEmail() {
+        workspaceAdminService = newService();
+        UUID workspaceId = UUID.randomUUID();
+        UUID targetUserId = UUID.randomUUID();
+        Workspace workspace = Workspace.builder().id(workspaceId).title("WS").build();
+        AppUser target = AppUser.builder().id(targetUserId).name("Existing WS Admin").email("wsadmin2@test.com")
+                .roles(new java.util.HashSet<>(Set.of(Role.builder().roleName("WORKSPACE_ADMIN").build()))).build();
+
+        when(workspaceRepository.findById(workspaceId)).thenReturn(Optional.of(workspace));
+        when(appUserRepository.findById(targetUserId)).thenReturn(Optional.of(target));
+        when(workspaceAdminRepository.existsByWorkspace_IdAndUser_Id(workspaceId, targetUserId)).thenReturn(false);
+        when(workspaceAdminRepository.save(any())).thenAnswer(inv -> {
+            WorkspaceAdminMapping m = inv.getArgument(0);
+            m.setId(UUID.randomUUID());
+            return m;
+        });
+
+        WorkspaceAdminAssignRequestDto request = new WorkspaceAdminAssignRequestDto(targetUserId);
+        WorkspaceAdminResponseDto result = workspaceAdminService.assignWorkspaceAdmin(
+                workspaceId, request, "wsadmin@test.com");
+
+        assertThat(result.getUserEmail()).isEqualTo("wsadmin2@test.com");
+        verify(appUserRepository, never()).save(any());
+        verify(emailService, never()).sendRoleChangeNotification(any(), any(), any(), any());
     }
 }

@@ -133,6 +133,19 @@ class AuthorizationIntegrationTest {
                 .build());
     }
 
+    /** Persists a plain MEMBER-role AppUser, used to test WORKSPACE_ADMIN promotion flows. */
+    private AppUser seedMemberUser(String email) {
+        Role memberRole = roleRepository.findByRoleName("MEMBER")
+                .orElseGet(() -> roleRepository.save(Role.builder().roleName("MEMBER").build()));
+        return appUserRepository.save(AppUser.builder()
+                .name("Plain Member")
+                .email(email)
+                .passwordHash("n/a")
+                .enabled(true)
+                .roles(new java.util.HashSet<>(java.util.Set.of(memberRole)))
+                .build());
+    }
+
     // ── Workspace reads (MEMBER) ──────────────────────────────────────────────
 
     @Test
@@ -259,6 +272,39 @@ class AuthorizationIntegrationTest {
     @WithMockUser(username = "wsadmin-nodelete@test.com", roles = "WORKSPACE_ADMIN")
     void workspaceAdmin_cannotDeleteWorkspace() throws Exception {
         mockMvc.perform(delete("/api/v1/workspaces/{id}", WORKSPACE_ID))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(username = "wsadmin-promoter@test.com", roles = "WORKSPACE_ADMIN")
+    void workspaceAdmin_canPromoteMemberToWorkspaceAdminForOwnWorkspace() throws Exception {
+        AppUser admin = seedWorkspaceAdminUser("wsadmin-promoter@test.com");
+        Workspace ownWorkspace = seedWorkspace("Own WS");
+        seedWorkspaceAdminMapping(ownWorkspace, admin);
+        AppUser member = seedMemberUser("member-to-promote@test.com");
+
+        mockMvc.perform(post("/api/v1/workspaces/{workspaceId}/admins", ownWorkspace.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"userId\":\"" + member.getId() + "\"}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.userEmail").value("member-to-promote@test.com"));
+
+        AppUser updatedMember = appUserRepository.findById(member.getId()).orElseThrow();
+        assertThat(updatedMember.getRoles()).extracting(Role::getRoleName).contains("WORKSPACE_ADMIN");
+        assertThat(workspaceAdminRepository.existsByWorkspace_IdAndUser_Id(ownWorkspace.getId(), member.getId())).isTrue();
+    }
+
+    @Test
+    @WithMockUser(username = "wsadmin-denied-promoter@test.com", roles = "WORKSPACE_ADMIN")
+    void workspaceAdmin_cannotPromoteMemberForUnadministeredWorkspace() throws Exception {
+        seedWorkspaceAdminUser("wsadmin-denied-promoter@test.com");
+        UUID otherWorkspaceId = seedWorkspace("Someone Else's WS").getId();
+        AppUser member = seedMemberUser("member-not-promoted@test.com");
+        // Note: no WorkspaceAdminMapping seeded for this user/workspace pair
+
+        mockMvc.perform(post("/api/v1/workspaces/{workspaceId}/admins", otherWorkspaceId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"userId\":\"" + member.getId() + "\"}"))
                 .andExpect(status().isForbidden());
     }
 

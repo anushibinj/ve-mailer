@@ -84,4 +84,5 @@
 - [ ] In the Delete Group modal, currently it says "This does not affect existing subscriptions." and fails. Instead show a graceful error saying "This will delete all associated Subscriptions, do you want to continue?" and the buttons shown should be: "Cancel", "Delete group and associated subsriptions".
 - [ ] In the 'New Subscription' modal, Individual shows bell icon, but for groups it shows a group of people as icon. So, change individual to show a single person icon to align with 'Group'
 - [x] As a WORKPSACE_ADMIN, I should not see any workspace other than the ones I am WORKSPACE_ADMIN for in the /admin?tab=workspaces tab in the frontend
-- [ ] Currently, as a WORKSPACE_ADMIN, I can only set other WORKSPACE_ADMIN as an admin to my workspace. But as a WORKSPACE_ADMIN, I should be able to promote other MEMBER-role users as WORKSPACE_ADMINS while adding them as WORKSPACE_ADMIN to my own workspace.
+- [x] Currently, as a WORKSPACE_ADMIN, I can only set other WORKSPACE_ADMIN as an admin to my workspace. But as a WORKSPACE_ADMIN, I should be able to promote other MEMBER-role users as WORKSPACE_ADMINS while adding them as WORKSPACE_ADMIN to my own workspace.
+- [ ] As a WORKSPACE_ADMIN, when I access the Groups tab in the Admin Panel, the workspace selector dropdown should list only the workspaces that I have access to.

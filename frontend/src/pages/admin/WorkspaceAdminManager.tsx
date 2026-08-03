@@ -73,11 +73,10 @@ const WorkspaceAdminManager: React.FC<WorkspaceAdminManagerProps> = ({ workspace
   };
 
   // Users who are not already admins of this workspace (exclude global ADMINs too).
-  // WORKSPACE_ADMIN actors may only pick users who already carry the WORKSPACE_ADMIN role —
-  // only a global ADMIN can promote a plain USER/MEMBER into an admin.
+  // Both global ADMINs and WORKSPACE_ADMINs may promote a plain MEMBER user into an admin of
+  // this workspace — the backend auto-upgrades the target's role to WORKSPACE_ADMIN.
   const availableUsers = users.filter(u => {
     if (admins.some(a => a.userId === u.id) || u.roles.includes('ADMIN')) return false;
-    if (!isAdmin && !u.roles.includes('WORKSPACE_ADMIN')) return false;
     return true;
   });
 
@@ -101,7 +100,8 @@ const WorkspaceAdminManager: React.FC<WorkspaceAdminManagerProps> = ({ workspace
       {/* Assign form */}
       {!isAdmin && (
         <p className="text-xs text-gray-500 mb-2">
-          As a workspace admin, you can only assign other users who already have the WORKSPACE_ADMIN role.
+          As a workspace admin, you can assign any user here — they will be promoted to
+          WORKSPACE_ADMIN automatically if they aren't already.
         </p>
       )}
       <div className="flex items-center gap-2 mb-4">

@@ -402,8 +402,9 @@ public class WorkspaceController {
     }
 
     /**
-     * Assigns a workspace admin. Global ADMINs may promote any user; WORKSPACE_ADMINs may only
-     * add other users who already hold the WORKSPACE_ADMIN role (see WorkspaceAdminService).
+     * Assigns a workspace admin. Both global ADMINs and WORKSPACE_ADMINs acting on their own
+     * (administered) workspace may promote a plain USER/MEMBER into an admin — the target's
+     * global role is auto-upgraded to WORKSPACE_ADMIN if needed (see WorkspaceAdminService).
      */
     @PostMapping("/{workspaceId}/admins")
     @PreAuthorize("hasAnyRole('ADMIN', 'WORKSPACE_ADMIN')")
@@ -415,9 +416,8 @@ public class WorkspaceController {
         if (!workspaceAdminService.canManageWorkspace(authentication, workspaceId)) {
             throw new AccessDeniedException("You are not authorized to manage admins for this workspace");
         }
-        boolean isGlobalAdmin = workspaceAdminService.isGlobalAdmin(authentication);
         WorkspaceAdminResponseDto result = workspaceAdminService.assignWorkspaceAdmin(
-                workspaceId, request, userDetails.getUsername(), isGlobalAdmin);
+                workspaceId, request, userDetails.getUsername());
         return ResponseEntity.status(HttpStatus.CREATED).body(result);
     }
 
