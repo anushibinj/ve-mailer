@@ -33,6 +33,7 @@ A full-stack application that lets users subscribe to email digest notifications
     - [Triage SLA Custom Field](#triage-sla-custom-field)
     - [Frontend — Environment Variables](#frontend--environment-variables)
       - [`VITE_ALLOW_CUSTOM_QUERY_STRING` — query-string filter workflow toggle](#vite_allow_custom_query_string--query-string-filter-workflow-toggle)
+      - [`VITE_ALLOW_DARK_MODE_TOGGLE` — dark/light mode toggle visibility](#vite_allow_dark_mode_toggle--darklight-mode-toggle-visibility)
       - [`VITE_FOOTER_HTML` — custom footer](#vite_footer_html--custom-footer)
     - [Docker — Timezone (`TZ`)](#docker--timezone-tz)
   - [Running Tests](#running-tests)
@@ -837,6 +838,7 @@ The `.env.local` file must contain:
 ```env
 VITE_BACKEND_ROOT_URL=http://localhost:8080
 VITE_ALLOW_CUSTOM_QUERY_STRING=false
+VITE_ALLOW_DARK_MODE_TOGGLE=false
 ```
 
 ---
@@ -956,6 +958,7 @@ Prompts are stored in `backend/src/main/resources/prompts/` and can be customize
 |-------------------------|--------------------------------------------------------------------------|------------------------------------------------------------||
 | `VITE_BACKEND_ROOT_URL` | Base URL of the Spring Boot backend                                      | `http://localhost:8080`                                    |
 | `VITE_ALLOW_CUSTOM_QUERY_STRING` | Enables query-string based filter creation and copy-string actions in the UI | `false` |
+| `VITE_ALLOW_DARK_MODE_TOGGLE` | Shows or hides the dark/light mode toggle button in the app header | `false` |
 | `VITE_FOOTER_HTML`      | Optional HTML injected into the global app footer (sanitized before render) | `<div style="text-align:center">Powered by VE Mailer</div>` |
 
 Create a `.env.local` file in the `frontend/` directory. Vite exposes only variables prefixed with `VITE_` to the browser bundle.
@@ -966,6 +969,13 @@ Controls whether the filter builder exposes query-string based workflow.
 
 - `false` (default): hide all query-string UI (generate-from-string flow and copy-string action).
 - `true`: show query-string workflow and related controls.
+
+#### `VITE_ALLOW_DARK_MODE_TOGGLE` — dark/light mode toggle visibility
+
+Controls whether users can switch between light and dark modes from the app header.
+
+- `false` (default): hide the dark/light toggle button.
+- `true`: show the dark/light toggle button.
 
 #### `VITE_FOOTER_HTML` — custom footer
 

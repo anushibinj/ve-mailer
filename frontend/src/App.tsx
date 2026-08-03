@@ -7,6 +7,8 @@ import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 import { Toaster } from 'react-hot-toast';
 import { Mail, LayoutDashboard, LogOut, ShieldCheck, Sun, Moon, ChevronRight, Home } from 'lucide-react';
 
+const allowDarkModeToggle = String(import.meta.env.VITE_ALLOW_DARK_MODE_TOGGLE ?? 'false').toLowerCase() === 'true';
+
 const LandingView = lazy(() => import('./components/LandingView'));
 const WorkspaceDashboard = lazy(() => import('./components/WorkspaceDashboard'));
 const FilterBuilderView = lazy(() => import('./components/FilterBuilderView'));
@@ -114,7 +116,7 @@ function AppHeader() {
             </button>
           )}
 
-          <ThemeToggle />
+          {allowDarkModeToggle && <ThemeToggle />}
 
           <div className="w-px h-4 bg-slate-200 dark:bg-slate-700" />
 
