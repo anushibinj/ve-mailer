@@ -173,7 +173,7 @@ class WorkspaceAdminServiceTest {
         assertThat(result.getUserEmail()).isEqualTo("user@test.com");
         assertThat(target.getRoles()).extracting(Role::getRoleName).contains("WORKSPACE_ADMIN");
         verify(appUserRepository, times(1)).save(target);
-        verify(emailService, times(1)).sendRoleChangeNotification("Plain User", "user@test.com", "MEMBER", "WORKSPACE_ADMIN");
+        verify(emailService, times(1)).sendRoleChangeNotification("Plain User", "user@test.com", "MEMBER", "WORKSPACE_ADMIN", workspaceId.toString(), "WS");
     }
 
     @Test
@@ -203,7 +203,7 @@ class WorkspaceAdminServiceTest {
         assertThat(result.getUserEmail()).isEqualTo("user@test.com");
         assertThat(target.getRoles()).extracting(Role::getRoleName).contains("WORKSPACE_ADMIN");
         verify(appUserRepository, times(1)).save(target);
-        verify(emailService, times(1)).sendRoleChangeNotification("Plain User", "user@test.com", "MEMBER", "WORKSPACE_ADMIN");
+        verify(emailService, times(1)).sendRoleChangeNotification("Plain User", "user@test.com", "MEMBER", "WORKSPACE_ADMIN", workspaceId.toString(), "WS");
     }
 
     @Test
@@ -230,6 +230,6 @@ class WorkspaceAdminServiceTest {
 
         assertThat(result.getUserEmail()).isEqualTo("wsadmin2@test.com");
         verify(appUserRepository, never()).save(any());
-        verify(emailService, never()).sendRoleChangeNotification(any(), any(), any(), any());
+        verify(emailService, never()).sendRoleChangeNotification(any(), any(), any(), any(), any(), any());
     }
 }

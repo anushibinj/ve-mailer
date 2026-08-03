@@ -426,9 +426,9 @@ public class AuthService {
         }
 
         if (promoteToWorkspaceAdmin && !isCurrentlyWorkspaceAdmin) {
-            emailService.sendRoleChangeNotification(user.getName(), user.getEmail(), "MEMBER", "WORKSPACE_ADMIN");
+            emailService.sendRoleChangeNotification(user.getName(), user.getEmail(), "MEMBER", "WORKSPACE_ADMIN", null, null);
         } else if (!promoteToWorkspaceAdmin && isCurrentlyWorkspaceAdmin) {
-            emailService.sendRoleChangeNotification(user.getName(), user.getEmail(), "WORKSPACE_ADMIN", "MEMBER");
+            emailService.sendRoleChangeNotification(user.getName(), user.getEmail(), "WORKSPACE_ADMIN", "MEMBER", null, null);
         }
 
         return userQueryService.getUserSummary(user.getId());

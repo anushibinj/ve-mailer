@@ -340,9 +340,10 @@ public class NotificationService {
           .append("<table cellpadding=\"0\" cellspacing=\"0\" border=\"0\" width=\"100%\" bgcolor=\"#ffffff\" ")
           .append("style=\"width:100%;background-color:#ffffff;")
           .append("border-radius:12px;border:1px solid #e2e8f0;\">")
-          // Gradient header — bgcolor is a flat indigo fallback for Outlook (MSO ignores CSS gradients)
+          // Header — flat indigo background (no gradient: Outlook/Word engine ignores CSS
+          // gradients entirely, so a gradient here would leave the header transparent).
           .append("<tr><td bgcolor=\"#4f46e5\" ")
-          .append("style=\"background:linear-gradient(135deg,#4f46e5 0%,#7c3aed 100%);")
+          .append("style=\"background-color:#4f46e5;")
           .append("padding:18px 28px;border-radius:12px 12px 0 0;\">")
           .append("<span style=\"color:#ffffff;font-size:16px;font-weight:700;letter-spacing:-0.3px;\">")
           .append("&#9993;&nbsp;&nbsp;VE Mailer</span></td></tr>");

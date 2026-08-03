@@ -128,7 +128,8 @@ public class WorkspaceAdminService {
                     .orElseThrow(() -> new IllegalStateException("WORKSPACE_ADMIN role not found in database"));
             user.getRoles().add(workspaceAdminRole);
             appUserRepository.save(user);
-            emailService.sendRoleChangeNotification(user.getName(), user.getEmail(), previousRoleName, "WORKSPACE_ADMIN");
+            emailService.sendRoleChangeNotification(user.getName(), user.getEmail(), previousRoleName, "WORKSPACE_ADMIN",
+                    workspace.getId().toString(), workspace.getTitle());
         }
 
         WorkspaceAdminMapping mapping = WorkspaceAdminMapping.builder()

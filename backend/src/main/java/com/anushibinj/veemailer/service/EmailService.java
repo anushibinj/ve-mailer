@@ -69,7 +69,7 @@ public class EmailService {
                 "</p>" +
                 "<div style=\"margin:24px 0;\">" +
                 "<a href=\"" + esc(magicLink) + "\" " +
-                "style=\"display:inline-block;background:linear-gradient(135deg,#4f46e5 0%,#7c3aed 100%);" +
+                "style=\"display:inline-block;background-color:#4f46e5;" +
                 "color:#ffffff;text-decoration:none;font-size:14px;font-weight:600;" +
                 "padding:12px 28px;border-radius:8px;letter-spacing:0.02em;\">" +
                 "Accept invitation &#8594;</a>" +
@@ -151,14 +151,31 @@ public class EmailService {
             String userName,
             String userEmail,
             String previousRoleName,
-            String newRoleName) {
+            String newRoleName,
+            String workspaceId,
+            String workspaceTitle) {
         try {
             Session session = dynamicMailSenderService.getSession();
             String from = dynamicMailSenderService.getFromAddress();
 
+            boolean hasWorkspace = workspaceId != null && !workspaceId.isBlank();
+            String workspaceRow = hasWorkspace
+                ? "<tr><td style=\"padding:4px 16px 4px 0;font-size:12px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.05em;white-space:nowrap;\">Workspace</td>" +
+                  "<td style=\"padding:4px 0;font-size:14px;color:#1e293b;\">" + esc(workspaceTitle) + "</td></tr>"
+                : "";
+            String workspaceLink = hasWorkspace
+                ? "<div style=\"margin:20px 0;\">" +
+                  "<a href=\"" + esc(frontendUrl) + "/workspace/" + esc(workspaceId) + "\" " +
+                  "style=\"display:inline-block;background-color:#4f46e5;" +
+                  "color:#ffffff;text-decoration:none;font-size:14px;font-weight:600;" +
+                  "padding:12px 28px;border-radius:8px;letter-spacing:0.02em;\">" +
+                  "Go to " + esc(workspaceTitle) + " &#8594;</a>" +
+                  "</div>"
+                : "";
+
             String body =
                 "<p style=\"margin:0 0 20px;font-size:14px;line-height:1.6;color:#334155;\">" +
-                "Your VE Mailer role has been updated." +
+                "Your VE Mailer role has been updated" + (hasWorkspace ? " for the workspace below." : ".") +
                 "</p>" +
                 "<div style=\"background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;" +
                 "padding:16px 20px;margin:0 0 20px;\">" +
@@ -171,8 +188,10 @@ public class EmailService {
                 "<td style=\"padding:4px 0;font-size:14px;color:#1e293b;\">" + esc(previousRoleName) + "</td></tr>" +
                 "<tr><td style=\"padding:4px 16px 4px 0;font-size:12px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.05em;white-space:nowrap;\">New role</td>" +
                 "<td style=\"padding:4px 0;font-size:14px;color:#1e293b;\">" + esc(newRoleName) + "</td></tr>" +
+                workspaceRow +
                 "</table>" +
-                "</div>";
+                "</div>" +
+                workspaceLink;
 
             MimeMessage message = new MimeMessage(session);
             message.setFrom(new InternetAddress(from));
@@ -337,7 +356,7 @@ public class EmailService {
                "style=\"max-width:560px;width:100%;background-color:#ffffff;" +
                "border-radius:12px;border:1px solid #e2e8f0;\">" +
                "<tr><td bgcolor=\"#4f46e5\" " +
-               "style=\"background:linear-gradient(135deg,#4f46e5 0%,#7c3aed 100%);" +
+               "style=\"background-color:#4f46e5;" +
                "padding:18px 28px;border-radius:12px 12px 0 0;\">" +
                "<span style=\"color:#ffffff;font-size:16px;font-weight:700;letter-spacing:-0.3px;\">" +
                "&#9993;&nbsp;&nbsp;VE Mailer</span></td></tr>" +

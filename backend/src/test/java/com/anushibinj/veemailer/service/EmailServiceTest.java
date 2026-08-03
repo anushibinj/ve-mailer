@@ -87,4 +87,44 @@ class EmailServiceTest {
                 "Invite email body should include the fallback accept-invite page URL");
         assertTrue(body.contains("only once"), "Invite email body should mention single-use");
     }
+
+    @Test
+    void testSendRoleChangeNotification_WithoutWorkspace_OmitsWorkspaceRowAndLink() throws Exception {
+        when(dynamicMailSenderService.getSession()).thenReturn(testSession());
+        when(dynamicMailSenderService.getFromAddress()).thenReturn("noreply@test.com");
+        doNothing().when(dynamicMailSenderService).send(any(MimeMessage.class));
+
+        emailService.sendRoleChangeNotification("Jane Doe", "jane@example.com", "MEMBER", "WORKSPACE_ADMIN", null, null);
+
+        ArgumentCaptor<MimeMessage> captor = ArgumentCaptor.forClass(MimeMessage.class);
+        verify(dynamicMailSenderService, times(1)).send(captor.capture());
+        String body = captor.getValue().getContent().toString();
+
+        assertTrue(body.contains("MEMBER"), "Body should mention the previous role");
+        assertTrue(body.contains("WORKSPACE_ADMIN"), "Body should mention the new role");
+        assertFalse(body.contains("Workspace</td>"), "Body should not include a Workspace row when no workspace is given");
+        assertFalse(body.contains("/workspace/"), "Body should not include a workspace link when no workspace is given");
+    }
+
+    @Test
+    void testSendRoleChangeNotification_WithWorkspace_IncludesWorkspaceNameAndLink() throws Exception {
+        String frontendUrl = "http://localhost:5173";
+        String workspaceId = "d25d5478-7d5d-404d-ad5e-62267350aecc";
+
+        ReflectionTestUtils.setField(emailService, "frontendUrl", frontendUrl);
+        when(dynamicMailSenderService.getSession()).thenReturn(testSession());
+        when(dynamicMailSenderService.getFromAddress()).thenReturn("noreply@test.com");
+        doNothing().when(dynamicMailSenderService).send(any(MimeMessage.class));
+
+        emailService.sendRoleChangeNotification(
+                "Jane Doe", "jane@example.com", "MEMBER", "WORKSPACE_ADMIN", workspaceId, "Portfolio-Hyd");
+
+        ArgumentCaptor<MimeMessage> captor = ArgumentCaptor.forClass(MimeMessage.class);
+        verify(dynamicMailSenderService, times(1)).send(captor.capture());
+        String body = captor.getValue().getContent().toString();
+
+        assertTrue(body.contains("Portfolio-Hyd"), "Body should mention the workspace title");
+        assertTrue(body.contains(frontendUrl + "/workspace/" + workspaceId),
+                "Body should include a link to the workspace");
+    }
 }
