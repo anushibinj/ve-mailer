@@ -157,7 +157,10 @@ const LandingView: React.FC = () => {
             {filtered.map((workspace, idx) => {
               const gradient = ICON_GRADIENTS[idx % ICON_GRADIENTS.length];
               const shadow   = ICON_SHADOWS[idx % ICON_SHADOWS.length];
-              const initial  = workspace.title ? workspace.title.charAt(0).toUpperCase() : '?';
+              const avatarShortcode = (workspace.workspaceShortcode || workspace.title || '?')
+                .trim()
+                .toUpperCase()
+                .slice(0, 4);
 
               return (
                 <button
@@ -170,8 +173,10 @@ const LandingView: React.FC = () => {
                       : 'px-5 py-4 w-full'
                   }`}
                 >
-                  <div className={`h-11 w-11 rounded-xl bg-gradient-to-br ${gradient} flex items-center justify-center flex-shrink-0 shadow-lg ${shadow} group-hover:scale-110 transition-all duration-300`}>
-                    <span className="text-white font-bold text-base">{initial}</span>
+                  <div className={`h-12 w-12 rounded-full bg-gradient-to-br ${gradient} flex items-center justify-center flex-shrink-0 shadow-lg ${shadow} group-hover:scale-110 transition-all duration-300`}>
+                    <span className="text-white font-extrabold font-mono text-[11px] tracking-tight leading-none">
+                      {avatarShortcode}
+                    </span>
                   </div>
 
                   <div className="flex-1 min-w-0">
