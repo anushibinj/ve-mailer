@@ -48,6 +48,16 @@ public interface EmailSubscriberRepository extends JpaRepository<EmailSubscriber
     @Query("SELECT e FROM EmailSubscriber e JOIN FETCH e.filter WHERE e.recipientEmail = :email AND e.workspace.id = :workspaceId AND e.status IN :statuses")
     List<EmailSubscriber> findByRecipientEmailAndWorkspaceIdAndStatusIn(@Param("email") String email, @Param("workspaceId") UUID workspaceId, @Param("statuses") List<Status> statuses);
 
+    /**
+     * Returns ACTIVE and DISABLED group subscriptions within a workspace where the given email is a
+     * member of the subscribed recipient group. Used so a MEMBER can see (read-only) the group
+     * subscriptions they receive mail through, in addition to their own person-level subscriptions.
+     */
+    @Query("SELECT e FROM EmailSubscriber e JOIN FETCH e.filter JOIN e.group g JOIN g.memberEmails m " +
+            "WHERE e.workspace.id = :workspaceId AND m = :email AND e.status IN :statuses")
+    List<EmailSubscriber> findGroupSubscriptionsForMemberAndWorkspaceIdAndStatusIn(
+            @Param("email") String email, @Param("workspaceId") UUID workspaceId, @Param("statuses") List<Status> statuses);
+
     /** Finds all active subscribers that have :hour in their scheduled hours and match the given schedule type. */
     @Query("SELECT DISTINCT e FROM EmailSubscriber e JOIN e.scheduledHours h WHERE h = :hour AND e.scheduleType = :scheduleType AND e.status = :status")
     List<EmailSubscriber> findActiveByScheduledHourAndScheduleType(@Param("hour") int hour, @Param("scheduleType") ScheduleType scheduleType, @Param("status") Status status);

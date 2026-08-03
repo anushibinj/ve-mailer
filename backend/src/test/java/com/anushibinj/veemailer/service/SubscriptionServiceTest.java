@@ -411,6 +411,41 @@ class SubscriptionServiceTest {
         assertTrue(results.isEmpty());
     }
 
+    @Test
+    void testGetActiveSubscriptionsForUser_IncludesGroupSubscriptionsUserIsMemberOf() {
+        EmailSubscriber personal = new EmailSubscriber();
+        personal.setRecipientEmail("user@test.com");
+        personal.setFilter(filter);
+        personal.setScheduleType(ScheduleType.DAILY);
+        personal.setScheduledHours(List.of(9));
+        personal.setStatus(Status.ACTIVE);
+
+        com.anushibinj.veemailer.model.RecipientGroup group = com.anushibinj.veemailer.model.RecipientGroup.builder()
+                .id(UUID.randomUUID())
+                .name("QA Team")
+                .memberEmails(new java.util.LinkedHashSet<>(List.of("user@test.com", "other@test.com")))
+                .build();
+        EmailSubscriber groupSub = new EmailSubscriber();
+        groupSub.setGroup(group);
+        groupSub.setFilter(filter);
+        groupSub.setScheduleType(ScheduleType.DAILY);
+        groupSub.setScheduledHours(List.of(10));
+        groupSub.setStatus(Status.ACTIVE);
+
+        when(emailSubscriberRepository.findByRecipientEmailAndWorkspaceIdAndStatusIn(
+                "user@test.com", workspaceId, List.of(Status.ACTIVE, Status.DISABLED)))
+                .thenReturn(List.of(personal));
+        when(emailSubscriberRepository.findGroupSubscriptionsForMemberAndWorkspaceIdAndStatusIn(
+                "user@test.com", workspaceId, List.of(Status.ACTIVE, Status.DISABLED)))
+                .thenReturn(List.of(groupSub));
+
+        List<SubscriptionResponseDTO> results = subscriptionService.getActiveSubscriptionsForUser("user@test.com", workspaceId);
+
+        assertEquals(2, results.size());
+        assertTrue(results.stream().anyMatch(r -> "user@test.com".equals(r.getRecipientEmail())));
+        assertTrue(results.stream().anyMatch(r -> group.getId().equals(r.getGroupId()) && "QA Team".equals(r.getGroupName())));
+    }
+
     // ─────────────────────── toggleSubscription ───────────────────────────────
 
     @Test

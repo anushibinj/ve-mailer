@@ -80,7 +80,7 @@
 - [x] In the new subscription modal, show which fields are mandatory. And show why the submit button is disabled.
 - [ ] Moonshot: Allow multi-filter subscription in a single subscription. And it should send a single e-mail with multiple tables iniside it.
 - [ ] Rename 'Unscubribe' to 'Delete subcription' in the 'Edit subscription' modal.
-- [ ] As a MEMBER, If I am part of a group, and I am subscribed to a filter, I need to see a read-only view of that subscription. As of now, I cannot see any subscription that I'm part of as a group. I can only see 'person level' subscriptions. In the Actions button column, add a 'i' button that shows a popover saying "Contact your Workspace Admin for changes to this Group Subscription"
+- [x] As a MEMBER, If I am part of a group, and I am subscribed to a filter, I need to see a read-only view of that subscription. As of now, I cannot see any subscription that I'm part of as a group. I can only see 'person level' subscriptions. In the Actions button column, add a 'i' button that shows a popover saying "Contact your Workspace Admin for changes to this Group Subscription"
 - [ ] In the Delete Group modal, currently it says "This does not affect existing subscriptions." and fails. Instead show a graceful error saying "This will delete all associated Subscriptions, do you want to continue?" and the buttons shown should be: "Cancel", "Delete group and associated subsriptions".
 - [ ] In the 'New Subscription' modal, Individual shows bell icon, but for groups it shows a group of people as icon. So, change individual to show a single person icon to align with 'Group'
 - [x] As a WORKPSACE_ADMIN, I should not see any workspace other than the ones I am WORKSPACE_ADMIN for in the /admin?tab=workspaces tab in the frontend

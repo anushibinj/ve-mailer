@@ -213,11 +213,20 @@ public class SubscriptionService {
     /**
      * Returns ACTIVE and DISABLED subscriptions belonging to the authenticated user within a workspace.
      * Used for MEMBER-role requests to enforce per-user data isolation.
+     * Includes both the user's own person-level subscriptions and any group subscriptions for groups
+     * the user is a member of, so a MEMBER can see (read-only) the group subscriptions they receive
+     * mail through — group rows can't be edited/toggled/deleted by non-admins (see enforceOwnership).
      */
     public List<SubscriptionResponseDTO> getActiveSubscriptionsForUser(String email, UUID workspaceId) {
-        List<EmailSubscriber> subscribers = emailSubscriberRepository
-                .findByRecipientEmailAndWorkspaceIdAndStatusIn(email, workspaceId, List.of(Status.ACTIVE, Status.DISABLED));
-        return subscribers.stream().map(this::toResponseDto).collect(Collectors.toList());
+        List<Status> statuses = List.of(Status.ACTIVE, Status.DISABLED);
+        List<EmailSubscriber> personal = emailSubscriberRepository
+                .findByRecipientEmailAndWorkspaceIdAndStatusIn(email, workspaceId, statuses);
+        List<EmailSubscriber> groupSubs = emailSubscriberRepository
+                .findGroupSubscriptionsForMemberAndWorkspaceIdAndStatusIn(email, workspaceId, statuses);
+
+        List<EmailSubscriber> combined = new ArrayList<>(personal);
+        combined.addAll(groupSubs);
+        return combined.stream().map(this::toResponseDto).collect(Collectors.toList());
     }
 
     /**

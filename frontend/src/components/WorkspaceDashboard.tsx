@@ -14,7 +14,7 @@ import { formatHourLabel } from '../services/scheduleUtils';
 import { useAuth } from '../hooks/useAuth';
 import {
   ArrowLeft, SlidersHorizontal, Pencil, Eye, Play, Plus, Bell, Mail,
-  Settings2, Users, PowerOff, Power, ChevronUp, ChevronDown, ChevronsUpDown
+  Settings2, Users, PowerOff, Power, ChevronUp, ChevronDown, ChevronsUpDown, Info
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import LoadingPlaceholder from './LoadingPlaceholder';
@@ -367,9 +367,7 @@ const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({
               <thead>
                 <tr className="bg-slate-50/80 dark:bg-slate-800/40 border-b border-slate-100 dark:border-slate-800">
                   <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Actions</th>
-                  {canManage && (
-                    <SortableHeader label="Recipient" sortKey="recipient" currentKey={sortKey} currentDir={sortDir} onSort={handleSort} />
-                  )}
+                  <SortableHeader label="Recipient" sortKey="recipient" currentKey={sortKey} currentDir={sortDir} onSort={handleSort} />
                   <SortableHeader label="Filter" sortKey="filter" currentKey={sortKey} currentDir={sortDir} onSort={handleSort} />
                   <SortableHeader label="Schedule" sortKey="schedule" currentKey={sortKey} currentDir={sortDir} onSort={handleSort} />
                   <SortableHeader label="Status" sortKey="status" currentKey={sortKey} currentDir={sortDir} onSort={handleSort} />
@@ -397,17 +395,21 @@ const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({
                             label="Send email now"
                           />
                         )}
-                        <TableActionButton
-                          variant={sub.status === 'DISABLED' ? 'success' : 'secondary'}
-                          loading={togglingIds.has(sub.id)}
-                          icon={sub.status === 'DISABLED' ? <Power className="h-3.5 w-3.5" /> : <PowerOff className="h-3.5 w-3.5" />}
-                          disabled={!canManage && !!sub.groupId}
-                          onClick={() => handleToggleSubscription(sub)}
-                          label={!canManage && sub.groupId
-                            ? 'Only workspace admins can manage group subscriptions'
-                            : sub.status === 'DISABLED' ? 'Enable subscription' : 'Disable subscription'
-                          }
-                        />
+                        {!canManage && sub.groupId ? (
+                          <TableActionButton
+                            variant="secondary"
+                            icon={<Info className="h-3.5 w-3.5" />}
+                            label="Contact your Workspace Admin for changes to this Group Subscription"
+                          />
+                        ) : (
+                          <TableActionButton
+                            variant={sub.status === 'DISABLED' ? 'success' : 'secondary'}
+                            loading={togglingIds.has(sub.id)}
+                            icon={sub.status === 'DISABLED' ? <Power className="h-3.5 w-3.5" /> : <PowerOff className="h-3.5 w-3.5" />}
+                            onClick={() => handleToggleSubscription(sub)}
+                            label={sub.status === 'DISABLED' ? 'Enable subscription' : 'Disable subscription'}
+                          />
+                        )}
                         <TableActionButton
                           variant="secondary"
                           icon={!canManage && sub.groupId ? <Eye className="h-3.5 w-3.5" /> : <Pencil className="h-3.5 w-3.5" />}
@@ -416,27 +418,25 @@ const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({
                         />
                       </div>
                     </td>
-                    {canManage && (
-                      <td className="px-4 py-3.5 whitespace-nowrap">
-                        {sub.groupId ? (
-                          <div className="flex items-center gap-2">
-                            <Badge variant="teal" className="gap-1">
-                              <Users className="h-3 w-3" />
-                              {sub.groupName}
-                            </Badge>
-                            {sub.groupMemberCount != null && (
-                              <span className="text-xs text-slate-400 dark:text-slate-500 tabular-nums">
-                                {sub.groupMemberCount}m
-                              </span>
-                            )}
-                          </div>
-                        ) : (
-                          <span className="text-sm font-medium text-slate-900 dark:text-slate-200 max-w-[180px] truncate block" title={sub.recipientEmail ?? ''}>
-                            {sub.recipientEmail}
-                          </span>
-                        )}
-                      </td>
-                    )}
+                    <td className="px-4 py-3.5 whitespace-nowrap">
+                      {sub.groupId ? (
+                        <div className="flex items-center gap-2">
+                          <Badge variant="teal" className="gap-1">
+                            <Users className="h-3 w-3" />
+                            {sub.groupName}
+                          </Badge>
+                          {sub.groupMemberCount != null && (
+                            <span className="text-xs text-slate-400 dark:text-slate-500 tabular-nums">
+                              {sub.groupMemberCount}m
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-sm font-medium text-slate-900 dark:text-slate-200 max-w-[180px] truncate block" title={sub.recipientEmail ?? ''}>
+                          {sub.recipientEmail}
+                        </span>
+                      )}
+                    </td>
                     <td className="px-4 py-3.5 whitespace-nowrap">
                       <Badge variant={sub.status === 'DISABLED' ? 'neutral' : 'brand'} className={sub.status === 'DISABLED' ? 'line-through' : ''}>
                         {sub.filterTitle}
