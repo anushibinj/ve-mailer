@@ -308,7 +308,7 @@ const WorkspaceFormModal: React.FC<WorkspaceFormModalProps> = ({
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4 max-h-[70vh] overflow-y-auto">
+        <form onSubmit={handleSubmit} className="px-6 pt-5 pb-0 space-y-4 max-h-[70vh] overflow-y-auto">
           {/* Duplicate workspace conflict banner (409 from backend) */}
           {duplicateConflict && <DuplicateWorkspaceConflictBanner existingWorkspace={duplicateConflict} />}
 
@@ -468,7 +468,7 @@ const WorkspaceFormModal: React.FC<WorkspaceFormModalProps> = ({
           )}
 
           {/* Actions */}
-          <div className="flex justify-end gap-3 pt-2">
+          <div className="sticky bottom-0 -mx-6 px-6 py-3 flex justify-end gap-3 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
             <button
               type="button"
               onClick={onClose}
