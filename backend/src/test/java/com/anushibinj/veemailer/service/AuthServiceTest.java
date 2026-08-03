@@ -111,7 +111,7 @@ class AuthServiceTest {
                 .confirmPassword("Password1!")
                 .build();
 
-        when(appUserRepository.existsByEmail(anyString())).thenReturn(false);
+        when(appUserRepository.findByEmail(anyString())).thenReturn(Optional.empty());
         when(passwordEncoder.encode(anyString())).thenReturn("hashed");
 
         String result = authService.signup(request);
@@ -142,9 +142,39 @@ class AuthServiceTest {
                 .confirmPassword("Password1!")
                 .build();
 
-        when(appUserRepository.existsByEmail("test@company.com")).thenReturn(true);
+        // A fully-onboarded existing user (mustSetPassword=false) should be rejected as a duplicate.
+        when(appUserRepository.findByEmail("test@company.com")).thenReturn(Optional.of(testUser));
 
         assertThrows(IllegalArgumentException.class, () -> authService.signup(request));
+    }
+
+    @Test
+    void signup_AllowedForInvitedUserWhoHasNotSetPasswordYet() {
+        SignupRequestDto request = SignupRequestDto.builder()
+                .name("Test User")
+                .email("test@company.com")
+                .password("Password1!")
+                .confirmPassword("Password1!")
+                .build();
+
+        AppUser invitedUser = AppUser.builder()
+                .id(UUID.randomUUID())
+                .name("Test User")
+                .email("test@company.com")
+                .passwordHash("random-temp-hash")
+                .enabled(true)
+                .mustSetPassword(true)
+                .roles(Set.of(memberRole))
+                .build();
+
+        when(appUserRepository.findByEmail("test@company.com")).thenReturn(Optional.of(invitedUser));
+        when(passwordEncoder.encode(anyString())).thenReturn("hashed");
+
+        String result = authService.signup(request);
+
+        assertNotNull(result);
+        assertTrue(result.contains("OTP has been sent"));
+        verify(otpService).createAndSendOtp(eq("test@company.com"), eq(ActionType.SIGNUP_VERIFICATION), anyString());
     }
 
     @Test
@@ -331,6 +361,70 @@ class AuthServiceTest {
         assertEquals("access-token", result.getAccessToken());
         verify(otpService).cleanupOtp(otpRequest);
         verify(emailService).sendOnboardingNotificationToAdmins(eq("Test User"), eq("test@company.com"), eq(List.of("admin@company.com")));
+    }
+
+    @Test
+    void verifySignupOtp_CompletesOnboardingForPreviouslyInvitedUser() {
+        VerifySignupOtpDto request = VerifySignupOtpDto.builder()
+                .email("test@company.com")
+                .otp("123456")
+                .build();
+
+        OtpRequest otpRequest = OtpRequest.builder()
+                .email("test@company.com")
+                .actionType(ActionType.SIGNUP_VERIFICATION)
+                .payload("{\"name\":\"Test User\",\"email\":\"test@company.com\",\"passwordHash\":\"hashed\"}")
+                .build();
+
+        AppUser invitedUser = AppUser.builder()
+                .id(UUID.randomUUID())
+                .name("Old Name")
+                .email("test@company.com")
+                .passwordHash("random-temp-hash")
+                .enabled(true)
+                .mustSetPassword(true)
+                .roles(Set.of(memberRole))
+                .build();
+
+        when(otpService.validateOtp("test@company.com", "123456")).thenReturn(otpRequest);
+        when(appUserRepository.findByEmail("test@company.com")).thenReturn(Optional.of(invitedUser));
+        when(appUserRepository.save(any(AppUser.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(notificationPreferencesService.getAdminNotificationEmails()).thenReturn(List.of("admin@company.com"));
+        when(jwtService.generateAccessToken(any(AppUser.class))).thenReturn("access-token");
+        when(jwtService.getAccessTokenExpirationMs()).thenReturn(900000L);
+        when(refreshTokenService.createRefreshToken(any(AppUser.class)))
+                .thenReturn(RefreshToken.builder().token("refresh-token").build());
+
+        AuthResponseDto result = authService.verifySignupOtp(request);
+
+        assertNotNull(result);
+        assertEquals("access-token", result.getAccessToken());
+        assertEquals("Test User", invitedUser.getName());
+        assertEquals("hashed", invitedUser.getPasswordHash());
+        assertFalse(invitedUser.isMustSetPassword());
+        verify(appUserRepository, never()).save(argThat(u -> u != invitedUser));
+        verify(otpService).cleanupOtp(otpRequest);
+    }
+
+    @Test
+    void verifySignupOtp_RejectsWhenUserAlreadyOnboardedByAnotherPath() {
+        VerifySignupOtpDto request = VerifySignupOtpDto.builder()
+                .email("test@company.com")
+                .otp("123456")
+                .build();
+
+        OtpRequest otpRequest = OtpRequest.builder()
+                .email("test@company.com")
+                .actionType(ActionType.SIGNUP_VERIFICATION)
+                .payload("{\"name\":\"Test User\",\"email\":\"test@company.com\",\"passwordHash\":\"hashed\"}")
+                .build();
+
+        // Already fully onboarded (e.g. accepted the invite magic link in the meantime).
+        when(otpService.validateOtp("test@company.com", "123456")).thenReturn(otpRequest);
+        when(appUserRepository.findByEmail("test@company.com")).thenReturn(Optional.of(testUser));
+
+        assertThrows(IllegalArgumentException.class, () -> authService.verifySignupOtp(request));
+        verify(appUserRepository, never()).save(any(AppUser.class));
     }
 
     @Test

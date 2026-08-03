@@ -55,8 +55,12 @@ public class AuthService {
         // Validate email domain
         validateEmailDomain(request.getEmail());
 
-        // Check for duplicate email
-        if (appUserRepository.existsByEmail(request.getEmail())) {
+        // Check for duplicate email. A user who was invited by an admin (magic-link onboarding)
+        // but has not yet set a password (mustSetPassword=true) has not actually onboarded yet,
+        // so they're allowed to complete their account setup via this self-signup flow too —
+        // e.g. if they lost/forgot the invite email. Only fully-onboarded accounts are rejected.
+        AppUser existingUser = appUserRepository.findByEmail(request.getEmail()).orElse(null);
+        if (existingUser != null && !existingUser.isMustSetPassword()) {
             throw new IllegalArgumentException("An account with this email already exists.");
         }
 
@@ -96,14 +100,30 @@ public class AuthService {
         Role memberRole = roleRepository.findByRoleName("MEMBER")
                 .orElseGet(() -> roleRepository.save(Role.builder().roleName("MEMBER").build()));
 
-        // Create user
-        AppUser user = AppUser.builder()
-                .name(name)
-                .email(email)
-                .passwordHash(passwordHash)
-                .enabled(true)
-                .roles(Set.of(memberRole))
-                .build();
+        // If this email was previously invited by an admin (magic-link onboarding) but never
+        // set a password, complete onboarding on that existing record instead of creating a
+        // duplicate user — this lets an invited user fall back to the self-signup flow if
+        // they lost the invite email, without losing their existing roles/workspace memberships.
+        AppUser user = appUserRepository.findByEmail(email).orElse(null);
+        if (user != null) {
+            // Guards against a race where the account finished onboarding via another path
+            // (e.g. the invite magic link) between the signup request and this OTP verification.
+            if (!user.isMustSetPassword()) {
+                throw new IllegalArgumentException("An account with this email already exists.");
+            }
+            user.setName(name);
+            user.setPasswordHash(passwordHash);
+            user.setEnabled(true);
+            user.setMustSetPassword(false);
+        } else {
+            user = AppUser.builder()
+                    .name(name)
+                    .email(email)
+                    .passwordHash(passwordHash)
+                    .enabled(true)
+                    .roles(Set.of(memberRole))
+                    .build();
+        }
 
         user = appUserRepository.save(user);
 
