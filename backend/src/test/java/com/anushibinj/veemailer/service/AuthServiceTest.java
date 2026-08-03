@@ -21,6 +21,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.Optional;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -318,6 +319,7 @@ class AuthServiceTest {
             user.setId(UUID.randomUUID());
             return user;
         });
+        when(notificationPreferencesService.getAdminNotificationEmails()).thenReturn(List.of("admin@company.com"));
         when(jwtService.generateAccessToken(any(AppUser.class))).thenReturn("access-token");
         when(jwtService.getAccessTokenExpirationMs()).thenReturn(900000L);
         when(refreshTokenService.createRefreshToken(any(AppUser.class)))
@@ -328,6 +330,7 @@ class AuthServiceTest {
         assertNotNull(result);
         assertEquals("access-token", result.getAccessToken());
         verify(otpService).cleanupOtp(otpRequest);
+        verify(emailService).sendOnboardingNotificationToAdmins(eq("Test User"), eq("test@company.com"), eq(List.of("admin@company.com")));
     }
 
     @Test

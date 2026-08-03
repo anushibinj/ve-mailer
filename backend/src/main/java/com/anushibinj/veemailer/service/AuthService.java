@@ -110,6 +110,10 @@ public class AuthService {
         // Cleanup OTP
         otpService.cleanupOtp(otpRequest);
 
+        // Notify configured admin emails that a new user has signed up
+        List<String> adminEmails = notificationPreferencesService.getAdminNotificationEmails();
+        emailService.sendOnboardingNotificationToAdmins(user.getName(), user.getEmail(), adminEmails);
+
         // Auto-login: generate tokens
         return buildAuthResponse(user);
     }
