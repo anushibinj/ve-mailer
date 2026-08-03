@@ -106,15 +106,6 @@ function AppHeader() {
         </div>
 
         <div className="flex items-center gap-2 flex-shrink-0">
-          {showAdminNav && (
-            <button
-              onClick={() => navigate('/admin')}
-              className="hidden sm:flex items-center gap-1.5 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 text-sm font-medium transition-colors cursor-pointer"
-            >
-              <LayoutDashboard className="h-3.5 w-3.5" />
-              Admin
-            </button>
-          )}
 
           {allowDarkModeToggle && <ThemeToggle />}
 
@@ -124,7 +115,7 @@ function AppHeader() {
             <div className="h-7 w-7 rounded-full bg-gradient-to-br from-indigo-500/20 to-violet-500/20 dark:from-indigo-500/30 dark:to-violet-500/30 border border-indigo-500/30 dark:border-indigo-400/30 flex items-center justify-center flex-shrink-0">
               <span className="text-indigo-600 dark:text-indigo-300 text-xs font-bold">{initial}</span>
             </div>
-            <span className="text-slate-700 dark:text-slate-300 text-sm hidden sm:block font-medium max-w-[120px] truncate" title={user?.name ?? ''}>
+            <span className="text-slate-700 dark:text-slate-300 text-sm hidden sm:block font-medium truncate" title={user?.name ?? ''}>
               {user?.name}
             </span>
           </div>
@@ -134,6 +125,18 @@ function AppHeader() {
               <ShieldCheck className="h-3 w-3" />
               {isAdmin ? 'Admin' : 'WS Admin'}
             </span>
+          )}
+
+          <div className="w-px h-4 bg-slate-200 dark:bg-slate-700" />
+
+          {showAdminNav && (
+            <button
+              onClick={() => navigate('/admin')}
+              className="hidden sm:flex items-center gap-1.5 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 text-sm font-medium transition-colors cursor-pointer"
+            >
+              <LayoutDashboard className="h-3.5 w-3.5" />
+              Admin Panel
+            </button>
           )}
 
           <div className="w-px h-4 bg-slate-200 dark:bg-slate-700" />
