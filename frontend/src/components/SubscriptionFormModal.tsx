@@ -52,6 +52,20 @@ function filterHasTriageSla(filter?: Filter): boolean {
   }
 }
 
+/** Small red asterisk shown next to labels for required fields. */
+function RequiredMark() {
+  return (
+    <span className="text-rose-500 dark:text-rose-400" aria-hidden="true"> *</span>
+  );
+}
+
+/** Joins items into a natural-language list: "a", "a and b", "a, b, and c". */
+function joinWithAnd(items: string[]): string {
+  if (items.length <= 1) return items[0] ?? '';
+  if (items.length === 2) return `${items[0]} and ${items[1]}`;
+  return `${items.slice(0, -1).join(', ')}, and ${items[items.length - 1]}`;
+}
+
 const SubscriptionFormModal: React.FC<SubscriptionFormModalProps> = ({
   isOpen, workspaceId, filters, canManage = false, onClose, onSuccess,
 }) => {
@@ -134,6 +148,13 @@ const SubscriptionFormModal: React.FC<SubscriptionFormModalProps> = ({
 
   const isFormValid = selectedFilter !== '' && scheduledHours.length > 0
     && (mode === 'individual' || (mode === 'group' && selectedGroupId !== ''));
+
+  // Human-readable list of what's still missing, shown under the submit button so it's clear
+  // why "Subscribe" is greyed out instead of leaving the user to guess.
+  const missingFields: string[] = [];
+  if (mode === 'group' && selectedGroupId === '') missingFields.push('a recipient group');
+  if (selectedFilter === '') missingFields.push('a filter template');
+  if (scheduledHours.length === 0) missingFields.push('at least one notification hour');
 
   const handleAddHour = () => {
     if (!scheduledHours.includes(hourToAdd)) {
@@ -292,7 +313,7 @@ const SubscriptionFormModal: React.FC<SubscriptionFormModalProps> = ({
             {canManage && mode === 'group' && (
               <div className="space-y-1.5">
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
-                  Recipient Group
+                  Recipient Group<RequiredMark />
                 </label>
                 {groupsLoading ? (
                   <div className="flex items-center gap-2 text-slate-400 text-sm py-2">
@@ -421,7 +442,9 @@ const SubscriptionFormModal: React.FC<SubscriptionFormModalProps> = ({
             )}
 
             <div className="space-y-1.5">
-              <label htmlFor="sub-filter" className="block text-sm font-medium text-slate-700 dark:text-slate-300">Filter Template</label>
+              <label htmlFor="sub-filter" className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+                Filter Template<RequiredMark />
+              </label>
               <select
                 id="sub-filter" required value={selectedFilter}
                 onChange={e => {
@@ -480,7 +503,9 @@ const SubscriptionFormModal: React.FC<SubscriptionFormModalProps> = ({
             </div>
 
             <div className="space-y-1.5">
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Notification Hours</label>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+                Notification Hours<RequiredMark />
+              </label>
               <div className="flex gap-2">
                 <select
                   value={hourToAdd}
@@ -523,13 +548,24 @@ const SubscriptionFormModal: React.FC<SubscriptionFormModalProps> = ({
               )}
             </div>
 
-            <button
-              type="submit"
-              disabled={!isFormValid || isSubmitting}
-              className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-indigo-600 hover:bg-indigo-500 dark:bg-indigo-500 dark:hover:bg-indigo-400 text-white text-sm font-semibold rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900 disabled:opacity-50 disabled:cursor-not-allowed transition-all mt-2 cursor-pointer"
-            >
-              {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Subscribe'}
-            </button>
+            <div className="pt-2 space-y-1.5">
+              <button
+                type="submit"
+                disabled={!isFormValid || isSubmitting}
+                aria-describedby={!isFormValid ? 'sub-disabled-reason' : undefined}
+                className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-indigo-600 hover:bg-indigo-500 dark:bg-indigo-500 dark:hover:bg-indigo-400 text-white text-sm font-semibold rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900 disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer"
+              >
+                {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Subscribe'}
+              </button>
+              {!isFormValid && missingFields.length > 0 && (
+                <p id="sub-disabled-reason" className="text-xs text-amber-600 dark:text-amber-400 text-center">
+                  Add {joinWithAnd(missingFields)} to enable Subscribe.
+                </p>
+              )}
+              <p className="text-xs text-slate-400 dark:text-slate-500 text-center">
+                <span className="text-rose-500 dark:text-rose-400" aria-hidden="true">*</span> marks a required field.
+              </p>
+            </div>
           </form>
         </div>
       </div>
