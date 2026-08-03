@@ -13,6 +13,7 @@ import {
 } from '../services/apiService';
 import toast from 'react-hot-toast';
 import { useAuth } from '../hooks/useAuth';
+import WorkspaceAdminManager from '../pages/admin/WorkspaceAdminManager';
 import {
   CLIENT_KEY_PLACEHOLDER,
   SHORTCODE_UNKNOWN_ENABLE_BLOCKED_MESSAGE,
@@ -96,7 +97,8 @@ interface FormErrors {
 const WorkspaceFormModal: React.FC<WorkspaceFormModalProps> = ({
   isOpen, workspace, onClose, onSuccess, onRefetched,
 }) => {
-  const { isAdmin } = useAuth();
+  const { isAdmin, isWorkspaceAdmin } = useAuth();
+  const canManageWorkspaceAdmins = isAdmin || isWorkspaceAdmin;
   // Title and Shortcode are always read-only in this modal — they are system-derived during
   // creation by the workspace creation wizard and can only be corrected by editing the
   // discovery result (a Super Admin operation handled outside this form).
@@ -498,6 +500,13 @@ const WorkspaceFormModal: React.FC<WorkspaceFormModalProps> = ({
               Save Changes
             </button>
           </div>
+
+          {canManageWorkspaceAdmins && (
+            <WorkspaceAdminManager
+              workspaceId={workspace.id}
+              workspaceTitle={workspace.title}
+            />
+          )}
         </form>
       </div>
     </div>

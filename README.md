@@ -233,7 +233,7 @@ ve-mailer/
     │   │   ├── ProtectedRoute.tsx    # Auth guard with role-based access
     │   │   ├── LoadingPlaceholder.tsx # Shared Suspense fallback (spinner + contextual loading text)
     │   │   ├── RecipientGroupsView.tsx # Workspace-scoped recipient group management; accordion shows read-only member badges
-    │   │   └── WorkspaceDashboard.tsx # Subscription management + filter execution with sortable/filterable table
+    │   │   └── WorkspaceDashboard.tsx # Subscription management + filter execution with sortable/filterable table; includes in-workspace Edit Workspace modal
     │   ├── hooks/
     │   │   └── useAuth.tsx           # AuthContext + AuthProvider + useAuth hook
     │   ├── pages/
@@ -250,7 +250,7 @@ ve-mailer/
     │   │       ├── NotificationPreferencesPage.tsx # SMTP config form
     │   │       ├── RecipientGroupsPage.tsx        # Recipient group management with workspace selector
     │   │       ├── UsersPage.tsx                  # All registered users with sortable columns + role badges
-    │   │       ├── WorkspaceAdminManager.tsx      # Assign/remove workspace admins per workspace (available to ADMIN and WORKSPACE_ADMIN)
+    │   │       ├── WorkspaceAdminManager.tsx      # Assign/remove workspace admins per workspace (used in Admin panel and Edit Workspace modal)
     │   │       └── WorkspaceManagementPage.tsx    # Workspace CRUD
     │   ├── services/
     │   │   ├── apiService.ts         # All backend API calls (workspaces, filters, subscriptions)

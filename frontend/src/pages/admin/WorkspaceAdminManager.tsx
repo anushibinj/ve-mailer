@@ -89,17 +89,17 @@ const WorkspaceAdminManager: React.FC<WorkspaceAdminManagerProps> = ({ workspace
   }
 
   return (
-    <div className="mt-6 border-t border-gray-200 pt-6">
+    <div className="mt-6 border-t border-slate-200 dark:border-slate-700 pt-6">
       <div className="flex items-center gap-2 mb-4">
-        <Shield className="h-4 w-4 text-violet-600" />
-        <h3 className="text-sm font-semibold text-gray-900">
+        <Shield className="h-4 w-4 text-violet-600 dark:text-violet-400" />
+        <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
           Workspace Admins — {workspaceTitle}
         </h3>
       </div>
 
       {/* Assign form */}
       {!isAdmin && (
-        <p className="text-xs text-gray-500 mb-2">
+        <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">
           As a workspace admin, you can assign any user here — they will be promoted to
           WORKSPACE_ADMIN automatically if they aren't already.
         </p>
@@ -108,7 +108,7 @@ const WorkspaceAdminManager: React.FC<WorkspaceAdminManagerProps> = ({ workspace
         <select
           value={selectedUserId}
           onChange={(e) => setSelectedUserId(e.target.value)}
-          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+          className="flex-1 px-3 py-2 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
         >
           <option value="">Select a user to assign…</option>
           {availableUsers.map(u => (
@@ -118,9 +118,10 @@ const WorkspaceAdminManager: React.FC<WorkspaceAdminManagerProps> = ({ workspace
           ))}
         </select>
         <button
+          type="button"
           onClick={handleAssign}
           disabled={!selectedUserId || isAssigning}
-          className="inline-flex items-center gap-1.5 px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium rounded-lg disabled:opacity-50 transition-colors"
+          className="inline-flex items-center gap-1.5 px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium rounded-lg disabled:opacity-50 transition-colors cursor-pointer"
         >
           {isAssigning ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
           Assign
@@ -129,14 +130,14 @@ const WorkspaceAdminManager: React.FC<WorkspaceAdminManagerProps> = ({ workspace
 
       {/* Current admins list */}
       {admins.length === 0 ? (
-        <p className="text-sm text-gray-500">No workspace admins assigned yet.</p>
+        <p className="text-sm text-slate-500 dark:text-slate-400">No workspace admins assigned yet.</p>
       ) : (
-        <ul className="divide-y divide-gray-100 border border-gray-200 rounded-lg overflow-hidden">
+        <ul className="divide-y divide-slate-100 dark:divide-slate-700 border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden">
           {admins.map(admin => (
-            <li key={admin.id} className="flex items-center justify-between px-4 py-3 bg-white hover:bg-gray-50">
+            <li key={admin.id} className="flex items-center justify-between px-4 py-3 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700">
               <div>
-                <span className="text-sm font-medium text-gray-900">{admin.userName}</span>
-                <span className="ml-2 text-xs text-gray-500">{admin.userEmail}</span>
+                <span className="text-sm font-medium text-slate-900 dark:text-slate-100">{admin.userName}</span>
+                <span className="ml-2 text-xs text-slate-500 dark:text-slate-400">{admin.userEmail}</span>
               </div>
               <TableActionButton
                 icon={<Trash2 className="h-3.5 w-3.5" />}

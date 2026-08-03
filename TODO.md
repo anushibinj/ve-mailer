@@ -77,13 +77,13 @@
 - [ ] In "New Subscription" modal, in the "Groups" tab, if there are no groups, just show only that message. No dropdowns or anything below that asking for filter name, frequency, etc.
 - [ ] The user selection dropdown in "New Group" modal gets cut off within the modal bounds instead of showing the full list
 - [ ] In new subscription modal, under "Notification hours" (the frequency), change it into a button group with all the 24 hours in the day. Users should be able to one-click select or deselect their desired times.
-- [ ] In new subscription modal, show what is mandatory. And show why the submit button is disabled.
+- [ ] In the new subscription modal, show which fields are mandatory. And show why the submit button is disabled.
 - [ ] Moonshot: Allow multi-filter subscription in a single subscription. And it should send a single e-mail with multiple tables iniside it.
 - [ ] Rename 'Unscubribe' to 'Delete subcription' in the 'Edit subscription' modal.
-- [ ] As a MEMBER, If I am part of a group, and I am subscribed to a filter, I need to see a read-only view of that subscription. As of now, I cannot see any subscription that I'm part of as a group. I can only see 'person level' subscriptions. In the Actions button column, add a 'i' button that shows a popover saying "Contact your Workspace Admin for changes to this Subscription"
+- [ ] As a MEMBER, If I am part of a group, and I am subscribed to a filter, I need to see a read-only view of that subscription. As of now, I cannot see any subscription that I'm part of as a group. I can only see 'person level' subscriptions. In the Actions button column, add a 'i' button that shows a popover saying "Contact your Workspace Admin for changes to this Group Subscription"
 - [ ] In the Delete Group modal, currently it says "This does not affect existing subscriptions." and fails. Instead show a graceful error saying "This will delete all associated Subscriptions, do you want to continue?" and the buttons shown should be: "Cancel", "Delete group and associated subsriptions".
 - [ ] In the 'New Subscription' modal, Individual shows bell icon, but for groups it shows a group of people as icon. So, change individual to show a single person icon to align with 'Group'
 - [x] As a WORKPSACE_ADMIN, I should not see any workspace other than the ones I am WORKSPACE_ADMIN for in the /admin?tab=workspaces tab in the frontend
 - [x] Currently, as a WORKSPACE_ADMIN, I can only set other WORKSPACE_ADMIN as an admin to my workspace. But as a WORKSPACE_ADMIN, I should be able to promote other MEMBER-role users as WORKSPACE_ADMINS while adding them as WORKSPACE_ADMIN to my own workspace.
 - [x] As a WORKSPACE_ADMIN, when I access the Groups tab in the Admin Panel, the workspace selector dropdown should list only the workspaces that I have access to.
-- [ ] As a WORKSPACE_ADMIN or ADMIN, when I click on the "Edit Workspace" button when inside a workspace, a modal opens. That modal should allow me to modify workspace admins as well. As of now, that feature is accessible only via the Admin Panel for me.
+- [x] As a WORKSPACE_ADMIN or ADMIN, when I click on the "Edit Workspace" button when inside a workspace, a modal opens. That modal should allow me to modify workspace admins as well. As of now, that feature is accessible only via the Admin Panel for me.
