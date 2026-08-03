@@ -34,6 +34,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -44,6 +45,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
@@ -258,6 +260,38 @@ class AuthorizationIntegrationTest {
     void workspaceAdmin_cannotDeleteWorkspace() throws Exception {
         mockMvc.perform(delete("/api/v1/workspaces/{id}", WORKSPACE_ID))
                 .andExpect(status().isForbidden());
+    }
+
+    // ── Workspace Management admin tab ("/all") visibility ───────────────────
+
+    @Test
+    @WithMockUser(username = "member@test.com", roles = "MEMBER")
+    void member_cannotAccessAllWorkspacesEndpoint() throws Exception {
+        mockMvc.perform(get("/api/v1/workspaces/all"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(username = "wsadmin-all@test.com", roles = "WORKSPACE_ADMIN")
+    void workspaceAdmin_allWorkspacesEndpoint_onlyReturnsAdministeredWorkspaces() throws Exception {
+        AppUser admin = seedWorkspaceAdminUser("wsadmin-all@test.com");
+        Workspace ownWorkspace = seedWorkspace("Own WS");
+        seedWorkspaceAdminMapping(ownWorkspace, admin);
+
+        WorkspaceResponseDto ownDto = WorkspaceResponseDto.builder()
+                .id(ownWorkspace.getId()).title("Own WS").status(WorkspaceStatus.DRAFT).build();
+        when(workspaceService.findAllAdministeredOnly(List.of(ownWorkspace.getId())))
+                .thenReturn(List.of(ownDto));
+
+        // A workspace this user does NOT administer must never surface here, even though
+        // /api/v1/workspaces (the general browsing endpoint) intentionally shows every ENABLED
+        // workspace to every WORKSPACE_ADMIN.
+        seedWorkspace("Someone Else's WS");
+
+        mockMvc.perform(get("/api/v1/workspaces/all"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].id").value(ownWorkspace.getId().toString()));
     }
 
     // ── Filter reads (MEMBER) ─────────────────────────────────────────────────

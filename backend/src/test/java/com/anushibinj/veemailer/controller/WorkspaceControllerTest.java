@@ -129,6 +129,45 @@ class WorkspaceControllerTest {
     }
 
     @Test
+    @WithMockUser(username = "wsadmin@test.com", roles = "WORKSPACE_ADMIN")
+    void testGetAllWorkspaces_WorkspaceAdmin_OnlyReturnsAdministeredWorkspaces() throws Exception {
+        UUID administeredId = UUID.randomUUID();
+        WorkspaceResponseDto administered = WorkspaceResponseDto.builder()
+                .id(administeredId).title("Mine").status(WorkspaceStatus.ENABLED).build();
+
+        when(workspaceAdminService.isGlobalAdmin(any())).thenReturn(false);
+        when(workspaceAdminService.getAdministeredWorkspaceIds("wsadmin@test.com"))
+                .thenReturn(List.of(administeredId));
+        when(workspaceService.findAllAdministeredOnly(List.of(administeredId)))
+                .thenReturn(List.of(administered));
+
+        mockMvc.perform(get("/api/v1/workspaces/all").contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].id").value(administeredId.toString()));
+
+        verify(workspaceService, never()).findAll();
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void testGetAllWorkspaces_GlobalAdmin_ReturnsEveryWorkspace() throws Exception {
+        UUID id = UUID.randomUUID();
+        WorkspaceResponseDto dto = WorkspaceResponseDto.builder()
+                .id(id).title("Any Workspace").status(WorkspaceStatus.DISABLED).build();
+
+        when(workspaceAdminService.isGlobalAdmin(any())).thenReturn(true);
+        when(workspaceService.findAll()).thenReturn(List.of(dto));
+
+        mockMvc.perform(get("/api/v1/workspaces/all").contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].id").value(id.toString()));
+
+        verify(workspaceService, never()).findAllAdministeredOnly(any());
+    }
+
+    @Test
     @WithMockUser(roles = "ADMIN")
     void testGetWorkspaces_MasksClientKey() throws Exception {
         UUID id = UUID.randomUUID();

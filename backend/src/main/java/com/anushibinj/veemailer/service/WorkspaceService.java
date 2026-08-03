@@ -101,6 +101,23 @@ public class WorkspaceService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Returns ONLY the workspaces (any status, including DISABLED) that the given IDs identify —
+     * for the Workspace Management admin tab when accessed by a WORKSPACE_ADMIN (as opposed to a
+     * global ADMIN). Unlike {@link #findAllForWorkspaceAdmin}, this deliberately does NOT union in
+     * every ENABLED workspace in the system: the management/edit view must only ever show
+     * workspaces the WORKSPACE_ADMIN actually administers, since every action button there
+     * (Edit, Delete, Manage Admins) operates on workspace-level admin permissions.
+     */
+    public List<WorkspaceResponseDto> findAllAdministeredOnly(List<UUID> workspaceIds) {
+        if (workspaceIds.isEmpty()) {
+            return List.of();
+        }
+        return workspaceRepository.findAllById(workspaceIds).stream()
+                .map(this::toResponseDto)
+                .collect(Collectors.toList());
+    }
+
     public WorkspaceResponseDto findById(UUID id) {
         Workspace workspace = workspaceRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Workspace not found: " + id));

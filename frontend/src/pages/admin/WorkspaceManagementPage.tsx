@@ -6,7 +6,6 @@ import {
   adminFetchWorkspaces,
   adminDeleteWorkspace,
   adminTestWorkspaceConnection,
-  fetchWorkspaces,
 } from '../../services/apiService';
 import ConfirmDialog from '../../components/ConfirmDialog';
 import { useAuth } from '../../hooks/useAuth';
@@ -38,10 +37,10 @@ const WorkspaceManagementPage: React.FC = () => {
   const loadWorkspaces = useCallback(async () => {
     setIsLoading(true);
     try {
-      // ADMIN uses /all endpoint; WORKSPACE_ADMIN uses normal /workspaces which is filtered server-side
-      const data = isAdmin
-        ? await adminFetchWorkspaces()
-        : (await fetchWorkspaces()) as unknown as WorkspaceAdmin[];
+      // The /all endpoint is server-side scoped: global ADMINs get every workspace, while
+      // WORKSPACE_ADMINs only ever receive the workspaces they personally administer — this
+      // page must never show workspaces the current user cannot manage.
+      const data = await adminFetchWorkspaces();
       setWorkspaces(data);
     } catch (err: unknown) {
       const axiosErr = err as { response?: { data?: { message?: string } } };
@@ -51,7 +50,7 @@ const WorkspaceManagementPage: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [isAdmin]);
+  }, []);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -143,7 +142,7 @@ const WorkspaceManagementPage: React.FC = () => {
         <div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Workspace Management</h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            {isAdmin ? 'Create and manage ValueEdge workspace connections.' : 'Manage your assigned workspaces.'}
+            {isAdmin ? 'Create and manage ValueEdge workspace connections.' : 'Manage the workspaces you administer.'}
           </p>
         </div>
         {(isAdmin || isWorkspaceAdmin) && (
@@ -170,7 +169,9 @@ const WorkspaceManagementPage: React.FC = () => {
           </div>
           <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-1">No workspaces yet</h3>
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-5">
-            Add your first ValueEdge workspace to get started.
+            {isAdmin
+              ? 'Add your first ValueEdge workspace to get started.'
+              : 'You do not administer any workspaces yet.'}
           </p>
           {(isAdmin || isWorkspaceAdmin) && (
             <button

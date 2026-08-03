@@ -148,6 +148,28 @@ class WorkspaceServiceTest {
     }
 
     @Test
+    void findAllAdministeredOnly_ReturnsOnlyGivenWorkspaceIds_RegardlessOfStatus() {
+        UUID administeredId = UUID.randomUUID();
+        Workspace administered = buildWorkspace(administeredId);
+        administered.setStatus(WorkspaceStatus.DISABLED);
+
+        when(workspaceRepository.findAllById(List.of(administeredId)))
+                .thenReturn(List.of(administered));
+
+        List<WorkspaceResponseDto> result = workspaceService.findAllAdministeredOnly(List.of(administeredId));
+
+        assertThat(result).extracting(WorkspaceResponseDto::getId).containsExactly(administeredId);
+    }
+
+    @Test
+    void findAllAdministeredOnly_NoAdministeredWorkspaces_ReturnsEmptyList_NeverQueriesRepository() {
+        List<WorkspaceResponseDto> result = workspaceService.findAllAdministeredOnly(List.of());
+
+        assertThat(result).isEmpty();
+        verify(workspaceRepository, org.mockito.Mockito.never()).findAllById(any());
+    }
+
+    @Test
     void create_SharesRootUrlAndSharedSpaceId_DifferentWorkspaceId_Allowed() {
         when(workspaceRepository.findFirstByRootUrlAndSharedSpaceIdAndWorkspaceId(
                 "https://ve.example.com", "sp-1", "ws-2")).thenReturn(Optional.empty());

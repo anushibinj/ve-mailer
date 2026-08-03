@@ -82,13 +82,23 @@ public class WorkspaceController {
     }
 
     /**
-     * Admin-only endpoint to list ALL workspaces including DISABLED (for management views).
+     * Workspace Management admin tab endpoint. Global ADMINs see ALL workspaces including
+     * DISABLED. WORKSPACE_ADMINs see ONLY the workspaces they personally administer (any status)
+     * — unlike {@link #getWorkspaces()}, this never unions in every other ENABLED workspace in
+     * the system, since this endpoint backs the management view where every action (Edit,
+     * Delete, Manage Admins) requires workspace-level admin permission.
      */
     @GetMapping("/all")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'WORKSPACE_ADMIN')")
     public ResponseEntity<List<WorkspaceResponseDto>> getAllWorkspaces() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        List<WorkspaceResponseDto> result = workspaceService.findAll();
+        List<WorkspaceResponseDto> result;
+        if (workspaceAdminService.isGlobalAdmin(authentication)) {
+            result = workspaceService.findAll();
+        } else {
+            List<UUID> administeredIds = workspaceAdminService.getAdministeredWorkspaceIds(authentication.getName());
+            result = workspaceService.findAllAdministeredOnly(administeredIds);
+        }
         markMyWorkspaceAdmin(result, authentication);
         return ResponseEntity.ok(result);
     }
