@@ -460,6 +460,13 @@ const WorkspaceFormModal: React.FC<WorkspaceFormModalProps> = ({
             )}
           </div>
 
+          {canManageWorkspaceAdmins && (
+            <WorkspaceAdminManager
+              workspaceId={workspace.id}
+              workspaceTitle={workspace.title}
+            />
+          )}
+
           {/* Actions */}
           <div className="flex justify-end gap-3 pt-2">
             <button
@@ -500,13 +507,6 @@ const WorkspaceFormModal: React.FC<WorkspaceFormModalProps> = ({
               Save Changes
             </button>
           </div>
-
-          {canManageWorkspaceAdmins && (
-            <WorkspaceAdminManager
-              workspaceId={workspace.id}
-              workspaceTitle={workspace.title}
-            />
-          )}
         </form>
       </div>
     </div>
