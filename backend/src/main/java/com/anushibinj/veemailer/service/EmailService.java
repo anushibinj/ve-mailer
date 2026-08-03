@@ -146,6 +146,47 @@ public class EmailService {
         }
     }
 
+    @Async
+    public void sendRoleChangeNotification(
+            String userName,
+            String userEmail,
+            String previousRoleName,
+            String newRoleName) {
+        try {
+            Session session = dynamicMailSenderService.getSession();
+            String from = dynamicMailSenderService.getFromAddress();
+
+            String body =
+                "<p style=\"margin:0 0 20px;font-size:14px;line-height:1.6;color:#334155;\">" +
+                "Your VE Mailer role has been updated." +
+                "</p>" +
+                "<div style=\"background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;" +
+                "padding:16px 20px;margin:0 0 20px;\">" +
+                "<table border=\"0\" cellpadding=\"0\" cellspacing=\"0\" style=\"border-collapse:collapse;\">" +
+                "<tr><td style=\"padding:4px 16px 4px 0;font-size:12px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.05em;white-space:nowrap;\">Name</td>" +
+                "<td style=\"padding:4px 0;font-size:14px;color:#1e293b;\">" + esc(userName) + "</td></tr>" +
+                "<tr><td style=\"padding:4px 16px 4px 0;font-size:12px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.05em;white-space:nowrap;\">Email</td>" +
+                "<td style=\"padding:4px 0;font-size:14px;color:#1e293b;\">" + esc(userEmail) + "</td></tr>" +
+                "<tr><td style=\"padding:4px 16px 4px 0;font-size:12px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.05em;white-space:nowrap;\">Previous role</td>" +
+                "<td style=\"padding:4px 0;font-size:14px;color:#1e293b;\">" + esc(previousRoleName) + "</td></tr>" +
+                "<tr><td style=\"padding:4px 16px 4px 0;font-size:12px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.05em;white-space:nowrap;\">New role</td>" +
+                "<td style=\"padding:4px 0;font-size:14px;color:#1e293b;\">" + esc(newRoleName) + "</td></tr>" +
+                "</table>" +
+                "</div>";
+
+            MimeMessage message = new MimeMessage(session);
+            message.setFrom(new InternetAddress(from));
+            message.addRecipients(Message.RecipientType.TO, InternetAddress.parse(userEmail));
+            message.setSubject("[ve-mailer] Role updated: " + previousRoleName + " to " + newRoleName, "UTF-8");
+            message.setContent(buildEmailShell("Role updated", body), "text/html; charset=UTF-8");
+            message.saveChanges();
+
+            dynamicMailSenderService.send(message);
+        } catch (MessagingException e) {
+            log.error("Failed to send role change notification to {}: {}", userEmail, e.getMessage());
+        }
+    }
+
     /**
      * Notifies all Super Admins (users holding the ADMIN role) that a newly created workspace
      * needs manual review because its shortcode could not be determined automatically during

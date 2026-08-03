@@ -65,7 +65,7 @@
 - [x] Draft workpsaces should be visible only to super admins (ADMIN role) and workspace admins (WORKSPACE_ADMIN role) of that workspace.
 - [ ] Don't allow workspace admins (WORKSPACE_ADMIN role) to edit the title and shortcode of workspaces they have access to. Only the super admin (ADMIN role) should be able to edit those values.
 - [ ] Onboard flow should ask user role
-- [ ] Role change should send that user an email notifying the same. They should see in the e-mail from which role to which role they were changed. Example, MEMBER to WORKSPACE_ADMIN.
+- [x] Role change should send that user an email notifying the same. They should see in the e-mail from which role to which role they were changed. Example, MEMBER to WORKSPACE_ADMIN.
 - [ ] Landing page should say 'manage my workspaces' instead of '+ new workspace' for WORKSPACE_ADMIN
 - [ ] Add 'Back' Button in Admin's Panel.
 - [ ] Add a popover over the workspace status badge explaining what it is. (Add this tooltip to all other complex fields as well )

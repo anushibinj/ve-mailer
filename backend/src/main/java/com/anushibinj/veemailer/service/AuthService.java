@@ -425,6 +425,12 @@ public class AuthService {
             appUserRepository.save(user);
         }
 
+        if (promoteToWorkspaceAdmin && !isCurrentlyWorkspaceAdmin) {
+            emailService.sendRoleChangeNotification(user.getName(), user.getEmail(), "MEMBER", "WORKSPACE_ADMIN");
+        } else if (!promoteToWorkspaceAdmin && isCurrentlyWorkspaceAdmin) {
+            emailService.sendRoleChangeNotification(user.getName(), user.getEmail(), "WORKSPACE_ADMIN", "MEMBER");
+        }
+
         return userQueryService.getUserSummary(user.getId());
     }
 

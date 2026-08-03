@@ -546,6 +546,7 @@ class AuthServiceTest {
         assertEquals(expectedSummary, result);
         assertTrue(target.getRoles().contains(workspaceAdminRole));
         verify(appUserRepository).save(target);
+        verify(emailService).sendRoleChangeNotification("Plain User", "plain.user@company.com", "MEMBER", "WORKSPACE_ADMIN");
     }
 
     @Test
@@ -571,6 +572,7 @@ class AuthServiceTest {
         verify(appUserRepository).save(target);
         // Demotion must never touch workspace-level admin mapping rows.
         verifyNoInteractions(workspaceAdminRepository);
+        verify(emailService).sendRoleChangeNotification("Workspace Admin", "ws.admin@company.com", "WORKSPACE_ADMIN", "MEMBER");
     }
 
     @Test
