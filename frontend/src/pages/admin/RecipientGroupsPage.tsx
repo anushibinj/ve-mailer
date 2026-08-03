@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
-  fetchWorkspaces,
   adminFetchWorkspaces,
   fetchRecipientGroups,
   createRecipientGroup,
@@ -27,7 +26,6 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import ConfirmDialog from '../../components/ConfirmDialog';
-import { useAuth } from '../../hooks/useAuth';
 import { TableActionButton } from '../../components/ui';
 
 // ── Shared input class ────────────────────────────────────────────────────────
@@ -347,7 +345,6 @@ function AddMemberPicker({ users, existingEmails, allowedDomains, onAdd }: AddMe
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function RecipientGroupsPage() {
-  const { isAdmin } = useAuth();
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [selectedWsId, setSelectedWsId] = useState('');
   const [wsLoading, setWsLoading] = useState(true);
@@ -367,19 +364,20 @@ export default function RecipientGroupsPage() {
     fetchAllowedDomains().then(setAllowedDomains).catch(() => { /* non-critical */ });
   }, []);
 
-  // Load workspaces
+  // Load workspaces (the admin `/all` endpoint already scopes results to only the workspaces
+  // this caller administers when they're a WORKSPACE_ADMIN, and to every workspace for a
+  // global ADMIN — see WorkspaceController#getAllWorkspaces).
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setWsLoading(true);
-    const fetchFn = isAdmin ? adminFetchWorkspaces : fetchWorkspaces;
-    (fetchFn as () => Promise<Workspace[]>)()
+    adminFetchWorkspaces()
       .then(data => {
         setWorkspaces(data);
         if (data.length > 0) setSelectedWsId(data[0].id);
       })
       .catch(() => toast.error('Failed to load workspaces.'))
       .finally(() => setWsLoading(false));
-  }, [isAdmin]);
+  }, []);
 
   // Load groups and workspace users for selected workspace
   const loadGroups = useCallback(async () => {
