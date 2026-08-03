@@ -86,3 +86,4 @@
 - [x] As a WORKPSACE_ADMIN, I should not see any workspace other than the ones I am WORKSPACE_ADMIN for in the /admin?tab=workspaces tab in the frontend
 - [x] Currently, as a WORKSPACE_ADMIN, I can only set other WORKSPACE_ADMIN as an admin to my workspace. But as a WORKSPACE_ADMIN, I should be able to promote other MEMBER-role users as WORKSPACE_ADMINS while adding them as WORKSPACE_ADMIN to my own workspace.
 - [ ] As a WORKSPACE_ADMIN, when I access the Groups tab in the Admin Panel, the workspace selector dropdown should list only the workspaces that I have access to.
+- [ ] As a WORKSPACE_ADMIN or ADMIN, when I click on the "Edit Workspace" button when inside a workspace, a modal opens. That modal should allow me to modify workspace admins as well. As of now, that feature is accessible only via the Admin Panel for me.
