@@ -316,8 +316,10 @@ export const adminTestWorkspaceConnection = async (
 
 // --- Filters (workspace-scoped) ---
 
-export const fetchFilters = async (workspaceId: string): Promise<Filter[]> => {
-  const response = await api.get(`/api/v1/workspaces/${workspaceId}/filters`);
+export const fetchFilters = async (workspaceId: string, options?: { subscribableOnly?: boolean }): Promise<Filter[]> => {
+  const response = await api.get(`/api/v1/workspaces/${workspaceId}/filters`, {
+    params: options?.subscribableOnly ? { subscribableOnly: true } : undefined,
+  });
   return response.data;
 };
 

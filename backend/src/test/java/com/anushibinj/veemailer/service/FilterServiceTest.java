@@ -356,6 +356,26 @@ class FilterServiceTest {
     }
 
     @Test
+    void testGetSubscribableFilters_DelegatesToFindVisibleForUser() {
+        java.util.UUID workspaceId = java.util.UUID.randomUUID();
+        com.anushibinj.veemailer.model.Filter publicFilter = new com.anushibinj.veemailer.model.Filter();
+        publicFilter.setId(java.util.UUID.randomUUID());
+        org.mockito.Mockito.when(filterRepository.findVisibleForUser(workspaceId, "user@example.com"))
+                .thenReturn(List.of(publicFilter));
+
+        List<com.anushibinj.veemailer.model.Filter> result =
+                filterService.getSubscribableFilters(workspaceId, "User@Example.com");
+
+        assertEquals(1, result.size());
+        assertEquals(publicFilter.getId(), result.get(0).getId());
+        // Must normalize email before delegating, and must never fall back to the unrestricted
+        // findByWorkspace_Id query used for admin filter template management.
+        org.mockito.Mockito.verify(filterRepository).findVisibleForUser(workspaceId, "user@example.com");
+        org.mockito.Mockito.verify(filterRepository, org.mockito.Mockito.never())
+                .findByWorkspace_Id(org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
     void testBuildFilterQueryString_SerializesLastXDaysToken() {
         String output = filterService.buildFilterQueryString(
                 List.of("id", "creation_time"),

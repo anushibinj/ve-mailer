@@ -37,11 +37,20 @@ public class FilterController {
     private final WorkspaceAdminService workspaceAdminService;
 
     @GetMapping
-    public ResponseEntity<List<Filter>> getFilters(@PathVariable UUID workspaceId) {
+    public ResponseEntity<List<Filter>> getFilters(
+            @PathVariable UUID workspaceId,
+            @RequestParam(required = false, defaultValue = "false") boolean subscribableOnly) {
         Authentication authentication = currentAuthentication();
         boolean canManage = canManageWorkspaceTemplates(authentication, workspaceId);
-        List<Filter> filters = filterService.getAccessibleFilters(workspaceId, authenticationName(authentication), canManage);
-        filters.forEach(f -> applyAccessMetadata(f, authenticationName(authentication), canManage));
+        String email = authenticationName(authentication);
+        // When listing filters for subscription purposes, a private filter is only visible to its
+        // owner — this applies even to ADMIN/WORKSPACE_ADMIN, since a private filter can only ever
+        // be subscribed by its owner (see SubscriptionService). The unrestricted (canManage) list is
+        // reserved for filter template management, where admins need to see/edit everyone's filters.
+        List<Filter> filters = subscribableOnly
+                ? filterService.getSubscribableFilters(workspaceId, email)
+                : filterService.getAccessibleFilters(workspaceId, email, canManage);
+        filters.forEach(f -> applyAccessMetadata(f, email, canManage));
         return ResponseEntity.ok(filters);
     }
 

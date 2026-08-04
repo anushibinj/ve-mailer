@@ -139,6 +139,16 @@ public class FilterService {
         return filterRepository.findVisibleForUser(workspaceId, normalizeEmail(email));
     }
 
+    /**
+     * Returns only the filters the given user may subscribe to: public/legacy (workspace-level)
+     * filters plus their own private filters. Unlike {@link #getAccessibleFilters}, this ignores
+     * canManageWorkspaceTemplates — a private filter can only ever be subscribed by its owner, even
+     * for an ADMIN/WORKSPACE_ADMIN who can otherwise manage every filter in the workspace.
+     */
+    public List<Filter> getSubscribableFilters(UUID workspaceId, String email) {
+        return filterRepository.findVisibleForUser(workspaceId, normalizeEmail(email));
+    }
+
     public Filter getFilterInWorkspace(UUID filterId, UUID workspaceId) {
         return filterRepository.findByIdAndWorkspace_Id(filterId, workspaceId)
                 .orElseThrow(() -> new IllegalArgumentException("Filter not found"));

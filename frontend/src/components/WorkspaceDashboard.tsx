@@ -75,6 +75,7 @@ const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({
 
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [filters, setFilters] = useState<Filter[]>([]);
+  const [subscribableFilters, setSubscribableFilters] = useState<Filter[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingSubscription, setEditingSubscription] = useState<Subscription | null>(null);
@@ -123,13 +124,15 @@ const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const [subsData, filtersData, wsData] = await Promise.all([
+      const [subsData, filtersData, subscribableFiltersData, wsData] = await Promise.all([
         fetchSubscriptionsByWorkspace(workspaceId),
         fetchFilters(workspaceId),
+        fetchFilters(workspaceId, { subscribableOnly: true }),
         adminFetchWorkspace(workspaceId),
       ]);
       setSubscriptions(subsData);
       setFilters(filtersData);
+      setSubscribableFilters(subscribableFiltersData);
       setWorkspaceData(wsData);
     } catch {
       toast.error('Failed to load dashboard data.');
@@ -218,7 +221,7 @@ const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({
         <SubscriptionFormModal
           isOpen={isCreateModalOpen}
           workspaceId={workspaceId}
-          filters={filters}
+          filters={subscribableFilters}
           canManage={canManage}
           onClose={() => setIsCreateModalOpen(false)}
           onSuccess={() => { setIsCreateModalOpen(false); loadData(); }}

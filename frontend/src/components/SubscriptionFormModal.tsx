@@ -102,16 +102,12 @@ const SubscriptionFormModal: React.FC<SubscriptionFormModalProps> = ({
   const [groupsLoading, setGroupsLoading] = useState(false);
   const [selectedGroupId, setSelectedGroupId] = useState('');
 
-  // Private filters (owned by a specific user, not marked public) may only be subscribed by their
-  // owner — hide them from everyone else's "Filter Template" picker, including admins, so nobody
-  // can attempt to subscribe (themselves or someone else) to a filter they don't own.
-  const ownedOrPublicFilters = filters.filter(f =>
-    f.publicTemplate || (!!f.ownerEmail && f.ownerEmail.toLowerCase() === user?.email?.toLowerCase())
-  );
+  // The `filters` prop is already restricted by the backend to only those the current user may
+  // subscribe to (public/legacy filters plus their own private filters) — see fetchFilters(..., { subscribableOnly: true }).
   // Group subscriptions can only ever use public filters (server-enforced), even for the filter's owner.
   const subscribableFilters = mode === 'group'
-    ? ownedOrPublicFilters.filter(f => f.publicTemplate)
-    : ownedOrPublicFilters;
+    ? filters.filter(f => f.publicTemplate)
+    : filters;
 
   const selectedFilterMeta = subscribableFilters.find(filter => filter.id === selectedFilter);
   const triageEnabled = filterHasTriageSla(selectedFilterMeta);

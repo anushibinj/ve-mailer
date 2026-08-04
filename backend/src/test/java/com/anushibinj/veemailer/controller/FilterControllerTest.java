@@ -95,6 +95,26 @@ class FilterControllerTest {
     }
 
     @Test
+    void testGetFilters_subscribableOnly_usesGetSubscribableFilters() throws Exception {
+        Filter f = buildTestFilter();
+
+        when(filterService.getSubscribableFilters(eq(WORKSPACE_ID), any())).thenReturn(Arrays.asList(f));
+
+        mockMvc.perform(get("/api/v1/workspaces/{workspaceId}/filters", WORKSPACE_ID)
+                .param("subscribableOnly", "true")
+                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].title").value("Urgent Tickets"));
+
+        // Even though the mocked auth is treated as admin (canManageWorkspaceTemplates -> true),
+        // the unrestricted getAccessibleFilters should NOT be used when subscribableOnly=true —
+        // admins do not get to see other users' private filters when picking a subscription target.
+        org.mockito.Mockito.verify(filterService, org.mockito.Mockito.never())
+                .getAccessibleFilters(any(), any(), anyBoolean());
+    }
+
+    @Test
     void testCreateFilter() throws Exception {
         Filter saved = buildTestFilter();
 
