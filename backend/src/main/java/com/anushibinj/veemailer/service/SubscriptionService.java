@@ -55,6 +55,10 @@ public class SubscriptionService {
 
         Filter filter = filterRepository.findById(filterId)
                 .orElseThrow(() -> new IllegalArgumentException("Filter not found"));
+        // A private filter (owned by a specific user, not public) may only ever be subscribed by its
+        // owner — this applies to everyone, including ADMIN/WORKSPACE_ADMIN subscribing on behalf of
+        // someone else. Private filters are hidden from the subscription filter picker in the frontend
+        // for non-owners, so this is primarily a defense-in-depth server-side guarantee.
         enforceFilterCanBeSubscribedByRecipient(filter, email);
 
         Optional<EmailSubscriber> existingOpt = emailSubscriberRepository
@@ -67,6 +71,7 @@ public class SubscriptionService {
         applySchedule(subscriber, schedule);
         subscriber.setTriageSlaThreshold(resolveTriageSlaThreshold(triageSlaThreshold));
         subscriber.setStatus(Status.ACTIVE);
+
 
         return toResponseDto(emailSubscriberRepository.save(subscriber));
     }

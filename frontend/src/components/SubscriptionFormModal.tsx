@@ -42,6 +42,9 @@ function userLabel(u: UserSummary) {
   return `${u.name} (${u.email})`;
 }
 
+/** Basic email format check used to offer "subscribe this email" for people who haven't onboarded yet. */
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 function filterHasTriageSla(filter?: Filter): boolean {
   if (!filter?.fields) return false;
   try {
@@ -87,6 +90,9 @@ const SubscriptionFormModal: React.FC<SubscriptionFormModalProps> = ({
   const [usersLoading, setUsersLoading] = useState(false);
   // null = "Myself"; a UserSummary = subscribe that person
   const [selectedRecipient, setSelectedRecipient] = useState<UserSummary | null>(null);
+  // Set when the admin subscribes someone by raw email who has no application-user account yet
+  // (i.e. they haven't been onboarded). Mutually exclusive with selectedRecipient.
+  const [customEmail, setCustomEmail] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const comboboxRef = useRef<HTMLDivElement>(null);
@@ -96,7 +102,18 @@ const SubscriptionFormModal: React.FC<SubscriptionFormModalProps> = ({
   const [groupsLoading, setGroupsLoading] = useState(false);
   const [selectedGroupId, setSelectedGroupId] = useState('');
 
-  const selectedFilterMeta = filters.find(filter => filter.id === selectedFilter);
+  // Private filters (owned by a specific user, not marked public) may only be subscribed by their
+  // owner — hide them from everyone else's "Filter Template" picker, including admins, so nobody
+  // can attempt to subscribe (themselves or someone else) to a filter they don't own.
+  const ownedOrPublicFilters = filters.filter(f =>
+    f.publicTemplate || (!!f.ownerEmail && f.ownerEmail.toLowerCase() === user?.email?.toLowerCase())
+  );
+  // Group subscriptions can only ever use public filters (server-enforced), even for the filter's owner.
+  const subscribableFilters = mode === 'group'
+    ? ownedOrPublicFilters.filter(f => f.publicTemplate)
+    : ownedOrPublicFilters;
+
+  const selectedFilterMeta = subscribableFilters.find(filter => filter.id === selectedFilter);
   const triageEnabled = filterHasTriageSla(selectedFilterMeta);
 
   // Fetch users once when modal opens (only for admins, individual mode)
@@ -144,7 +161,16 @@ const SubscriptionFormModal: React.FC<SubscriptionFormModalProps> = ({
 
   const displayValue = selectedRecipient
     ? userLabel(selectedRecipient)
-    : query;
+    : customEmail ?? query;
+
+  // Show a "subscribe this email" option when the typed text is a valid email address that
+  // doesn't already belong to a registered user — lets admins subscribe people who haven't
+  // onboarded (signed up) yet.
+  const trimmedQuery = query.trim();
+  const isNewEmailCandidate =
+    trimmedQuery.length > 0
+    && EMAIL_REGEX.test(trimmedQuery)
+    && !users.some(u => u.email.toLowerCase() === trimmedQuery.toLowerCase());
 
   const isFormValid = selectedFilter !== '' && scheduledHours.length > 0
     && (mode === 'individual' || (mode === 'group' && selectedGroupId !== ''));
@@ -169,6 +195,7 @@ const SubscriptionFormModal: React.FC<SubscriptionFormModalProps> = ({
     setHourToAdd(9);
     setTriageSlaThreshold('GREEN');
     setSelectedRecipient(null);
+    setCustomEmail(null);
     setQuery('');
     setDropdownOpen(false);
     setSelectedGroupId('');
@@ -179,12 +206,21 @@ const SubscriptionFormModal: React.FC<SubscriptionFormModalProps> = ({
 
   const handleSelectUser = (u: UserSummary | null) => {
     setSelectedRecipient(u);
+    setCustomEmail(null);
+    setQuery('');
+    setDropdownOpen(false);
+  };
+
+  const handleSelectCustomEmail = (email: string) => {
+    setSelectedRecipient(null);
+    setCustomEmail(email);
     setQuery('');
     setDropdownOpen(false);
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSelectedRecipient(null); // clear selection when typing
+    setCustomEmail(null);
     setQuery(e.target.value);
     setDropdownOpen(true);
   };
@@ -193,6 +229,7 @@ const SubscriptionFormModal: React.FC<SubscriptionFormModalProps> = ({
 
   const handleClearRecipient = () => {
     setSelectedRecipient(null);
+    setCustomEmail(null);
     setQuery('');
     setDropdownOpen(false);
   };
@@ -222,9 +259,11 @@ const SubscriptionFormModal: React.FC<SubscriptionFormModalProps> = ({
           schedule,
           ...(triageEnabled ? { triageSlaThreshold } : {}),
         };
-        // Send recipientEmail only when admin explicitly picked someone other than themselves
-        if (canManage && selectedRecipient && selectedRecipient.email.toLowerCase() !== user?.email?.toLowerCase()) {
-          payload.recipientEmail = selectedRecipient.email;
+        // Send recipientEmail only when admin explicitly picked someone other than themselves.
+        // This may be a registered user's email or a raw email typed for someone not yet onboarded.
+        const recipientEmail = selectedRecipient?.email ?? customEmail ?? undefined;
+        if (canManage && recipientEmail && recipientEmail.toLowerCase() !== user?.email?.toLowerCase()) {
+          payload.recipientEmail = recipientEmail;
         }
         await createSubscription(workspaceId, payload);
         toast.success('Subscribed successfully!');
@@ -284,7 +323,7 @@ const SubscriptionFormModal: React.FC<SubscriptionFormModalProps> = ({
               <div className="flex rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
                 <button
                   type="button"
-                  onClick={() => setMode('individual')}
+                  onClick={() => { setMode('individual'); setSelectedFilter(''); }}
                   className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-semibold transition-colors cursor-pointer ${
                     mode === 'individual'
                       ? 'bg-indigo-600 text-white'
@@ -296,7 +335,7 @@ const SubscriptionFormModal: React.FC<SubscriptionFormModalProps> = ({
                 </button>
                 <button
                   type="button"
-                  onClick={() => setMode('group')}
+                  onClick={() => { setMode('group'); setSelectedFilter(''); }}
                   className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-semibold transition-colors cursor-pointer ${
                     mode === 'group'
                       ? 'bg-indigo-600 text-white'
@@ -362,7 +401,7 @@ const SubscriptionFormModal: React.FC<SubscriptionFormModalProps> = ({
                       className="w-full pl-3.5 pr-16 py-2.5 border border-slate-200 dark:border-slate-600 rounded-xl text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 bg-white dark:bg-slate-800/60 focus:outline-none focus:border-indigo-500 dark:focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/15 dark:focus:ring-indigo-400/15 transition-all"
                     />
                     <div className="absolute right-2 flex items-center gap-1">
-                      {selectedRecipient && (
+                      {(selectedRecipient || customEmail) && (
                         <button
                           type="button"
                           onClick={handleClearRecipient}
@@ -396,20 +435,34 @@ const SubscriptionFormModal: React.FC<SubscriptionFormModalProps> = ({
                         type="button"
                         onMouseDown={e => { e.preventDefault(); handleSelectUser(null); }}
                         className={`w-full text-left px-3.5 py-2.5 text-sm flex items-center justify-between gap-2 transition-colors
-                          ${!selectedRecipient
+                          ${!selectedRecipient && !customEmail
                             ? 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300'
                             : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
                       >
                         <span className="truncate">{myselfLabel}</span>
-                        {!selectedRecipient && <Check className="h-3.5 w-3.5 flex-shrink-0" />}
+                        {!selectedRecipient && !customEmail && <Check className="h-3.5 w-3.5 flex-shrink-0" />}
                       </button>
 
                       {/* Divider */}
-                      {filteredUsers.length > 0 && (
+                      {(filteredUsers.length > 0 || isNewEmailCandidate) && (
                         <div className="border-t border-slate-100 dark:border-slate-800" />
                       )}
 
-                      {filteredUsers.length === 0 && query.trim() ? (
+                      {/* Subscribe a not-yet-onboarded person by raw email */}
+                      {isNewEmailCandidate && (
+                        <button
+                          type="button"
+                          onMouseDown={e => { e.preventDefault(); handleSelectCustomEmail(trimmedQuery); }}
+                          className="w-full text-left px-3.5 py-2.5 text-sm text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-colors"
+                        >
+                          Subscribe <span className="font-semibold">{trimmedQuery}</span>
+                          <span className="block text-xs text-slate-400 dark:text-slate-500">
+                            Not onboarded yet — they'll be subscribed by email.
+                          </span>
+                        </button>
+                      )}
+
+                      {filteredUsers.length === 0 && query.trim() && !isNewEmailCandidate ? (
                         <p className="px-3.5 py-3 text-sm text-slate-400 dark:text-slate-500">
                           No users match "{query}".
                         </p>
@@ -436,7 +489,7 @@ const SubscriptionFormModal: React.FC<SubscriptionFormModalProps> = ({
                   )}
                 </div>
                 <p className="text-xs text-slate-400 dark:text-slate-500">
-                  Leave as yourself or pick another user to subscribe on their behalf.
+                  Leave as yourself, pick another user, or type any email address to subscribe someone who hasn't onboarded yet.
                 </p>
               </div>
             )}
@@ -454,7 +507,7 @@ const SubscriptionFormModal: React.FC<SubscriptionFormModalProps> = ({
                 className={selectClass}
               >
                 <option value="" disabled>Select a filter…</option>
-                {filters.map(f => <option key={f.id} value={f.id}>{f.title}</option>)}
+                {subscribableFilters.map(f => <option key={f.id} value={f.id}>{f.title}</option>)}
               </select>
             </div>
 

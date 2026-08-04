@@ -159,6 +159,33 @@ class SubscriptionServiceTest {
     }
 
     @Test
+    void testCreateSubscription_PrivateFilterOtherRecipient_ThrowsAccessDenied() {
+        filter.setOwnerEmail("owner@test.com");
+        filter.setPublic(false);
+        when(workspaceRepository.findById(workspaceId)).thenReturn(Optional.of(workspace));
+        when(filterRepository.findById(filterId)).thenReturn(Optional.of(filter));
+
+        assertThrows(AccessDeniedException.class, () ->
+                subscriptionService.createSubscription("someone-else@test.com", workspaceId, filterId, dailySchedule));
+    }
+
+    @Test
+    void testCreateSubscription_PrivateFilterEvenForAdminOnBehalf_ThrowsAccessDenied() {
+        // Private filters can only ever be subscribed by their owner — this restriction applies
+        // regardless of whether the caller is an ADMIN/WORKSPACE_ADMIN subscribing someone else.
+        // (The frontend hides private filters owned by other users from the subscription picker;
+        // this is the server-side guarantee of the same rule.)
+        filter.setOwnerEmail("owner@test.com");
+        filter.setPublic(false);
+        when(workspaceRepository.findById(workspaceId)).thenReturn(Optional.of(workspace));
+        when(filterRepository.findById(filterId)).thenReturn(Optional.of(filter));
+
+        assertThrows(AccessDeniedException.class, () ->
+                subscriptionService.createSubscription(
+                        "someone-else@test.com", workspaceId, filterId, dailySchedule, TriageSlaThreshold.GREEN));
+    }
+
+    @Test
     void testCreateSubscription_FilterNotFound_Throws() {
         when(workspaceRepository.findById(workspaceId)).thenReturn(Optional.of(workspace));
         when(filterRepository.findById(filterId)).thenReturn(Optional.empty());

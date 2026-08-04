@@ -641,8 +641,10 @@ The backend automatically maps the `targetEntityType` to the correct Octane API 
 All subscription endpoints require authentication. Users may only update/delete their own subscriptions (ownership enforced server-side). The on-demand `run` endpoint requires the `ADMIN` role.
 
 Private filter subscriptions are enforced server-side:
-- A private filter can only be subscribed by its owner.
+- A private filter can only be subscribed by its owner — this applies to everyone, including `ADMIN`/`WORKSPACE_ADMIN` subscribing another recipient on their behalf. Private filters owned by other users are hidden from the "Filter Template" picker in the New Subscription modal, so only the owner ever sees/selects their own private filters there.
 - Group subscriptions can only use public filters.
+
+**Subscribing users who haven't onboarded:** admins/workspace admins can subscribe any email address to a **public** filter via `recipientEmail`, even if that person has no application-user account yet. The frontend's recipient picker lets admins type a raw email address (in addition to selecting from registered users) for exactly this case.
 
 **Subscription visibility:** `ADMIN` users see all subscriptions for the workspace; `MEMBER` users see only their own subscriptions plus any group subscriptions that include them. For group subscriptions, `MEMBER` users get a **View-only** experience (no edit, unsubscribe, enable/disable, or schedule changes). The frontend hides the "Recipient Email" column and labels the section "My Subscriptions" for `MEMBER` users.
 

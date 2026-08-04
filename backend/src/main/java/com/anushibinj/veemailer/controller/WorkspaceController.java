@@ -277,7 +277,8 @@ public class WorkspaceController {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
         // Admins and workspace admins may subscribe any user by specifying recipientEmail.
-        // Regular users always subscribe themselves.
+        // Regular users always subscribe themselves. Private filters can still only be subscribed
+        // by their owner — see SubscriptionService#createSubscription.
         String targetEmail = userDetails.getUsername();
         if (request.getRecipientEmail() != null && !request.getRecipientEmail().isBlank()) {
             if (!workspaceAdminService.canViewWorkspaceSubscriptions(authentication, workspaceId)) {
