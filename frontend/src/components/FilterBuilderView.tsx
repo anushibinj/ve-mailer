@@ -33,7 +33,7 @@ type FilterCreationMode = 'queryString' | 'manual';
 type OrderByDirection = 'ASC' | 'DESC';
 
 const ENTITY_TYPES = [
-  { value: 'backlog_items', label: 'Backlog Items (Story/Defect/Quality Story)' },
+  { value: 'backlog_items', label: 'Backlog Items (Story/Quality Story/Defect/CPE Incident)' },
   { value: 'epic', label: 'Epics' },
   { value: 'feature', label: 'Features' },
 ];
