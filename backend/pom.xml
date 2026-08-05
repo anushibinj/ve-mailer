@@ -116,6 +116,12 @@
 			<scope>runtime</scope>
 		</dependency>
 
+		<!-- Actuator for health and metrics endpoints -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-actuator</artifactId>
+		</dependency>
+
 		<!-- Lombok for convenience -->
 		<dependency>
 			<groupId>org.projectlombok</groupId>

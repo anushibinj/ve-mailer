@@ -59,6 +59,8 @@ public class SecurityConfig {
                 .requestMatchers("/api/auth/**").permitAll()
                 // Build metadata — unauthenticated so the footer can call it from the login page
                 .requestMatchers("/api/about").permitAll()
+                // Actuator health endpoint — unauthenticated for Docker/k8s healthchecks
+                .requestMatchers("/actuator/health").permitAll()
                 // Public issue reporting endpoint exposed through the global footer
                 .requestMatchers("/api/v1/issues/**").permitAll()
                 // H2 console for development

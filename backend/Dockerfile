@@ -17,6 +17,6 @@ ENV TZ=Asia/Calcutta
 
 COPY --from=builder /tmp/staging-area/target/veemailer-0.0.1-SNAPSHOT.jar app.jar
 HEALTHCHECK --interval=10s --timeout=3s --start-period=10s --retries=10 \
-    CMD curl http://localhost:8080/ || exit 1
+    CMD curl -f http://localhost:8080/actuator/health || exit 1
 EXPOSE 8080
 ENTRYPOINT exec java $JAVA_OPTS -Duser.timezone=$TZ -Djava.security.egd=file:/dev/./urandom -jar app.jar
