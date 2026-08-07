@@ -1,7 +1,19 @@
 {
   "name": "ve-mailer",
-  "rootPath": "/home/runner/work/ve-mailer/ve-mailer",
+  "rootPath": "C:\\sts-workspace\\general\\ve-mailer",
   "languages": [
+    {
+      "name": "CSS",
+      "fileCount": 2
+    },
+    {
+      "name": "Docker",
+      "fileCount": 2
+    },
+    {
+      "name": "HTML",
+      "fileCount": 1
+    },
     {
       "name": "JSON",
       "fileCount": 5
@@ -4726,6 +4738,6 @@
   ],
   "git": {
     "branch": "master",
-    "commitHash": "3c8cf6854b7dd55ebce830eeb263b2adf603bce3"
+    "commitHash": "d376d1539f30dbb7d5f328320dcd19b2dc813186"
   }
 }
