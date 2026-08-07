@@ -1,0 +1,15 @@
+{
+  "name": "ve-mailer",
+  "rootPath": "/home/runner/work/ve-mailer/ve-mailer",
+  "languages": [],
+  "modules": null,
+  "features": null,
+  "components": [],
+  "routes": null,
+  "apis": null,
+  "tables": [],
+  "git": {
+    "branch": "master",
+    "commitHash": "17098673ae776ce21e0d6f0badb9656394ace729"
+  }
+}
