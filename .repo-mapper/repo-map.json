@@ -1,7 +1,20 @@
 {
   "name": "ve-mailer",
   "rootPath": "/home/runner/work/ve-mailer/ve-mailer",
-  "languages": [],
+  "languages": [
+    {
+      "name": "JSON",
+      "fileCount": 5
+    },
+    {
+      "name": "Markdown",
+      "fileCount": 8
+    },
+    {
+      "name": "YAML",
+      "fileCount": 1
+    }
+  ],
   "modules": null,
   "features": null,
   "components": [],
@@ -10,6 +23,6 @@
   "tables": [],
   "git": {
     "branch": "master",
-    "commitHash": "17098673ae776ce21e0d6f0badb9656394ace729"
+    "commitHash": "3c8cf6854b7dd55ebce830eeb263b2adf603bce3"
   }
 }
