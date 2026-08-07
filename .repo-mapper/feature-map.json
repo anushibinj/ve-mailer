@@ -1,1 +1,850 @@
-null
+[
+  {
+    "feature": "About",
+    "backend": [
+      "AboutController"
+    ]
+  },
+  {
+    "feature": "Acceptinvite",
+    "frontend": [
+      "AcceptInvitePage"
+    ]
+  },
+  {
+    "feature": "Addmemberpicker",
+    "frontend": [
+      "AddMemberPicker"
+    ]
+  },
+  {
+    "feature": "Adminbootstrap",
+    "backend": [
+      "AdminBootstrapService"
+    ]
+  },
+  {
+    "feature": "Admincontrolpanel",
+    "frontend": [
+      "AdminControlPanel"
+    ]
+  },
+  {
+    "feature": "Aipreferences",
+    "frontend": [
+      "AiPreferencesPage"
+    ],
+    "backend": [
+      "AiPreferences",
+      "AiPreferencesController",
+      "AiPreferencesService"
+    ],
+    "database": [
+      "ai_preferences"
+    ]
+  },
+  {
+    "feature": "Aisummary",
+    "backend": [
+      "AiSummaryService"
+    ]
+  },
+  {
+    "feature": "App",
+    "frontend": [
+      "App"
+    ]
+  },
+  {
+    "feature": "Appbreadcrumbs",
+    "frontend": [
+      "AppBreadcrumbs"
+    ]
+  },
+  {
+    "feature": "Appfooter",
+    "frontend": [
+      "AppFooter"
+    ]
+  },
+  {
+    "feature": "Appheader",
+    "frontend": [
+      "AppHeader"
+    ]
+  },
+  {
+    "feature": "Appshell",
+    "frontend": [
+      "AppShell"
+    ]
+  },
+  {
+    "feature": "Appuser",
+    "backend": [
+      "AppUser",
+      "AppUserRepository"
+    ],
+    "database": [
+      "app_users"
+    ]
+  },
+  {
+    "feature": "Appuserdetails",
+    "backend": [
+      "AppUserDetailsService"
+    ]
+  },
+  {
+    "feature": "Auth",
+    "backend": [
+      "AuthController",
+      "AuthService"
+    ],
+    "apis": [
+      "/api/auth/accept-invite",
+      "/api/auth/allowed-domains",
+      "/api/auth/forgot-password",
+      "/api/auth/login",
+      "/api/auth/logout",
+      "/api/auth/me",
+      "/api/auth/refresh",
+      "/api/auth/request-invite-link",
+      "/api/auth/reset-password",
+      "/api/auth/signup",
+      "/api/auth/verify-invite-link",
+      "/api/auth/verify-reset-otp",
+      "/api/auth/verify-signup"
+    ]
+  },
+  {
+    "feature": "Auth401entrypoint",
+    "backend": [
+      "Auth401EntryPoint"
+    ]
+  },
+  {
+    "feature": "Auth403accessdeniedhandler",
+    "backend": [
+      "Auth403AccessDeniedHandler"
+    ]
+  },
+  {
+    "feature": "Authprovider",
+    "frontend": [
+      "AuthProvider"
+    ]
+  },
+  {
+    "feature": "Authshell",
+    "frontend": [
+      "AuthShell"
+    ]
+  },
+  {
+    "feature": "Badge",
+    "frontend": [
+      "Badge"
+    ]
+  },
+  {
+    "feature": "Button",
+    "frontend": [
+      "Button"
+    ]
+  },
+  {
+    "feature": "Card",
+    "frontend": [
+      "Card"
+    ]
+  },
+  {
+    "feature": "Cardbody",
+    "frontend": [
+      "CardBody"
+    ]
+  },
+  {
+    "feature": "Cardheader",
+    "frontend": [
+      "CardHeader"
+    ]
+  },
+  {
+    "feature": "Cleanup",
+    "backend": [
+      "CleanupService"
+    ]
+  },
+  {
+    "feature": "Confirmdialog",
+    "frontend": [
+      "ConfirmDialog"
+    ]
+  },
+  {
+    "feature": "Connectivitybadge",
+    "frontend": [
+      "ConnectivityBadge"
+    ]
+  },
+  {
+    "feature": "Duplicateworkspaceconflictbanner",
+    "frontend": [
+      "DuplicateWorkspaceConflictBanner"
+    ]
+  },
+  {
+    "feature": "Dynamicaiclient",
+    "backend": [
+      "DynamicAiClientService"
+    ]
+  },
+  {
+    "feature": "Dynamicmailsender",
+    "backend": [
+      "DynamicMailSenderService"
+    ]
+  },
+  {
+    "feature": "Editsubscriptionmodal",
+    "frontend": [
+      "EditSubscriptionModal"
+    ]
+  },
+  {
+    "feature": "Email",
+    "backend": [
+      "EmailService"
+    ]
+  },
+  {
+    "feature": "Emailsubscriber",
+    "backend": [
+      "EmailSubscriber",
+      "EmailSubscriberRepository"
+    ],
+    "database": [
+      "email_subscribers"
+    ]
+  },
+  {
+    "feature": "Emptystate",
+    "frontend": [
+      "EmptyState"
+    ]
+  },
+  {
+    "feature": "Errorstate",
+    "frontend": [
+      "ErrorState"
+    ]
+  },
+  {
+    "feature": "Fieldbadgewithpopover",
+    "frontend": [
+      "FieldBadgeWithPopover"
+    ]
+  },
+  {
+    "feature": "Fieldextractorregistry",
+    "backend": [
+      "FieldExtractorRegistry"
+    ]
+  },
+  {
+    "feature": "Fieldselect",
+    "frontend": [
+      "FieldSelect"
+    ]
+  },
+  {
+    "feature": "Filter",
+    "backend": [
+      "Filter",
+      "FilterRepository",
+      "FilterService"
+    ],
+    "database": [
+      "filters"
+    ]
+  },
+  {
+    "feature": "Filterbuilder",
+    "frontend": [
+      "FilterBuilderView"
+    ]
+  },
+  {
+    "feature": "Forgotpassword",
+    "frontend": [
+      "ForgotPasswordPage"
+    ]
+  },
+  {
+    "feature": "Generalsettings",
+    "frontend": [
+      "GeneralSettingsPage"
+    ],
+    "backend": [
+      "GeneralSettings",
+      "GeneralSettingsController",
+      "GeneralSettingsRepository",
+      "GeneralSettingsService"
+    ],
+    "database": [
+      "general_settings"
+    ]
+  },
+  {
+    "feature": "Groupformmodal",
+    "frontend": [
+      "GroupFormModal"
+    ]
+  },
+  {
+    "feature": "Input",
+    "frontend": [
+      "Input"
+    ]
+  },
+  {
+    "feature": "Invitemagiclink",
+    "backend": [
+      "InviteMagicLink",
+      "InviteMagicLinkRepository",
+      "InviteMagicLinkService"
+    ],
+    "database": [
+      "invite_magic_links"
+    ]
+  },
+  {
+    "feature": "Issuereport",
+    "backend": [
+      "IssueReport",
+      "IssueReportController",
+      "IssueReportRepository",
+      "IssueReportService"
+    ],
+    "apis": [
+      "/api/admin/issues",
+      "/api/admin/issues/{issueId}/status",
+      "/api/v1/issues",
+      "/api/v1/issues/config"
+    ],
+    "database": [
+      "issue_reports"
+    ]
+  },
+  {
+    "feature": "Issuereportmodal",
+    "frontend": [
+      "IssueReportModal"
+    ]
+  },
+  {
+    "feature": "Issues",
+    "frontend": [
+      "IssuesPage"
+    ]
+  },
+  {
+    "feature": "Jwt",
+    "backend": [
+      "JwtService"
+    ]
+  },
+  {
+    "feature": "Jwtauthenticationfilter",
+    "backend": [
+      "JwtAuthenticationFilter"
+    ]
+  },
+  {
+    "feature": "Landing",
+    "frontend": [
+      "LandingView"
+    ]
+  },
+  {
+    "feature": "Loadingplaceholder",
+    "frontend": [
+      "LoadingPlaceholder"
+    ]
+  },
+  {
+    "feature": "Login",
+    "frontend": [
+      "LoginPage"
+    ]
+  },
+  {
+    "feature": "Mailanalytics",
+    "frontend": [
+      "MailAnalyticsPage"
+    ],
+    "backend": [
+      "MailAnalyticsController",
+      "MailAnalyticsService"
+    ],
+    "apis": [
+      "/daily-recipients",
+      "/daily-volume",
+      "/filter-usage",
+      "/history",
+      "/summary",
+      "/workspace-distribution"
+    ]
+  },
+  {
+    "feature": "Mailaudit",
+    "backend": [
+      "MailAuditService"
+    ]
+  },
+  {
+    "feature": "Mailauditlog",
+    "backend": [
+      "MailAuditLog",
+      "MailAuditLogRepository"
+    ],
+    "database": [
+      "mail_audit_log"
+    ]
+  },
+  {
+    "feature": "Notification",
+    "backend": [
+      "NotificationService"
+    ]
+  },
+  {
+    "feature": "Notificationpreferences",
+    "frontend": [
+      "NotificationPreferencesPage"
+    ],
+    "backend": [
+      "NotificationPreferences",
+      "NotificationPreferencesController",
+      "NotificationPreferencesService"
+    ],
+    "database": [
+      "notification_preferences"
+    ]
+  },
+  {
+    "feature": "Octanecache",
+    "backend": [
+      "OctaneCacheService"
+    ]
+  },
+  {
+    "feature": "Octanemetadata",
+    "backend": [
+      "OctaneMetadataService"
+    ]
+  },
+  {
+    "feature": "Onboardmodal",
+    "frontend": [
+      "OnboardModal"
+    ]
+  },
+  {
+    "feature": "Otp",
+    "backend": [
+      "OtpService"
+    ]
+  },
+  {
+    "feature": "Otprequest",
+    "backend": [
+      "OtpRequest",
+      "OtpRequestRepository"
+    ],
+    "database": [
+      "otp_requests"
+    ]
+  },
+  {
+    "feature": "Pageheader",
+    "frontend": [
+      "PageHeader"
+    ]
+  },
+  {
+    "feature": "Polling",
+    "backend": [
+      "PollingService"
+    ]
+  },
+  {
+    "feature": "Protectedroute",
+    "frontend": [
+      "ProtectedRoute"
+    ]
+  },
+  {
+    "feature": "Recipient_group_members",
+    "database": [
+      "recipient_group_members"
+    ]
+  },
+  {
+    "feature": "Recipient_groups",
+    "database": [
+      "recipient_groups"
+    ]
+  },
+  {
+    "feature": "Recipientgroup",
+    "backend": [
+      "RecipientGroupRepository",
+      "RecipientGroupService"
+    ]
+  },
+  {
+    "feature": "Recipientgroups",
+    "frontend": [
+      "RecipientGroupsPage",
+      "RecipientGroupsView"
+    ]
+  },
+  {
+    "feature": "Refreshtoken",
+    "backend": [
+      "RefreshToken",
+      "RefreshTokenRepository",
+      "RefreshTokenService"
+    ],
+    "database": [
+      "refresh_tokens"
+    ]
+  },
+  {
+    "feature": "Requiredmark",
+    "frontend": [
+      "RequiredMark"
+    ]
+  },
+  {
+    "feature": "Resetpassword",
+    "frontend": [
+      "ResetPasswordPage"
+    ]
+  },
+  {
+    "feature": "Role",
+    "backend": [
+      "Role",
+      "RoleRepository"
+    ],
+    "database": [
+      "roles"
+    ]
+  },
+  {
+    "feature": "Schedulemigrationrunner",
+    "backend": [
+      "ScheduleMigrationRunner"
+    ]
+  },
+  {
+    "feature": "Searchinput",
+    "frontend": [
+      "SearchInput"
+    ]
+  },
+  {
+    "feature": "Sectionheader",
+    "frontend": [
+      "SectionHeader"
+    ]
+  },
+  {
+    "feature": "Select",
+    "frontend": [
+      "Select"
+    ]
+  },
+  {
+    "feature": "Signup",
+    "frontend": [
+      "SignupPage"
+    ]
+  },
+  {
+    "feature": "Skeleton",
+    "frontend": [
+      "Skeleton"
+    ]
+  },
+  {
+    "feature": "Skeletoncard",
+    "frontend": [
+      "SkeletonCard"
+    ]
+  },
+  {
+    "feature": "Skeletoncardgrid",
+    "frontend": [
+      "SkeletonCardGrid"
+    ]
+  },
+  {
+    "feature": "Skeletondashboard",
+    "frontend": [
+      "SkeletonDashboard"
+    ]
+  },
+  {
+    "feature": "Skeletonrow",
+    "frontend": [
+      "SkeletonRow"
+    ]
+  },
+  {
+    "feature": "Skeletontext",
+    "frontend": [
+      "SkeletonText"
+    ]
+  },
+  {
+    "feature": "Smartfilterrow",
+    "frontend": [
+      "SmartFilterRow"
+    ]
+  },
+  {
+    "feature": "Sortableheader",
+    "frontend": [
+      "SortableHeader"
+    ]
+  },
+  {
+    "feature": "Sorticon",
+    "frontend": [
+      "SortIcon"
+    ]
+  },
+  {
+    "feature": "Statcard",
+    "frontend": [
+      "StatCard"
+    ]
+  },
+  {
+    "feature": "Stubappshell",
+    "frontend": [
+      "StubAppShell"
+    ]
+  },
+  {
+    "feature": "Subscriber_scheduled_hours",
+    "database": [
+      "subscriber_scheduled_hours"
+    ]
+  },
+  {
+    "feature": "Subscription",
+    "backend": [
+      "SubscriptionController",
+      "SubscriptionService"
+    ]
+  },
+  {
+    "feature": "Subscriptionformmodal",
+    "frontend": [
+      "SubscriptionFormModal"
+    ]
+  },
+  {
+    "feature": "Summaryrow",
+    "frontend": [
+      "SummaryRow"
+    ]
+  },
+  {
+    "feature": "Summarysection",
+    "frontend": [
+      "SummarySection"
+    ]
+  },
+  {
+    "feature": "Tableactionbutton",
+    "frontend": [
+      "TableActionButton"
+    ]
+  },
+  {
+    "feature": "Textarea",
+    "frontend": [
+      "Textarea"
+    ]
+  },
+  {
+    "feature": "Themeprovider",
+    "frontend": [
+      "ThemeProvider"
+    ]
+  },
+  {
+    "feature": "Themetoggle",
+    "frontend": [
+      "ThemeToggle"
+    ]
+  },
+  {
+    "feature": "Ticketcomment",
+    "backend": [
+      "TicketCommentService"
+    ]
+  },
+  {
+    "feature": "Tooltip",
+    "frontend": [
+      "Tooltip"
+    ]
+  },
+  {
+    "feature": "User_roles",
+    "database": [
+      "user_roles"
+    ]
+  },
+  {
+    "feature": "Usermanagement",
+    "backend": [
+      "UserManagementController"
+    ],
+    "apis": [
+      "/non-app-users",
+      "/{userId}",
+      "/{userId}/resend-invite",
+      "/{userId}/role"
+    ]
+  },
+  {
+    "feature": "Userquery",
+    "backend": [
+      "UserQueryService"
+    ]
+  },
+  {
+    "feature": "Users",
+    "frontend": [
+      "UsersPage"
+    ]
+  },
+  {
+    "feature": "Valuepicker",
+    "frontend": [
+      "ValuePicker"
+    ]
+  },
+  {
+    "feature": "Verifysignup",
+    "frontend": [
+      "VerifySignupPage"
+    ]
+  },
+  {
+    "feature": "Veutils",
+    "backend": [
+      "VeUtils"
+    ]
+  },
+  {
+    "feature": "Workspace",
+    "backend": [
+      "WorkspaceController",
+      "WorkspaceRepository",
+      "WorkspaceService"
+    ],
+    "apis": [
+      "/api/v1/workspaces/all",
+      "/api/v1/workspaces/check-duplicate",
+      "/api/v1/workspaces/discover-metadata",
+      "/api/v1/workspaces/test-connection",
+      "/api/v1/workspaces/{id}",
+      "/api/v1/workspaces/{id}/refetch-metadata",
+      "/api/v1/workspaces/{workspaceId}/admins",
+      "/api/v1/workspaces/{workspaceId}/admins/{userId}",
+      "/api/v1/workspaces/{workspaceId}/subscriptions",
+      "/api/v1/workspaces/{workspaceId}/subscriptions/bulk-group",
+      "/api/v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}",
+      "/api/v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}/run",
+      "/api/v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}/toggle",
+      "/api/v1/workspaces/{workspaceId}/users"
+    ]
+  },
+  {
+    "feature": "Workspace_admins",
+    "database": [
+      "workspace_admins"
+    ]
+  },
+  {
+    "feature": "Workspaceadmin",
+    "backend": [
+      "WorkspaceAdminRepository",
+      "WorkspaceAdminService"
+    ]
+  },
+  {
+    "feature": "Workspaceadminmanager",
+    "frontend": [
+      "WorkspaceAdminManager"
+    ]
+  },
+  {
+    "feature": "Workspaceconnectivitypolling",
+    "backend": [
+      "WorkspaceConnectivityPollingService"
+    ]
+  },
+  {
+    "feature": "Workspacecreationwizard",
+    "frontend": [
+      "WorkspaceCreationWizard"
+    ]
+  },
+  {
+    "feature": "Workspacedashboard",
+    "frontend": [
+      "WorkspaceDashboard"
+    ]
+  },
+  {
+    "feature": "Workspacediscovery",
+    "backend": [
+      "WorkspaceDiscoveryService"
+    ]
+  },
+  {
+    "feature": "Workspaceformmodal",
+    "frontend": [
+      "WorkspaceFormModal"
+    ]
+  },
+  {
+    "feature": "Workspacemanagement",
+    "frontend": [
+      "WorkspaceManagementPage"
+    ]
+  },
+  {
+    "feature": "Workspaces",
+    "database": [
+      "workspaces"
+    ]
+  },
+  {
+    "feature": "Workspaceshell",
+    "frontend": [
+      "WorkspaceShell"
+    ]
+  }
+]

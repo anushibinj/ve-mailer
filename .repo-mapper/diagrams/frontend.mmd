@@ -1,2 +1,246 @@
 flowchart TD
-    NoFrontend[No frontend components detected]
+    PageHeader[PageHeader]
+    SectionHeader[SectionHeader]
+    AcceptInvitePage[AcceptInvitePage]
+    ForgotPasswordPage[ForgotPasswordPage]
+    LoginPage[LoginPage]
+    ResetPasswordPage[ResetPasswordPage]
+    SignupPage[SignupPage]
+    VerifySignupPage[VerifySignupPage]
+    AdminControlPanel[AdminControlPanel]
+    AiPreferencesPage[AiPreferencesPage]
+    GeneralSettingsPage[GeneralSettingsPage]
+    IssuesPage[IssuesPage]
+    MailAnalyticsPage[MailAnalyticsPage]
+    StatCard[StatCard]
+    NotificationPreferencesPage[NotificationPreferencesPage]
+    AddMemberPicker[AddMemberPicker]
+    GroupFormModal[GroupFormModal]
+    RecipientGroupsPage[RecipientGroupsPage]
+    OnboardModal[OnboardModal]
+    SortIcon[SortIcon]
+    UsersPage[UsersPage]
+    WorkspaceAdminManager[WorkspaceAdminManager]
+    WorkspaceManagementPage[WorkspaceManagementPage]
+    App(App)
+    AppBreadcrumbs(AppBreadcrumbs)
+    AppHeader(AppHeader)
+    AppShell(AppShell)
+    ThemeToggle(ThemeToggle)
+    WorkspaceShell(WorkspaceShell)
+    AppFooter(AppFooter)
+    AuthShell(AuthShell)
+    ConfirmDialog(ConfirmDialog)
+    EditSubscriptionModal(EditSubscriptionModal)
+    FieldBadgeWithPopover(FieldBadgeWithPopover)
+    FilterBuilderView(FilterBuilderView)
+    IssueReportModal(IssueReportModal)
+    LandingView(LandingView)
+    LoadingPlaceholder(LoadingPlaceholder)
+    ProtectedRoute(ProtectedRoute)
+    GroupFormModal(GroupFormModal)
+    RecipientGroupsView(RecipientGroupsView)
+    FieldSelect(FieldSelect)
+    SmartFilterRow(SmartFilterRow)
+    ValuePicker(ValuePicker)
+    RequiredMark(RequiredMark)
+    SubscriptionFormModal(SubscriptionFormModal)
+    SummaryRow(SummaryRow)
+    SummarySection(SummarySection)
+    WorkspaceCreationWizard(WorkspaceCreationWizard)
+    SortIcon(SortIcon)
+    SortableHeader(SortableHeader)
+    WorkspaceDashboard(WorkspaceDashboard)
+    WorkspaceFormModal(WorkspaceFormModal)
+    StubAppShell(StubAppShell)
+    Badge(Badge)
+    ConnectivityBadge(ConnectivityBadge)
+    Button(Button)
+    Card(Card)
+    CardBody(CardBody)
+    CardHeader(CardHeader)
+    EmptyState(EmptyState)
+    ErrorState(ErrorState)
+    Input(Input)
+    Select(Select)
+    Textarea(Textarea)
+    SearchInput(SearchInput)
+    Skeleton(Skeleton)
+    SkeletonCard(SkeletonCard)
+    SkeletonCardGrid(SkeletonCardGrid)
+    SkeletonDashboard(SkeletonDashboard)
+    SkeletonRow(SkeletonRow)
+    SkeletonText(SkeletonText)
+    TableActionButton(TableActionButton)
+    Tooltip(Tooltip)
+    DuplicateWorkspaceConflictBanner(DuplicateWorkspaceConflictBanner)
+    ThemeProvider(ThemeProvider)
+    AuthProvider(AuthProvider)
+    REST[[REST API]]
+    AcceptInvitePage --> useAuth
+    AcceptInvitePage --> useEffect
+    AcceptInvitePage --> useLocation
+    AcceptInvitePage --> useMemo
+    AcceptInvitePage --> useNavigate
+    AcceptInvitePage --> useState
+    AddMemberPicker --> useCallback
+    AddMemberPicker --> useEffect
+    AddMemberPicker --> useState
+    AdminControlPanel --> useAuth
+    AdminControlPanel --> useLocation
+    AdminControlPanel --> useNavigate
+    AiPreferencesPage --> useEffect
+    AiPreferencesPage --> useState
+    App --> useAuth
+    App --> useLocation
+    App --> useNavigate
+    App --> useTheme
+    AppBreadcrumbs --> useAuth
+    AppBreadcrumbs --> useLocation
+    AppBreadcrumbs --> useNavigate
+    AppBreadcrumbs --> useTheme
+    AppFooter --> REST
+    AppFooter --> useEffect
+    AppFooter --> useState
+    AppHeader --> useAuth
+    AppHeader --> useLocation
+    AppHeader --> useNavigate
+    AppHeader --> useTheme
+    AppShell --> useAuth
+    AppShell --> useLocation
+    AppShell --> useNavigate
+    AppShell --> useTheme
+    AuthProvider --> useAuth
+    AuthProvider --> useCallback
+    AuthProvider --> useContext
+    AuthProvider --> useEffect
+    AuthProvider --> useNavigate
+    EditSubscriptionModal --> useAuth
+    EditSubscriptionModal --> useState
+    FieldBadgeWithPopover --> useAuth
+    FieldBadgeWithPopover --> useCallback
+    FieldBadgeWithPopover --> useEffect
+    FieldBadgeWithPopover --> useState
+    FieldSelect --> useEffect
+    FieldSelect --> useRef
+    FieldSelect --> useState
+    FilterBuilderView --> useAuth
+    FilterBuilderView --> useCallback
+    FilterBuilderView --> useEffect
+    FilterBuilderView --> useState
+    ForgotPasswordPage --> useEffect
+    ForgotPasswordPage --> useNavigate
+    ForgotPasswordPage --> useState
+    GeneralSettingsPage --> useCallback
+    GeneralSettingsPage --> useEffect
+    GeneralSettingsPage --> useState
+    GroupFormModal --> useCallback
+    GroupFormModal --> useEffect
+    GroupFormModal --> useState
+    IssueReportModal --> useEffect
+    IssueReportModal --> useState
+    IssuesPage --> useCallback
+    IssuesPage --> useEffect
+    IssuesPage --> useState
+    LandingView --> useAuth
+    LandingView --> useEffect
+    LandingView --> useNavigate
+    LandingView --> useState
+    LoginPage --> useAuth
+    LoginPage --> useLocation
+    LoginPage --> useNavigate
+    LoginPage --> useState
+    MailAnalyticsPage --> useCallback
+    MailAnalyticsPage --> useEffect
+    MailAnalyticsPage --> useState
+    NotificationPreferencesPage --> useEffect
+    NotificationPreferencesPage --> useState
+    OnboardModal --> useAuth
+    OnboardModal --> useCallback
+    OnboardModal --> useEffect
+    OnboardModal --> useMemo
+    OnboardModal --> useState
+    ProtectedRoute --> useAuth
+    ProtectedRoute --> useLocation
+    RecipientGroupsPage --> useCallback
+    RecipientGroupsPage --> useEffect
+    RecipientGroupsPage --> useState
+    RecipientGroupsView --> useCallback
+    RecipientGroupsView --> useEffect
+    RecipientGroupsView --> useState
+    RequiredMark --> useAuth
+    RequiredMark --> useCallback
+    RequiredMark --> useEffect
+    RequiredMark --> useState
+    ResetPasswordPage --> useEffect
+    ResetPasswordPage --> useLocation
+    ResetPasswordPage --> useNavigate
+    ResetPasswordPage --> useState
+    SignupPage --> useNavigate
+    SignupPage --> useState
+    SmartFilterRow --> useEffect
+    SmartFilterRow --> useRef
+    SmartFilterRow --> useState
+    SortIcon --> useAuth
+    SortIcon --> useCallback
+    SortIcon --> useEffect
+    SortIcon --> useMemo
+    SortIcon --> useState
+    SortableHeader --> useAuth
+    SortableHeader --> useEffect
+    SortableHeader --> useMemo
+    SortableHeader --> useState
+    StatCard --> useCallback
+    StatCard --> useEffect
+    StatCard --> useState
+    SubscriptionFormModal --> useAuth
+    SubscriptionFormModal --> useCallback
+    SubscriptionFormModal --> useEffect
+    SubscriptionFormModal --> useState
+    SummaryRow --> useEffect
+    SummaryRow --> useState
+    SummarySection --> useEffect
+    SummarySection --> useState
+    ThemeProvider --> useCallback
+    ThemeProvider --> useContext
+    ThemeProvider --> useEffect
+    ThemeToggle --> useAuth
+    ThemeToggle --> useLocation
+    ThemeToggle --> useNavigate
+    ThemeToggle --> useTheme
+    Tooltip --> useCallback
+    Tooltip --> useLayoutEffect
+    Tooltip --> useState
+    UsersPage --> useAuth
+    UsersPage --> useCallback
+    UsersPage --> useEffect
+    UsersPage --> useMemo
+    UsersPage --> useState
+    ValuePicker --> useEffect
+    ValuePicker --> useRef
+    ValuePicker --> useState
+    VerifySignupPage --> useAuth
+    VerifySignupPage --> useEffect
+    VerifySignupPage --> useLocation
+    VerifySignupPage --> useNavigate
+    VerifySignupPage --> useState
+    WorkspaceAdminManager --> useAuth
+    WorkspaceAdminManager --> useEffect
+    WorkspaceAdminManager --> useState
+    WorkspaceCreationWizard --> useEffect
+    WorkspaceCreationWizard --> useState
+    WorkspaceDashboard --> useAuth
+    WorkspaceDashboard --> useEffect
+    WorkspaceDashboard --> useMemo
+    WorkspaceDashboard --> useState
+    WorkspaceFormModal --> useAuth
+    WorkspaceFormModal --> useEffect
+    WorkspaceFormModal --> useState
+    WorkspaceManagementPage --> useAuth
+    WorkspaceManagementPage --> useCallback
+    WorkspaceManagementPage --> useEffect
+    WorkspaceManagementPage --> useState
+    WorkspaceShell --> useAuth
+    WorkspaceShell --> useLocation
+    WorkspaceShell --> useNavigate
+    WorkspaceShell --> useTheme

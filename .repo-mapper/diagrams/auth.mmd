@@ -1,0 +1,44 @@
+flowchart LR
+    Client[Client]
+    Auth401EntryPoint[Auth401EntryPoint]
+    Auth403AccessDeniedHandler[Auth403AccessDeniedHandler]
+    JwtAuthenticationFilter[JwtAuthenticationFilter]
+    SecurityConfig[SecurityConfig]
+    AuthController[AuthController]
+    AuthResponseDto[AuthResponseDto]
+    LoginRequestDto[LoginRequestDto]
+    RefreshTokenRequestDto[RefreshTokenRequestDto]
+    RefreshToken[RefreshToken]
+    RefreshTokenRepository[RefreshTokenRepository]
+    AuthService[AuthService]
+    JwtService[JwtService]
+    RefreshTokenService[RefreshTokenService]
+    SecurityConfigTest[SecurityConfigTest]
+    AuthControllerTest[AuthControllerTest]
+    AuthorizationIntegrationTest[AuthorizationIntegrationTest]
+    AuthServiceTest[AuthServiceTest]
+    JwtServiceTest[JwtServiceTest]
+    AuthShell[AuthShell]
+    AuthProvider[AuthProvider]
+    LoginPage[LoginPage]
+    Client --> Auth401EntryPoint
+    Auth401EntryPoint --> Auth403AccessDeniedHandler
+    Auth403AccessDeniedHandler --> JwtAuthenticationFilter
+    JwtAuthenticationFilter --> SecurityConfig
+    SecurityConfig --> AuthController
+    AuthController --> AuthResponseDto
+    AuthResponseDto --> LoginRequestDto
+    LoginRequestDto --> RefreshTokenRequestDto
+    RefreshTokenRequestDto --> RefreshToken
+    RefreshToken --> RefreshTokenRepository
+    RefreshTokenRepository --> AuthService
+    AuthService --> JwtService
+    JwtService --> RefreshTokenService
+    RefreshTokenService --> SecurityConfigTest
+    SecurityConfigTest --> AuthControllerTest
+    AuthControllerTest --> AuthorizationIntegrationTest
+    AuthorizationIntegrationTest --> AuthServiceTest
+    AuthServiceTest --> JwtServiceTest
+    JwtServiceTest --> AuthShell
+    AuthShell --> AuthProvider
+    AuthProvider --> LoginPage
