@@ -1,1 +1,324 @@
-null
+[
+  {
+    "method": "GET",
+    "path": "/api/admin/issues",
+    "controller": "IssueReportController",
+    "handler": "PreAuthorize",
+    "file": "backend/src/main/java/com/anushibinj/veemailer/controller/IssueReportController.java"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/admin/issues/{issueId}/status",
+    "controller": "IssueReportController",
+    "handler": "PreAuthorize",
+    "file": "backend/src/main/java/com/anushibinj/veemailer/controller/IssueReportController.java"
+  },
+  {
+    "method": "POST",
+    "path": "/api/auth/accept-invite",
+    "controller": "AuthController",
+    "handler": "acceptInvite",
+    "file": "backend/src/main/java/com/anushibinj/veemailer/controller/AuthController.java"
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/allowed-domains",
+    "controller": "AuthController",
+    "handler": "getAllowedDomains",
+    "file": "backend/src/main/java/com/anushibinj/veemailer/controller/AuthController.java"
+  },
+  {
+    "method": "POST",
+    "path": "/api/auth/forgot-password",
+    "controller": "AuthController",
+    "handler": "forgotPassword",
+    "file": "backend/src/main/java/com/anushibinj/veemailer/controller/AuthController.java"
+  },
+  {
+    "method": "POST",
+    "path": "/api/auth/login",
+    "controller": "AuthController",
+    "handler": "login",
+    "file": "backend/src/main/java/com/anushibinj/veemailer/controller/AuthController.java"
+  },
+  {
+    "method": "POST",
+    "path": "/api/auth/logout",
+    "controller": "AuthController",
+    "handler": "logout",
+    "file": "backend/src/main/java/com/anushibinj/veemailer/controller/AuthController.java"
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "controller": "AuthController",
+    "handler": "getCurrentUser",
+    "file": "backend/src/main/java/com/anushibinj/veemailer/controller/AuthController.java"
+  },
+  {
+    "method": "POST",
+    "path": "/api/auth/refresh",
+    "controller": "AuthController",
+    "handler": "refreshToken",
+    "file": "backend/src/main/java/com/anushibinj/veemailer/controller/AuthController.java"
+  },
+  {
+    "method": "POST",
+    "path": "/api/auth/request-invite-link",
+    "controller": "AuthController",
+    "handler": "requestInviteLink",
+    "file": "backend/src/main/java/com/anushibinj/veemailer/controller/AuthController.java"
+  },
+  {
+    "method": "POST",
+    "path": "/api/auth/reset-password",
+    "controller": "AuthController",
+    "handler": "resetPassword",
+    "file": "backend/src/main/java/com/anushibinj/veemailer/controller/AuthController.java"
+  },
+  {
+    "method": "POST",
+    "path": "/api/auth/signup",
+    "controller": "AuthController",
+    "handler": "signup",
+    "file": "backend/src/main/java/com/anushibinj/veemailer/controller/AuthController.java"
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/verify-invite-link",
+    "controller": "AuthController",
+    "handler": "verifyInviteLink",
+    "file": "backend/src/main/java/com/anushibinj/veemailer/controller/AuthController.java"
+  },
+  {
+    "method": "POST",
+    "path": "/api/auth/verify-reset-otp",
+    "controller": "AuthController",
+    "handler": "verifyResetOtp",
+    "file": "backend/src/main/java/com/anushibinj/veemailer/controller/AuthController.java"
+  },
+  {
+    "method": "POST",
+    "path": "/api/auth/verify-signup",
+    "controller": "AuthController",
+    "handler": "verifySignup",
+    "file": "backend/src/main/java/com/anushibinj/veemailer/controller/AuthController.java"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/issues",
+    "controller": "IssueReportController",
+    "handler": "submitIssue",
+    "file": "backend/src/main/java/com/anushibinj/veemailer/controller/IssueReportController.java"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/issues/config",
+    "controller": "IssueReportController",
+    "handler": "getIssueUploadConfig",
+    "file": "backend/src/main/java/com/anushibinj/veemailer/controller/IssueReportController.java"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/workspaces/all",
+    "controller": "WorkspaceController",
+    "handler": "PreAuthorize",
+    "file": "backend/src/main/java/com/anushibinj/veemailer/controller/WorkspaceController.java"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/workspaces/check-duplicate",
+    "controller": "WorkspaceController",
+    "handler": "PreAuthorize",
+    "file": "backend/src/main/java/com/anushibinj/veemailer/controller/WorkspaceController.java"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/workspaces/discover-metadata",
+    "controller": "WorkspaceController",
+    "handler": "PreAuthorize",
+    "file": "backend/src/main/java/com/anushibinj/veemailer/controller/WorkspaceController.java"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/workspaces/test-connection",
+    "controller": "WorkspaceController",
+    "handler": "PreAuthorize",
+    "file": "backend/src/main/java/com/anushibinj/veemailer/controller/WorkspaceController.java"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v1/workspaces/{id}",
+    "controller": "WorkspaceController",
+    "handler": "PreAuthorize",
+    "file": "backend/src/main/java/com/anushibinj/veemailer/controller/WorkspaceController.java"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/workspaces/{id}",
+    "controller": "WorkspaceController",
+    "handler": "getWorkspace",
+    "file": "backend/src/main/java/com/anushibinj/veemailer/controller/WorkspaceController.java"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/workspaces/{id}",
+    "controller": "WorkspaceController",
+    "handler": "PreAuthorize",
+    "file": "backend/src/main/java/com/anushibinj/veemailer/controller/WorkspaceController.java"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/workspaces/{id}/refetch-metadata",
+    "controller": "WorkspaceController",
+    "handler": "PreAuthorize",
+    "file": "backend/src/main/java/com/anushibinj/veemailer/controller/WorkspaceController.java"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspaceId}/admins",
+    "controller": "WorkspaceController",
+    "handler": "PreAuthorize",
+    "file": "backend/src/main/java/com/anushibinj/veemailer/controller/WorkspaceController.java"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspaceId}/admins",
+    "controller": "WorkspaceController",
+    "handler": "PreAuthorize",
+    "file": "backend/src/main/java/com/anushibinj/veemailer/controller/WorkspaceController.java"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v1/workspaces/{workspaceId}/admins/{userId}",
+    "controller": "WorkspaceController",
+    "handler": "PreAuthorize",
+    "file": "backend/src/main/java/com/anushibinj/veemailer/controller/WorkspaceController.java"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspaceId}/subscriptions",
+    "controller": "WorkspaceController",
+    "handler": "getSubscriptions",
+    "file": "backend/src/main/java/com/anushibinj/veemailer/controller/WorkspaceController.java"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspaceId}/subscriptions",
+    "controller": "WorkspaceController",
+    "handler": "createSubscription",
+    "file": "backend/src/main/java/com/anushibinj/veemailer/controller/WorkspaceController.java"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspaceId}/subscriptions/bulk-group",
+    "controller": "WorkspaceController",
+    "handler": "PreAuthorize",
+    "file": "backend/src/main/java/com/anushibinj/veemailer/controller/WorkspaceController.java"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}",
+    "controller": "WorkspaceController",
+    "handler": "deleteSubscription",
+    "file": "backend/src/main/java/com/anushibinj/veemailer/controller/WorkspaceController.java"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}",
+    "controller": "WorkspaceController",
+    "handler": "updateSubscription",
+    "file": "backend/src/main/java/com/anushibinj/veemailer/controller/WorkspaceController.java"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}/run",
+    "controller": "WorkspaceController",
+    "handler": "PreAuthorize",
+    "file": "backend/src/main/java/com/anushibinj/veemailer/controller/WorkspaceController.java"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}/toggle",
+    "controller": "WorkspaceController",
+    "handler": "toggleSubscription",
+    "file": "backend/src/main/java/com/anushibinj/veemailer/controller/WorkspaceController.java"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/workspaces/{workspaceId}/users",
+    "controller": "WorkspaceController",
+    "handler": "PreAuthorize",
+    "file": "backend/src/main/java/com/anushibinj/veemailer/controller/WorkspaceController.java"
+  },
+  {
+    "method": "GET",
+    "path": "/daily-recipients",
+    "controller": "MailAnalyticsController",
+    "handler": "getDailyRecipients",
+    "file": "backend/src/main/java/com/anushibinj/veemailer/controller/MailAnalyticsController.java"
+  },
+  {
+    "method": "GET",
+    "path": "/daily-volume",
+    "controller": "MailAnalyticsController",
+    "handler": "getDailyVolume",
+    "file": "backend/src/main/java/com/anushibinj/veemailer/controller/MailAnalyticsController.java"
+  },
+  {
+    "method": "GET",
+    "path": "/filter-usage",
+    "controller": "MailAnalyticsController",
+    "handler": "getFilterUsage",
+    "file": "backend/src/main/java/com/anushibinj/veemailer/controller/MailAnalyticsController.java"
+  },
+  {
+    "method": "GET",
+    "path": "/history",
+    "controller": "MailAnalyticsController",
+    "handler": "getHistory",
+    "file": "backend/src/main/java/com/anushibinj/veemailer/controller/MailAnalyticsController.java"
+  },
+  {
+    "method": "GET",
+    "path": "/non-app-users",
+    "controller": "UserManagementController",
+    "handler": "getNonAppUsers",
+    "file": "backend/src/main/java/com/anushibinj/veemailer/controller/UserManagementController.java"
+  },
+  {
+    "method": "GET",
+    "path": "/summary",
+    "controller": "MailAnalyticsController",
+    "handler": "getSummary",
+    "file": "backend/src/main/java/com/anushibinj/veemailer/controller/MailAnalyticsController.java"
+  },
+  {
+    "method": "GET",
+    "path": "/workspace-distribution",
+    "controller": "MailAnalyticsController",
+    "handler": "getWorkspaceDistribution",
+    "file": "backend/src/main/java/com/anushibinj/veemailer/controller/MailAnalyticsController.java"
+  },
+  {
+    "method": "DELETE",
+    "path": "/{userId}",
+    "controller": "UserManagementController",
+    "handler": "deleteUser",
+    "file": "backend/src/main/java/com/anushibinj/veemailer/controller/UserManagementController.java"
+  },
+  {
+    "method": "POST",
+    "path": "/{userId}/resend-invite",
+    "controller": "UserManagementController",
+    "handler": "resendInvite",
+    "file": "backend/src/main/java/com/anushibinj/veemailer/controller/UserManagementController.java"
+  },
+  {
+    "method": "PATCH",
+    "path": "/{userId}/role",
+    "controller": "UserManagementController",
+    "handler": "updateGlobalRole",
+    "file": "backend/src/main/java/com/anushibinj/veemailer/controller/UserManagementController.java"
+  }
+]

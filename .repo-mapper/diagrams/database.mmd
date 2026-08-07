@@ -1,2 +1,172 @@
 erDiagram
-    %% No tables detected
+    ai_preferences {
+        VARCHAR api_key
+        VARCHAR base_url
+        VARCHAR chat_completions_path
+        UUID id
+        VARCHAR model
+    }
+    app_users {
+        TIMESTAMP created_at
+        VARCHAR email
+        BOOLEAN enabled
+        UUID id
+        VARCHAR name
+        VARCHAR password_hash
+        TIMESTAMP updated_at
+    }
+    email_subscribers {
+        UUID filter_id
+        VARCHAR frequency
+        UUID id
+        VARCHAR recipient_email
+        VARCHAR schedule_type
+        VARCHAR status
+        UUID workspace_id
+    }
+    filters {
+        TEXT criteria
+        VARCHAR description
+        VARCHAR entity_type
+        TEXT fields
+        UUID id
+        VARCHAR title
+        UUID workspace_id
+    }
+    general_settings {
+        UUID id
+        INT query_limit
+    }
+    invite_magic_links {
+        VARCHAR email
+        TIMESTAMP expires_at
+        UUID id
+        TIMESTAMP last_sent_at
+        INTEGER resend_count
+        VARCHAR token_hash
+        TIMESTAMP used_at
+    }
+    issue_reports {
+        TIMESTAMP created_at
+        UUID id
+        TEXT message
+        VARCHAR reporter_email
+        VARCHAR screenshot_content_type
+        BYTEA screenshot_data
+        VARCHAR screenshot_file_name
+        VARCHAR status
+        TIMESTAMP updated_at
+    }
+    mail_audit_log {
+        VARCHAR delivery_status
+        BIGINT duration_ms
+        VARCHAR failure_reason
+        UUID filter_template_id
+        VARCHAR filter_title
+        UUID id
+        VARCHAR mail_subject
+        VARCHAR recipient_email
+        TIMESTAMP sent_at
+        UUID subscription_id
+        INTEGER ticket_count
+        UUID user_id
+        UUID workspace_id
+        VARCHAR workspace_title
+    }
+    notification_preferences {
+        VARCHAR host
+        UUID id
+        VARCHAR password
+        INT port
+        BOOLEAN start_tls_enabled
+        VARCHAR username
+    }
+    otp_requests {
+        VARCHAR action_type
+        VARCHAR email
+        TIMESTAMP expires_at
+        UUID id
+        VARCHAR otp_hash
+        TEXT payload
+    }
+    recipient_group_members {
+        UUID group_id
+        VARCHAR member_email
+    }
+    recipient_groups {
+        TIMESTAMP created_at
+        VARCHAR created_by
+        VARCHAR description
+        UUID id
+        VARCHAR name
+        UUID workspace_id
+    }
+    refresh_tokens {
+        TIMESTAMP expires_at
+        UUID id
+        BOOLEAN revoked
+        VARCHAR token
+        UUID user_id
+    }
+    roles {
+        UUID id
+        VARCHAR role_name
+    }
+    subscriber_scheduled_hours {
+        INTEGER scheduled_hour
+        UUID subscriber_id
+    }
+    user_roles {
+        UUID role_id
+        UUID user_id
+    }
+    workspace_admins {
+        TIMESTAMP created_at
+        VARCHAR created_by
+        UUID id
+        UUID user_id
+        UUID workspace_id
+    }
+    workspaces {
+        VARCHAR client_id
+        VARCHAR client_key
+        UUID id
+        VARCHAR shared_space_id
+        VARCHAR title
+        VARCHAR workspace_id
+    }
+    ai_preferences ||--o{ PRIMARY : "references"
+    ai_preferences ||--o{ UUID : "references"
+    app_users ||--o{ UUID : "references"
+    email_subscribers ||--o{ Frequency : "references"
+    email_subscribers ||--o{ RecipientGroup : "references"
+    email_subscribers ||--o{ ScheduleType : "references"
+    email_subscribers ||--o{ Status : "references"
+    email_subscribers ||--o{ TriageSlaThreshold : "references"
+    email_subscribers ||--o{ UUID : "references"
+    email_subscribers ||--o{ Workspace : "references"
+    email_subscribers ||--o{ filters : "references"
+    email_subscribers ||--o{ workspaces : "references"
+    filters ||--o{ UUID : "references"
+    filters ||--o{ Workspace : "references"
+    filters ||--o{ workspaces : "references"
+    general_settings ||--o{ UUID : "references"
+    invite_magic_links ||--o{ UUID : "references"
+    issue_reports ||--o{ IssueStatus : "references"
+    issue_reports ||--o{ UUID : "references"
+    mail_audit_log ||--o{ DeliveryStatus : "references"
+    mail_audit_log ||--o{ UUID : "references"
+    notification_preferences ||--o{ PRIMARY : "references"
+    notification_preferences ||--o{ UUID : "references"
+    otp_requests ||--o{ ActionType : "references"
+    otp_requests ||--o{ UUID : "references"
+    recipient_group_members ||--o{ recipient_groups : "references"
+    recipient_groups ||--o{ workspaces : "references"
+    refresh_tokens ||--o{ UUID : "references"
+    refresh_tokens ||--o{ app_users : "references"
+    roles ||--o{ UUID : "references"
+    subscriber_scheduled_hours ||--o{ email_subscribers : "references"
+    user_roles ||--o{ app_users : "references"
+    user_roles ||--o{ roles : "references"
+    workspace_admins ||--o{ app_users : "references"
+    workspace_admins ||--o{ workspaces : "references"

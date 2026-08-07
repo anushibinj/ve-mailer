@@ -3,22 +3,4736 @@
   "rootPath": "/home/runner/work/ve-mailer/ve-mailer",
   "languages": [
     {
-      "name": "JSON",
+      "name": "CSS",
+      "fileCount": 2
+    },
+    {
+      "name": "Docker",
+      "fileCount": 2
+    },
+    {
+      "name": "HTML",
       "fileCount": 1
     },
     {
+      "name": "JSON",
+      "fileCount": 4
+    },
+    {
+      "name": "Java",
+      "fileCount": 205
+    },
+    {
+      "name": "JavaScript",
+      "fileCount": 3
+    },
+    {
       "name": "Markdown",
+      "fileCount": 7
+    },
+    {
+      "name": "Node",
       "fileCount": 1
+    },
+    {
+      "name": "SQL",
+      "fileCount": 28
+    },
+    {
+      "name": "TypeScript",
+      "fileCount": 56
+    },
+    {
+      "name": "XML",
+      "fileCount": 1
+    },
+    {
+      "name": "YAML",
+      "fileCount": 6
     }
   ],
-  "modules": null,
-  "features": null,
-  "components": [],
-  "routes": null,
-  "apis": null,
-  "tables": [],
+  "modules": [
+    {
+      "name": "frontend",
+      "path": "frontend",
+      "kind": "frontend"
+    }
+  ],
+  "features": [
+    {
+      "feature": "About",
+      "backend": [
+        "AboutController"
+      ]
+    },
+    {
+      "feature": "Acceptinvite",
+      "frontend": [
+        "AcceptInvitePage"
+      ]
+    },
+    {
+      "feature": "Addmemberpicker",
+      "frontend": [
+        "AddMemberPicker"
+      ]
+    },
+    {
+      "feature": "Adminbootstrap",
+      "backend": [
+        "AdminBootstrapService"
+      ]
+    },
+    {
+      "feature": "Admincontrolpanel",
+      "frontend": [
+        "AdminControlPanel"
+      ]
+    },
+    {
+      "feature": "Aipreferences",
+      "frontend": [
+        "AiPreferencesPage"
+      ],
+      "backend": [
+        "AiPreferences",
+        "AiPreferencesController",
+        "AiPreferencesService"
+      ],
+      "database": [
+        "ai_preferences"
+      ]
+    },
+    {
+      "feature": "Aisummary",
+      "backend": [
+        "AiSummaryService"
+      ]
+    },
+    {
+      "feature": "App",
+      "frontend": [
+        "App"
+      ]
+    },
+    {
+      "feature": "Appbreadcrumbs",
+      "frontend": [
+        "AppBreadcrumbs"
+      ]
+    },
+    {
+      "feature": "Appfooter",
+      "frontend": [
+        "AppFooter"
+      ]
+    },
+    {
+      "feature": "Appheader",
+      "frontend": [
+        "AppHeader"
+      ]
+    },
+    {
+      "feature": "Appshell",
+      "frontend": [
+        "AppShell"
+      ]
+    },
+    {
+      "feature": "Appuser",
+      "backend": [
+        "AppUser",
+        "AppUserRepository"
+      ],
+      "database": [
+        "app_users"
+      ]
+    },
+    {
+      "feature": "Appuserdetails",
+      "backend": [
+        "AppUserDetailsService"
+      ]
+    },
+    {
+      "feature": "Auth",
+      "backend": [
+        "AuthController",
+        "AuthService"
+      ],
+      "apis": [
+        "/api/auth/accept-invite",
+        "/api/auth/allowed-domains",
+        "/api/auth/forgot-password",
+        "/api/auth/login",
+        "/api/auth/logout",
+        "/api/auth/me",
+        "/api/auth/refresh",
+        "/api/auth/request-invite-link",
+        "/api/auth/reset-password",
+        "/api/auth/signup",
+        "/api/auth/verify-invite-link",
+        "/api/auth/verify-reset-otp",
+        "/api/auth/verify-signup"
+      ]
+    },
+    {
+      "feature": "Auth401entrypoint",
+      "backend": [
+        "Auth401EntryPoint"
+      ]
+    },
+    {
+      "feature": "Auth403accessdeniedhandler",
+      "backend": [
+        "Auth403AccessDeniedHandler"
+      ]
+    },
+    {
+      "feature": "Authprovider",
+      "frontend": [
+        "AuthProvider"
+      ]
+    },
+    {
+      "feature": "Authshell",
+      "frontend": [
+        "AuthShell"
+      ]
+    },
+    {
+      "feature": "Badge",
+      "frontend": [
+        "Badge"
+      ]
+    },
+    {
+      "feature": "Button",
+      "frontend": [
+        "Button"
+      ]
+    },
+    {
+      "feature": "Card",
+      "frontend": [
+        "Card"
+      ]
+    },
+    {
+      "feature": "Cardbody",
+      "frontend": [
+        "CardBody"
+      ]
+    },
+    {
+      "feature": "Cardheader",
+      "frontend": [
+        "CardHeader"
+      ]
+    },
+    {
+      "feature": "Cleanup",
+      "backend": [
+        "CleanupService"
+      ]
+    },
+    {
+      "feature": "Confirmdialog",
+      "frontend": [
+        "ConfirmDialog"
+      ]
+    },
+    {
+      "feature": "Connectivitybadge",
+      "frontend": [
+        "ConnectivityBadge"
+      ]
+    },
+    {
+      "feature": "Duplicateworkspaceconflictbanner",
+      "frontend": [
+        "DuplicateWorkspaceConflictBanner"
+      ]
+    },
+    {
+      "feature": "Dynamicaiclient",
+      "backend": [
+        "DynamicAiClientService"
+      ]
+    },
+    {
+      "feature": "Dynamicmailsender",
+      "backend": [
+        "DynamicMailSenderService"
+      ]
+    },
+    {
+      "feature": "Editsubscriptionmodal",
+      "frontend": [
+        "EditSubscriptionModal"
+      ]
+    },
+    {
+      "feature": "Email",
+      "backend": [
+        "EmailService"
+      ]
+    },
+    {
+      "feature": "Emailsubscriber",
+      "backend": [
+        "EmailSubscriber",
+        "EmailSubscriberRepository"
+      ],
+      "database": [
+        "email_subscribers"
+      ]
+    },
+    {
+      "feature": "Emptystate",
+      "frontend": [
+        "EmptyState"
+      ]
+    },
+    {
+      "feature": "Errorstate",
+      "frontend": [
+        "ErrorState"
+      ]
+    },
+    {
+      "feature": "Fieldbadgewithpopover",
+      "frontend": [
+        "FieldBadgeWithPopover"
+      ]
+    },
+    {
+      "feature": "Fieldextractorregistry",
+      "backend": [
+        "FieldExtractorRegistry"
+      ]
+    },
+    {
+      "feature": "Fieldselect",
+      "frontend": [
+        "FieldSelect"
+      ]
+    },
+    {
+      "feature": "Filter",
+      "backend": [
+        "Filter",
+        "FilterRepository",
+        "FilterService"
+      ],
+      "database": [
+        "filters"
+      ]
+    },
+    {
+      "feature": "Filterbuilder",
+      "frontend": [
+        "FilterBuilderView"
+      ]
+    },
+    {
+      "feature": "Forgotpassword",
+      "frontend": [
+        "ForgotPasswordPage"
+      ]
+    },
+    {
+      "feature": "Generalsettings",
+      "frontend": [
+        "GeneralSettingsPage"
+      ],
+      "backend": [
+        "GeneralSettings",
+        "GeneralSettingsController",
+        "GeneralSettingsRepository",
+        "GeneralSettingsService"
+      ],
+      "database": [
+        "general_settings"
+      ]
+    },
+    {
+      "feature": "Groupformmodal",
+      "frontend": [
+        "GroupFormModal"
+      ]
+    },
+    {
+      "feature": "Input",
+      "frontend": [
+        "Input"
+      ]
+    },
+    {
+      "feature": "Invitemagiclink",
+      "backend": [
+        "InviteMagicLink",
+        "InviteMagicLinkRepository",
+        "InviteMagicLinkService"
+      ],
+      "database": [
+        "invite_magic_links"
+      ]
+    },
+    {
+      "feature": "Issuereport",
+      "backend": [
+        "IssueReport",
+        "IssueReportController",
+        "IssueReportRepository",
+        "IssueReportService"
+      ],
+      "apis": [
+        "/api/admin/issues",
+        "/api/admin/issues/{issueId}/status",
+        "/api/v1/issues",
+        "/api/v1/issues/config"
+      ],
+      "database": [
+        "issue_reports"
+      ]
+    },
+    {
+      "feature": "Issuereportmodal",
+      "frontend": [
+        "IssueReportModal"
+      ]
+    },
+    {
+      "feature": "Issues",
+      "frontend": [
+        "IssuesPage"
+      ]
+    },
+    {
+      "feature": "Jwt",
+      "backend": [
+        "JwtService"
+      ]
+    },
+    {
+      "feature": "Jwtauthenticationfilter",
+      "backend": [
+        "JwtAuthenticationFilter"
+      ]
+    },
+    {
+      "feature": "Landing",
+      "frontend": [
+        "LandingView"
+      ]
+    },
+    {
+      "feature": "Loadingplaceholder",
+      "frontend": [
+        "LoadingPlaceholder"
+      ]
+    },
+    {
+      "feature": "Login",
+      "frontend": [
+        "LoginPage"
+      ]
+    },
+    {
+      "feature": "Mailanalytics",
+      "frontend": [
+        "MailAnalyticsPage"
+      ],
+      "backend": [
+        "MailAnalyticsController",
+        "MailAnalyticsService"
+      ],
+      "apis": [
+        "/daily-recipients",
+        "/daily-volume",
+        "/filter-usage",
+        "/history",
+        "/summary",
+        "/workspace-distribution"
+      ]
+    },
+    {
+      "feature": "Mailaudit",
+      "backend": [
+        "MailAuditService"
+      ]
+    },
+    {
+      "feature": "Mailauditlog",
+      "backend": [
+        "MailAuditLog",
+        "MailAuditLogRepository"
+      ],
+      "database": [
+        "mail_audit_log"
+      ]
+    },
+    {
+      "feature": "Notification",
+      "backend": [
+        "NotificationService"
+      ]
+    },
+    {
+      "feature": "Notificationpreferences",
+      "frontend": [
+        "NotificationPreferencesPage"
+      ],
+      "backend": [
+        "NotificationPreferences",
+        "NotificationPreferencesController",
+        "NotificationPreferencesService"
+      ],
+      "database": [
+        "notification_preferences"
+      ]
+    },
+    {
+      "feature": "Octanecache",
+      "backend": [
+        "OctaneCacheService"
+      ]
+    },
+    {
+      "feature": "Octanemetadata",
+      "backend": [
+        "OctaneMetadataService"
+      ]
+    },
+    {
+      "feature": "Onboardmodal",
+      "frontend": [
+        "OnboardModal"
+      ]
+    },
+    {
+      "feature": "Otp",
+      "backend": [
+        "OtpService"
+      ]
+    },
+    {
+      "feature": "Otprequest",
+      "backend": [
+        "OtpRequest",
+        "OtpRequestRepository"
+      ],
+      "database": [
+        "otp_requests"
+      ]
+    },
+    {
+      "feature": "Pageheader",
+      "frontend": [
+        "PageHeader"
+      ]
+    },
+    {
+      "feature": "Polling",
+      "backend": [
+        "PollingService"
+      ]
+    },
+    {
+      "feature": "Protectedroute",
+      "frontend": [
+        "ProtectedRoute"
+      ]
+    },
+    {
+      "feature": "Recipient_group_members",
+      "database": [
+        "recipient_group_members"
+      ]
+    },
+    {
+      "feature": "Recipient_groups",
+      "database": [
+        "recipient_groups"
+      ]
+    },
+    {
+      "feature": "Recipientgroup",
+      "backend": [
+        "RecipientGroupRepository",
+        "RecipientGroupService"
+      ]
+    },
+    {
+      "feature": "Recipientgroups",
+      "frontend": [
+        "RecipientGroupsPage",
+        "RecipientGroupsView"
+      ]
+    },
+    {
+      "feature": "Refreshtoken",
+      "backend": [
+        "RefreshToken",
+        "RefreshTokenRepository",
+        "RefreshTokenService"
+      ],
+      "database": [
+        "refresh_tokens"
+      ]
+    },
+    {
+      "feature": "Requiredmark",
+      "frontend": [
+        "RequiredMark"
+      ]
+    },
+    {
+      "feature": "Resetpassword",
+      "frontend": [
+        "ResetPasswordPage"
+      ]
+    },
+    {
+      "feature": "Role",
+      "backend": [
+        "Role",
+        "RoleRepository"
+      ],
+      "database": [
+        "roles"
+      ]
+    },
+    {
+      "feature": "Schedulemigrationrunner",
+      "backend": [
+        "ScheduleMigrationRunner"
+      ]
+    },
+    {
+      "feature": "Searchinput",
+      "frontend": [
+        "SearchInput"
+      ]
+    },
+    {
+      "feature": "Sectionheader",
+      "frontend": [
+        "SectionHeader"
+      ]
+    },
+    {
+      "feature": "Select",
+      "frontend": [
+        "Select"
+      ]
+    },
+    {
+      "feature": "Signup",
+      "frontend": [
+        "SignupPage"
+      ]
+    },
+    {
+      "feature": "Skeleton",
+      "frontend": [
+        "Skeleton"
+      ]
+    },
+    {
+      "feature": "Skeletoncard",
+      "frontend": [
+        "SkeletonCard"
+      ]
+    },
+    {
+      "feature": "Skeletoncardgrid",
+      "frontend": [
+        "SkeletonCardGrid"
+      ]
+    },
+    {
+      "feature": "Skeletondashboard",
+      "frontend": [
+        "SkeletonDashboard"
+      ]
+    },
+    {
+      "feature": "Skeletonrow",
+      "frontend": [
+        "SkeletonRow"
+      ]
+    },
+    {
+      "feature": "Skeletontext",
+      "frontend": [
+        "SkeletonText"
+      ]
+    },
+    {
+      "feature": "Smartfilterrow",
+      "frontend": [
+        "SmartFilterRow"
+      ]
+    },
+    {
+      "feature": "Sortableheader",
+      "frontend": [
+        "SortableHeader"
+      ]
+    },
+    {
+      "feature": "Sorticon",
+      "frontend": [
+        "SortIcon"
+      ]
+    },
+    {
+      "feature": "Statcard",
+      "frontend": [
+        "StatCard"
+      ]
+    },
+    {
+      "feature": "Stubappshell",
+      "frontend": [
+        "StubAppShell"
+      ]
+    },
+    {
+      "feature": "Subscriber_scheduled_hours",
+      "database": [
+        "subscriber_scheduled_hours"
+      ]
+    },
+    {
+      "feature": "Subscription",
+      "backend": [
+        "SubscriptionController",
+        "SubscriptionService"
+      ]
+    },
+    {
+      "feature": "Subscriptionformmodal",
+      "frontend": [
+        "SubscriptionFormModal"
+      ]
+    },
+    {
+      "feature": "Summaryrow",
+      "frontend": [
+        "SummaryRow"
+      ]
+    },
+    {
+      "feature": "Summarysection",
+      "frontend": [
+        "SummarySection"
+      ]
+    },
+    {
+      "feature": "Tableactionbutton",
+      "frontend": [
+        "TableActionButton"
+      ]
+    },
+    {
+      "feature": "Textarea",
+      "frontend": [
+        "Textarea"
+      ]
+    },
+    {
+      "feature": "Themeprovider",
+      "frontend": [
+        "ThemeProvider"
+      ]
+    },
+    {
+      "feature": "Themetoggle",
+      "frontend": [
+        "ThemeToggle"
+      ]
+    },
+    {
+      "feature": "Ticketcomment",
+      "backend": [
+        "TicketCommentService"
+      ]
+    },
+    {
+      "feature": "Tooltip",
+      "frontend": [
+        "Tooltip"
+      ]
+    },
+    {
+      "feature": "User_roles",
+      "database": [
+        "user_roles"
+      ]
+    },
+    {
+      "feature": "Usermanagement",
+      "backend": [
+        "UserManagementController"
+      ],
+      "apis": [
+        "/non-app-users",
+        "/{userId}",
+        "/{userId}/resend-invite",
+        "/{userId}/role"
+      ]
+    },
+    {
+      "feature": "Userquery",
+      "backend": [
+        "UserQueryService"
+      ]
+    },
+    {
+      "feature": "Users",
+      "frontend": [
+        "UsersPage"
+      ]
+    },
+    {
+      "feature": "Valuepicker",
+      "frontend": [
+        "ValuePicker"
+      ]
+    },
+    {
+      "feature": "Verifysignup",
+      "frontend": [
+        "VerifySignupPage"
+      ]
+    },
+    {
+      "feature": "Veutils",
+      "backend": [
+        "VeUtils"
+      ]
+    },
+    {
+      "feature": "Workspace",
+      "backend": [
+        "WorkspaceController",
+        "WorkspaceRepository",
+        "WorkspaceService"
+      ],
+      "apis": [
+        "/api/v1/workspaces/all",
+        "/api/v1/workspaces/check-duplicate",
+        "/api/v1/workspaces/discover-metadata",
+        "/api/v1/workspaces/test-connection",
+        "/api/v1/workspaces/{id}",
+        "/api/v1/workspaces/{id}/refetch-metadata",
+        "/api/v1/workspaces/{workspaceId}/admins",
+        "/api/v1/workspaces/{workspaceId}/admins/{userId}",
+        "/api/v1/workspaces/{workspaceId}/subscriptions",
+        "/api/v1/workspaces/{workspaceId}/subscriptions/bulk-group",
+        "/api/v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}",
+        "/api/v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}/run",
+        "/api/v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}/toggle",
+        "/api/v1/workspaces/{workspaceId}/users"
+      ]
+    },
+    {
+      "feature": "Workspace_admins",
+      "database": [
+        "workspace_admins"
+      ]
+    },
+    {
+      "feature": "Workspaceadmin",
+      "backend": [
+        "WorkspaceAdminRepository",
+        "WorkspaceAdminService"
+      ]
+    },
+    {
+      "feature": "Workspaceadminmanager",
+      "frontend": [
+        "WorkspaceAdminManager"
+      ]
+    },
+    {
+      "feature": "Workspaceconnectivitypolling",
+      "backend": [
+        "WorkspaceConnectivityPollingService"
+      ]
+    },
+    {
+      "feature": "Workspacecreationwizard",
+      "frontend": [
+        "WorkspaceCreationWizard"
+      ]
+    },
+    {
+      "feature": "Workspacedashboard",
+      "frontend": [
+        "WorkspaceDashboard"
+      ]
+    },
+    {
+      "feature": "Workspacediscovery",
+      "backend": [
+        "WorkspaceDiscoveryService"
+      ]
+    },
+    {
+      "feature": "Workspaceformmodal",
+      "frontend": [
+        "WorkspaceFormModal"
+      ]
+    },
+    {
+      "feature": "Workspacemanagement",
+      "frontend": [
+        "WorkspaceManagementPage"
+      ]
+    },
+    {
+      "feature": "Workspaces",
+      "database": [
+        "workspaces"
+      ]
+    },
+    {
+      "feature": "Workspaceshell",
+      "frontend": [
+        "WorkspaceShell"
+      ]
+    }
+  ],
+  "components": [
+    {
+      "id": "backend/Dockerfile#backend",
+      "name": "backend",
+      "kind": "docker-image",
+      "language": "Docker",
+      "file": "backend/Dockerfile",
+      "attributes": {
+        "baseImage": "maven:3.8.6-openjdk-18-slim",
+        "exposedPorts": "8080"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/NotificationBrokerApplication.java#NotificationBrokerApplication",
+      "name": "NotificationBrokerApplication",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/NotificationBrokerApplication.java",
+      "package": "com.anushibinj.veemailer",
+      "attributes": {
+        "annotations": "SpringBootApplication"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/config/AppConfig.java#AppConfig",
+      "name": "AppConfig",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/config/AppConfig.java",
+      "package": "com.anushibinj.veemailer.config",
+      "attributes": {
+        "annotations": "Configuration,EnableAsync,EnableScheduling"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/config/Auth401EntryPoint.java#Auth401EntryPoint",
+      "name": "Auth401EntryPoint",
+      "kind": "bean",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/config/Auth401EntryPoint.java"
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/config/Auth403AccessDeniedHandler.java#Auth403AccessDeniedHandler",
+      "name": "Auth403AccessDeniedHandler",
+      "kind": "bean",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/config/Auth403AccessDeniedHandler.java"
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/config/GlobalExceptionHandler.java#GlobalExceptionHandler",
+      "name": "GlobalExceptionHandler",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/config/GlobalExceptionHandler.java",
+      "package": "com.anushibinj.veemailer.config",
+      "attributes": {
+        "annotations": "RestControllerAdvice,Slf4j"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/config/JwtAuthenticationFilter.java#JwtAuthenticationFilter",
+      "name": "JwtAuthenticationFilter",
+      "kind": "bean",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/config/JwtAuthenticationFilter.java"
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/config/SecurityConfig.java#SecurityConfig",
+      "name": "SecurityConfig",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/config/SecurityConfig.java",
+      "package": "com.anushibinj.veemailer.config",
+      "attributes": {
+        "annotations": "Configuration,EnableMethodSecurity,RequiredArgsConstructor"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/config/WebConfig.java#WebConfig",
+      "name": "WebConfig",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/config/WebConfig.java",
+      "package": "com.anushibinj.veemailer.config",
+      "attributes": {
+        "annotations": "Configuration"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/controller/AboutController.java#AboutController",
+      "name": "AboutController",
+      "kind": "controller",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/controller/AboutController.java",
+      "attributes": {
+        "basePath": "/api/about"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/controller/AiPreferencesController.java#AiPreferencesController",
+      "name": "AiPreferencesController",
+      "kind": "controller",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/controller/AiPreferencesController.java",
+      "attributes": {
+        "basePath": ""
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/controller/AuthController.java#AuthController",
+      "name": "AuthController",
+      "kind": "controller",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/controller/AuthController.java",
+      "attributes": {
+        "basePath": "/api/auth"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/controller/FilterController.java#FilterController",
+      "name": "FilterController",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/controller/FilterController.java",
+      "package": "com.anushibinj.veemailer.controller",
+      "attributes": {
+        "annotations": "RestController,RequestMapping,RequiredArgsConstructor"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/controller/GeneralSettingsController.java#GeneralSettingsController",
+      "name": "GeneralSettingsController",
+      "kind": "controller",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/controller/GeneralSettingsController.java",
+      "attributes": {
+        "basePath": ""
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/controller/IssueReportController.java#IssueReportController",
+      "name": "IssueReportController",
+      "kind": "controller",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/controller/IssueReportController.java",
+      "attributes": {
+        "basePath": ""
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/controller/MailAnalyticsController.java#MailAnalyticsController",
+      "name": "MailAnalyticsController",
+      "kind": "controller",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/controller/MailAnalyticsController.java",
+      "attributes": {
+        "basePath": ""
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/controller/NotificationPreferencesController.java#NotificationPreferencesController",
+      "name": "NotificationPreferencesController",
+      "kind": "controller",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/controller/NotificationPreferencesController.java",
+      "attributes": {
+        "basePath": ""
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/controller/OctaneMetadataController.java#OctaneMetadataController",
+      "name": "OctaneMetadataController",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/controller/OctaneMetadataController.java",
+      "package": "com.anushibinj.veemailer.controller",
+      "attributes": {
+        "annotations": "RestController,RequestMapping,RequiredArgsConstructor"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/controller/RecipientGroupController.java#RecipientGroupController",
+      "name": "RecipientGroupController",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/controller/RecipientGroupController.java",
+      "package": "com.anushibinj.veemailer.controller",
+      "attributes": {
+        "annotations": "RestController,RequestMapping,RequiredArgsConstructor"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/controller/SubscriptionController.java#SubscriptionController",
+      "name": "SubscriptionController",
+      "kind": "controller",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/controller/SubscriptionController.java",
+      "attributes": {
+        "basePath": "/api/v1/subscriptions"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/controller/UserManagementController.java#UserManagementController",
+      "name": "UserManagementController",
+      "kind": "controller",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/controller/UserManagementController.java",
+      "attributes": {
+        "basePath": ""
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/controller/WorkspaceController.java#WorkspaceController",
+      "name": "WorkspaceController",
+      "kind": "controller",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/controller/WorkspaceController.java",
+      "attributes": {
+        "basePath": "/api/v1/workspaces"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/dto/AcceptInviteRequestDto.java#AcceptInviteRequestDto",
+      "name": "AcceptInviteRequestDto",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/dto/AcceptInviteRequestDto.java",
+      "package": "com.anushibinj.veemailer.dto",
+      "attributes": {
+        "annotations": "Data,NoArgsConstructor,AllArgsConstructor,Builder"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/dto/AdminOnboardUserRequestDto.java#AdminOnboardUserRequestDto",
+      "name": "AdminOnboardUserRequestDto",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/dto/AdminOnboardUserRequestDto.java",
+      "package": "com.anushibinj.veemailer.dto",
+      "attributes": {
+        "annotations": "Data,NoArgsConstructor,AllArgsConstructor,Builder"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/dto/AiPreferencesResponseDto.java#AiPreferencesResponseDto",
+      "name": "AiPreferencesResponseDto",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/dto/AiPreferencesResponseDto.java",
+      "package": "com.anushibinj.veemailer.dto",
+      "attributes": {
+        "annotations": "Data,NoArgsConstructor,AllArgsConstructor,Builder"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/dto/AiPreferencesUpdateDto.java#AiPreferencesUpdateDto",
+      "name": "AiPreferencesUpdateDto",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/dto/AiPreferencesUpdateDto.java",
+      "package": "com.anushibinj.veemailer.dto",
+      "attributes": {
+        "annotations": "Data,NoArgsConstructor,AllArgsConstructor"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/dto/ApiErrorResponse.java#ApiErrorResponse",
+      "name": "ApiErrorResponse",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/dto/ApiErrorResponse.java",
+      "package": "com.anushibinj.veemailer.dto",
+      "attributes": {
+        "annotations": "Data,NoArgsConstructor,AllArgsConstructor,Builder,JsonInclude"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/dto/ApiResponseWrapper.java#ApiResponseWrapper",
+      "name": "ApiResponseWrapper",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/dto/ApiResponseWrapper.java",
+      "package": "com.anushibinj.veemailer.dto",
+      "attributes": {
+        "annotations": "Data,NoArgsConstructor,AllArgsConstructor,Builder"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/dto/AuthResponseDto.java#AuthResponseDto",
+      "name": "AuthResponseDto",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/dto/AuthResponseDto.java",
+      "package": "com.anushibinj.veemailer.dto",
+      "attributes": {
+        "annotations": "Data,NoArgsConstructor,AllArgsConstructor,Builder"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/dto/FilterDto.java#FilterDto",
+      "name": "FilterDto",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/dto/FilterDto.java",
+      "package": "com.anushibinj.veemailer.dto",
+      "attributes": {
+        "annotations": "Data,NoArgsConstructor,AllArgsConstructor,Builder"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/dto/FilterQueryStringRequest.java#FilterQueryStringRequest",
+      "name": "FilterQueryStringRequest",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/dto/FilterQueryStringRequest.java",
+      "package": "com.anushibinj.veemailer.dto",
+      "attributes": {
+        "annotations": "Data,NoArgsConstructor,AllArgsConstructor,Builder"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/dto/ForgotPasswordRequestDto.java#ForgotPasswordRequestDto",
+      "name": "ForgotPasswordRequestDto",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/dto/ForgotPasswordRequestDto.java",
+      "package": "com.anushibinj.veemailer.dto",
+      "attributes": {
+        "annotations": "Data,NoArgsConstructor,AllArgsConstructor,Builder"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/dto/GeneralSettingsDto.java#GeneralSettingsDto",
+      "name": "GeneralSettingsDto",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/dto/GeneralSettingsDto.java",
+      "package": "com.anushibinj.veemailer.dto",
+      "attributes": {
+        "annotations": "Data,NoArgsConstructor,AllArgsConstructor,Builder"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/dto/InviteMagicLinkVerificationResponseDto.java#InviteMagicLinkVerificationResponseDto",
+      "name": "InviteMagicLinkVerificationResponseDto",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/dto/InviteMagicLinkVerificationResponseDto.java",
+      "package": "com.anushibinj.veemailer.dto",
+      "attributes": {
+        "annotations": "Data,NoArgsConstructor,AllArgsConstructor,Builder"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/dto/IssueReportResponseDto.java#IssueReportResponseDto",
+      "name": "IssueReportResponseDto",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/dto/IssueReportResponseDto.java",
+      "package": "com.anushibinj.veemailer.dto",
+      "attributes": {
+        "annotations": "Data,NoArgsConstructor,AllArgsConstructor,Builder"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/dto/IssueStatusUpdateRequestDto.java#IssueStatusUpdateRequestDto",
+      "name": "IssueStatusUpdateRequestDto",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/dto/IssueStatusUpdateRequestDto.java",
+      "package": "com.anushibinj.veemailer.dto",
+      "attributes": {
+        "annotations": "Data,NoArgsConstructor,AllArgsConstructor"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/dto/IssueUploadConfigDto.java#IssueUploadConfigDto",
+      "name": "IssueUploadConfigDto",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/dto/IssueUploadConfigDto.java",
+      "package": "com.anushibinj.veemailer.dto",
+      "attributes": {
+        "annotations": "Data,NoArgsConstructor,AllArgsConstructor,Builder"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/dto/LoginRequestDto.java#LoginRequestDto",
+      "name": "LoginRequestDto",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/dto/LoginRequestDto.java",
+      "package": "com.anushibinj.veemailer.dto",
+      "attributes": {
+        "annotations": "Data,NoArgsConstructor,AllArgsConstructor,Builder"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/dto/NotificationPreferencesResponseDto.java#NotificationPreferencesResponseDto",
+      "name": "NotificationPreferencesResponseDto",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/dto/NotificationPreferencesResponseDto.java",
+      "package": "com.anushibinj.veemailer.dto",
+      "attributes": {
+        "annotations": "Data,NoArgsConstructor,AllArgsConstructor,Builder"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/dto/NotificationPreferencesUpdateDto.java#NotificationPreferencesUpdateDto",
+      "name": "NotificationPreferencesUpdateDto",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/dto/NotificationPreferencesUpdateDto.java",
+      "package": "com.anushibinj.veemailer.dto",
+      "attributes": {
+        "annotations": "Data,NoArgsConstructor,AllArgsConstructor"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/dto/OctaneFieldDto.java#OctaneFieldDto",
+      "name": "OctaneFieldDto",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/dto/OctaneFieldDto.java",
+      "package": "com.anushibinj.veemailer.dto",
+      "attributes": {
+        "annotations": "Data,NoArgsConstructor,AllArgsConstructor,Builder"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/dto/OctaneFieldValueDto.java#OctaneFieldValueDto",
+      "name": "OctaneFieldValueDto",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/dto/OctaneFieldValueDto.java",
+      "package": "com.anushibinj.veemailer.dto",
+      "attributes": {
+        "annotations": "Data,NoArgsConstructor,AllArgsConstructor,Builder"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/dto/ParsedFilterQueryResponse.java#ParsedFilterQueryResponse",
+      "name": "ParsedFilterQueryResponse",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/dto/ParsedFilterQueryResponse.java",
+      "package": "com.anushibinj.veemailer.dto",
+      "attributes": {
+        "annotations": "Data,NoArgsConstructor,AllArgsConstructor,Builder"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/dto/PreviewResponse.java#PreviewResponse",
+      "name": "PreviewResponse",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/dto/PreviewResponse.java",
+      "package": "com.anushibinj.veemailer.dto",
+      "attributes": {
+        "annotations": "Data,NoArgsConstructor,AllArgsConstructor,Builder"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/dto/RecipientGroupCreateDto.java#RecipientGroupCreateDto",
+      "name": "RecipientGroupCreateDto",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/dto/RecipientGroupCreateDto.java",
+      "package": "com.anushibinj.veemailer.dto",
+      "attributes": {
+        "annotations": "Data"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/dto/RecipientGroupMemberDto.java#RecipientGroupMemberDto",
+      "name": "RecipientGroupMemberDto",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/dto/RecipientGroupMemberDto.java",
+      "package": "com.anushibinj.veemailer.dto",
+      "attributes": {
+        "annotations": "Data"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/dto/RecipientGroupResponseDto.java#RecipientGroupResponseDto",
+      "name": "RecipientGroupResponseDto",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/dto/RecipientGroupResponseDto.java",
+      "package": "com.anushibinj.veemailer.dto",
+      "attributes": {
+        "annotations": "Data,Builder"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/dto/RecipientGroupUpdateDto.java#RecipientGroupUpdateDto",
+      "name": "RecipientGroupUpdateDto",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/dto/RecipientGroupUpdateDto.java",
+      "package": "com.anushibinj.veemailer.dto",
+      "attributes": {
+        "annotations": "Data"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/dto/RefreshTokenRequestDto.java#RefreshTokenRequestDto",
+      "name": "RefreshTokenRequestDto",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/dto/RefreshTokenRequestDto.java",
+      "package": "com.anushibinj.veemailer.dto",
+      "attributes": {
+        "annotations": "Data,NoArgsConstructor,AllArgsConstructor,Builder"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/dto/RequestInviteMagicLinkDto.java#RequestInviteMagicLinkDto",
+      "name": "RequestInviteMagicLinkDto",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/dto/RequestInviteMagicLinkDto.java",
+      "package": "com.anushibinj.veemailer.dto",
+      "attributes": {
+        "annotations": "Data,NoArgsConstructor,AllArgsConstructor,Builder"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/dto/ResetPasswordDto.java#ResetPasswordDto",
+      "name": "ResetPasswordDto",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/dto/ResetPasswordDto.java",
+      "package": "com.anushibinj.veemailer.dto",
+      "attributes": {
+        "annotations": "Data,NoArgsConstructor,AllArgsConstructor,Builder"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/dto/ScheduleDto.java#ScheduleDto",
+      "name": "ScheduleDto",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/dto/ScheduleDto.java",
+      "package": "com.anushibinj.veemailer.dto",
+      "attributes": {
+        "annotations": "Data,NoArgsConstructor,AllArgsConstructor,Builder"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/dto/SignupRequestDto.java#SignupRequestDto",
+      "name": "SignupRequestDto",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/dto/SignupRequestDto.java",
+      "package": "com.anushibinj.veemailer.dto",
+      "attributes": {
+        "annotations": "Data,NoArgsConstructor,AllArgsConstructor,Builder"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/dto/SubscriptionCreateDto.java#SubscriptionCreateDto",
+      "name": "SubscriptionCreateDto",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/dto/SubscriptionCreateDto.java",
+      "package": "com.anushibinj.veemailer.dto",
+      "attributes": {
+        "annotations": "Data,NoArgsConstructor,AllArgsConstructor"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/dto/SubscriptionRequestDto.java#SubscriptionRequestDto",
+      "name": "SubscriptionRequestDto",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/dto/SubscriptionRequestDto.java",
+      "package": "com.anushibinj.veemailer.dto",
+      "attributes": {
+        "annotations": "Data,NoArgsConstructor,AllArgsConstructor,Builder"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/dto/SubscriptionResponseDTO.java#SubscriptionResponseDTO",
+      "name": "SubscriptionResponseDTO",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/dto/SubscriptionResponseDTO.java",
+      "package": "com.anushibinj.veemailer.dto",
+      "attributes": {
+        "annotations": "Data,NoArgsConstructor,AllArgsConstructor,Builder"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/dto/SubscriptionUpdateDto.java#SubscriptionUpdateDto",
+      "name": "SubscriptionUpdateDto",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/dto/SubscriptionUpdateDto.java",
+      "package": "com.anushibinj.veemailer.dto",
+      "attributes": {
+        "annotations": "Data,NoArgsConstructor,AllArgsConstructor"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/dto/TicketCommentDto.java#TicketCommentDto",
+      "name": "TicketCommentDto",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/dto/TicketCommentDto.java",
+      "package": "com.anushibinj.veemailer.dto",
+      "attributes": {
+        "annotations": "Data,NoArgsConstructor,AllArgsConstructor,Builder"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/dto/UserGlobalRoleUpdateRequestDto.java#UserGlobalRoleUpdateRequestDto",
+      "name": "UserGlobalRoleUpdateRequestDto",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/dto/UserGlobalRoleUpdateRequestDto.java",
+      "package": "com.anushibinj.veemailer.dto",
+      "attributes": {
+        "annotations": "Data,NoArgsConstructor,AllArgsConstructor"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/dto/UserSummaryDto.java#UserSummaryDto",
+      "name": "UserSummaryDto",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/dto/UserSummaryDto.java",
+      "package": "com.anushibinj.veemailer.dto",
+      "attributes": {
+        "annotations": "Data,NoArgsConstructor,AllArgsConstructor,Builder"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/dto/VerificationRequestDto.java#VerificationRequestDto",
+      "name": "VerificationRequestDto",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/dto/VerificationRequestDto.java",
+      "package": "com.anushibinj.veemailer.dto",
+      "attributes": {
+        "annotations": "Data,NoArgsConstructor,AllArgsConstructor,Builder"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/dto/VerifyResetOtpDto.java#VerifyResetOtpDto",
+      "name": "VerifyResetOtpDto",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/dto/VerifyResetOtpDto.java",
+      "package": "com.anushibinj.veemailer.dto",
+      "attributes": {
+        "annotations": "Data,NoArgsConstructor,AllArgsConstructor,Builder"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/dto/VerifySignupOtpDto.java#VerifySignupOtpDto",
+      "name": "VerifySignupOtpDto",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/dto/VerifySignupOtpDto.java",
+      "package": "com.anushibinj.veemailer.dto",
+      "attributes": {
+        "annotations": "Data,NoArgsConstructor,AllArgsConstructor,Builder"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/dto/WorkspaceAdminAssignRequestDto.java#WorkspaceAdminAssignRequestDto",
+      "name": "WorkspaceAdminAssignRequestDto",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/dto/WorkspaceAdminAssignRequestDto.java",
+      "package": "com.anushibinj.veemailer.dto",
+      "attributes": {
+        "annotations": "Data,NoArgsConstructor,AllArgsConstructor"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/dto/WorkspaceAdminResponseDto.java#WorkspaceAdminResponseDto",
+      "name": "WorkspaceAdminResponseDto",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/dto/WorkspaceAdminResponseDto.java",
+      "package": "com.anushibinj.veemailer.dto",
+      "attributes": {
+        "annotations": "Data,NoArgsConstructor,AllArgsConstructor,Builder"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/dto/WorkspaceConflictErrorResponse.java#WorkspaceConflictErrorResponse",
+      "name": "WorkspaceConflictErrorResponse",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/dto/WorkspaceConflictErrorResponse.java",
+      "package": "com.anushibinj.veemailer.dto",
+      "attributes": {
+        "annotations": "Data,NoArgsConstructor,AllArgsConstructor,Builder"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/dto/WorkspaceConnectionTestRequestDto.java#WorkspaceConnectionTestRequestDto",
+      "name": "WorkspaceConnectionTestRequestDto",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/dto/WorkspaceConnectionTestRequestDto.java",
+      "package": "com.anushibinj.veemailer.dto",
+      "attributes": {
+        "annotations": "Data,NoArgsConstructor,AllArgsConstructor"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/dto/WorkspaceConnectionTestResponseDto.java#WorkspaceConnectionTestResponseDto",
+      "name": "WorkspaceConnectionTestResponseDto",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/dto/WorkspaceConnectionTestResponseDto.java",
+      "package": "com.anushibinj.veemailer.dto",
+      "attributes": {
+        "annotations": "Data,NoArgsConstructor,AllArgsConstructor,Builder"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/dto/WorkspaceCreateRequestDto.java#WorkspaceCreateRequestDto",
+      "name": "WorkspaceCreateRequestDto",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/dto/WorkspaceCreateRequestDto.java",
+      "package": "com.anushibinj.veemailer.dto",
+      "attributes": {
+        "annotations": "Data,NoArgsConstructor,AllArgsConstructor"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/dto/WorkspaceDiscoveryErrorResponse.java#WorkspaceDiscoveryErrorResponse",
+      "name": "WorkspaceDiscoveryErrorResponse",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/dto/WorkspaceDiscoveryErrorResponse.java",
+      "package": "com.anushibinj.veemailer.dto",
+      "attributes": {
+        "annotations": "Data,NoArgsConstructor,AllArgsConstructor,Builder"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/dto/WorkspaceDiscoveryRequestDto.java#WorkspaceDiscoveryRequestDto",
+      "name": "WorkspaceDiscoveryRequestDto",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/dto/WorkspaceDiscoveryRequestDto.java",
+      "package": "com.anushibinj.veemailer.dto",
+      "attributes": {
+        "annotations": "Data,NoArgsConstructor,AllArgsConstructor"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/dto/WorkspaceDiscoveryResponseDto.java#WorkspaceDiscoveryResponseDto",
+      "name": "WorkspaceDiscoveryResponseDto",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/dto/WorkspaceDiscoveryResponseDto.java",
+      "package": "com.anushibinj.veemailer.dto",
+      "attributes": {
+        "annotations": "Data,NoArgsConstructor,AllArgsConstructor,Builder"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/dto/WorkspaceDto.java#WorkspaceDto",
+      "name": "WorkspaceDto",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/dto/WorkspaceDto.java",
+      "package": "com.anushibinj.veemailer.dto",
+      "attributes": {
+        "annotations": "Data,NoArgsConstructor,AllArgsConstructor,Builder"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/dto/WorkspaceDuplicateCheckResponseDto.java#WorkspaceDuplicateCheckResponseDto",
+      "name": "WorkspaceDuplicateCheckResponseDto",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/dto/WorkspaceDuplicateCheckResponseDto.java",
+      "package": "com.anushibinj.veemailer.dto",
+      "attributes": {
+        "annotations": "Data,NoArgsConstructor,AllArgsConstructor,Builder"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/dto/WorkspaceRefetchMetadataResponseDto.java#WorkspaceRefetchMetadataResponseDto",
+      "name": "WorkspaceRefetchMetadataResponseDto",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/dto/WorkspaceRefetchMetadataResponseDto.java",
+      "package": "com.anushibinj.veemailer.dto",
+      "attributes": {
+        "annotations": "Data,NoArgsConstructor,AllArgsConstructor,Builder"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/dto/WorkspaceResponseDto.java#WorkspaceResponseDto",
+      "name": "WorkspaceResponseDto",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/dto/WorkspaceResponseDto.java",
+      "package": "com.anushibinj.veemailer.dto",
+      "attributes": {
+        "annotations": "Data,NoArgsConstructor,AllArgsConstructor,Builder"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/dto/WorkspaceUpdateRequestDto.java#WorkspaceUpdateRequestDto",
+      "name": "WorkspaceUpdateRequestDto",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/dto/WorkspaceUpdateRequestDto.java",
+      "package": "com.anushibinj.veemailer.dto",
+      "attributes": {
+        "annotations": "Data,NoArgsConstructor,AllArgsConstructor"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/exception/DuplicateWorkspaceException.java#DuplicateWorkspaceException",
+      "name": "DuplicateWorkspaceException",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/exception/DuplicateWorkspaceException.java",
+      "package": "com.anushibinj.veemailer.exception",
+      "attributes": {
+        "annotations": "Getter"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/exception/WorkspaceDiscoveryFailedException.java#WorkspaceDiscoveryFailedException",
+      "name": "WorkspaceDiscoveryFailedException",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/exception/WorkspaceDiscoveryFailedException.java",
+      "package": "com.anushibinj.veemailer.exception",
+      "attributes": {
+        "annotations": "Getter"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/exception/WorkspaceDiscoveryNotFoundException.java#WorkspaceDiscoveryNotFoundException",
+      "name": "WorkspaceDiscoveryNotFoundException",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/exception/WorkspaceDiscoveryNotFoundException.java",
+      "package": "com.anushibinj.veemailer.exception",
+      "attributes": {
+        "annotations": "Getter"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/model/ActionType.java#ActionType",
+      "name": "ActionType",
+      "kind": "enum",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/model/ActionType.java",
+      "package": "com.anushibinj.veemailer.model",
+      "attributes": {
+        "annotations": ""
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/model/AiPreferences.java#AiPreferences",
+      "name": "AiPreferences",
+      "kind": "entity",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/model/AiPreferences.java",
+      "attributes": {
+        "table": "ai_preferences"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/model/AppUser.java#AppUser",
+      "name": "AppUser",
+      "kind": "entity",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/model/AppUser.java",
+      "attributes": {
+        "table": "app_users"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/model/DeliveryStatus.java#DeliveryStatus",
+      "name": "DeliveryStatus",
+      "kind": "enum",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/model/DeliveryStatus.java",
+      "package": "com.anushibinj.veemailer.model",
+      "attributes": {
+        "annotations": ""
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/model/EmailSubscriber.java#EmailSubscriber",
+      "name": "EmailSubscriber",
+      "kind": "entity",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/model/EmailSubscriber.java",
+      "attributes": {
+        "table": "email_subscribers"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/model/Filter.java#Filter",
+      "name": "Filter",
+      "kind": "entity",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/model/Filter.java",
+      "attributes": {
+        "table": "filters"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/model/FilterCriteriaClause.java#FilterCriteriaClause",
+      "name": "FilterCriteriaClause",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/model/FilterCriteriaClause.java",
+      "package": "com.anushibinj.veemailer.model",
+      "attributes": {
+        "annotations": "Data,NoArgsConstructor,AllArgsConstructor,Builder"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/model/Frequency.java#Frequency",
+      "name": "Frequency",
+      "kind": "enum",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/model/Frequency.java",
+      "package": "com.anushibinj.veemailer.model",
+      "attributes": {
+        "annotations": ""
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/model/GeneralSettings.java#GeneralSettings",
+      "name": "GeneralSettings",
+      "kind": "entity",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/model/GeneralSettings.java",
+      "attributes": {
+        "table": "general_settings"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/model/InviteMagicLink.java#InviteMagicLink",
+      "name": "InviteMagicLink",
+      "kind": "entity",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/model/InviteMagicLink.java",
+      "attributes": {
+        "table": "invite_magic_links"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/model/IssueReport.java#IssueReport",
+      "name": "IssueReport",
+      "kind": "entity",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/model/IssueReport.java",
+      "attributes": {
+        "table": "issue_reports"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/model/IssueStatus.java#IssueStatus",
+      "name": "IssueStatus",
+      "kind": "enum",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/model/IssueStatus.java",
+      "package": "com.anushibinj.veemailer.model",
+      "attributes": {
+        "annotations": ""
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/model/MailAuditLog.java#MailAuditLog",
+      "name": "MailAuditLog",
+      "kind": "entity",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/model/MailAuditLog.java",
+      "attributes": {
+        "table": "mail_audit_log"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/model/NotificationPreferences.java#NotificationPreferences",
+      "name": "NotificationPreferences",
+      "kind": "entity",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/model/NotificationPreferences.java",
+      "attributes": {
+        "table": "notification_preferences"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/model/OtpRequest.java#OtpRequest",
+      "name": "OtpRequest",
+      "kind": "entity",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/model/OtpRequest.java",
+      "attributes": {
+        "table": "otp_requests"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/model/RecipientGroup.java#RecipientGroup",
+      "name": "RecipientGroup",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/model/RecipientGroup.java",
+      "package": "com.anushibinj.veemailer.model",
+      "attributes": {
+        "annotations": "Data,NoArgsConstructor,AllArgsConstructor,Builder"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/model/RefreshToken.java#RefreshToken",
+      "name": "RefreshToken",
+      "kind": "entity",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/model/RefreshToken.java",
+      "attributes": {
+        "table": "refresh_tokens"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/model/Role.java#Role",
+      "name": "Role",
+      "kind": "entity",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/model/Role.java",
+      "attributes": {
+        "table": "roles"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/model/ScheduleType.java#ScheduleType",
+      "name": "ScheduleType",
+      "kind": "enum",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/model/ScheduleType.java",
+      "package": "com.anushibinj.veemailer.model",
+      "attributes": {
+        "annotations": ""
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/model/Status.java#Status",
+      "name": "Status",
+      "kind": "enum",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/model/Status.java",
+      "package": "com.anushibinj.veemailer.model",
+      "attributes": {
+        "annotations": ""
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/model/TriageSlaThreshold.java#TriageSlaThreshold",
+      "name": "TriageSlaThreshold",
+      "kind": "enum",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/model/TriageSlaThreshold.java",
+      "package": "com.anushibinj.veemailer.model",
+      "attributes": {
+        "annotations": ""
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/model/Workspace.java#Workspace",
+      "name": "Workspace",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/model/Workspace.java",
+      "package": "com.anushibinj.veemailer.model",
+      "attributes": {
+        "annotations": "Entity,Table,Data,NoArgsConstructor,AllArgsConstructor,Builder,JsonIgnoreProperties"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/model/WorkspaceAdminMapping.java#WorkspaceAdminMapping",
+      "name": "WorkspaceAdminMapping",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/model/WorkspaceAdminMapping.java",
+      "package": "com.anushibinj.veemailer.model",
+      "attributes": {
+        "annotations": "Data,NoArgsConstructor,AllArgsConstructor,Builder"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/model/WorkspaceConnectivityStatus.java#WorkspaceConnectivityStatus",
+      "name": "WorkspaceConnectivityStatus",
+      "kind": "enum",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/model/WorkspaceConnectivityStatus.java",
+      "package": "com.anushibinj.veemailer.model",
+      "attributes": {
+        "annotations": ""
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/model/WorkspaceStatus.java#WorkspaceStatus",
+      "name": "WorkspaceStatus",
+      "kind": "enum",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/model/WorkspaceStatus.java",
+      "package": "com.anushibinj.veemailer.model",
+      "attributes": {
+        "annotations": ""
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/repository/AiPreferencesRepository.java#AiPreferencesRepository",
+      "name": "AiPreferencesRepository",
+      "kind": "interface",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/repository/AiPreferencesRepository.java",
+      "package": "com.anushibinj.veemailer.repository",
+      "attributes": {
+        "annotations": ""
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/repository/AppUserRepository.java#AppUserRepository",
+      "name": "AppUserRepository",
+      "kind": "repository",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/repository/AppUserRepository.java"
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/repository/EmailSubscriberRepository.java#EmailSubscriberRepository",
+      "name": "EmailSubscriberRepository",
+      "kind": "repository",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/repository/EmailSubscriberRepository.java"
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/repository/FilterRepository.java#FilterRepository",
+      "name": "FilterRepository",
+      "kind": "repository",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/repository/FilterRepository.java"
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/repository/GeneralSettingsRepository.java#GeneralSettingsRepository",
+      "name": "GeneralSettingsRepository",
+      "kind": "repository",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/repository/GeneralSettingsRepository.java"
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/repository/InviteMagicLinkRepository.java#InviteMagicLinkRepository",
+      "name": "InviteMagicLinkRepository",
+      "kind": "repository",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/repository/InviteMagicLinkRepository.java"
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/repository/IssueReportRepository.java#IssueReportRepository",
+      "name": "IssueReportRepository",
+      "kind": "repository",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/repository/IssueReportRepository.java"
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/repository/MailAuditLogRepository.java#MailAuditLogRepository",
+      "name": "MailAuditLogRepository",
+      "kind": "repository",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/repository/MailAuditLogRepository.java"
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/repository/MailAuditLogSpecs.java#MailAuditLogSpecs",
+      "name": "MailAuditLogSpecs",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/repository/MailAuditLogSpecs.java",
+      "package": "com.anushibinj.veemailer.repository",
+      "attributes": {
+        "annotations": ""
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/repository/NotificationPreferencesRepository.java#NotificationPreferencesRepository",
+      "name": "NotificationPreferencesRepository",
+      "kind": "interface",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/repository/NotificationPreferencesRepository.java",
+      "package": "com.anushibinj.veemailer.repository",
+      "attributes": {
+        "annotations": ""
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/repository/OtpRequestRepository.java#OtpRequestRepository",
+      "name": "OtpRequestRepository",
+      "kind": "repository",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/repository/OtpRequestRepository.java"
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/repository/RecipientGroupRepository.java#RecipientGroupRepository",
+      "name": "RecipientGroupRepository",
+      "kind": "repository",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/repository/RecipientGroupRepository.java"
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/repository/RefreshTokenRepository.java#RefreshTokenRepository",
+      "name": "RefreshTokenRepository",
+      "kind": "repository",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/repository/RefreshTokenRepository.java"
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/repository/RoleRepository.java#RoleRepository",
+      "name": "RoleRepository",
+      "kind": "repository",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/repository/RoleRepository.java"
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/repository/WorkspaceAdminRepository.java#WorkspaceAdminRepository",
+      "name": "WorkspaceAdminRepository",
+      "kind": "repository",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/repository/WorkspaceAdminRepository.java"
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/repository/WorkspaceRepository.java#WorkspaceRepository",
+      "name": "WorkspaceRepository",
+      "kind": "repository",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/repository/WorkspaceRepository.java"
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/service/AdminBootstrapService.java#AdminBootstrapService",
+      "name": "AdminBootstrapService",
+      "kind": "bean",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/service/AdminBootstrapService.java"
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/service/AiPreferencesService.java#AiPreferencesService",
+      "name": "AiPreferencesService",
+      "kind": "service",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/service/AiPreferencesService.java"
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/service/AiSummaryService.java#AiSummaryService",
+      "name": "AiSummaryService",
+      "kind": "service",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/service/AiSummaryService.java"
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/service/AppUserDetailsService.java#AppUserDetailsService",
+      "name": "AppUserDetailsService",
+      "kind": "service",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/service/AppUserDetailsService.java"
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/service/AuthService.java#AuthService",
+      "name": "AuthService",
+      "kind": "service",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/service/AuthService.java"
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/service/CleanupService.java#CleanupService",
+      "name": "CleanupService",
+      "kind": "service",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/service/CleanupService.java"
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/service/DynamicAiClientService.java#DynamicAiClientService",
+      "name": "DynamicAiClientService",
+      "kind": "service",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/service/DynamicAiClientService.java"
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/service/DynamicMailSenderService.java#DynamicMailSenderService",
+      "name": "DynamicMailSenderService",
+      "kind": "service",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/service/DynamicMailSenderService.java"
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/service/EmailService.java#EmailService",
+      "name": "EmailService",
+      "kind": "service",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/service/EmailService.java"
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/service/FilterService.java#FilterService",
+      "name": "FilterService",
+      "kind": "service",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/service/FilterService.java"
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/service/GeneralSettingsService.java#GeneralSettingsService",
+      "name": "GeneralSettingsService",
+      "kind": "service",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/service/GeneralSettingsService.java"
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/service/InviteMagicLinkService.java#InviteMagicLinkService",
+      "name": "InviteMagicLinkService",
+      "kind": "service",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/service/InviteMagicLinkService.java"
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/service/IssueReportService.java#IssueReportService",
+      "name": "IssueReportService",
+      "kind": "service",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/service/IssueReportService.java"
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/service/JwtService.java#JwtService",
+      "name": "JwtService",
+      "kind": "service",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/service/JwtService.java"
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/service/MailAnalyticsService.java#MailAnalyticsService",
+      "name": "MailAnalyticsService",
+      "kind": "service",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/service/MailAnalyticsService.java"
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/service/MailAuditService.java#MailAuditService",
+      "name": "MailAuditService",
+      "kind": "service",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/service/MailAuditService.java"
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/service/NotificationPreferencesService.java#NotificationPreferencesService",
+      "name": "NotificationPreferencesService",
+      "kind": "service",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/service/NotificationPreferencesService.java"
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/service/NotificationService.java#NotificationService",
+      "name": "NotificationService",
+      "kind": "service",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/service/NotificationService.java"
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/service/OctaneCacheService.java#OctaneCacheService",
+      "name": "OctaneCacheService",
+      "kind": "service",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/service/OctaneCacheService.java"
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/service/OctaneMetadataService.java#OctaneMetadataService",
+      "name": "OctaneMetadataService",
+      "kind": "service",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/service/OctaneMetadataService.java"
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/service/OctaneQueryLogger.java#OctaneQueryLogger",
+      "name": "OctaneQueryLogger",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/service/OctaneQueryLogger.java",
+      "package": "com.anushibinj.veemailer.service",
+      "attributes": {
+        "annotations": ""
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/service/OtpService.java#OtpService",
+      "name": "OtpService",
+      "kind": "service",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/service/OtpService.java"
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/service/PollingService.java#PollingService",
+      "name": "PollingService",
+      "kind": "service",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/service/PollingService.java"
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/service/RecipientGroupService.java#RecipientGroupService",
+      "name": "RecipientGroupService",
+      "kind": "service",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/service/RecipientGroupService.java"
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/service/RefreshTokenService.java#RefreshTokenService",
+      "name": "RefreshTokenService",
+      "kind": "service",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/service/RefreshTokenService.java"
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/service/ScheduleMigrationRunner.java#ScheduleMigrationRunner",
+      "name": "ScheduleMigrationRunner",
+      "kind": "bean",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/service/ScheduleMigrationRunner.java"
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/service/SubscriptionService.java#SubscriptionService",
+      "name": "SubscriptionService",
+      "kind": "service",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/service/SubscriptionService.java"
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/service/TicketCommentService.java#TicketCommentService",
+      "name": "TicketCommentService",
+      "kind": "service",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/service/TicketCommentService.java"
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/service/TriageSlaPolicy.java#TriageSlaPolicy",
+      "name": "TriageSlaPolicy",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/service/TriageSlaPolicy.java",
+      "package": "com.anushibinj.veemailer.service",
+      "attributes": {
+        "annotations": ""
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/service/UserQueryService.java#UserQueryService",
+      "name": "UserQueryService",
+      "kind": "service",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/service/UserQueryService.java"
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/service/WorkspaceAdminService.java#WorkspaceAdminService",
+      "name": "WorkspaceAdminService",
+      "kind": "service",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/service/WorkspaceAdminService.java"
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/service/WorkspaceConnectivityPollingService.java#WorkspaceConnectivityPollingService",
+      "name": "WorkspaceConnectivityPollingService",
+      "kind": "service",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/service/WorkspaceConnectivityPollingService.java"
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/service/WorkspaceDiscoveryService.java#WorkspaceDiscoveryService",
+      "name": "WorkspaceDiscoveryService",
+      "kind": "service",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/service/WorkspaceDiscoveryService.java"
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/service/WorkspaceService.java#WorkspaceService",
+      "name": "WorkspaceService",
+      "kind": "service",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/service/WorkspaceService.java"
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/service/extractor/FieldExtractorRegistry.java#FieldExtractorRegistry",
+      "name": "FieldExtractorRegistry",
+      "kind": "bean",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/service/extractor/FieldExtractorRegistry.java"
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/service/extractor/FieldValueExtractor.java#FieldValueExtractor",
+      "name": "FieldValueExtractor",
+      "kind": "interface",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/service/extractor/FieldValueExtractor.java",
+      "package": "com.anushibinj.veemailer.service.extractor",
+      "attributes": {
+        "annotations": ""
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/service/extractor/ReferenceExtractor.java#ReferenceExtractor",
+      "name": "ReferenceExtractor",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/service/extractor/ReferenceExtractor.java",
+      "package": "com.anushibinj.veemailer.service.extractor",
+      "attributes": {
+        "annotations": ""
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/service/ve/VeUtils.java#VeUtils",
+      "name": "VeUtils",
+      "kind": "service",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/service/ve/VeUtils.java"
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/util/UrlNormalizer.java#UrlNormalizer",
+      "name": "UrlNormalizer",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/util/UrlNormalizer.java",
+      "package": "com.anushibinj.veemailer.util",
+      "attributes": {
+        "annotations": ""
+      }
+    },
+    {
+      "id": "backend/src/test/java/com/anushibinj/veemailer/NotificationBrokerApplicationTests.java#NotificationBrokerApplicationTests",
+      "name": "NotificationBrokerApplicationTests",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/test/java/com/anushibinj/veemailer/NotificationBrokerApplicationTests.java",
+      "package": "com.anushibinj.veemailer",
+      "attributes": {
+        "annotations": "SpringBootTest"
+      }
+    },
+    {
+      "id": "backend/src/test/java/com/anushibinj/veemailer/config/AppConfigTest.java#AppConfigTest",
+      "name": "AppConfigTest",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/test/java/com/anushibinj/veemailer/config/AppConfigTest.java",
+      "package": "com.anushibinj.veemailer.config",
+      "attributes": {
+        "annotations": ""
+      }
+    },
+    {
+      "id": "backend/src/test/java/com/anushibinj/veemailer/config/SecurityConfigTest.java#SecurityConfigTest",
+      "name": "SecurityConfigTest",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/test/java/com/anushibinj/veemailer/config/SecurityConfigTest.java",
+      "package": "com.anushibinj.veemailer.config",
+      "attributes": {
+        "annotations": "SpringBootTest,AutoConfigureMockMvc"
+      }
+    },
+    {
+      "id": "backend/src/test/java/com/anushibinj/veemailer/config/WebConfigTest.java#WebConfigTest",
+      "name": "WebConfigTest",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/test/java/com/anushibinj/veemailer/config/WebConfigTest.java",
+      "package": "com.anushibinj.veemailer.config",
+      "attributes": {
+        "annotations": ""
+      }
+    },
+    {
+      "id": "backend/src/test/java/com/anushibinj/veemailer/controller/AiPreferencesControllerTest.java#AiPreferencesControllerTest",
+      "name": "AiPreferencesControllerTest",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/test/java/com/anushibinj/veemailer/controller/AiPreferencesControllerTest.java",
+      "package": "com.anushibinj.veemailer.controller",
+      "attributes": {
+        "annotations": "WebMvcTest,AutoConfigureMockMvc"
+      }
+    },
+    {
+      "id": "backend/src/test/java/com/anushibinj/veemailer/controller/AuthControllerTest.java#AuthControllerTest",
+      "name": "AuthControllerTest",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/test/java/com/anushibinj/veemailer/controller/AuthControllerTest.java",
+      "package": "com.anushibinj.veemailer.controller",
+      "attributes": {
+        "annotations": "WebMvcTest,AutoConfigureMockMvc"
+      }
+    },
+    {
+      "id": "backend/src/test/java/com/anushibinj/veemailer/controller/AuthorizationIntegrationTest.java#AuthorizationIntegrationTest",
+      "name": "AuthorizationIntegrationTest",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/test/java/com/anushibinj/veemailer/controller/AuthorizationIntegrationTest.java",
+      "package": "com.anushibinj.veemailer.controller",
+      "attributes": {
+        "annotations": "SpringBootTest,AutoConfigureMockMvc"
+      }
+    },
+    {
+      "id": "backend/src/test/java/com/anushibinj/veemailer/controller/FilterControllerTest.java#FilterControllerTest",
+      "name": "FilterControllerTest",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/test/java/com/anushibinj/veemailer/controller/FilterControllerTest.java",
+      "package": "com.anushibinj.veemailer.controller",
+      "attributes": {
+        "annotations": "WebMvcTest,AutoConfigureMockMvc"
+      }
+    },
+    {
+      "id": "backend/src/test/java/com/anushibinj/veemailer/controller/IssueReportControllerTest.java#IssueReportControllerTest",
+      "name": "IssueReportControllerTest",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/test/java/com/anushibinj/veemailer/controller/IssueReportControllerTest.java",
+      "package": "com.anushibinj.veemailer.controller",
+      "attributes": {
+        "annotations": "WebMvcTest,AutoConfigureMockMvc"
+      }
+    },
+    {
+      "id": "backend/src/test/java/com/anushibinj/veemailer/controller/MailAnalyticsControllerTest.java#MailAnalyticsControllerTest",
+      "name": "MailAnalyticsControllerTest",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/test/java/com/anushibinj/veemailer/controller/MailAnalyticsControllerTest.java",
+      "package": "com.anushibinj.veemailer.controller",
+      "attributes": {
+        "annotations": "WebMvcTest,AutoConfigureMockMvc"
+      }
+    },
+    {
+      "id": "backend/src/test/java/com/anushibinj/veemailer/controller/NotificationPreferencesControllerTest.java#NotificationPreferencesControllerTest",
+      "name": "NotificationPreferencesControllerTest",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/test/java/com/anushibinj/veemailer/controller/NotificationPreferencesControllerTest.java",
+      "package": "com.anushibinj.veemailer.controller",
+      "attributes": {
+        "annotations": "WebMvcTest,AutoConfigureMockMvc"
+      }
+    },
+    {
+      "id": "backend/src/test/java/com/anushibinj/veemailer/controller/OctaneMetadataControllerTest.java#OctaneMetadataControllerTest",
+      "name": "OctaneMetadataControllerTest",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/test/java/com/anushibinj/veemailer/controller/OctaneMetadataControllerTest.java",
+      "package": "com.anushibinj.veemailer.controller",
+      "attributes": {
+        "annotations": "WebMvcTest,AutoConfigureMockMvc"
+      }
+    },
+    {
+      "id": "backend/src/test/java/com/anushibinj/veemailer/controller/SubscriptionControllerTest.java#SubscriptionControllerTest",
+      "name": "SubscriptionControllerTest",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/test/java/com/anushibinj/veemailer/controller/SubscriptionControllerTest.java",
+      "package": "com.anushibinj.veemailer.controller",
+      "attributes": {
+        "annotations": "WebMvcTest,AutoConfigureMockMvc"
+      }
+    },
+    {
+      "id": "backend/src/test/java/com/anushibinj/veemailer/controller/UserManagementControllerTest.java#UserManagementControllerTest",
+      "name": "UserManagementControllerTest",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/test/java/com/anushibinj/veemailer/controller/UserManagementControllerTest.java",
+      "package": "com.anushibinj.veemailer.controller",
+      "attributes": {
+        "annotations": "WebMvcTest,AutoConfigureMockMvc"
+      }
+    },
+    {
+      "id": "backend/src/test/java/com/anushibinj/veemailer/controller/WorkspaceControllerTest.java#WorkspaceControllerTest",
+      "name": "WorkspaceControllerTest",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/test/java/com/anushibinj/veemailer/controller/WorkspaceControllerTest.java",
+      "package": "com.anushibinj.veemailer.controller",
+      "attributes": {
+        "annotations": "WebMvcTest,AutoConfigureMockMvc"
+      }
+    },
+    {
+      "id": "backend/src/test/java/com/anushibinj/veemailer/repository/MailAuditLogRepositoryPostgresIT.java#MailAuditLogRepositoryPostgresIT",
+      "name": "MailAuditLogRepositoryPostgresIT",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/test/java/com/anushibinj/veemailer/repository/MailAuditLogRepositoryPostgresIT.java",
+      "package": "com.anushibinj.veemailer.repository",
+      "attributes": {
+        "annotations": "DataJpaTest,EnabledIfPostgresAvailable,ActiveProfiles,AutoConfigureTestDatabase"
+      }
+    },
+    {
+      "id": "backend/src/test/java/com/anushibinj/veemailer/repository/PostgresAvailableCondition.java#PostgresAvailableCondition",
+      "name": "PostgresAvailableCondition",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/test/java/com/anushibinj/veemailer/repository/PostgresAvailableCondition.java",
+      "package": "com.anushibinj.veemailer.repository",
+      "attributes": {
+        "annotations": ""
+      }
+    },
+    {
+      "id": "backend/src/test/java/com/anushibinj/veemailer/repository/RepositoryTests.java#RepositoryTests",
+      "name": "RepositoryTests",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/test/java/com/anushibinj/veemailer/repository/RepositoryTests.java",
+      "package": "com.anushibinj.veemailer.repository",
+      "attributes": {
+        "annotations": "DataJpaTest"
+      }
+    },
+    {
+      "id": "backend/src/test/java/com/anushibinj/veemailer/service/AiPreferencesServiceTest.java#AiPreferencesServiceTest",
+      "name": "AiPreferencesServiceTest",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/test/java/com/anushibinj/veemailer/service/AiPreferencesServiceTest.java",
+      "package": "com.anushibinj.veemailer.service",
+      "attributes": {
+        "annotations": "ExtendWith"
+      }
+    },
+    {
+      "id": "backend/src/test/java/com/anushibinj/veemailer/service/AiSummaryServiceTest.java#AiSummaryServiceTest",
+      "name": "AiSummaryServiceTest",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/test/java/com/anushibinj/veemailer/service/AiSummaryServiceTest.java",
+      "package": "com.anushibinj.veemailer.service",
+      "attributes": {
+        "annotations": "ExtendWith"
+      }
+    },
+    {
+      "id": "backend/src/test/java/com/anushibinj/veemailer/service/AppUserDetailsServiceTest.java#AppUserDetailsServiceTest",
+      "name": "AppUserDetailsServiceTest",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/test/java/com/anushibinj/veemailer/service/AppUserDetailsServiceTest.java",
+      "package": "com.anushibinj.veemailer.service",
+      "attributes": {
+        "annotations": "ExtendWith"
+      }
+    },
+    {
+      "id": "backend/src/test/java/com/anushibinj/veemailer/service/AuthServiceTest.java#AuthServiceTest",
+      "name": "AuthServiceTest",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/test/java/com/anushibinj/veemailer/service/AuthServiceTest.java",
+      "package": "com.anushibinj.veemailer.service",
+      "attributes": {
+        "annotations": "ExtendWith"
+      }
+    },
+    {
+      "id": "backend/src/test/java/com/anushibinj/veemailer/service/CleanupServiceTest.java#CleanupServiceTest",
+      "name": "CleanupServiceTest",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/test/java/com/anushibinj/veemailer/service/CleanupServiceTest.java",
+      "package": "com.anushibinj.veemailer.service",
+      "attributes": {
+        "annotations": "ExtendWith"
+      }
+    },
+    {
+      "id": "backend/src/test/java/com/anushibinj/veemailer/service/DynamicAiClientServiceTest.java#DynamicAiClientServiceTest",
+      "name": "DynamicAiClientServiceTest",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/test/java/com/anushibinj/veemailer/service/DynamicAiClientServiceTest.java",
+      "package": "com.anushibinj.veemailer.service",
+      "attributes": {
+        "annotations": "ExtendWith"
+      }
+    },
+    {
+      "id": "backend/src/test/java/com/anushibinj/veemailer/service/DynamicMailSenderServiceTest.java#DynamicMailSenderServiceTest",
+      "name": "DynamicMailSenderServiceTest",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/test/java/com/anushibinj/veemailer/service/DynamicMailSenderServiceTest.java",
+      "package": "com.anushibinj.veemailer.service",
+      "attributes": {
+        "annotations": "ExtendWith"
+      }
+    },
+    {
+      "id": "backend/src/test/java/com/anushibinj/veemailer/service/EmailServiceTest.java#EmailServiceTest",
+      "name": "EmailServiceTest",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/test/java/com/anushibinj/veemailer/service/EmailServiceTest.java",
+      "package": "com.anushibinj.veemailer.service",
+      "attributes": {
+        "annotations": "ExtendWith"
+      }
+    },
+    {
+      "id": "backend/src/test/java/com/anushibinj/veemailer/service/FilterServiceTest.java#FilterServiceTest",
+      "name": "FilterServiceTest",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/test/java/com/anushibinj/veemailer/service/FilterServiceTest.java",
+      "package": "com.anushibinj.veemailer.service",
+      "attributes": {
+        "annotations": "ExtendWith"
+      }
+    },
+    {
+      "id": "backend/src/test/java/com/anushibinj/veemailer/service/InviteMagicLinkServiceTest.java#InviteMagicLinkServiceTest",
+      "name": "InviteMagicLinkServiceTest",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/test/java/com/anushibinj/veemailer/service/InviteMagicLinkServiceTest.java",
+      "package": "com.anushibinj.veemailer.service",
+      "attributes": {
+        "annotations": "ExtendWith"
+      }
+    },
+    {
+      "id": "backend/src/test/java/com/anushibinj/veemailer/service/IssueReportServiceTest.java#IssueReportServiceTest",
+      "name": "IssueReportServiceTest",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/test/java/com/anushibinj/veemailer/service/IssueReportServiceTest.java",
+      "package": "com.anushibinj.veemailer.service",
+      "attributes": {
+        "annotations": "ExtendWith"
+      }
+    },
+    {
+      "id": "backend/src/test/java/com/anushibinj/veemailer/service/JwtServiceTest.java#JwtServiceTest",
+      "name": "JwtServiceTest",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/test/java/com/anushibinj/veemailer/service/JwtServiceTest.java",
+      "package": "com.anushibinj.veemailer.service",
+      "attributes": {
+        "annotations": ""
+      }
+    },
+    {
+      "id": "backend/src/test/java/com/anushibinj/veemailer/service/MailAnalyticsServiceTest.java#MailAnalyticsServiceTest",
+      "name": "MailAnalyticsServiceTest",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/test/java/com/anushibinj/veemailer/service/MailAnalyticsServiceTest.java",
+      "package": "com.anushibinj.veemailer.service",
+      "attributes": {
+        "annotations": "ExtendWith"
+      }
+    },
+    {
+      "id": "backend/src/test/java/com/anushibinj/veemailer/service/MailAuditServiceTest.java#MailAuditServiceTest",
+      "name": "MailAuditServiceTest",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/test/java/com/anushibinj/veemailer/service/MailAuditServiceTest.java",
+      "package": "com.anushibinj.veemailer.service",
+      "attributes": {
+        "annotations": "ExtendWith"
+      }
+    },
+    {
+      "id": "backend/src/test/java/com/anushibinj/veemailer/service/NotificationPreferencesServiceTest.java#NotificationPreferencesServiceTest",
+      "name": "NotificationPreferencesServiceTest",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/test/java/com/anushibinj/veemailer/service/NotificationPreferencesServiceTest.java",
+      "package": "com.anushibinj.veemailer.service",
+      "attributes": {
+        "annotations": "ExtendWith"
+      }
+    },
+    {
+      "id": "backend/src/test/java/com/anushibinj/veemailer/service/NotificationServiceTest.java#NotificationServiceTest",
+      "name": "NotificationServiceTest",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/test/java/com/anushibinj/veemailer/service/NotificationServiceTest.java",
+      "package": "com.anushibinj.veemailer.service",
+      "attributes": {
+        "annotations": "ExtendWith"
+      }
+    },
+    {
+      "id": "backend/src/test/java/com/anushibinj/veemailer/service/OctaneCacheServiceTest.java#OctaneCacheServiceTest",
+      "name": "OctaneCacheServiceTest",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/test/java/com/anushibinj/veemailer/service/OctaneCacheServiceTest.java",
+      "package": "com.anushibinj.veemailer.service",
+      "attributes": {
+        "annotations": "ExtendWith"
+      }
+    },
+    {
+      "id": "backend/src/test/java/com/anushibinj/veemailer/service/OctaneMetadataServiceTest.java#OctaneMetadataServiceTest",
+      "name": "OctaneMetadataServiceTest",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/test/java/com/anushibinj/veemailer/service/OctaneMetadataServiceTest.java",
+      "package": "com.anushibinj.veemailer.service",
+      "attributes": {
+        "annotations": "ExtendWith"
+      }
+    },
+    {
+      "id": "backend/src/test/java/com/anushibinj/veemailer/service/OtpServiceTest.java#OtpServiceTest",
+      "name": "OtpServiceTest",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/test/java/com/anushibinj/veemailer/service/OtpServiceTest.java",
+      "package": "com.anushibinj.veemailer.service",
+      "attributes": {
+        "annotations": "ExtendWith"
+      }
+    },
+    {
+      "id": "backend/src/test/java/com/anushibinj/veemailer/service/PollingServiceTest.java#PollingServiceTest",
+      "name": "PollingServiceTest",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/test/java/com/anushibinj/veemailer/service/PollingServiceTest.java",
+      "package": "com.anushibinj.veemailer.service",
+      "attributes": {
+        "annotations": "ExtendWith"
+      }
+    },
+    {
+      "id": "backend/src/test/java/com/anushibinj/veemailer/service/SubscriptionServiceTest.java#SubscriptionServiceTest",
+      "name": "SubscriptionServiceTest",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/test/java/com/anushibinj/veemailer/service/SubscriptionServiceTest.java",
+      "package": "com.anushibinj.veemailer.service",
+      "attributes": {
+        "annotations": "ExtendWith"
+      }
+    },
+    {
+      "id": "backend/src/test/java/com/anushibinj/veemailer/service/TicketCommentServiceTest.java#TicketCommentServiceTest",
+      "name": "TicketCommentServiceTest",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/test/java/com/anushibinj/veemailer/service/TicketCommentServiceTest.java",
+      "package": "com.anushibinj.veemailer.service",
+      "attributes": {
+        "annotations": "ExtendWith"
+      }
+    },
+    {
+      "id": "backend/src/test/java/com/anushibinj/veemailer/service/TriageSlaPolicyTest.java#TriageSlaPolicyTest",
+      "name": "TriageSlaPolicyTest",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/test/java/com/anushibinj/veemailer/service/TriageSlaPolicyTest.java",
+      "package": "com.anushibinj.veemailer.service",
+      "attributes": {
+        "annotations": ""
+      }
+    },
+    {
+      "id": "backend/src/test/java/com/anushibinj/veemailer/service/WorkspaceAdminServiceTest.java#WorkspaceAdminServiceTest",
+      "name": "WorkspaceAdminServiceTest",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/test/java/com/anushibinj/veemailer/service/WorkspaceAdminServiceTest.java",
+      "package": "com.anushibinj.veemailer.service",
+      "attributes": {
+        "annotations": "ExtendWith"
+      }
+    },
+    {
+      "id": "backend/src/test/java/com/anushibinj/veemailer/service/WorkspaceDiscoveryServiceTest.java#WorkspaceDiscoveryServiceTest",
+      "name": "WorkspaceDiscoveryServiceTest",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/test/java/com/anushibinj/veemailer/service/WorkspaceDiscoveryServiceTest.java",
+      "package": "com.anushibinj.veemailer.service",
+      "attributes": {
+        "annotations": "ExtendWith"
+      }
+    },
+    {
+      "id": "backend/src/test/java/com/anushibinj/veemailer/service/WorkspaceServiceTest.java#WorkspaceServiceTest",
+      "name": "WorkspaceServiceTest",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/test/java/com/anushibinj/veemailer/service/WorkspaceServiceTest.java",
+      "package": "com.anushibinj.veemailer.service",
+      "attributes": {
+        "annotations": "ExtendWith"
+      }
+    },
+    {
+      "id": "backend/src/test/java/com/anushibinj/veemailer/service/extractor/FieldExtractorRegistryTest.java#FieldExtractorRegistryTest",
+      "name": "FieldExtractorRegistryTest",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/test/java/com/anushibinj/veemailer/service/extractor/FieldExtractorRegistryTest.java",
+      "package": "com.anushibinj.veemailer.service.extractor",
+      "attributes": {
+        "annotations": ""
+      }
+    },
+    {
+      "id": "backend/src/test/java/com/anushibinj/veemailer/service/ve/VeUtilsTest.java#VeUtilsTest",
+      "name": "VeUtilsTest",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/test/java/com/anushibinj/veemailer/service/ve/VeUtilsTest.java",
+      "package": "com.anushibinj.veemailer.service.ve",
+      "attributes": {
+        "annotations": ""
+      }
+    },
+    {
+      "id": "docker-compose.yml#postgres",
+      "name": "postgres",
+      "kind": "infra-service",
+      "language": "Docker",
+      "file": "docker-compose.yml",
+      "attributes": {
+        "image": "postgres:16-alpine",
+        "ports": "5432:5432"
+      }
+    },
+    {
+      "id": "frontend/Dockerfile#frontend",
+      "name": "frontend",
+      "kind": "docker-image",
+      "language": "Docker",
+      "file": "frontend/Dockerfile",
+      "attributes": {
+        "baseImage": "node:20-alpine",
+        "exposedPorts": "80"
+      }
+    },
+    {
+      "id": "frontend/src/App.tsx#App",
+      "name": "App",
+      "kind": "component",
+      "language": "TypeScript/JavaScript",
+      "file": "frontend/src/App.tsx",
+      "attributes": {
+        "hooks": "useTheme,useLocation,useNavigate,useAuth"
+      }
+    },
+    {
+      "id": "frontend/src/App.tsx#AppBreadcrumbs",
+      "name": "AppBreadcrumbs",
+      "kind": "component",
+      "language": "TypeScript/JavaScript",
+      "file": "frontend/src/App.tsx",
+      "attributes": {
+        "hooks": "useTheme,useLocation,useNavigate,useAuth"
+      }
+    },
+    {
+      "id": "frontend/src/App.tsx#AppHeader",
+      "name": "AppHeader",
+      "kind": "component",
+      "language": "TypeScript/JavaScript",
+      "file": "frontend/src/App.tsx",
+      "attributes": {
+        "hooks": "useTheme,useLocation,useNavigate,useAuth"
+      }
+    },
+    {
+      "id": "frontend/src/App.tsx#AppShell",
+      "name": "AppShell",
+      "kind": "component",
+      "language": "TypeScript/JavaScript",
+      "file": "frontend/src/App.tsx",
+      "attributes": {
+        "hooks": "useTheme,useLocation,useNavigate,useAuth"
+      }
+    },
+    {
+      "id": "frontend/src/App.tsx#ThemeToggle",
+      "name": "ThemeToggle",
+      "kind": "component",
+      "language": "TypeScript/JavaScript",
+      "file": "frontend/src/App.tsx",
+      "attributes": {
+        "hooks": "useTheme,useLocation,useNavigate,useAuth"
+      }
+    },
+    {
+      "id": "frontend/src/App.tsx#WorkspaceShell",
+      "name": "WorkspaceShell",
+      "kind": "component",
+      "language": "TypeScript/JavaScript",
+      "file": "frontend/src/App.tsx",
+      "attributes": {
+        "hooks": "useTheme,useLocation,useNavigate,useAuth"
+      }
+    },
+    {
+      "id": "frontend/src/components/AppFooter.tsx#AppFooter",
+      "name": "AppFooter",
+      "kind": "component",
+      "language": "TypeScript/JavaScript",
+      "file": "frontend/src/components/AppFooter.tsx",
+      "calls": [
+        "${backendUrl}/api/about"
+      ],
+      "attributes": {
+        "hooks": "useState,useEffect"
+      }
+    },
+    {
+      "id": "frontend/src/components/AuthShell.tsx#AuthShell",
+      "name": "AuthShell",
+      "kind": "component",
+      "language": "TypeScript/JavaScript",
+      "file": "frontend/src/components/AuthShell.tsx",
+      "attributes": {
+        "hooks": ""
+      }
+    },
+    {
+      "id": "frontend/src/components/ConfirmDialog.tsx#ConfirmDialog",
+      "name": "ConfirmDialog",
+      "kind": "component",
+      "language": "TypeScript/JavaScript",
+      "file": "frontend/src/components/ConfirmDialog.tsx",
+      "attributes": {
+        "hooks": ""
+      }
+    },
+    {
+      "id": "frontend/src/components/EditSubscriptionModal.tsx#EditSubscriptionModal",
+      "name": "EditSubscriptionModal",
+      "kind": "component",
+      "language": "TypeScript/JavaScript",
+      "file": "frontend/src/components/EditSubscriptionModal.tsx",
+      "attributes": {
+        "hooks": "useAuth,useState"
+      }
+    },
+    {
+      "id": "frontend/src/components/FilterBuilderView.tsx#FieldBadgeWithPopover",
+      "name": "FieldBadgeWithPopover",
+      "kind": "component",
+      "language": "TypeScript/JavaScript",
+      "file": "frontend/src/components/FilterBuilderView.tsx",
+      "attributes": {
+        "hooks": "useState,useCallback,useEffect,useAuth"
+      }
+    },
+    {
+      "id": "frontend/src/components/FilterBuilderView.tsx#FilterBuilderView",
+      "name": "FilterBuilderView",
+      "kind": "component",
+      "language": "TypeScript/JavaScript",
+      "file": "frontend/src/components/FilterBuilderView.tsx",
+      "attributes": {
+        "hooks": "useState,useCallback,useEffect,useAuth"
+      }
+    },
+    {
+      "id": "frontend/src/components/IssueReportModal.tsx#IssueReportModal",
+      "name": "IssueReportModal",
+      "kind": "component",
+      "language": "TypeScript/JavaScript",
+      "file": "frontend/src/components/IssueReportModal.tsx",
+      "attributes": {
+        "hooks": "useState,useEffect"
+      }
+    },
+    {
+      "id": "frontend/src/components/LandingView.tsx#LandingView",
+      "name": "LandingView",
+      "kind": "component",
+      "language": "TypeScript/JavaScript",
+      "file": "frontend/src/components/LandingView.tsx",
+      "attributes": {
+        "hooks": "useNavigate,useAuth,useState,useEffect"
+      }
+    },
+    {
+      "id": "frontend/src/components/LoadingPlaceholder.tsx#LoadingPlaceholder",
+      "name": "LoadingPlaceholder",
+      "kind": "component",
+      "language": "TypeScript/JavaScript",
+      "file": "frontend/src/components/LoadingPlaceholder.tsx",
+      "attributes": {
+        "hooks": ""
+      }
+    },
+    {
+      "id": "frontend/src/components/ProtectedRoute.tsx#ProtectedRoute",
+      "name": "ProtectedRoute",
+      "kind": "component",
+      "language": "TypeScript/JavaScript",
+      "file": "frontend/src/components/ProtectedRoute.tsx",
+      "attributes": {
+        "hooks": "useAuth,useLocation"
+      }
+    },
+    {
+      "id": "frontend/src/components/RecipientGroupsView.tsx#GroupFormModal",
+      "name": "GroupFormModal",
+      "kind": "component",
+      "language": "TypeScript/JavaScript",
+      "file": "frontend/src/components/RecipientGroupsView.tsx",
+      "attributes": {
+        "hooks": "useState,useEffect,useCallback"
+      }
+    },
+    {
+      "id": "frontend/src/components/RecipientGroupsView.tsx#RecipientGroupsView",
+      "name": "RecipientGroupsView",
+      "kind": "component",
+      "language": "TypeScript/JavaScript",
+      "file": "frontend/src/components/RecipientGroupsView.tsx",
+      "attributes": {
+        "hooks": "useState,useEffect,useCallback"
+      }
+    },
+    {
+      "id": "frontend/src/components/SmartFilterRow.tsx#FieldSelect",
+      "name": "FieldSelect",
+      "kind": "component",
+      "language": "TypeScript/JavaScript",
+      "file": "frontend/src/components/SmartFilterRow.tsx",
+      "attributes": {
+        "hooks": "useState,useEffect,useRef"
+      }
+    },
+    {
+      "id": "frontend/src/components/SmartFilterRow.tsx#SmartFilterRow",
+      "name": "SmartFilterRow",
+      "kind": "component",
+      "language": "TypeScript/JavaScript",
+      "file": "frontend/src/components/SmartFilterRow.tsx",
+      "attributes": {
+        "hooks": "useState,useEffect,useRef"
+      }
+    },
+    {
+      "id": "frontend/src/components/SmartFilterRow.tsx#ValuePicker",
+      "name": "ValuePicker",
+      "kind": "component",
+      "language": "TypeScript/JavaScript",
+      "file": "frontend/src/components/SmartFilterRow.tsx",
+      "attributes": {
+        "hooks": "useState,useEffect,useRef"
+      }
+    },
+    {
+      "id": "frontend/src/components/SubscriptionFormModal.tsx#RequiredMark",
+      "name": "RequiredMark",
+      "kind": "component",
+      "language": "TypeScript/JavaScript",
+      "file": "frontend/src/components/SubscriptionFormModal.tsx",
+      "attributes": {
+        "hooks": "useAuth,useState,useEffect,useCallback"
+      }
+    },
+    {
+      "id": "frontend/src/components/SubscriptionFormModal.tsx#SubscriptionFormModal",
+      "name": "SubscriptionFormModal",
+      "kind": "component",
+      "language": "TypeScript/JavaScript",
+      "file": "frontend/src/components/SubscriptionFormModal.tsx",
+      "attributes": {
+        "hooks": "useAuth,useState,useEffect,useCallback"
+      }
+    },
+    {
+      "id": "frontend/src/components/WorkspaceCreationWizard.tsx#SummaryRow",
+      "name": "SummaryRow",
+      "kind": "component",
+      "language": "TypeScript/JavaScript",
+      "file": "frontend/src/components/WorkspaceCreationWizard.tsx",
+      "attributes": {
+        "hooks": "useState,useEffect"
+      }
+    },
+    {
+      "id": "frontend/src/components/WorkspaceCreationWizard.tsx#SummarySection",
+      "name": "SummarySection",
+      "kind": "component",
+      "language": "TypeScript/JavaScript",
+      "file": "frontend/src/components/WorkspaceCreationWizard.tsx",
+      "attributes": {
+        "hooks": "useState,useEffect"
+      }
+    },
+    {
+      "id": "frontend/src/components/WorkspaceCreationWizard.tsx#WorkspaceCreationWizard",
+      "name": "WorkspaceCreationWizard",
+      "kind": "component",
+      "language": "TypeScript/JavaScript",
+      "file": "frontend/src/components/WorkspaceCreationWizard.tsx",
+      "attributes": {
+        "hooks": "useState,useEffect"
+      }
+    },
+    {
+      "id": "frontend/src/components/WorkspaceDashboard.tsx#SortIcon",
+      "name": "SortIcon",
+      "kind": "component",
+      "language": "TypeScript/JavaScript",
+      "file": "frontend/src/components/WorkspaceDashboard.tsx",
+      "attributes": {
+        "hooks": "useAuth,useState,useEffect,useMemo"
+      }
+    },
+    {
+      "id": "frontend/src/components/WorkspaceDashboard.tsx#SortableHeader",
+      "name": "SortableHeader",
+      "kind": "component",
+      "language": "TypeScript/JavaScript",
+      "file": "frontend/src/components/WorkspaceDashboard.tsx",
+      "attributes": {
+        "hooks": "useAuth,useState,useEffect,useMemo"
+      }
+    },
+    {
+      "id": "frontend/src/components/WorkspaceDashboard.tsx#WorkspaceDashboard",
+      "name": "WorkspaceDashboard",
+      "kind": "component",
+      "language": "TypeScript/JavaScript",
+      "file": "frontend/src/components/WorkspaceDashboard.tsx",
+      "attributes": {
+        "hooks": "useAuth,useState,useEffect,useMemo"
+      }
+    },
+    {
+      "id": "frontend/src/components/WorkspaceFormModal.tsx#WorkspaceFormModal",
+      "name": "WorkspaceFormModal",
+      "kind": "component",
+      "language": "TypeScript/JavaScript",
+      "file": "frontend/src/components/WorkspaceFormModal.tsx",
+      "attributes": {
+        "hooks": "useAuth,useState,useEffect"
+      }
+    },
+    {
+      "id": "frontend/src/components/__tests__/AppShell.test.tsx#StubAppShell",
+      "name": "StubAppShell",
+      "kind": "component",
+      "language": "TypeScript/JavaScript",
+      "file": "frontend/src/components/__tests__/AppShell.test.tsx",
+      "attributes": {
+        "hooks": ""
+      }
+    },
+    {
+      "id": "frontend/src/components/ui/Badge.tsx#Badge",
+      "name": "Badge",
+      "kind": "component",
+      "language": "TypeScript/JavaScript",
+      "file": "frontend/src/components/ui/Badge.tsx",
+      "attributes": {
+        "hooks": ""
+      }
+    },
+    {
+      "id": "frontend/src/components/ui/Badge.tsx#ConnectivityBadge",
+      "name": "ConnectivityBadge",
+      "kind": "component",
+      "language": "TypeScript/JavaScript",
+      "file": "frontend/src/components/ui/Badge.tsx",
+      "attributes": {
+        "hooks": ""
+      }
+    },
+    {
+      "id": "frontend/src/components/ui/Button.tsx#Button",
+      "name": "Button",
+      "kind": "component",
+      "language": "TypeScript/JavaScript",
+      "file": "frontend/src/components/ui/Button.tsx",
+      "attributes": {
+        "hooks": ""
+      }
+    },
+    {
+      "id": "frontend/src/components/ui/Card.tsx#Card",
+      "name": "Card",
+      "kind": "component",
+      "language": "TypeScript/JavaScript",
+      "file": "frontend/src/components/ui/Card.tsx",
+      "attributes": {
+        "hooks": ""
+      }
+    },
+    {
+      "id": "frontend/src/components/ui/Card.tsx#CardBody",
+      "name": "CardBody",
+      "kind": "component",
+      "language": "TypeScript/JavaScript",
+      "file": "frontend/src/components/ui/Card.tsx",
+      "attributes": {
+        "hooks": ""
+      }
+    },
+    {
+      "id": "frontend/src/components/ui/Card.tsx#CardHeader",
+      "name": "CardHeader",
+      "kind": "component",
+      "language": "TypeScript/JavaScript",
+      "file": "frontend/src/components/ui/Card.tsx",
+      "attributes": {
+        "hooks": ""
+      }
+    },
+    {
+      "id": "frontend/src/components/ui/EmptyState.tsx#EmptyState",
+      "name": "EmptyState",
+      "kind": "component",
+      "language": "TypeScript/JavaScript",
+      "file": "frontend/src/components/ui/EmptyState.tsx",
+      "attributes": {
+        "hooks": ""
+      }
+    },
+    {
+      "id": "frontend/src/components/ui/EmptyState.tsx#ErrorState",
+      "name": "ErrorState",
+      "kind": "component",
+      "language": "TypeScript/JavaScript",
+      "file": "frontend/src/components/ui/EmptyState.tsx",
+      "attributes": {
+        "hooks": ""
+      }
+    },
+    {
+      "id": "frontend/src/components/ui/Input.tsx#Input",
+      "name": "Input",
+      "kind": "component",
+      "language": "TypeScript/JavaScript",
+      "file": "frontend/src/components/ui/Input.tsx",
+      "attributes": {
+        "hooks": ""
+      }
+    },
+    {
+      "id": "frontend/src/components/ui/Input.tsx#Select",
+      "name": "Select",
+      "kind": "component",
+      "language": "TypeScript/JavaScript",
+      "file": "frontend/src/components/ui/Input.tsx",
+      "attributes": {
+        "hooks": ""
+      }
+    },
+    {
+      "id": "frontend/src/components/ui/Input.tsx#Textarea",
+      "name": "Textarea",
+      "kind": "component",
+      "language": "TypeScript/JavaScript",
+      "file": "frontend/src/components/ui/Input.tsx",
+      "attributes": {
+        "hooks": ""
+      }
+    },
+    {
+      "id": "frontend/src/components/ui/PageHeader.tsx#PageHeader",
+      "name": "PageHeader",
+      "kind": "page",
+      "language": "TypeScript/JavaScript",
+      "file": "frontend/src/components/ui/PageHeader.tsx",
+      "attributes": {
+        "hooks": ""
+      }
+    },
+    {
+      "id": "frontend/src/components/ui/PageHeader.tsx#SectionHeader",
+      "name": "SectionHeader",
+      "kind": "page",
+      "language": "TypeScript/JavaScript",
+      "file": "frontend/src/components/ui/PageHeader.tsx",
+      "attributes": {
+        "hooks": ""
+      }
+    },
+    {
+      "id": "frontend/src/components/ui/SearchInput.tsx#SearchInput",
+      "name": "SearchInput",
+      "kind": "component",
+      "language": "TypeScript/JavaScript",
+      "file": "frontend/src/components/ui/SearchInput.tsx",
+      "attributes": {
+        "hooks": ""
+      }
+    },
+    {
+      "id": "frontend/src/components/ui/Skeleton.tsx#Skeleton",
+      "name": "Skeleton",
+      "kind": "component",
+      "language": "TypeScript/JavaScript",
+      "file": "frontend/src/components/ui/Skeleton.tsx",
+      "attributes": {
+        "hooks": ""
+      }
+    },
+    {
+      "id": "frontend/src/components/ui/Skeleton.tsx#SkeletonCard",
+      "name": "SkeletonCard",
+      "kind": "component",
+      "language": "TypeScript/JavaScript",
+      "file": "frontend/src/components/ui/Skeleton.tsx",
+      "attributes": {
+        "hooks": ""
+      }
+    },
+    {
+      "id": "frontend/src/components/ui/Skeleton.tsx#SkeletonCardGrid",
+      "name": "SkeletonCardGrid",
+      "kind": "component",
+      "language": "TypeScript/JavaScript",
+      "file": "frontend/src/components/ui/Skeleton.tsx",
+      "attributes": {
+        "hooks": ""
+      }
+    },
+    {
+      "id": "frontend/src/components/ui/Skeleton.tsx#SkeletonDashboard",
+      "name": "SkeletonDashboard",
+      "kind": "component",
+      "language": "TypeScript/JavaScript",
+      "file": "frontend/src/components/ui/Skeleton.tsx",
+      "attributes": {
+        "hooks": ""
+      }
+    },
+    {
+      "id": "frontend/src/components/ui/Skeleton.tsx#SkeletonRow",
+      "name": "SkeletonRow",
+      "kind": "component",
+      "language": "TypeScript/JavaScript",
+      "file": "frontend/src/components/ui/Skeleton.tsx",
+      "attributes": {
+        "hooks": ""
+      }
+    },
+    {
+      "id": "frontend/src/components/ui/Skeleton.tsx#SkeletonText",
+      "name": "SkeletonText",
+      "kind": "component",
+      "language": "TypeScript/JavaScript",
+      "file": "frontend/src/components/ui/Skeleton.tsx",
+      "attributes": {
+        "hooks": ""
+      }
+    },
+    {
+      "id": "frontend/src/components/ui/TableActionButton.tsx#TableActionButton",
+      "name": "TableActionButton",
+      "kind": "component",
+      "language": "TypeScript/JavaScript",
+      "file": "frontend/src/components/ui/TableActionButton.tsx",
+      "attributes": {
+        "hooks": ""
+      }
+    },
+    {
+      "id": "frontend/src/components/ui/Tooltip.tsx#Tooltip",
+      "name": "Tooltip",
+      "kind": "component",
+      "language": "TypeScript/JavaScript",
+      "file": "frontend/src/components/ui/Tooltip.tsx",
+      "attributes": {
+        "hooks": "useState,useCallback,useLayoutEffect"
+      }
+    },
+    {
+      "id": "frontend/src/components/workspaceFormShared.tsx#DuplicateWorkspaceConflictBanner",
+      "name": "DuplicateWorkspaceConflictBanner",
+      "kind": "component",
+      "language": "TypeScript/JavaScript",
+      "file": "frontend/src/components/workspaceFormShared.tsx",
+      "attributes": {
+        "hooks": ""
+      }
+    },
+    {
+      "id": "frontend/src/contexts/ThemeContext.tsx#ThemeProvider",
+      "name": "ThemeProvider",
+      "kind": "component",
+      "language": "TypeScript/JavaScript",
+      "file": "frontend/src/contexts/ThemeContext.tsx",
+      "attributes": {
+        "hooks": "useEffect,useCallback,useContext"
+      }
+    },
+    {
+      "id": "frontend/src/hooks/useAuth.tsx#AuthProvider",
+      "name": "AuthProvider",
+      "kind": "component",
+      "language": "TypeScript/JavaScript",
+      "file": "frontend/src/hooks/useAuth.tsx",
+      "attributes": {
+        "hooks": "useNavigate,useEffect,useCallback,useAuth,useContext"
+      }
+    },
+    {
+      "id": "frontend/src/pages/AcceptInvitePage.tsx#AcceptInvitePage",
+      "name": "AcceptInvitePage",
+      "kind": "page",
+      "language": "TypeScript/JavaScript",
+      "file": "frontend/src/pages/AcceptInvitePage.tsx",
+      "attributes": {
+        "hooks": "useNavigate,useLocation,useAuth,useMemo,useState,useEffect"
+      }
+    },
+    {
+      "id": "frontend/src/pages/ForgotPasswordPage.tsx#ForgotPasswordPage",
+      "name": "ForgotPasswordPage",
+      "kind": "page",
+      "language": "TypeScript/JavaScript",
+      "file": "frontend/src/pages/ForgotPasswordPage.tsx",
+      "attributes": {
+        "hooks": "useNavigate,useState,useEffect"
+      }
+    },
+    {
+      "id": "frontend/src/pages/LoginPage.tsx#LoginPage",
+      "name": "LoginPage",
+      "kind": "page",
+      "language": "TypeScript/JavaScript",
+      "file": "frontend/src/pages/LoginPage.tsx",
+      "attributes": {
+        "hooks": "useNavigate,useLocation,useAuth,useState"
+      }
+    },
+    {
+      "id": "frontend/src/pages/ResetPasswordPage.tsx#ResetPasswordPage",
+      "name": "ResetPasswordPage",
+      "kind": "page",
+      "language": "TypeScript/JavaScript",
+      "file": "frontend/src/pages/ResetPasswordPage.tsx",
+      "attributes": {
+        "hooks": "useNavigate,useLocation,useState,useEffect"
+      }
+    },
+    {
+      "id": "frontend/src/pages/SignupPage.tsx#SignupPage",
+      "name": "SignupPage",
+      "kind": "page",
+      "language": "TypeScript/JavaScript",
+      "file": "frontend/src/pages/SignupPage.tsx",
+      "attributes": {
+        "hooks": "useNavigate,useState"
+      }
+    },
+    {
+      "id": "frontend/src/pages/VerifySignupPage.tsx#VerifySignupPage",
+      "name": "VerifySignupPage",
+      "kind": "page",
+      "language": "TypeScript/JavaScript",
+      "file": "frontend/src/pages/VerifySignupPage.tsx",
+      "attributes": {
+        "hooks": "useNavigate,useLocation,useAuth,useState,useEffect"
+      }
+    },
+    {
+      "id": "frontend/src/pages/admin/AdminControlPanel.tsx#AdminControlPanel",
+      "name": "AdminControlPanel",
+      "kind": "page",
+      "language": "TypeScript/JavaScript",
+      "file": "frontend/src/pages/admin/AdminControlPanel.tsx",
+      "attributes": {
+        "hooks": "useAuth,useLocation,useNavigate"
+      }
+    },
+    {
+      "id": "frontend/src/pages/admin/AiPreferencesPage.tsx#AiPreferencesPage",
+      "name": "AiPreferencesPage",
+      "kind": "page",
+      "language": "TypeScript/JavaScript",
+      "file": "frontend/src/pages/admin/AiPreferencesPage.tsx",
+      "attributes": {
+        "hooks": "useState,useEffect"
+      }
+    },
+    {
+      "id": "frontend/src/pages/admin/GeneralSettingsPage.tsx#GeneralSettingsPage",
+      "name": "GeneralSettingsPage",
+      "kind": "page",
+      "language": "TypeScript/JavaScript",
+      "file": "frontend/src/pages/admin/GeneralSettingsPage.tsx",
+      "attributes": {
+        "hooks": "useState,useCallback,useEffect"
+      }
+    },
+    {
+      "id": "frontend/src/pages/admin/IssuesPage.tsx#IssuesPage",
+      "name": "IssuesPage",
+      "kind": "page",
+      "language": "TypeScript/JavaScript",
+      "file": "frontend/src/pages/admin/IssuesPage.tsx",
+      "attributes": {
+        "hooks": "useState,useCallback,useEffect"
+      }
+    },
+    {
+      "id": "frontend/src/pages/admin/MailAnalyticsPage.tsx#MailAnalyticsPage",
+      "name": "MailAnalyticsPage",
+      "kind": "page",
+      "language": "TypeScript/JavaScript",
+      "file": "frontend/src/pages/admin/MailAnalyticsPage.tsx",
+      "attributes": {
+        "hooks": "useState,useCallback,useEffect"
+      }
+    },
+    {
+      "id": "frontend/src/pages/admin/MailAnalyticsPage.tsx#StatCard",
+      "name": "StatCard",
+      "kind": "page",
+      "language": "TypeScript/JavaScript",
+      "file": "frontend/src/pages/admin/MailAnalyticsPage.tsx",
+      "attributes": {
+        "hooks": "useState,useCallback,useEffect"
+      }
+    },
+    {
+      "id": "frontend/src/pages/admin/NotificationPreferencesPage.tsx#NotificationPreferencesPage",
+      "name": "NotificationPreferencesPage",
+      "kind": "page",
+      "language": "TypeScript/JavaScript",
+      "file": "frontend/src/pages/admin/NotificationPreferencesPage.tsx",
+      "attributes": {
+        "hooks": "useState,useEffect"
+      }
+    },
+    {
+      "id": "frontend/src/pages/admin/RecipientGroupsPage.tsx#AddMemberPicker",
+      "name": "AddMemberPicker",
+      "kind": "page",
+      "language": "TypeScript/JavaScript",
+      "file": "frontend/src/pages/admin/RecipientGroupsPage.tsx",
+      "attributes": {
+        "hooks": "useState,useEffect,useCallback"
+      }
+    },
+    {
+      "id": "frontend/src/pages/admin/RecipientGroupsPage.tsx#GroupFormModal",
+      "name": "GroupFormModal",
+      "kind": "page",
+      "language": "TypeScript/JavaScript",
+      "file": "frontend/src/pages/admin/RecipientGroupsPage.tsx",
+      "attributes": {
+        "hooks": "useState,useEffect,useCallback"
+      }
+    },
+    {
+      "id": "frontend/src/pages/admin/RecipientGroupsPage.tsx#RecipientGroupsPage",
+      "name": "RecipientGroupsPage",
+      "kind": "page",
+      "language": "TypeScript/JavaScript",
+      "file": "frontend/src/pages/admin/RecipientGroupsPage.tsx",
+      "attributes": {
+        "hooks": "useState,useEffect,useCallback"
+      }
+    },
+    {
+      "id": "frontend/src/pages/admin/UsersPage.tsx#OnboardModal",
+      "name": "OnboardModal",
+      "kind": "page",
+      "language": "TypeScript/JavaScript",
+      "file": "frontend/src/pages/admin/UsersPage.tsx",
+      "attributes": {
+        "hooks": "useAuth,useState,useCallback,useEffect,useMemo"
+      }
+    },
+    {
+      "id": "frontend/src/pages/admin/UsersPage.tsx#SortIcon",
+      "name": "SortIcon",
+      "kind": "page",
+      "language": "TypeScript/JavaScript",
+      "file": "frontend/src/pages/admin/UsersPage.tsx",
+      "attributes": {
+        "hooks": "useAuth,useState,useCallback,useEffect,useMemo"
+      }
+    },
+    {
+      "id": "frontend/src/pages/admin/UsersPage.tsx#UsersPage",
+      "name": "UsersPage",
+      "kind": "page",
+      "language": "TypeScript/JavaScript",
+      "file": "frontend/src/pages/admin/UsersPage.tsx",
+      "attributes": {
+        "hooks": "useAuth,useState,useCallback,useEffect,useMemo"
+      }
+    },
+    {
+      "id": "frontend/src/pages/admin/WorkspaceAdminManager.tsx#WorkspaceAdminManager",
+      "name": "WorkspaceAdminManager",
+      "kind": "page",
+      "language": "TypeScript/JavaScript",
+      "file": "frontend/src/pages/admin/WorkspaceAdminManager.tsx",
+      "attributes": {
+        "hooks": "useAuth,useState,useEffect"
+      }
+    },
+    {
+      "id": "frontend/src/pages/admin/WorkspaceManagementPage.tsx#WorkspaceManagementPage",
+      "name": "WorkspaceManagementPage",
+      "kind": "page",
+      "language": "TypeScript/JavaScript",
+      "file": "frontend/src/pages/admin/WorkspaceManagementPage.tsx",
+      "attributes": {
+        "hooks": "useAuth,useState,useCallback,useEffect"
+      }
+    }
+  ],
+  "routes": [
+    {
+      "path": "*",
+      "component": "Navigate",
+      "file": "frontend/src/App.tsx"
+    },
+    {
+      "path": "*",
+      "component": "Navigate",
+      "file": "frontend/src/App.tsx"
+    },
+    {
+      "path": "/",
+      "component": "ProtectedRoute",
+      "file": "frontend/src/App.tsx"
+    },
+    {
+      "path": "/accept-invite",
+      "component": "Suspense",
+      "file": "frontend/src/App.tsx"
+    },
+    {
+      "path": "/admin",
+      "component": "ProtectedRoute",
+      "file": "frontend/src/App.tsx"
+    },
+    {
+      "path": "/forgot-password",
+      "component": "Suspense",
+      "file": "frontend/src/App.tsx"
+    },
+    {
+      "path": "/login",
+      "component": "Suspense",
+      "file": "frontend/src/App.tsx"
+    },
+    {
+      "path": "/reset-password",
+      "component": "Suspense",
+      "file": "frontend/src/App.tsx"
+    },
+    {
+      "path": "/signup",
+      "component": "Suspense",
+      "file": "frontend/src/App.tsx"
+    },
+    {
+      "path": "/verify-signup",
+      "component": "Suspense",
+      "file": "frontend/src/App.tsx"
+    },
+    {
+      "path": "/workspace/:workspaceId/*",
+      "component": "ProtectedRoute",
+      "file": "frontend/src/App.tsx"
+    },
+    {
+      "path": "filters",
+      "component": "Suspense",
+      "file": "frontend/src/App.tsx"
+    },
+    {
+      "path": "groups",
+      "component": "Suspense",
+      "file": "frontend/src/App.tsx"
+    }
+  ],
+  "apis": [
+    {
+      "method": "GET",
+      "path": "/api/admin/issues",
+      "controller": "IssueReportController",
+      "handler": "PreAuthorize",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/controller/IssueReportController.java"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/admin/issues/{issueId}/status",
+      "controller": "IssueReportController",
+      "handler": "PreAuthorize",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/controller/IssueReportController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/accept-invite",
+      "controller": "AuthController",
+      "handler": "acceptInvite",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/controller/AuthController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/auth/allowed-domains",
+      "controller": "AuthController",
+      "handler": "getAllowedDomains",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/controller/AuthController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/forgot-password",
+      "controller": "AuthController",
+      "handler": "forgotPassword",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/controller/AuthController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/login",
+      "controller": "AuthController",
+      "handler": "login",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/controller/AuthController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/logout",
+      "controller": "AuthController",
+      "handler": "logout",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/controller/AuthController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/auth/me",
+      "controller": "AuthController",
+      "handler": "getCurrentUser",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/controller/AuthController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/refresh",
+      "controller": "AuthController",
+      "handler": "refreshToken",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/controller/AuthController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/request-invite-link",
+      "controller": "AuthController",
+      "handler": "requestInviteLink",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/controller/AuthController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/reset-password",
+      "controller": "AuthController",
+      "handler": "resetPassword",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/controller/AuthController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/signup",
+      "controller": "AuthController",
+      "handler": "signup",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/controller/AuthController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/auth/verify-invite-link",
+      "controller": "AuthController",
+      "handler": "verifyInviteLink",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/controller/AuthController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/verify-reset-otp",
+      "controller": "AuthController",
+      "handler": "verifyResetOtp",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/controller/AuthController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/verify-signup",
+      "controller": "AuthController",
+      "handler": "verifySignup",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/controller/AuthController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/issues",
+      "controller": "IssueReportController",
+      "handler": "submitIssue",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/controller/IssueReportController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/issues/config",
+      "controller": "IssueReportController",
+      "handler": "getIssueUploadConfig",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/controller/IssueReportController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/workspaces/all",
+      "controller": "WorkspaceController",
+      "handler": "PreAuthorize",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/controller/WorkspaceController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/workspaces/check-duplicate",
+      "controller": "WorkspaceController",
+      "handler": "PreAuthorize",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/controller/WorkspaceController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/workspaces/discover-metadata",
+      "controller": "WorkspaceController",
+      "handler": "PreAuthorize",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/controller/WorkspaceController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/workspaces/test-connection",
+      "controller": "WorkspaceController",
+      "handler": "PreAuthorize",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/controller/WorkspaceController.java"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/workspaces/{id}",
+      "controller": "WorkspaceController",
+      "handler": "PreAuthorize",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/controller/WorkspaceController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/workspaces/{id}",
+      "controller": "WorkspaceController",
+      "handler": "getWorkspace",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/controller/WorkspaceController.java"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/workspaces/{id}",
+      "controller": "WorkspaceController",
+      "handler": "PreAuthorize",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/controller/WorkspaceController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/workspaces/{id}/refetch-metadata",
+      "controller": "WorkspaceController",
+      "handler": "PreAuthorize",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/controller/WorkspaceController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/workspaces/{workspaceId}/admins",
+      "controller": "WorkspaceController",
+      "handler": "PreAuthorize",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/controller/WorkspaceController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/workspaces/{workspaceId}/admins",
+      "controller": "WorkspaceController",
+      "handler": "PreAuthorize",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/controller/WorkspaceController.java"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/workspaces/{workspaceId}/admins/{userId}",
+      "controller": "WorkspaceController",
+      "handler": "PreAuthorize",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/controller/WorkspaceController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/workspaces/{workspaceId}/subscriptions",
+      "controller": "WorkspaceController",
+      "handler": "getSubscriptions",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/controller/WorkspaceController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/workspaces/{workspaceId}/subscriptions",
+      "controller": "WorkspaceController",
+      "handler": "createSubscription",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/controller/WorkspaceController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/workspaces/{workspaceId}/subscriptions/bulk-group",
+      "controller": "WorkspaceController",
+      "handler": "PreAuthorize",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/controller/WorkspaceController.java"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}",
+      "controller": "WorkspaceController",
+      "handler": "deleteSubscription",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/controller/WorkspaceController.java"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}",
+      "controller": "WorkspaceController",
+      "handler": "updateSubscription",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/controller/WorkspaceController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}/run",
+      "controller": "WorkspaceController",
+      "handler": "PreAuthorize",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/controller/WorkspaceController.java"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}/toggle",
+      "controller": "WorkspaceController",
+      "handler": "toggleSubscription",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/controller/WorkspaceController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/workspaces/{workspaceId}/users",
+      "controller": "WorkspaceController",
+      "handler": "PreAuthorize",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/controller/WorkspaceController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/daily-recipients",
+      "controller": "MailAnalyticsController",
+      "handler": "getDailyRecipients",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/controller/MailAnalyticsController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/daily-volume",
+      "controller": "MailAnalyticsController",
+      "handler": "getDailyVolume",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/controller/MailAnalyticsController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/filter-usage",
+      "controller": "MailAnalyticsController",
+      "handler": "getFilterUsage",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/controller/MailAnalyticsController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/history",
+      "controller": "MailAnalyticsController",
+      "handler": "getHistory",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/controller/MailAnalyticsController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/non-app-users",
+      "controller": "UserManagementController",
+      "handler": "getNonAppUsers",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/controller/UserManagementController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/summary",
+      "controller": "MailAnalyticsController",
+      "handler": "getSummary",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/controller/MailAnalyticsController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/workspace-distribution",
+      "controller": "MailAnalyticsController",
+      "handler": "getWorkspaceDistribution",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/controller/MailAnalyticsController.java"
+    },
+    {
+      "method": "DELETE",
+      "path": "/{userId}",
+      "controller": "UserManagementController",
+      "handler": "deleteUser",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/controller/UserManagementController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/{userId}/resend-invite",
+      "controller": "UserManagementController",
+      "handler": "resendInvite",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/controller/UserManagementController.java"
+    },
+    {
+      "method": "PATCH",
+      "path": "/{userId}/role",
+      "controller": "UserManagementController",
+      "handler": "updateGlobalRole",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/controller/UserManagementController.java"
+    }
+  ],
+  "tables": [
+    {
+      "name": "ai_preferences",
+      "entity": "AiPreferences",
+      "columns": [
+        {
+          "name": "api_key",
+          "type": "VARCHAR(500)"
+        },
+        {
+          "name": "base_url",
+          "type": "VARCHAR(255)"
+        },
+        {
+          "name": "chat_completions_path",
+          "type": "VARCHAR(255)"
+        },
+        {
+          "name": "id",
+          "type": "UUID"
+        },
+        {
+          "name": "model",
+          "type": "VARCHAR(255)"
+        }
+      ],
+      "relatesTo": [
+        "PRIMARY",
+        "UUID"
+      ],
+      "sourceFile": "backend/src/main/java/com/anushibinj/veemailer/model/AiPreferences.java"
+    },
+    {
+      "name": "app_users",
+      "entity": "AppUser",
+      "columns": [
+        {
+          "name": "created_at",
+          "type": "TIMESTAMP"
+        },
+        {
+          "name": "email",
+          "type": "VARCHAR(255)"
+        },
+        {
+          "name": "enabled",
+          "type": "BOOLEAN"
+        },
+        {
+          "name": "id",
+          "type": "UUID"
+        },
+        {
+          "name": "name",
+          "type": "VARCHAR(255)"
+        },
+        {
+          "name": "password_hash",
+          "type": "VARCHAR(255)"
+        },
+        {
+          "name": "updated_at",
+          "type": "TIMESTAMP"
+        }
+      ],
+      "relatesTo": [
+        "UUID"
+      ],
+      "sourceFile": "backend/src/main/java/com/anushibinj/veemailer/model/AppUser.java"
+    },
+    {
+      "name": "email_subscribers",
+      "entity": "EmailSubscriber",
+      "columns": [
+        {
+          "name": "filter_id",
+          "type": "UUID"
+        },
+        {
+          "name": "frequency",
+          "type": "VARCHAR(50)"
+        },
+        {
+          "name": "id",
+          "type": "UUID"
+        },
+        {
+          "name": "recipient_email",
+          "type": "VARCHAR(255)"
+        },
+        {
+          "name": "schedule_type",
+          "type": "VARCHAR(50)"
+        },
+        {
+          "name": "status",
+          "type": "VARCHAR(50)"
+        },
+        {
+          "name": "workspace_id",
+          "type": "UUID"
+        }
+      ],
+      "relatesTo": [
+        "Frequency",
+        "RecipientGroup",
+        "ScheduleType",
+        "Status",
+        "TriageSlaThreshold",
+        "UUID",
+        "Workspace",
+        "filters",
+        "workspaces"
+      ],
+      "sourceFile": "backend/src/main/java/com/anushibinj/veemailer/model/EmailSubscriber.java"
+    },
+    {
+      "name": "filters",
+      "entity": "Filter",
+      "columns": [
+        {
+          "name": "criteria",
+          "type": "TEXT"
+        },
+        {
+          "name": "description",
+          "type": "VARCHAR(255)"
+        },
+        {
+          "name": "entity_type",
+          "type": "VARCHAR(255)"
+        },
+        {
+          "name": "fields",
+          "type": "TEXT"
+        },
+        {
+          "name": "id",
+          "type": "UUID"
+        },
+        {
+          "name": "title",
+          "type": "VARCHAR(255)"
+        },
+        {
+          "name": "workspace_id",
+          "type": "UUID"
+        }
+      ],
+      "relatesTo": [
+        "UUID",
+        "Workspace",
+        "workspaces"
+      ],
+      "sourceFile": "backend/src/main/java/com/anushibinj/veemailer/model/Filter.java"
+    },
+    {
+      "name": "general_settings",
+      "entity": "GeneralSettings",
+      "columns": [
+        {
+          "name": "id",
+          "type": "UUID"
+        },
+        {
+          "name": "query_limit",
+          "type": "INT"
+        }
+      ],
+      "relatesTo": [
+        "UUID"
+      ],
+      "sourceFile": "backend/src/main/java/com/anushibinj/veemailer/model/GeneralSettings.java"
+    },
+    {
+      "name": "invite_magic_links",
+      "entity": "InviteMagicLink",
+      "columns": [
+        {
+          "name": "email",
+          "type": "VARCHAR(255)"
+        },
+        {
+          "name": "expires_at",
+          "type": "TIMESTAMP"
+        },
+        {
+          "name": "id",
+          "type": "UUID"
+        },
+        {
+          "name": "last_sent_at",
+          "type": "TIMESTAMP"
+        },
+        {
+          "name": "resend_count",
+          "type": "INTEGER"
+        },
+        {
+          "name": "token_hash",
+          "type": "VARCHAR(255)"
+        },
+        {
+          "name": "used_at",
+          "type": "TIMESTAMP"
+        }
+      ],
+      "relatesTo": [
+        "UUID"
+      ],
+      "sourceFile": "backend/src/main/java/com/anushibinj/veemailer/model/InviteMagicLink.java"
+    },
+    {
+      "name": "issue_reports",
+      "entity": "IssueReport",
+      "columns": [
+        {
+          "name": "created_at",
+          "type": "TIMESTAMP"
+        },
+        {
+          "name": "id",
+          "type": "UUID"
+        },
+        {
+          "name": "message",
+          "type": "TEXT"
+        },
+        {
+          "name": "reporter_email",
+          "type": "VARCHAR(255)"
+        },
+        {
+          "name": "screenshot_content_type",
+          "type": "VARCHAR(255)"
+        },
+        {
+          "name": "screenshot_data",
+          "type": "BYTEA"
+        },
+        {
+          "name": "screenshot_file_name",
+          "type": "VARCHAR(255)"
+        },
+        {
+          "name": "status",
+          "type": "VARCHAR(30)"
+        },
+        {
+          "name": "updated_at",
+          "type": "TIMESTAMP"
+        }
+      ],
+      "relatesTo": [
+        "IssueStatus",
+        "UUID"
+      ],
+      "sourceFile": "backend/src/main/java/com/anushibinj/veemailer/model/IssueReport.java"
+    },
+    {
+      "name": "mail_audit_log",
+      "entity": "MailAuditLog",
+      "columns": [
+        {
+          "name": "delivery_status",
+          "type": "VARCHAR(20)"
+        },
+        {
+          "name": "duration_ms",
+          "type": "BIGINT"
+        },
+        {
+          "name": "failure_reason",
+          "type": "VARCHAR(2000)"
+        },
+        {
+          "name": "filter_template_id",
+          "type": "UUID"
+        },
+        {
+          "name": "filter_title",
+          "type": "VARCHAR(255)"
+        },
+        {
+          "name": "id",
+          "type": "UUID"
+        },
+        {
+          "name": "mail_subject",
+          "type": "VARCHAR(500)"
+        },
+        {
+          "name": "recipient_email",
+          "type": "VARCHAR(255)"
+        },
+        {
+          "name": "sent_at",
+          "type": "TIMESTAMP"
+        },
+        {
+          "name": "subscription_id",
+          "type": "UUID"
+        },
+        {
+          "name": "ticket_count",
+          "type": "INTEGER"
+        },
+        {
+          "name": "user_id",
+          "type": "UUID"
+        },
+        {
+          "name": "workspace_id",
+          "type": "UUID"
+        },
+        {
+          "name": "workspace_title",
+          "type": "VARCHAR(255)"
+        }
+      ],
+      "relatesTo": [
+        "DeliveryStatus",
+        "UUID"
+      ],
+      "sourceFile": "backend/src/main/java/com/anushibinj/veemailer/model/MailAuditLog.java"
+    },
+    {
+      "name": "notification_preferences",
+      "entity": "NotificationPreferences",
+      "columns": [
+        {
+          "name": "host",
+          "type": "VARCHAR(255)"
+        },
+        {
+          "name": "id",
+          "type": "UUID"
+        },
+        {
+          "name": "password",
+          "type": "VARCHAR(255)"
+        },
+        {
+          "name": "port",
+          "type": "INT"
+        },
+        {
+          "name": "start_tls_enabled",
+          "type": "BOOLEAN"
+        },
+        {
+          "name": "username",
+          "type": "VARCHAR(255)"
+        }
+      ],
+      "relatesTo": [
+        "PRIMARY",
+        "UUID"
+      ],
+      "sourceFile": "backend/src/main/java/com/anushibinj/veemailer/model/NotificationPreferences.java"
+    },
+    {
+      "name": "otp_requests",
+      "entity": "OtpRequest",
+      "columns": [
+        {
+          "name": "action_type",
+          "type": "VARCHAR(50)"
+        },
+        {
+          "name": "email",
+          "type": "VARCHAR(255)"
+        },
+        {
+          "name": "expires_at",
+          "type": "TIMESTAMP"
+        },
+        {
+          "name": "id",
+          "type": "UUID"
+        },
+        {
+          "name": "otp_hash",
+          "type": "VARCHAR(255)"
+        },
+        {
+          "name": "payload",
+          "type": "TEXT"
+        }
+      ],
+      "relatesTo": [
+        "ActionType",
+        "UUID"
+      ],
+      "sourceFile": "backend/src/main/java/com/anushibinj/veemailer/model/OtpRequest.java"
+    },
+    {
+      "name": "recipient_group_members",
+      "columns": [
+        {
+          "name": "group_id",
+          "type": "UUID"
+        },
+        {
+          "name": "member_email",
+          "type": "VARCHAR(255)"
+        }
+      ],
+      "relatesTo": [
+        "recipient_groups"
+      ],
+      "sourceFile": "backend/src/main/resources/db/migration/V15__add_recipient_groups.sql"
+    },
+    {
+      "name": "recipient_groups",
+      "columns": [
+        {
+          "name": "created_at",
+          "type": "TIMESTAMP"
+        },
+        {
+          "name": "created_by",
+          "type": "VARCHAR(255)"
+        },
+        {
+          "name": "description",
+          "type": "VARCHAR(500)"
+        },
+        {
+          "name": "id",
+          "type": "UUID"
+        },
+        {
+          "name": "name",
+          "type": "VARCHAR(255)"
+        },
+        {
+          "name": "workspace_id",
+          "type": "UUID"
+        }
+      ],
+      "relatesTo": [
+        "workspaces"
+      ],
+      "sourceFile": "backend/src/main/resources/db/migration/V15__add_recipient_groups.sql"
+    },
+    {
+      "name": "refresh_tokens",
+      "entity": "RefreshToken",
+      "columns": [
+        {
+          "name": "expires_at",
+          "type": "TIMESTAMP"
+        },
+        {
+          "name": "id",
+          "type": "UUID"
+        },
+        {
+          "name": "revoked",
+          "type": "BOOLEAN"
+        },
+        {
+          "name": "token",
+          "type": "VARCHAR(255)"
+        },
+        {
+          "name": "user_id",
+          "type": "UUID"
+        }
+      ],
+      "relatesTo": [
+        "UUID",
+        "app_users"
+      ],
+      "sourceFile": "backend/src/main/java/com/anushibinj/veemailer/model/RefreshToken.java"
+    },
+    {
+      "name": "roles",
+      "entity": "Role",
+      "columns": [
+        {
+          "name": "id",
+          "type": "UUID"
+        },
+        {
+          "name": "role_name",
+          "type": "VARCHAR(255)"
+        }
+      ],
+      "relatesTo": [
+        "UUID"
+      ],
+      "sourceFile": "backend/src/main/java/com/anushibinj/veemailer/model/Role.java"
+    },
+    {
+      "name": "subscriber_scheduled_hours",
+      "columns": [
+        {
+          "name": "scheduled_hour",
+          "type": "INTEGER"
+        },
+        {
+          "name": "subscriber_id",
+          "type": "UUID"
+        }
+      ],
+      "relatesTo": [
+        "email_subscribers"
+      ],
+      "sourceFile": "backend/src/main/resources/db/migration/V1__initial_schema.sql"
+    },
+    {
+      "name": "user_roles",
+      "columns": [
+        {
+          "name": "role_id",
+          "type": "UUID"
+        },
+        {
+          "name": "user_id",
+          "type": "UUID"
+        }
+      ],
+      "relatesTo": [
+        "app_users",
+        "roles"
+      ],
+      "sourceFile": "backend/src/main/resources/db/migration/V1__initial_schema.sql"
+    },
+    {
+      "name": "workspace_admins",
+      "columns": [
+        {
+          "name": "created_at",
+          "type": "TIMESTAMP"
+        },
+        {
+          "name": "created_by",
+          "type": "VARCHAR(255)"
+        },
+        {
+          "name": "id",
+          "type": "UUID"
+        },
+        {
+          "name": "user_id",
+          "type": "UUID"
+        },
+        {
+          "name": "workspace_id",
+          "type": "UUID"
+        }
+      ],
+      "relatesTo": [
+        "app_users",
+        "workspaces"
+      ],
+      "sourceFile": "backend/src/main/resources/db/migration/V12__add_workspace_admins.sql"
+    },
+    {
+      "name": "workspaces",
+      "columns": [
+        {
+          "name": "client_id",
+          "type": "VARCHAR(255)"
+        },
+        {
+          "name": "client_key",
+          "type": "VARCHAR(255)"
+        },
+        {
+          "name": "id",
+          "type": "UUID"
+        },
+        {
+          "name": "shared_space_id",
+          "type": "VARCHAR(255)"
+        },
+        {
+          "name": "title",
+          "type": "VARCHAR(255)"
+        },
+        {
+          "name": "workspace_id",
+          "type": "VARCHAR(255)"
+        }
+      ],
+      "sourceFile": "backend/src/main/resources/db/migration/V1__initial_schema.sql"
+    }
+  ],
   "git": {
     "branch": "master",
-    "commitHash": "e726d28a5b70462f8507f6c3ee0e2cd04d10da0b"
+    "commitHash": "7e5b27088ade714c4510d63802a8964e5a437861"
   }
 }
