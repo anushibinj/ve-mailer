@@ -1,0 +1,13 @@
+name: Repo Map
+
+on:
+    push:
+        branches: [master] # adjust to your default branch
+
+jobs:
+    repo-map:
+        permissions:
+            contents: write # required: the job pushes the updated docs back
+        uses: anushibinj/repo-mapper/.github/workflows/update-repo-map.yml@v1.0.0
+        with:
+            repo-mapper-version: v1.0.0
