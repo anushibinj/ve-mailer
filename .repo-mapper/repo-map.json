@@ -1,19 +1,7 @@
 {
   "name": "ve-mailer",
-  "rootPath": "C:\\sts-workspace\\general\\ve-mailer",
+  "rootPath": "/home/runner/work/ve-mailer/ve-mailer",
   "languages": [
-    {
-      "name": "CSS",
-      "fileCount": 2
-    },
-    {
-      "name": "Docker",
-      "fileCount": 2
-    },
-    {
-      "name": "HTML",
-      "fileCount": 1
-    },
     {
       "name": "JSON",
       "fileCount": 5
