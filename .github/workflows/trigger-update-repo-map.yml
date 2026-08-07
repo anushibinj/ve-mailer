@@ -8,6 +8,6 @@ jobs:
     repo-map:
         permissions:
             contents: write # required: the job pushes the updated docs back
-        uses: anushibinj/repo-mapper/.github/workflows/update-repo-map.yml@v1.1.0
+        uses: anushibinj/repo-mapper/.github/workflows/update-repo-map.yml@v1.2.0
         with:
-            repo-mapper-version: v1.1.0
+            repo-mapper-version: v1.2.0
