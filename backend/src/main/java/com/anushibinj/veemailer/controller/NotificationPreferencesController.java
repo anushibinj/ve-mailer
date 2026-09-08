@@ -2,16 +2,20 @@ package com.anushibinj.veemailer.controller;
 
 import com.anushibinj.veemailer.dto.NotificationPreferencesResponseDto;
 import com.anushibinj.veemailer.dto.NotificationPreferencesUpdateDto;
+import com.anushibinj.veemailer.service.EmailService;
 import com.anushibinj.veemailer.service.NotificationPreferencesService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/admin/notification-preferences")
@@ -20,6 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class NotificationPreferencesController {
 
     private final NotificationPreferencesService service;
+    private final EmailService emailService;
 
     @GetMapping
     public ResponseEntity<NotificationPreferencesResponseDto> get() {
@@ -30,5 +35,16 @@ public class NotificationPreferencesController {
     public ResponseEntity<NotificationPreferencesResponseDto> update(
             @Valid @RequestBody NotificationPreferencesUpdateDto dto) {
         return ResponseEntity.ok(service.update(dto));
+    }
+
+    /**
+     * Sends a test email to the currently configured admin notification addresses,
+     * exercising the saved SMTP configuration end-to-end.
+     */
+    @PostMapping("/test-email")
+    public ResponseEntity<Void> sendTestEmail() {
+        List<String> adminEmails = service.getAdminNotificationEmails();
+        emailService.sendTestEmail(adminEmails);
+        return ResponseEntity.ok().build();
     }
 }

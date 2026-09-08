@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import {
   adminGetNotificationPreferences,
   adminUpdateNotificationPreferences,
+  adminSendTestNotificationEmail,
 } from '../../services/apiService';
 import type {
   NotificationPreferencesResponse,
@@ -18,6 +19,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export default function NotificationPreferencesPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [testingConnection, setTestingConnection] = useState(false);
   const [configured, setConfigured] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
@@ -88,6 +90,20 @@ export default function NotificationPreferencesPage() {
 
   const removeAdminEmail = (email: string) => {
     setAdminEmails(prev => prev.filter(e => e !== email));
+  };
+
+  /** Sends a test email to the saved admin notification addresses using the saved SMTP config. */
+  const handleTestConnection = async () => {
+    try {
+      setTestingConnection(true);
+      await adminSendTestNotificationEmail();
+      toast.success('Test email sent successfully. Check the admin notification inbox.');
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { data?: { message?: string } } };
+      toast.error(axiosErr.response?.data?.message ?? 'Failed to send test email.');
+    } finally {
+      setTestingConnection(false);
+    }
   };
 
   const handleAdminEmailKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -371,6 +387,28 @@ export default function NotificationPreferencesPage() {
           {adminEmailError && (
             <p className="mt-1 text-xs text-red-600 dark:text-red-400">{adminEmailError}</p>
           )}
+
+          <div className="mt-3">
+            <button
+              type="button"
+              onClick={handleTestConnection}
+              disabled={testingConnection || !configured || adminEmails.length === 0}
+              title={
+                !configured
+                  ? 'Save preferences before testing the connection'
+                  : adminEmails.length === 0
+                    ? 'Add at least one admin notification email address'
+                    : undefined
+              }
+              className="inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {testingConnection ? 'Sending test email...' : 'Test Connection'}
+            </button>
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              Sends a test email using the saved SMTP settings to the admin notification
+              addresses above.
+            </p>
+          </div>
         </div>
 
         <div className="pt-4">

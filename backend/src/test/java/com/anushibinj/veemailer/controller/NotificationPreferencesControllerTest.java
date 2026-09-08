@@ -3,6 +3,7 @@ package com.anushibinj.veemailer.controller;
 import com.anushibinj.veemailer.dto.NotificationPreferencesResponseDto;
 import com.anushibinj.veemailer.dto.NotificationPreferencesUpdateDto;
 import com.anushibinj.veemailer.service.AppUserDetailsService;
+import com.anushibinj.veemailer.service.EmailService;
 import com.anushibinj.veemailer.service.JwtService;
 import com.anushibinj.veemailer.service.NotificationPreferencesService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -15,11 +16,17 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import java.util.List;
 
 @WebMvcTest(NotificationPreferencesController.class)
 @AutoConfigureMockMvc(addFilters = false)
@@ -33,6 +40,9 @@ class NotificationPreferencesControllerTest {
 
     @MockBean
     private NotificationPreferencesService service;
+
+    @MockBean
+    private EmailService emailService;
 
     @MockBean
     private JwtService jwtService;
@@ -170,6 +180,25 @@ class NotificationPreferencesControllerTest {
         mockMvc.perform(put("/api/admin/notification-preferences")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void testEmail_SendsToConfiguredAdminEmails() throws Exception {
+        when(service.getAdminNotificationEmails()).thenReturn(List.of("admin@example.com"));
+        doNothing().when(emailService).sendTestEmail(anyList());
+
+        mockMvc.perform(post("/api/admin/notification-preferences/test-email"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void testEmail_ReturnsBadRequestWhenNoAdminEmailsConfigured() throws Exception {
+        when(service.getAdminNotificationEmails()).thenReturn(List.of());
+        doThrow(new IllegalArgumentException("No admin notification email addresses are configured."))
+                .when(emailService).sendTestEmail(anyList());
+
+        mockMvc.perform(post("/api/admin/notification-preferences/test-email"))
                 .andExpect(status().isBadRequest());
     }
 }

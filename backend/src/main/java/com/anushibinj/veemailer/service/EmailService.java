@@ -327,6 +327,48 @@ public class EmailService {
         }
     }
 
+    /**
+     * Sends a test email to the configured admin notification addresses so admins can verify
+     * their SMTP configuration works end-to-end. Runs synchronously (not {@code @Async}) so the
+     * "Test Connection" button in the admin panel can surface success/failure immediately.
+     */
+    public void sendTestEmail(List<String> adminEmails) {
+        if (adminEmails == null || adminEmails.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "No admin notification email addresses are configured. Add at least one address and save before testing.");
+        }
+        try {
+            Session session = dynamicMailSenderService.getSession();
+            String from = dynamicMailSenderService.getFromAddress();
+            String recipientList = String.join(",", adminEmails);
+
+            String body =
+                "<p style=\"margin:0 0 20px;font-size:14px;line-height:1.6;color:#334155;\">" +
+                "This is a test email sent from the VE Mailer admin panel to verify the SMTP " +
+                "configuration and admin notification email addresses." +
+                "</p>" +
+                "<p style=\"margin:0;font-size:12px;color:#94a3b8;\">" +
+                "If you received this email, your notification settings are working correctly." +
+                "</p>";
+
+            MimeMessage message = new MimeMessage(session);
+            message.setFrom(new InternetAddress(from));
+            message.addRecipients(Message.RecipientType.TO, InternetAddress.parse(recipientList));
+            message.setSubject("[ve-mailer] Test notification email", "UTF-8");
+            message.setContent(buildEmailShell("Test notification email", body), "text/html; charset=UTF-8");
+            message.saveChanges();
+
+            dynamicMailSenderService.send(message);
+        } catch (MessagingException e) {
+            log.error("Failed to send test email: {}", e.getMessage());
+            throw new IllegalArgumentException("Failed to send test email: " + e.getMessage());
+        } catch (RuntimeException e) {
+            String detail = e.getCause() != null ? e.getCause().getMessage() : e.getMessage();
+            log.error("Failed to send test email: {}", detail);
+            throw new IllegalArgumentException("Failed to send test email: " + detail);
+        }
+    }
+
     /** Renders a single label/value row for the summary tables used by admin notification emails. */
     private String tableRow(String label, String value) {
         return "<tr><td style=\"padding:4px 16px 4px 0;font-size:12px;font-weight:600;color:#64748b;" +

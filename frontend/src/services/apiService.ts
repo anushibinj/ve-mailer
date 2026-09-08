@@ -585,6 +585,11 @@ export const adminUpdateNotificationPreferences = async (
   return response.data;
 };
 
+/** Sends a test email to the saved admin notification email addresses using the saved SMTP config. */
+export const adminSendTestNotificationEmail = async (): Promise<void> => {
+  await api.post('/api/admin/notification-preferences/test-email');
+};
+
 // --- Admin AI Preferences ---
 
 export interface AiPreferencesResponse {

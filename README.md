@@ -247,7 +247,7 @@ ve-mailer/
     │   │       ├── AiPreferencesPage.tsx          # AI model config form
     │   │       ├── GeneralSettingsPage.tsx        # Query result limit config (supports -1 for unlimited)
     │   │       ├── MailAnalyticsPage.tsx          # Mail delivery analytics dashboard (charts + history)
-    │   │       ├── NotificationPreferencesPage.tsx # SMTP config form
+    │   │       ├── NotificationPreferencesPage.tsx # SMTP config form + "Test Connection" button
     │   │       ├── RecipientGroupsPage.tsx        # Recipient group management with workspace selector
     │   │       ├── UsersPage.tsx                  # All registered users with sortable columns + role badges
     │   │       ├── WorkspaceAdminManager.tsx      # Assign/remove workspace admins per workspace (used in Admin panel and Edit Workspace modal)
@@ -700,6 +700,7 @@ All admin configuration endpoints require the `ADMIN` role. SMTP settings are st
 |--------|---------------------------------------|:-------------:|--------------------------------------|
 | `GET`  | `/admin/notification-preferences`     | ADMIN         | Get SMTP config (password masked)    |
 | `PUT`  | `/admin/notification-preferences`     | ADMIN         | Create/update SMTP config            |
+| `POST` | `/admin/notification-preferences/test-email` | ADMIN  | Send a test email to the saved admin notification addresses using the saved SMTP config |
 
 **Password handling:** The `password` field in responses is always `"(unchanged)"`. On update, sending `"(unchanged)"` (or blank/null) preserves the existing password. A new value replaces it.
 
