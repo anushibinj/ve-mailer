@@ -39,6 +39,9 @@
       "AiPreferencesController",
       "AiPreferencesService"
     ],
+    "apis": [
+      "/test-connection"
+    ],
     "database": [
       "ai_preferences"
     ]

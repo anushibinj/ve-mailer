@@ -294,6 +294,13 @@
     "file": "backend/src/main/java/com/anushibinj/veemailer/controller/MailAnalyticsController.java"
   },
   {
+    "method": "POST",
+    "path": "/test-connection",
+    "controller": "AiPreferencesController",
+    "handler": "testConnection",
+    "file": "backend/src/main/java/com/anushibinj/veemailer/controller/AiPreferencesController.java"
+  },
+  {
     "method": "GET",
     "path": "/workspace-distribution",
     "controller": "MailAnalyticsController",

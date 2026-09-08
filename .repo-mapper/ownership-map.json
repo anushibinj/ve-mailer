@@ -45,6 +45,11 @@
     "file": "backend/src/main/java/com/anushibinj/veemailer/dto/AdminOnboardUserRequestDto.java"
   },
   {
+    "component": "AiConnectionTestResultDto",
+    "kind": "class",
+    "file": "backend/src/main/java/com/anushibinj/veemailer/dto/AiConnectionTestResultDto.java"
+  },
+  {
     "component": "AiPreferences",
     "kind": "entity",
     "file": "backend/src/main/java/com/anushibinj/veemailer/model/AiPreferences.java",
@@ -505,14 +510,14 @@
   },
   {
     "component": "GroupFormModal",
-    "kind": "page",
-    "file": "frontend/src/pages/admin/RecipientGroupsPage.tsx",
+    "kind": "component",
+    "file": "frontend/src/components/RecipientGroupsView.tsx",
     "feature": "Groupformmodal"
   },
   {
     "component": "GroupFormModal",
-    "kind": "component",
-    "file": "frontend/src/components/RecipientGroupsView.tsx",
+    "kind": "page",
+    "file": "frontend/src/pages/admin/RecipientGroupsPage.tsx",
     "feature": "Groupformmodal"
   },
   {

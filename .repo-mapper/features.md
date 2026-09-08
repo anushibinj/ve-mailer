@@ -24,6 +24,7 @@
 
 - Frontend: AiPreferencesPage
 - Backend: AiPreferences, AiPreferencesController, AiPreferencesService
+- APIs: /test-connection
 - Database: ai_preferences
 
 ## Aisummary

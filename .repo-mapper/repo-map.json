@@ -20,7 +20,7 @@
     },
     {
       "name": "Java",
-      "fileCount": 205
+      "fileCount": 206
     },
     {
       "name": "JavaScript",
@@ -98,6 +98,9 @@
         "AiPreferences",
         "AiPreferencesController",
         "AiPreferencesService"
+      ],
+      "apis": [
+        "/test-connection"
       ],
       "database": [
         "ai_preferences"
@@ -1146,6 +1149,17 @@
       "kind": "class",
       "language": "Java",
       "file": "backend/src/main/java/com/anushibinj/veemailer/dto/AdminOnboardUserRequestDto.java",
+      "package": "com.anushibinj.veemailer.dto",
+      "attributes": {
+        "annotations": "Data,NoArgsConstructor,AllArgsConstructor,Builder"
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/dto/AiConnectionTestResultDto.java#AiConnectionTestResultDto",
+      "name": "AiConnectionTestResultDto",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/dto/AiConnectionTestResultDto.java",
       "package": "com.anushibinj.veemailer.dto",
       "attributes": {
         "annotations": "Data,NoArgsConstructor,AllArgsConstructor,Builder"
@@ -4112,6 +4126,13 @@
       "file": "backend/src/main/java/com/anushibinj/veemailer/controller/MailAnalyticsController.java"
     },
     {
+      "method": "POST",
+      "path": "/test-connection",
+      "controller": "AiPreferencesController",
+      "handler": "testConnection",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/controller/AiPreferencesController.java"
+    },
+    {
       "method": "GET",
       "path": "/workspace-distribution",
       "controller": "MailAnalyticsController",
@@ -4733,6 +4754,6 @@
   ],
   "git": {
     "branch": "master",
-    "commitHash": "7e5b27088ade714c4510d63802a8964e5a437861"
+    "commitHash": "efd63c5e2287763a6f6a68e6615bd047046c3172"
   }
 }
