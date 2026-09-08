@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import {
   adminGetAiPreferences,
   adminUpdateAiPreferences,
+  adminTestAiConnection,
 } from '../../services/apiService';
 import type {
   AiPreferencesResponse,
@@ -14,8 +15,10 @@ const API_KEY_PLACEHOLDER = '(unchanged)';
 export default function AiPreferencesPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [testing, setTesting] = useState(false);
   const [configured, setConfigured] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
+  const [testResult, setTestResult] = useState<{ success: boolean; message: string; reply?: string } | null>(null);
 
   const [apiKey, setApiKey] = useState('');
   const [baseUrl, setBaseUrl] = useState('');
@@ -86,11 +89,32 @@ export default function AiPreferencesPage() {
       setConfigured(data.configured);
       setApiKey(API_KEY_PLACEHOLDER);
       setShowApiKey(false);
+      setTestResult(null);
       toast.success('AI preferences saved successfully');
     } catch {
       toast.error('Failed to save AI preferences');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleTestConnection = async () => {
+    try {
+      setTesting(true);
+      setTestResult(null);
+      const result = await adminTestAiConnection();
+      setTestResult(result);
+      if (result.success) {
+        toast.success('Connection successful!');
+      } else {
+        toast.error('Connection failed: ' + result.message);
+      }
+    } catch {
+      const errorResult = { success: false, message: 'Unexpected error while testing connection.' };
+      setTestResult(errorResult);
+      toast.error(errorResult.message);
+    } finally {
+      setTesting(false);
     }
   };
 
@@ -206,15 +230,44 @@ export default function AiPreferencesPage() {
           />
         </div>
 
-        <div className="pt-4">
+        <div className="pt-4 flex items-center gap-3 flex-wrap">
           <button
             type="submit"
-            disabled={saving}
+            disabled={saving || testing}
             className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {saving ? 'Saving...' : 'Save Preferences'}
           </button>
+          <button
+            type="button"
+            onClick={handleTestConnection}
+            disabled={saving || testing || !configured}
+            title={!configured ? 'Save your preferences first before testing the connection' : undefined}
+            className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {testing ? 'Testing...' : 'Test Connection'}
+          </button>
         </div>
+
+        {testResult && (
+          <div
+            className={`mt-4 p-4 rounded-lg border text-sm ${
+              testResult.success
+                ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-700/30 text-green-800 dark:text-green-300'
+                : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-700/30 text-red-800 dark:text-red-300'
+            }`}
+          >
+            <p className="font-medium">{testResult.success ? '✓ Connection successful' : '✗ Connection failed'}</p>
+            {testResult.success && testResult.reply && (
+              <p className="mt-1 text-xs opacity-80">
+                <span className="font-medium">Model reply:</span> {testResult.reply}
+              </p>
+            )}
+            {!testResult.success && (
+              <p className="mt-1 text-xs opacity-80">{testResult.message}</p>
+            )}
+          </div>
+        )}
       </form>
     </div>
   );

@@ -1,14 +1,18 @@
 package com.anushibinj.veemailer.service;
 
+import com.anushibinj.veemailer.dto.AiConnectionTestResultDto;
 import com.anushibinj.veemailer.dto.AiPreferencesResponseDto;
 import com.anushibinj.veemailer.dto.AiPreferencesUpdateDto;
 import com.anushibinj.veemailer.model.AiPreferences;
 import com.anushibinj.veemailer.repository.AiPreferencesRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AiPreferencesService {
@@ -16,6 +20,7 @@ public class AiPreferencesService {
     static final String API_KEY_PLACEHOLDER = "(unchanged)";
 
     private final AiPreferencesRepository repository;
+    private final DynamicAiClientService dynamicAiClientService;
 
     /**
      * Returns the current AI preferences (there is only one row).
@@ -74,6 +79,42 @@ public class AiPreferencesService {
     public AiPreferences getEntity() {
         List<AiPreferences> all = repository.findAll();
         return all.isEmpty() ? null : all.get(0);
+    }
+
+    /**
+     * Tests connectivity to the configured AI model by sending a simple "Hi" message
+     * with both a system prompt and a user prompt, then returning the model's reply.
+     *
+     * @return a result DTO with success=true and the model reply, or success=false with an error message
+     */
+    public AiConnectionTestResultDto testConnection() {
+        AiPreferences prefs = getEntity();
+        if (prefs == null) {
+            return AiConnectionTestResultDto.builder()
+                    .success(false)
+                    .message("AI is not configured yet. Please save your preferences first.")
+                    .build();
+        }
+
+        try {
+            ChatClient chatClient = dynamicAiClientService.getChatClient();
+            String reply = chatClient.prompt()
+                    .system("You are a helpful assistant. Respond briefly and politely.")
+                    .user("Hi")
+                    .call()
+                    .content();
+            return AiConnectionTestResultDto.builder()
+                    .success(true)
+                    .message("Connection successful.")
+                    .reply(reply != null ? reply.trim() : "")
+                    .build();
+        } catch (Exception e) {
+            log.warn("AI connection test failed: {}", e.getMessage());
+            return AiConnectionTestResultDto.builder()
+                    .success(false)
+                    .message("Connection failed: " + e.getMessage())
+                    .build();
+        }
     }
 
     private AiPreferencesResponseDto toResponseDto(AiPreferences prefs) {
