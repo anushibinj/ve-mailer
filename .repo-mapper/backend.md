@@ -144,6 +144,7 @@
 | GET | /non-app-users | UserManagementController | getNonAppUsers |
 | GET | /summary | MailAnalyticsController | getSummary |
 | POST | /test-connection | AiPreferencesController | testConnection |
+| POST | /test-email | NotificationPreferencesController | sendTestEmail |
 | GET | /workspace-distribution | MailAnalyticsController | getWorkspaceDistribution |
 | DELETE | /{userId} | UserManagementController | deleteUser |
 | POST | /{userId}/resend-invite | UserManagementController | resendInvite |

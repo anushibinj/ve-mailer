@@ -433,6 +433,9 @@
       "NotificationPreferencesController",
       "NotificationPreferencesService"
     ],
+    "apis": [
+      "/test-email"
+    ],
     "database": [
       "notification_preferences"
     ]

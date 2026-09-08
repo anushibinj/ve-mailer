@@ -301,6 +301,13 @@
     "file": "backend/src/main/java/com/anushibinj/veemailer/controller/AiPreferencesController.java"
   },
   {
+    "method": "POST",
+    "path": "/test-email",
+    "controller": "NotificationPreferencesController",
+    "handler": "sendTestEmail",
+    "file": "backend/src/main/java/com/anushibinj/veemailer/controller/NotificationPreferencesController.java"
+  },
+  {
     "method": "GET",
     "path": "/workspace-distribution",
     "controller": "MailAnalyticsController",

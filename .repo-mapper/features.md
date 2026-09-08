@@ -247,6 +247,7 @@
 
 - Frontend: NotificationPreferencesPage
 - Backend: NotificationPreferences, NotificationPreferencesController, NotificationPreferencesService
+- APIs: /test-email
 - Database: notification_preferences
 
 ## Octanecache
