@@ -19,4 +19,9 @@ COPY --from=builder /tmp/staging-area/target/veemailer-0.0.1-SNAPSHOT.jar app.ja
 HEALTHCHECK --interval=10s --timeout=3s --start-period=10s --retries=10 \
     CMD curl -f http://localhost:8080/actuator/health || exit 1
 EXPOSE 8080
-ENTRYPOINT exec java $JAVA_OPTS -Duser.timezone=$TZ -Djava.security.egd=file:/dev/./urandom -jar app.jar
+
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+ENTRYPOINT ["/entrypoint.sh"]
+
+CMD exec java $JAVA_OPTS -Duser.timezone=$TZ -Djava.security.egd=file:/dev/./urandom -jar app.jar
