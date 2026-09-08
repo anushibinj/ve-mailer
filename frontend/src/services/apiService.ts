@@ -615,6 +615,18 @@ export const adminUpdateAiPreferences = async (
   return response.data;
 };
 
+export interface AiConnectionTestResult {
+  success: boolean;
+  message: string;
+  /** The AI's reply to the test "Hi" message; present only when success is true. */
+  reply?: string;
+}
+
+export const adminTestAiConnection = async (): Promise<AiConnectionTestResult> => {
+  const response = await api.post('/api/admin/ai-preferences/test-connection');
+  return response.data;
+};
+
 // --- Mail Analytics ---
 
 export interface MailAnalyticsSummary {
