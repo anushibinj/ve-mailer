@@ -73,10 +73,10 @@ public class AiSummaryService {
                     .call()
                     .content();
 
-            return result != null ? result.trim() : "AI summary unavailable.";
+            return result != null ? result.trim() : "Unable to reach AI now";
         } catch (Exception e) {
             log.error("AI summary generation failed for ticket '{}': {}", name, e.getMessage());
-            return "AI summary unavailable.";
+            return "Unable to reach AI now";
         }
     }
 

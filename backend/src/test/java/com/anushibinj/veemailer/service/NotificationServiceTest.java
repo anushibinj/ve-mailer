@@ -414,7 +414,7 @@ class NotificationServiceTest {
 
         String html = notificationService.buildHtmlTable(List.of(entity), List.of("name"), 25, true, null);
 
-        assertTrue(html.contains("AI summary unavailable."), "Should show fallback when summaries array is null");
+        assertTrue(html.contains("Unable to reach AI now"), "Should show fallback when summaries array is null");
     }
 
     @Test

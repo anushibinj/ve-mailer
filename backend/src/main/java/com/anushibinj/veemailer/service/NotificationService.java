@@ -110,17 +110,25 @@ public class NotificationService {
         String[] aiSummaries = null;
 
         if (aiSummaryEnabled) {
-            // Generate AI summaries for each ticket
+            // Generate AI summaries for each ticket. Each ticket is handled independently and
+            // any unexpected failure (AI unreachable, malformed data, etc.) falls back to a
+            // placeholder instead of aborting the whole notification — the email must still go out.
             aiSummaries = new String[results.size()];
             for (int i = 0; i < results.size(); i++) {
-                EntityModel entity = results.get(i);
-                String name = extractFieldValue("name", entity.getValue("name"));
-                String description = extractFieldValue("description", entity.getValue("description"));
-                String ticketId = extractFieldValue("id", entity.getValue("id"));
-                String phaseAgeStr = extractFieldValue("phase_age", entity.getValue("phase_age"));
-                Integer phaseAge = parsePhaseAge(phaseAgeStr);
-                String comments = aiSummaryService.fetchComments(ticketId, workspace);
-                aiSummaries[i] = aiSummaryService.generateSummary(ticketId, name, description, comments, phaseAge);
+                try {
+                    EntityModel entity = results.get(i);
+                    String name = extractFieldValue("name", entity.getValue("name"));
+                    String description = extractFieldValue("description", entity.getValue("description"));
+                    String ticketId = extractFieldValue("id", entity.getValue("id"));
+                    String phaseAgeStr = extractFieldValue("phase_age", entity.getValue("phase_age"));
+                    Integer phaseAge = parsePhaseAge(phaseAgeStr);
+                    String comments = aiSummaryService.fetchComments(ticketId, workspace);
+                    aiSummaries[i] = aiSummaryService.generateSummary(ticketId, name, description, comments, phaseAge);
+                } catch (Exception e) {
+                    log.error("AI summary generation failed unexpectedly for a ticket in workspace {}: {}",
+                            workspace.getId(), e.getMessage());
+                    aiSummaries[i] = "Unable to reach AI now";
+                }
             }
         }
 
@@ -403,7 +411,7 @@ public class NotificationService {
                     sb.append("<td style=\"padding:10px 12px;font-size:13px;color:#1e293b;border:1px solid #e2e8f0;\">");
                     if (AiSummaryService.AI_SUMMARY_FIELD.equals(field)) {
                         String summary = (aiSummaries != null && i < aiSummaries.length)
-                                ? aiSummaries[i] : "AI summary unavailable.";
+                                ? aiSummaries[i] : "Unable to reach AI now";
                         // AI summary is rendered as sanitized HTML — not escaped — so anchor tags,
                         // emphasis, and other email-safe formatting display correctly.
                         sb.append(sanitizeAiHtml(summary));

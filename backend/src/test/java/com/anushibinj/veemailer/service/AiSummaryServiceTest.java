@@ -85,7 +85,7 @@ class AiSummaryServiceTest {
 
         String summary = aiSummaryService.generateSummary("1002", "Some ticket", "desc", "User comment here", null);
 
-        assertEquals("AI summary unavailable.", summary);
+        assertEquals("Unable to reach AI now", summary);
     }
 
     @Test
@@ -105,7 +105,7 @@ class AiSummaryServiceTest {
 
         String summary = aiSummaryService.generateSummary("1002", "Some ticket", "desc", "User comment here", null);
 
-        assertEquals("AI summary unavailable.", summary);
+        assertEquals("Unable to reach AI now", summary);
     }
 
     @Test

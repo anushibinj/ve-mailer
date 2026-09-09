@@ -423,19 +423,27 @@ public class FilterService {
             workspaceService.markWorkspaceOnline(workspaceId, !entities.isEmpty());
 
             // AI Summary generation — matches the real email-send flow exactly.
+            // Each ticket is handled independently and any unexpected failure (AI unreachable,
+            // malformed data, etc.) falls back to a placeholder instead of aborting the preview.
             boolean aiSummaryEnabled = fields.contains(AiSummaryService.AI_SUMMARY_FIELD);
             String[] aiSummaries = null;
             if (aiSummaryEnabled) {
                 aiSummaries = new String[entities.size()];
                 for (int i = 0; i < entities.size(); i++) {
-                    EntityModel entity = entities.get(i);
-                    String name = extractFieldValue("name", entity.getValue("name"));
-                    String description = extractFieldValue("description", entity.getValue("description"));
-                    String ticketId = extractFieldValue("id", entity.getValue("id"));
-                    String phaseAgeStr = extractFieldValue("phase_age", entity.getValue("phase_age"));
-                    Integer phaseAge = parsePhaseAge(phaseAgeStr);
-                    String comments = aiSummaryService.fetchComments(ticketId, workspace);
-                    aiSummaries[i] = aiSummaryService.generateSummary(ticketId, name, description, comments, phaseAge);
+                    try {
+                        EntityModel entity = entities.get(i);
+                        String name = extractFieldValue("name", entity.getValue("name"));
+                        String description = extractFieldValue("description", entity.getValue("description"));
+                        String ticketId = extractFieldValue("id", entity.getValue("id"));
+                        String phaseAgeStr = extractFieldValue("phase_age", entity.getValue("phase_age"));
+                        Integer phaseAge = parsePhaseAge(phaseAgeStr);
+                        String comments = aiSummaryService.fetchComments(ticketId, workspace);
+                        aiSummaries[i] = aiSummaryService.generateSummary(ticketId, name, description, comments, phaseAge);
+                    } catch (Exception e) {
+                        log.error("AI summary generation failed unexpectedly for a ticket in workspace {}: {}",
+                                workspaceId, e.getMessage());
+                        aiSummaries[i] = "Unable to reach AI now";
+                    }
                 }
             }
 
