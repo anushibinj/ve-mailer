@@ -7,7 +7,9 @@ import com.anushibinj.veemailer.model.ScheduledJobRun;
 import com.anushibinj.veemailer.model.Status;
 import com.anushibinj.veemailer.model.Workspace;
 import com.anushibinj.veemailer.model.WorkspaceStatus;
+import com.anushibinj.veemailer.model.DeliveryStatus;
 import com.anushibinj.veemailer.repository.EmailSubscriberRepository;
+import com.anushibinj.veemailer.repository.MailAuditLogRepository;
 import com.anushibinj.veemailer.service.FilterService;
 import com.anushibinj.veemailer.service.NotificationService;
 import com.hpe.adm.nga.sdk.model.EntityModel;
@@ -45,6 +47,9 @@ class ScheduledJobExecutorTest {
     private EmailSubscriberRepository emailSubscriberRepository;
 
     @Mock
+    private MailAuditLogRepository mailAuditLogRepository;
+
+    @Mock
     private FilterService filterService;
 
     @Mock
@@ -65,9 +70,10 @@ class ScheduledJobExecutorTest {
     @BeforeEach
     void setUp() {
         clock = Clock.fixed(fixedNow, ZoneOffset.UTC);
-        executor = new ScheduledJobExecutor(scheduledJobRunService, emailSubscriberRepository,
+        executor = new ScheduledJobExecutor(scheduledJobRunService, emailSubscriberRepository, mailAuditLogRepository,
                 filterService, notificationService, classifier, clock);
         ReflectionTestUtils.setField(executor, "retryIntervalMinutes", 15);
+        ReflectionTestUtils.setField(executor, "minDispatchGapMinutes", 30);
 
         workspace = new Workspace();
         workspace.setId(UUID.randomUUID());

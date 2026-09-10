@@ -326,6 +326,19 @@ public class NotificationService {
     }
 
     /**
+     * Records a deliberate no-send (minimum-dispatch-gap or in-flight-run suppression) for every
+     * intended recipient, reusing the SKIPPED status with the given reason.
+     */
+    public void recordSuppressed(UUID jobRunId, List<EmailSubscriber> subscribers, Workspace workspace,
+                                 String filterTitle, String reason) {
+        String subject = buildMailSubject(filterTitle, 0);
+        forEachRecipient(subscribers, (subscriber, email) ->
+                mailAuditService.recordSuppressed(jobRunId, workspace.getId(), workspace.getTitle(), email,
+                        subscriber.getFilter() != null ? subscriber.getFilter().getId() : null,
+                        filterTitle, subscriber.getId(), null, subject, reason));
+    }
+
+    /**
      * Records a RETRYING audit row for every intended recipient after a transient fetch failure.
      */
     public void recordRetryingForAll(UUID jobRunId, List<EmailSubscriber> subscribers, Workspace workspace,

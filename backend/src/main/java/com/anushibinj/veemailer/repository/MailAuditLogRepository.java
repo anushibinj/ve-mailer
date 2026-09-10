@@ -105,4 +105,8 @@ public interface MailAuditLogRepository extends JpaRepository<MailAuditLog, UUID
     /** Minimum-dispatch-gap recency check (B): has this subscription already received a digest recently? */
     boolean existsBySubscriptionIdAndDeliveryStatusAndSentAtAfter(
             UUID subscriptionId, DeliveryStatus deliveryStatus, Instant sentAfter);
+
+    /** Used once the check above trips, to compute the exact "delivered N minutes ago" wording. */
+    Optional<MailAuditLog> findFirstBySubscriptionIdAndDeliveryStatusOrderBySentAtDesc(
+            UUID subscriptionId, DeliveryStatus deliveryStatus);
 }

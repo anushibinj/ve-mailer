@@ -1,13 +1,15 @@
 package com.anushibinj.veemailer.service.job;
 
+import com.anushibinj.veemailer.model.DeliveryStatus;
 import com.anushibinj.veemailer.model.EmailSubscriber;
-import com.anushibinj.veemailer.model.JobRunStatus;
+import com.anushibinj.veemailer.model.MailAuditLog;
 import com.anushibinj.veemailer.model.ScheduledJobRun;
 import com.anushibinj.veemailer.model.Status;
 import com.anushibinj.veemailer.model.TriageSlaThreshold;
 import com.anushibinj.veemailer.model.Workspace;
 import com.anushibinj.veemailer.model.WorkspaceStatus;
 import com.anushibinj.veemailer.repository.EmailSubscriberRepository;
+import com.anushibinj.veemailer.repository.MailAuditLogRepository;
 import com.anushibinj.veemailer.service.FilterService;
 import com.anushibinj.veemailer.service.NotificationService;
 import com.anushibinj.veemailer.service.TriageSlaPolicy;
@@ -20,6 +22,7 @@ import org.springframework.stereotype.Service;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -40,6 +43,7 @@ public class ScheduledJobExecutor {
 
     private final ScheduledJobRunService scheduledJobRunService;
     private final EmailSubscriberRepository emailSubscriberRepository;
+    private final MailAuditLogRepository mailAuditLogRepository;
     private final FilterService filterService;
     private final NotificationService notificationService;
     private final TransientFailureClassifier classifier;
@@ -47,6 +51,10 @@ public class ScheduledJobExecutor {
 
     @Value("${veemailer.jobs.retry.interval-minutes:15}")
     private int retryIntervalMinutes;
+
+    /** 0 disables suppression entirely. Kept below 60 by convention — see application.properties. */
+    @Value("${veemailer.jobs.min-dispatch-gap-minutes:30}")
+    private int minDispatchGapMinutes;
 
     /**
      * Attempts to run the given job. A no-op if the run cannot be found, or if the claim gate is
@@ -95,13 +103,40 @@ public class ScheduledJobExecutor {
             return;
         }
 
+        // Check A — in-flight (job level): another run for this (workspace, filter) is actively
+        // RUNNING/DISPATCHING right now. Its audit rows are not written yet, so check B below
+        // cannot see it — this is the check that catches the true overlap window.
+        if (scheduledJobRunService.hasOtherActiveRun(run.getWorkspaceId(), run.getFilterId(), run.getId())) {
+            log.warn("Job run {} suppressed — another run for workspace {} filter {} is already in-flight",
+                    run.getId(), run.getWorkspaceId(), run.getFilterId());
+            notificationService.recordSuppressed(run.getId(), subscribers, workspace, filterTitle,
+                    "Suppressed: another run for this workspace/filter is already in progress.");
+            scheduledJobRunService.markSuppressed(run);
+            return;
+        }
+
+        // Check B — recency (subscription level), evaluated per subscription immediately before
+        // dispatch: skip any subscription that already received a digest within the minimum gap.
+        // Precise per subscription rather than per batch, so a tick covering subscribers an
+        // earlier run did not still mails those subscribers.
+        List<EmailSubscriber> toSend = subscribers;
+        if (minDispatchGapMinutes > 0) {
+            toSend = applyMinimumGapSuppression(run.getId(), subscribers, workspace, filterTitle);
+            if (toSend.isEmpty()) {
+                log.warn("Job run {} suppressed — every subscription already received a digest within the last {} minutes",
+                        run.getId(), minDispatchGapMinutes);
+                scheduledJobRunService.markSuppressed(run);
+                return;
+            }
+        }
+
         if (!scheduledJobRunService.beginDispatch(run.getId())) {
             log.warn("Job run {} lost the dispatch gate — another attempt already dispatched or completed", run.getId());
             return;
         }
 
         try {
-            dispatchToSubscribers(run.getId(), subscribers, results, fields, limit, workspace, filterTitle);
+            dispatchToSubscribers(run.getId(), toSend, results, fields, limit, workspace, filterTitle);
             scheduledJobRunService.markSucceeded(run);
         } catch (Exception e) {
             // NotificationService.dispatch catches per-recipient failures internally and never
@@ -176,6 +211,33 @@ public class ScheduledJobExecutor {
 
     private TriageSlaThreshold resolveThreshold(TriageSlaThreshold threshold) {
         return threshold == null ? TriageSlaThreshold.GREEN : threshold;
+    }
+
+    /**
+     * Splits subscribers into those to actually mail and those whose last SUCCESS digest is still
+     * within the minimum gap — the latter get a SKIPPED audit row and are dropped from dispatch.
+     */
+    private List<EmailSubscriber> applyMinimumGapSuppression(UUID jobRunId, List<EmailSubscriber> subscribers,
+                                                              Workspace workspace, String filterTitle) {
+        Instant now = clock.instant();
+        Instant cutoff = now.minus(Duration.ofMinutes(minDispatchGapMinutes));
+        List<EmailSubscriber> toSend = new ArrayList<>();
+        for (EmailSubscriber subscriber : subscribers) {
+            boolean recentlyDelivered = mailAuditLogRepository.existsBySubscriptionIdAndDeliveryStatusAndSentAtAfter(
+                    subscriber.getId(), DeliveryStatus.SUCCESS, cutoff);
+            if (!recentlyDelivered) {
+                toSend.add(subscriber);
+                continue;
+            }
+            long minutesAgo = mailAuditLogRepository
+                    .findFirstBySubscriptionIdAndDeliveryStatusOrderBySentAtDesc(subscriber.getId(), DeliveryStatus.SUCCESS)
+                    .map(MailAuditLog::getSentAt)
+                    .map(sentAt -> Duration.between(sentAt, now).toMinutes())
+                    .orElse(0L);
+            String reason = "Suppressed: a digest for this subscription was delivered " + minutesAgo + " minutes ago.";
+            notificationService.recordSuppressed(jobRunId, List.of(subscriber), workspace, filterTitle, reason);
+        }
+        return toSend;
     }
 
     /**

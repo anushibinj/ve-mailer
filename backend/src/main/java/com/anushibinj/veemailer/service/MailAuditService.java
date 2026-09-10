@@ -163,12 +163,16 @@ public class MailAuditService {
                 "Skipped sending email: no tickets matched the filter", 0L);
     }
 
-    /** Minimum-dispatch-gap suppression: records a deliberate no-send, reusing the SKIPPED status. */
+    /**
+     * Minimum-dispatch-gap / in-flight-run suppression: records a deliberate no-send, reusing
+     * the SKIPPED status. {@code reason} is the caller's fully-formed message — the "delivered N
+     * minutes ago" wording for the per-subscription recency check (B), or a distinct message for
+     * the job-level in-flight check (A).
+     */
     @Transactional
     public void recordSuppressed(UUID jobRunId, UUID workspaceId, String workspaceTitle,
                                  String recipientEmail, UUID filterTemplateId, String filterTitle,
-                                 UUID subscriptionId, UUID userId, String mailSubject, long minutesAgo) {
-        String reason = "Suppressed: a digest for this subscription was delivered " + minutesAgo + " minutes ago.";
+                                 UUID subscriptionId, UUID userId, String mailSubject, String reason) {
         upsertJobRunRow(jobRunId, workspaceId, workspaceTitle, recipientEmail, filterTemplateId, filterTitle,
                 subscriptionId, userId, mailSubject, 0, DeliveryStatus.SKIPPED, reason, 0L);
     }

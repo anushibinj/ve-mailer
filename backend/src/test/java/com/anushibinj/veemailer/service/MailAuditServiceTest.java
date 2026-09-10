@@ -205,7 +205,7 @@ class MailAuditServiceTest {
     }
 
     @Test
-    void recordSuppressed_writesSkippedStatusWithGapMessage() {
+    void recordSuppressed_writesSkippedStatusWithGivenReason() {
         UUID jobRunId = UUID.randomUUID();
         UUID subId = UUID.randomUUID();
         when(clock.instant()).thenReturn(fixedNow);
@@ -213,7 +213,8 @@ class MailAuditServiceTest {
                 .thenReturn(Optional.empty());
 
         mailAuditService.recordSuppressed(jobRunId, UUID.randomUUID(), "WS", "a@b.com",
-                UUID.randomUUID(), "Filter", subId, null, "Subject", 12);
+                UUID.randomUUID(), "Filter", subId, null, "Subject",
+                "Suppressed: a digest for this subscription was delivered 12 minutes ago.");
 
         ArgumentCaptor<MailAuditLog> captor = ArgumentCaptor.forClass(MailAuditLog.class);
         verify(repository).save(captor.capture());
