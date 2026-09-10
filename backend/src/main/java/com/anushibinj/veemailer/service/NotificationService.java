@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -70,6 +71,9 @@ public class NotificationService {
      */
     record TicketLinkContext(String serverUrl, String sharedSpaceId, String workspaceId) {}
 
+    /** The rendered digest, ready to send — the output of {@link #prepare}, the input to {@link #dispatch}. */
+    public record PreparedDigest(String html, String subject, int ticketCount) {}
+
     private final DynamicMailSenderService dynamicMailSenderService;
     private final FieldExtractorRegistry fieldExtractorRegistry;
     private final AiSummaryService aiSummaryService;
@@ -91,6 +95,10 @@ public class NotificationService {
                 : "[ve-mailer] " + countPart + " \u2013 " + trimmed;
     }
 
+    /**
+     * Thin wrapper kept for non-job callers (and existing tests): the empty-result SKIPPED path,
+     * then {@link #prepare} followed by {@link #dispatch} with no job run to correlate against.
+     */
     @Async
     public void processAndSendNotifications(List<EmailSubscriber> subscribers,
                                             List<EntityModel> results,
@@ -101,10 +109,20 @@ public class NotificationService {
         if (results.isEmpty()) {
             log.info("Skipping notification emails for workspace {} filter '{}' because no tickets matched",
                     workspace.getId(), filterTitle);
-            recordNoTicketAuditEntries(subscribers, workspace, filterTitle);
+            recordSkippedNoTickets(null, subscribers, workspace, filterTitle);
             return;
         }
 
+        PreparedDigest digest = prepare(results, fields, limit, workspace, filterTitle);
+        dispatch(null, subscribers, digest, workspace, filterTitle);
+    }
+
+    /**
+     * Retryable phase: everything that can be redone safely because it happens strictly before
+     * any SMTP traffic — AI summary generation (which itself calls Octane) and HTML rendering.
+     */
+    public PreparedDigest prepare(List<EntityModel> results, List<String> fields, int limit,
+                                  Workspace workspace, String filterTitle) {
         // Check if AI Summary is enabled and generate summaries
         boolean aiSummaryEnabled = fields.contains(AiSummaryService.AI_SUMMARY_FIELD);
         String[] aiSummaries = null;
@@ -140,11 +158,22 @@ public class NotificationService {
         String workspaceUrl = frontendUrl.stripTrailing() + "/workspace/" + workspace.getId();
         String htmlBody = buildHtmlTable(results, fields, limit, aiSummaryEnabled, aiSummaries, linkContext, filterTitle, workspaceUrl);
         String subject = buildMailSubject(filterTitle, results.size());
+        return new PreparedDigest(htmlBody, subject, results.size());
+    }
+
+    /**
+     * Gated phase: the recipient fan-out. Everything from here on sends real email, so this is
+     * the side of the dispatch gate that may run at most once per job instance. {@code jobRunId}
+     * is null for non-job callers (the legacy async wrapper), in which case every audit row is a
+     * plain insert as before; job-driven callers pass a real id so rows upsert in place.
+     */
+    public void dispatch(UUID jobRunId, List<EmailSubscriber> subscribers, PreparedDigest digest,
+                         Workspace workspace, String filterTitle) {
         // Each subscriber is handled independently so one failure cannot affect the others.
         for (EmailSubscriber subscriber : subscribers) {
             if (subscriber.getGroup() != null) {
                 // Group subscription: one email thread to all current group members.
-                sendGroupEmail(subscriber, htmlBody, subject, workspace, filterTitle, results.size());
+                sendGroupEmail(jobRunId, subscriber, digest.html(), digest.subject(), workspace, filterTitle, digest.ticketCount());
             } else {
                 // Individual subscription: one email per person.
                 String recipientEmail = subscriber.getRecipientEmail();
@@ -154,26 +183,48 @@ public class NotificationService {
                 }
                 long start = System.currentTimeMillis();
                 try {
-                    sendEmail(recipientEmail, htmlBody, subject);
+                    sendEmail(recipientEmail, digest.html(), digest.subject());
                     long duration = System.currentTimeMillis() - start;
-                    mailAuditService.recordSuccess(
-                            workspace.getId(), workspace.getTitle(),
+                    recordSuccessAudit(jobRunId, workspace.getId(), workspace.getTitle(),
                             recipientEmail,
                             subscriber.getFilter() != null ? subscriber.getFilter().getId() : null,
                             filterTitle, subscriber.getId(), null,
-                            subject, results.size(), duration);
+                            digest.subject(), digest.ticketCount(), duration);
                 } catch (Exception e) {
                     long duration = System.currentTimeMillis() - start;
                     log.error("Failed to send notification email to {}", recipientEmail, e);
-                    mailAuditService.recordFailure(
-                            workspace.getId(), workspace.getTitle(),
+                    recordFailureAudit(jobRunId, workspace.getId(), workspace.getTitle(),
                             recipientEmail,
                             subscriber.getFilter() != null ? subscriber.getFilter().getId() : null,
                             filterTitle, subscriber.getId(), null,
-                            subject, results.size(), duration,
+                            digest.subject(), digest.ticketCount(), duration,
                             e.getMessage());
                 }
             }
+        }
+    }
+
+    private void recordSuccessAudit(UUID jobRunId, UUID workspaceId, String workspaceTitle, String recipientEmail,
+                                    UUID filterTemplateId, String filterTitle, UUID subscriptionId, UUID userId,
+                                    String subject, int ticketCount, long durationMs) {
+        if (jobRunId != null) {
+            mailAuditService.recordSuccess(jobRunId, workspaceId, workspaceTitle, recipientEmail,
+                    filterTemplateId, filterTitle, subscriptionId, userId, subject, ticketCount, durationMs);
+        } else {
+            mailAuditService.recordSuccess(workspaceId, workspaceTitle, recipientEmail,
+                    filterTemplateId, filterTitle, subscriptionId, userId, subject, ticketCount, durationMs);
+        }
+    }
+
+    private void recordFailureAudit(UUID jobRunId, UUID workspaceId, String workspaceTitle, String recipientEmail,
+                                    UUID filterTemplateId, String filterTitle, UUID subscriptionId, UUID userId,
+                                    String subject, int ticketCount, long durationMs, String failureReason) {
+        if (jobRunId != null) {
+            mailAuditService.recordFailure(jobRunId, workspaceId, workspaceTitle, recipientEmail,
+                    filterTemplateId, filterTitle, subscriptionId, userId, subject, ticketCount, durationMs, failureReason);
+        } else {
+            mailAuditService.recordFailure(workspaceId, workspaceTitle, recipientEmail,
+                    filterTemplateId, filterTitle, subscriptionId, userId, subject, ticketCount, durationMs, failureReason);
         }
     }
 
@@ -194,7 +245,7 @@ public class NotificationService {
      * Sends one email with all group members on the To line and records an audit entry per member.
      * The single send failure is caught here so other subscribers in the batch are not affected.
      */
-    private void sendGroupEmail(EmailSubscriber groupSub, String htmlBody, String subject,
+    private void sendGroupEmail(UUID jobRunId, EmailSubscriber groupSub, String htmlBody, String subject,
                                 Workspace workspace, String filterTitle, int ticketCount) {
         Set<String> memberEmailSet = groupSub.getGroup().getMemberEmails();
         List<String> validEmails = memberEmailSet == null ? List.of() : memberEmailSet.stream()
@@ -213,8 +264,7 @@ public class NotificationService {
             long duration = System.currentTimeMillis() - start;
             // One audit success entry per member for traceability
             for (String email : validEmails) {
-                mailAuditService.recordSuccess(
-                        workspace.getId(), workspace.getTitle(), email,
+                recordSuccessAudit(jobRunId, workspace.getId(), workspace.getTitle(), email,
                         groupSub.getFilter() != null ? groupSub.getFilter().getId() : null,
                         filterTitle, groupSub.getId(), null,
                         subject, ticketCount, duration);
@@ -224,8 +274,7 @@ public class NotificationService {
             log.error("Failed to send group email for group {} ({})",
                     groupSub.getGroup().getName(), groupSub.getId(), e);
             for (String email : validEmails) {
-                mailAuditService.recordFailure(
-                        workspace.getId(), workspace.getTitle(), email,
+                recordFailureAudit(jobRunId, workspace.getId(), workspace.getTitle(), email,
                         groupSub.getFilter() != null ? groupSub.getFilter().getId() : null,
                         filterTitle, groupSub.getId(), null,
                         subject, ticketCount, duration, e.getMessage());
@@ -249,9 +298,11 @@ public class NotificationService {
     }
 
     /**
-     * Records one audit entry per intended recipient when no tickets matched a filter.
+     * Records one audit entry per intended recipient when no tickets matched a filter. Public so
+     * job-driven callers (whose fetch succeeded with an empty result set) can record this without
+     * ever calling {@link #prepare}/{@link #dispatch} — there is no digest to send.
      */
-    private void recordNoTicketAuditEntries(List<EmailSubscriber> subscribers, Workspace workspace, String filterTitle) {
+    public void recordSkippedNoTickets(UUID jobRunId, List<EmailSubscriber> subscribers, Workspace workspace, String filterTitle) {
         String subject = buildMailSubject(filterTitle, 0);
         for (EmailSubscriber subscriber : subscribers) {
             if (subscriber.getGroup() != null) {
@@ -260,8 +311,7 @@ public class NotificationService {
                         .filter(e -> e != null && !e.isBlank())
                         .collect(Collectors.toList());
                 for (String email : validEmails) {
-                    mailAuditService.recordSkippedNoTickets(
-                            workspace.getId(), workspace.getTitle(), email,
+                    recordSkippedAudit(jobRunId, workspace.getId(), workspace.getTitle(), email,
                             subscriber.getFilter() != null ? subscriber.getFilter().getId() : null,
                             filterTitle, subscriber.getId(), null, subject);
                 }
@@ -273,10 +323,21 @@ public class NotificationService {
                 log.warn("Skipping no-ticket audit for subscriber {} — no recipient email", subscriber.getId());
                 continue;
             }
-            mailAuditService.recordSkippedNoTickets(
-                    workspace.getId(), workspace.getTitle(), recipientEmail,
+            recordSkippedAudit(jobRunId, workspace.getId(), workspace.getTitle(), recipientEmail,
                     subscriber.getFilter() != null ? subscriber.getFilter().getId() : null,
                     filterTitle, subscriber.getId(), null, subject);
+        }
+    }
+
+    private void recordSkippedAudit(UUID jobRunId, UUID workspaceId, String workspaceTitle, String recipientEmail,
+                                    UUID filterTemplateId, String filterTitle, UUID subscriptionId, UUID userId,
+                                    String subject) {
+        if (jobRunId != null) {
+            mailAuditService.recordSkippedNoTickets(jobRunId, workspaceId, workspaceTitle, recipientEmail,
+                    filterTemplateId, filterTitle, subscriptionId, userId, subject);
+        } else {
+            mailAuditService.recordSkippedNoTickets(workspaceId, workspaceTitle, recipientEmail,
+                    filterTemplateId, filterTitle, subscriptionId, userId, subject);
         }
     }
 

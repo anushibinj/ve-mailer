@@ -22,6 +22,7 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.UUID;
 
+
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
@@ -108,6 +109,89 @@ class NotificationServiceTest {
         ArgumentCaptor<MimeMessage> captor = ArgumentCaptor.forClass(MimeMessage.class);
         verify(dynamicMailSenderService).send(captor.capture());
         assertEquals("[ve-mailer] 1 ticket \u2013 Open Defects", captor.getValue().getSubject());
+    }
+
+    // ── prepare / dispatch split ───────────────────────────────────────────────
+
+    @Test
+    void testPrepare_ReturnsHtmlSubjectAndCount() {
+        EntityModel entity = new EntityModel(Set.of(new StringFieldModel("name", "Item 1")));
+
+        NotificationService.PreparedDigest digest = notificationService.prepare(
+                List.of(entity), List.of("name"), 25, testWorkspace, "Open Defects");
+
+        assertEquals("[ve-mailer] 1 ticket – Open Defects", digest.subject());
+        assertEquals(1, digest.ticketCount());
+        assertTrue(digest.html().contains("Item 1"));
+        verifyNoInteractions(dynamicMailSenderService);
+    }
+
+    @Test
+    void testPrepare_DoesNotSendEmailOrRecordAudit() {
+        EntityModel entity = new EntityModel(Set.of(new StringFieldModel("name", "Item 1")));
+
+        notificationService.prepare(List.of(entity), List.of("name"), 25, testWorkspace, "Open Defects");
+
+        verifyNoInteractions(dynamicMailSenderService, mailAuditService);
+    }
+
+    @Test
+    void testDispatch_NullJobRunId_UsesLegacyAuditOverload() {
+        EmailSubscriber sub = new EmailSubscriber();
+        sub.setRecipientEmail("user1@example.com");
+        NotificationService.PreparedDigest digest = new NotificationService.PreparedDigest("<html></html>", "Subject", 3);
+
+        notificationService.dispatch(null, List.of(sub), digest, testWorkspace, "Open Defects");
+
+        verify(dynamicMailSenderService).send(any(MimeMessage.class));
+        verify(mailAuditService).recordSuccess(
+                eq(testWorkspace.getId()), eq(testWorkspace.getTitle()), eq("user1@example.com"),
+                any(), eq("Open Defects"), any(), any(), eq("Subject"), eq(3), anyLong());
+    }
+
+    @Test
+    void testDispatch_WithJobRunId_UsesJobRunAwareAuditOverload() {
+        EmailSubscriber sub = new EmailSubscriber();
+        sub.setRecipientEmail("user1@example.com");
+        NotificationService.PreparedDigest digest = new NotificationService.PreparedDigest("<html></html>", "Subject", 3);
+        UUID jobRunId = UUID.randomUUID();
+
+        notificationService.dispatch(jobRunId, List.of(sub), digest, testWorkspace, "Open Defects");
+
+        verify(dynamicMailSenderService).send(any(MimeMessage.class));
+        verify(mailAuditService).recordSuccess(
+                eq(jobRunId), eq(testWorkspace.getId()), eq(testWorkspace.getTitle()), eq("user1@example.com"),
+                any(), eq("Open Defects"), any(), any(), eq("Subject"), eq(3), anyLong());
+        verify(mailAuditService, never()).recordSuccess(
+                any(UUID.class), any(String.class), anyString(), any(), any(), any(), any(), anyString(), anyInt(), anyLong());
+    }
+
+    @Test
+    void testDispatch_SendFailure_RecordsFailureWithJobRunId() {
+        EmailSubscriber sub = new EmailSubscriber();
+        sub.setRecipientEmail("user1@example.com");
+        NotificationService.PreparedDigest digest = new NotificationService.PreparedDigest("<html></html>", "Subject", 1);
+        UUID jobRunId = UUID.randomUUID();
+        doThrow(new RuntimeException("smtp down")).when(dynamicMailSenderService).send(any(MimeMessage.class));
+
+        notificationService.dispatch(jobRunId, List.of(sub), digest, testWorkspace, "Open Defects");
+
+        verify(mailAuditService).recordFailure(
+                eq(jobRunId), eq(testWorkspace.getId()), eq(testWorkspace.getTitle()), eq("user1@example.com"),
+                any(), eq("Open Defects"), any(), any(), eq("Subject"), eq(1), anyLong(), eq("smtp down"));
+    }
+
+    @Test
+    void testRecordSkippedNoTickets_WithJobRunId_UsesJobRunAwareAuditOverload() {
+        EmailSubscriber sub = new EmailSubscriber();
+        sub.setRecipientEmail("user1@example.com");
+        UUID jobRunId = UUID.randomUUID();
+
+        notificationService.recordSkippedNoTickets(jobRunId, List.of(sub), testWorkspace, "Open Defects");
+
+        verify(mailAuditService).recordSkippedNoTickets(
+                eq(jobRunId), eq(testWorkspace.getId()), eq(testWorkspace.getTitle()), eq("user1@example.com"),
+                any(), eq("Open Defects"), any(), any(), eq("[ve-mailer] 0 tickets – Open Defects"));
     }
 
     // ── buildMailSubject ──────────────────────────────────────────────────────
