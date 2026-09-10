@@ -3,35 +3,37 @@ package com.anushibinj.veemailer.service;
 import com.anushibinj.veemailer.model.EmailSubscriber;
 import com.anushibinj.veemailer.model.Filter;
 import com.anushibinj.veemailer.model.ScheduleType;
+import com.anushibinj.veemailer.model.ScheduledJobRun;
 import com.anushibinj.veemailer.model.Status;
-import com.anushibinj.veemailer.model.TriageSlaThreshold;
 import com.anushibinj.veemailer.model.Workspace;
+import com.anushibinj.veemailer.model.WorkspaceStatus;
 import com.anushibinj.veemailer.repository.EmailSubscriberRepository;
-import com.hpe.adm.nga.sdk.model.EntityModel;
-import com.hpe.adm.nga.sdk.model.StringFieldModel;
+import com.anushibinj.veemailer.service.job.ScheduledJobExecutor;
+import com.anushibinj.veemailer.service.job.ScheduledJobRunService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
-import java.time.Duration;
+import java.time.Clock;
 import java.time.DayOfWeek;
 import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.Set;
+import java.util.Optional;
 import java.util.UUID;
-import org.mockito.ArgumentCaptor;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @ExtendWith(MockitoExtension.class)
 class PollingServiceTest {
@@ -40,21 +42,25 @@ class PollingServiceTest {
     private EmailSubscriberRepository emailSubscriberRepository;
 
     @Mock
-    private NotificationService notificationService;
+    private ScheduledJobRunService scheduledJobRunService;
 
     @Mock
-    private FilterService filterService;
+    private ScheduledJobExecutor scheduledJobExecutor;
 
-    @InjectMocks
     private PollingService pollingService;
 
     private Workspace workspace1;
     private Workspace workspace2;
     private Filter filter1;
     private Filter filter2;
+    private final Instant fixedNow = Instant.parse("2026-01-01T09:17:00Z");
 
     @BeforeEach
     void setUp() {
+        Clock clock = Clock.fixed(fixedNow, ZoneOffset.UTC);
+        pollingService = new PollingService(emailSubscriberRepository, scheduledJobRunService, scheduledJobExecutor, clock);
+        ReflectionTestUtils.setField(pollingService, "maxAttempts", 4);
+
         workspace1 = new Workspace();
         workspace1.setId(UUID.randomUUID());
         workspace1.setClientId("client-id-1");
@@ -75,90 +81,92 @@ class PollingServiceTest {
         filter2.setWorkspace(workspace1);
     }
 
+    private void stubRunCreation() {
+        lenient().when(scheduledJobRunService.createScheduledRun(any(), any(), any(), anyList(), anyInt()))
+                .thenAnswer(inv -> Optional.of(ScheduledJobRun.builder().id(UUID.randomUUID()).build()));
+    }
+
     @Test
     void testProcessAtHour_Daily_GroupsCorrectly() {
+        stubRunCreation();
         EmailSubscriber sub1 = new EmailSubscriber();
+        sub1.setId(UUID.randomUUID());
         sub1.setWorkspace(workspace1);
         sub1.setFilter(filter1);
 
         EmailSubscriber sub2 = new EmailSubscriber();
+        sub2.setId(UUID.randomUUID());
         sub2.setWorkspace(workspace1);
         sub2.setFilter(filter1); // Same group as sub1
 
         EmailSubscriber sub3 = new EmailSubscriber();
+        sub3.setId(UUID.randomUUID());
         sub3.setWorkspace(workspace1);
         sub3.setFilter(filter2); // Different filter
 
         EmailSubscriber sub4 = new EmailSubscriber();
+        sub4.setId(UUID.randomUUID());
         sub4.setWorkspace(workspace2);
         sub4.setFilter(filter1); // Different workspace
 
         when(emailSubscriberRepository.findActiveByScheduledHourAndScheduleType(9, ScheduleType.DAILY, Status.ACTIVE))
                 .thenReturn(Arrays.asList(sub1, sub2, sub3, sub4));
-        when(filterService.getFilterFields(any())).thenReturn(List.of("name"));
-        when(filterService.executeFilter(any(), any())).thenReturn(Collections.emptyList());
-        when(filterService.getQueryLimit()).thenReturn(25);
 
         pollingService.processAtHour(9, DayOfWeek.WEDNESDAY);
 
         // Group 1: sub1, sub2  |  Group 2: sub3  |  Group 3: sub4
-        verify(notificationService, times(3))
-                .processAndSendNotifications(anyList(), anyList(), anyList(), anyInt(), any(), any());
+        verify(scheduledJobRunService, times(3)).createScheduledRun(any(), any(), any(), anyList(), eq(4));
+        verify(scheduledJobExecutor, times(3)).execute(any());
     }
 
     /**
      * Core deduplication test: when two subscribers share the same workspace+filter and
-     * the same scheduled hour, the filter must be executed exactly ONCE and both
-     * recipients must appear in the single processAndSendNotifications call.
+     * the same scheduled hour, exactly ONE job run must be created covering both recipients.
      */
     @Test
-    @SuppressWarnings("unchecked")
-    void testProcessAtHour_SharedFilter_ExecutesFilterOnce() {
+    void testProcessAtHour_SharedFilter_CreatesOneJobRunWithBothSubscriberIds() {
+        stubRunCreation();
         EmailSubscriber sub1 = new EmailSubscriber();
+        sub1.setId(UUID.randomUUID());
         sub1.setWorkspace(workspace1);
         sub1.setFilter(filter1);
         sub1.setRecipientEmail("alice@example.com");
 
         EmailSubscriber sub2 = new EmailSubscriber();
+        sub2.setId(UUID.randomUUID());
         sub2.setWorkspace(workspace1);
         sub2.setFilter(filter1); // Same workspace + filter → same group
         sub2.setRecipientEmail("bob@example.com");
 
         when(emailSubscriberRepository.findActiveByScheduledHourAndScheduleType(9, ScheduleType.DAILY, Status.ACTIVE))
                 .thenReturn(Arrays.asList(sub1, sub2));
-        when(filterService.getFilterFields(filter1.getId())).thenReturn(List.of("name"));
-        when(filterService.executeFilter(filter1.getId(), workspace1.getId())).thenReturn(Collections.emptyList());
-        when(filterService.getQueryLimit()).thenReturn(25);
 
         pollingService.processAtHour(9, DayOfWeek.WEDNESDAY);
 
-        // Filter must be executed exactly once, not once per subscriber
-        verify(filterService, times(1)).executeFilter(filter1.getId(), workspace1.getId());
+        // Exactly one job run created for the shared (workspace, filter) group
+        verify(scheduledJobRunService, times(1)).createScheduledRun(
+                eq(workspace1.getId()), eq(filter1.getId()), any(), anyList(), eq(4));
 
-        // Both recipients must be included in a single notification call
-        ArgumentCaptor<List<EmailSubscriber>> recipientsCaptor = ArgumentCaptor.forClass(List.class);
-        verify(notificationService, times(1))
-                .processAndSendNotifications(recipientsCaptor.capture(), anyList(), anyList(), anyInt(), any(), any());
-        List<EmailSubscriber> captured = recipientsCaptor.getValue();
-        assertEquals(2, captured.size(), "Both subscribers must receive the notification");
-        assertEquals(true, captured.contains(sub1));
-        assertEquals(true, captured.contains(sub2));
+        ArgumentCaptor<List<UUID>> idsCaptor = ArgumentCaptor.forClass(List.class);
+        verify(scheduledJobRunService).createScheduledRun(any(), any(), any(), idsCaptor.capture(), anyInt());
+        assertThat(idsCaptor.getValue()).containsExactlyInAnyOrder(sub1.getId(), sub2.getId());
     }
 
     @Test
-    void testProcessAtHour_Empty_NoNotificationsSent() {
+    void testProcessAtHour_Empty_NoJobRunsCreated() {
         when(emailSubscriberRepository.findActiveByScheduledHourAndScheduleType(9, ScheduleType.DAILY, Status.ACTIVE))
                 .thenReturn(Collections.emptyList());
 
         pollingService.processAtHour(9, DayOfWeek.WEDNESDAY);
 
-        verify(notificationService, never())
-                .processAndSendNotifications(anyList(), anyList(), anyList(), anyInt(), any(), any());
+        verifyNoInteractions(scheduledJobRunService, scheduledJobExecutor);
     }
 
     @Test
     void testProcessAtHour_Weekly_FiresOnlyOnMonday() {
+        stubRunCreation();
         EmailSubscriber weeklySub = new EmailSubscriber();
+        weeklySub.setId(UUID.randomUUID());
         weeklySub.setWorkspace(workspace1);
         weeklySub.setFilter(filter1);
 
@@ -166,14 +174,10 @@ class PollingServiceTest {
                 .thenReturn(Collections.emptyList());
         when(emailSubscriberRepository.findActiveByScheduledHourAndScheduleType(9, ScheduleType.WEEKLY, Status.ACTIVE))
                 .thenReturn(List.of(weeklySub));
-        when(filterService.getFilterFields(any())).thenReturn(List.of("name"));
-        when(filterService.executeFilter(any(), any())).thenReturn(Collections.emptyList());
-        when(filterService.getQueryLimit()).thenReturn(25);
 
         pollingService.processAtHour(9, DayOfWeek.MONDAY);
 
-        verify(notificationService, times(1))
-                .processAndSendNotifications(anyList(), anyList(), anyList(), anyInt(), any(), any());
+        verify(scheduledJobRunService, times(1)).createScheduledRun(any(), any(), any(), anyList(), anyInt());
     }
 
     @Test
@@ -186,8 +190,58 @@ class PollingServiceTest {
 
         verify(emailSubscriberRepository, never())
                 .findActiveByScheduledHourAndScheduleType(anyInt(), eq(ScheduleType.WEEKLY), any());
-        verify(notificationService, never())
-                .processAndSendNotifications(anyList(), anyList(), anyList(), anyInt(), any(), any());
+        verifyNoInteractions(scheduledJobRunService, scheduledJobExecutor);
+    }
+
+    @Test
+    void testProcessAtHour_DisabledWorkspace_SkipsGroup() {
+        EmailSubscriber sub = new EmailSubscriber();
+        sub.setId(UUID.randomUUID());
+        Workspace disabled = new Workspace();
+        disabled.setId(UUID.randomUUID());
+        disabled.setStatus(WorkspaceStatus.DISABLED);
+        sub.setWorkspace(disabled);
+        sub.setFilter(filter1);
+
+        when(emailSubscriberRepository.findActiveByScheduledHourAndScheduleType(9, ScheduleType.DAILY, Status.ACTIVE))
+                .thenReturn(List.of(sub));
+
+        pollingService.processAtHour(9, DayOfWeek.WEDNESDAY);
+
+        verifyNoInteractions(scheduledJobRunService, scheduledJobExecutor);
+    }
+
+    @Test
+    void testProcessAtHour_SupersedesOlderRunsBeforeCreating() {
+        stubRunCreation();
+        EmailSubscriber sub = new EmailSubscriber();
+        sub.setId(UUID.randomUUID());
+        sub.setWorkspace(workspace1);
+        sub.setFilter(filter1);
+
+        when(emailSubscriberRepository.findActiveByScheduledHourAndScheduleType(9, ScheduleType.DAILY, Status.ACTIVE))
+                .thenReturn(List.of(sub));
+
+        pollingService.processAtHour(9, DayOfWeek.WEDNESDAY);
+
+        verify(scheduledJobRunService).supersedeOlderRuns(eq(workspace1.getId()), eq(filter1.getId()), any());
+    }
+
+    @Test
+    void testProcessAtHour_DuplicateJobKey_ExecutorNeverCalled() {
+        EmailSubscriber sub = new EmailSubscriber();
+        sub.setId(UUID.randomUUID());
+        sub.setWorkspace(workspace1);
+        sub.setFilter(filter1);
+
+        when(emailSubscriberRepository.findActiveByScheduledHourAndScheduleType(9, ScheduleType.DAILY, Status.ACTIVE))
+                .thenReturn(List.of(sub));
+        when(scheduledJobRunService.createScheduledRun(any(), any(), any(), anyList(), anyInt()))
+                .thenReturn(Optional.empty()); // duplicate tick — creation gate rejected it
+
+        pollingService.processAtHour(9, DayOfWeek.WEDNESDAY);
+
+        verifyNoInteractions(scheduledJobExecutor);
     }
 
     @Test
@@ -201,76 +255,31 @@ class PollingServiceTest {
     }
 
     @Test
-    void testRunNow_CallsFilterServiceAndNotification() {
+    void testRunNow_CreatesManualRunAndExecutesIt() {
         EmailSubscriber subscriber = new EmailSubscriber();
+        subscriber.setId(UUID.randomUUID());
         subscriber.setWorkspace(workspace1);
         subscriber.setFilter(filter1);
-
-        List<String>      fields  = List.of("name", "phase");
-        List<EntityModel> results = Collections.emptyList();
-
-        when(filterService.getFilterFields(filter1.getId())).thenReturn(fields);
-        when(filterService.executeFilter(filter1.getId(), workspace1.getId())).thenReturn(results);
-        when(filterService.getQueryLimit()).thenReturn(25);
+        ScheduledJobRun manualRun = ScheduledJobRun.builder().id(UUID.randomUUID()).build();
+        when(scheduledJobRunService.createManualRun(subscriber.getId(), workspace1.getId(), filter1.getId(), List.of(subscriber.getId())))
+                .thenReturn(Optional.of(manualRun));
 
         pollingService.runNow(subscriber);
 
-        verify(filterService).getFilterFields(filter1.getId());
-        verify(filterService).executeFilter(filter1.getId(), workspace1.getId());
-        verify(notificationService).processAndSendNotifications(List.of(subscriber), results, fields, 25, workspace1, filter1.getTitle());
+        verify(scheduledJobExecutor).execute(manualRun.getId());
     }
 
     @Test
-    void testRunNow_TriageThreshold_FiltersToMatchingResults() {
+    void testRunNow_DuplicateManualRun_ExecutorNeverCalled() {
         EmailSubscriber subscriber = new EmailSubscriber();
+        subscriber.setId(UUID.randomUUID());
         subscriber.setWorkspace(workspace1);
         subscriber.setFilter(filter1);
-        subscriber.setTriageSlaThreshold(TriageSlaThreshold.RED);
-
-        EntityModel greenTicket = new EntityModel(Set.of(
-                new StringFieldModel("id", "1001"),
-                new StringFieldModel("creation_time", Instant.now().minus(Duration.ofDays(1)).toString())
-        ));
-        EntityModel redTicket = new EntityModel(Set.of(
-                new StringFieldModel("id", "1002"),
-                new StringFieldModel("creation_time", Instant.now().minus(Duration.ofDays(8)).toString())
-        ));
-
-        when(filterService.getFilterFields(filter1.getId()))
-                .thenReturn(List.of("name", TriageSlaPolicy.TRIAGE_SLA_FIELD));
-        when(filterService.executeFilter(filter1.getId(), workspace1.getId()))
-                .thenReturn(List.of(greenTicket, redTicket));
-        when(filterService.getQueryLimit()).thenReturn(25);
-
-        ArgumentCaptor<List<EntityModel>> resultsCaptor = ArgumentCaptor.forClass(List.class);
+        when(scheduledJobRunService.createManualRun(any(), any(), any(), anyList()))
+                .thenReturn(Optional.empty());
 
         pollingService.runNow(subscriber);
 
-        verify(notificationService).processAndSendNotifications(
-                anyList(), resultsCaptor.capture(), anyList(), anyInt(), any(), any());
-        assertEquals(1, resultsCaptor.getValue().size());
-        assertEquals("1002", resultsCaptor.getValue().get(0).getValue("id").getValue());
-    }
-
-    @Test
-    void testRunNow_FilterServiceException_LogsAndDoesNotThrow() {
-        EmailSubscriber subscriber = new EmailSubscriber();
-        subscriber.setWorkspace(workspace1);
-        subscriber.setFilter(filter1);
-
-        when(filterService.getFilterFields(any())).thenThrow(new RuntimeException("Octane error"));
-
-        // Should not propagate — error is logged internally
-        assertDoesNotThrow(() -> pollingService.runNow(subscriber));
-        verify(notificationService, never()).processAndSendNotifications(anyList(), anyList(), anyList(), anyInt(), any(), any());
-    }
-
-    // Bring in assertDoesNotThrow
-    private static void assertDoesNotThrow(org.junit.jupiter.api.function.Executable executable) {
-        try {
-            executable.execute();
-        } catch (Throwable t) {
-            throw new AssertionError("Expected no exception but got: " + t, t);
-        }
+        verifyNoInteractions(scheduledJobExecutor);
     }
 }

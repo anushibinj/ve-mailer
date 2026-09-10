@@ -80,6 +80,10 @@ public class ScheduledJobRunService {
         }
     }
 
+    public Optional<ScheduledJobRun> findById(UUID runId) {
+        return repository.findById(runId);
+    }
+
     /** Claim gate: only the caller whose call returns true may execute this run. */
     public boolean claim(UUID runId) {
         return repository.claim(runId, clock.instant()) == 1;

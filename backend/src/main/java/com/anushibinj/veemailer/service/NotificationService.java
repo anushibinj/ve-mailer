@@ -304,6 +304,46 @@ public class NotificationService {
      */
     public void recordSkippedNoTickets(UUID jobRunId, List<EmailSubscriber> subscribers, Workspace workspace, String filterTitle) {
         String subject = buildMailSubject(filterTitle, 0);
+        forEachRecipient(subscribers, (subscriber, email) ->
+                recordSkippedAudit(jobRunId, workspace.getId(), workspace.getTitle(), email,
+                        subscriber.getFilter() != null ? subscriber.getFilter().getId() : null,
+                        filterTitle, subscriber.getId(), null, subject));
+    }
+
+    /**
+     * Records a FAILED audit row for every intended recipient of a job that never got past the
+     * fetch (a permanent classification, or a transient one that exhausted its retry attempts).
+     * Upserts via the job-run-aware overload, so a row already RETRYING from an earlier attempt
+     * is updated in place rather than duplicated.
+     */
+    public void recordFailureForAll(UUID jobRunId, List<EmailSubscriber> subscribers, Workspace workspace,
+                                    String filterTitle, String failureReason) {
+        String subject = buildMailSubject(filterTitle, 0);
+        forEachRecipient(subscribers, (subscriber, email) ->
+                recordFailureAudit(jobRunId, workspace.getId(), workspace.getTitle(), email,
+                        subscriber.getFilter() != null ? subscriber.getFilter().getId() : null,
+                        filterTitle, subscriber.getId(), null, subject, 0, 0L, failureReason));
+    }
+
+    /**
+     * Records a RETRYING audit row for every intended recipient after a transient fetch failure.
+     */
+    public void recordRetryingForAll(UUID jobRunId, List<EmailSubscriber> subscribers, Workspace workspace,
+                                     String filterTitle, int attemptsSoFar, int retryIntervalMinutes) {
+        String subject = buildMailSubject(filterTitle, 0);
+        forEachRecipient(subscribers, (subscriber, email) ->
+                mailAuditService.recordRetrying(jobRunId, workspace.getId(), workspace.getTitle(), email,
+                        subscriber.getFilter() != null ? subscriber.getFilter().getId() : null,
+                        filterTitle, subscriber.getId(), null, subject, 0, attemptsSoFar, retryIntervalMinutes));
+    }
+
+    @FunctionalInterface
+    private interface RecipientAuditWriter {
+        void write(EmailSubscriber subscriber, String recipientEmail);
+    }
+
+    /** Expands each subscriber (individual or group) into its recipient emails, one callback per email. */
+    private void forEachRecipient(List<EmailSubscriber> subscribers, RecipientAuditWriter writer) {
         for (EmailSubscriber subscriber : subscribers) {
             if (subscriber.getGroup() != null) {
                 Set<String> memberEmailSet = subscriber.getGroup().getMemberEmails();
@@ -311,21 +351,17 @@ public class NotificationService {
                         .filter(e -> e != null && !e.isBlank())
                         .collect(Collectors.toList());
                 for (String email : validEmails) {
-                    recordSkippedAudit(jobRunId, workspace.getId(), workspace.getTitle(), email,
-                            subscriber.getFilter() != null ? subscriber.getFilter().getId() : null,
-                            filterTitle, subscriber.getId(), null, subject);
+                    writer.write(subscriber, email);
                 }
                 continue;
             }
 
             String recipientEmail = subscriber.getRecipientEmail();
             if (recipientEmail == null || recipientEmail.isBlank()) {
-                log.warn("Skipping no-ticket audit for subscriber {} — no recipient email", subscriber.getId());
+                log.warn("Skipping audit entry for subscriber {} — no recipient email", subscriber.getId());
                 continue;
             }
-            recordSkippedAudit(jobRunId, workspace.getId(), workspace.getTitle(), recipientEmail,
-                    subscriber.getFilter() != null ? subscriber.getFilter().getId() : null,
-                    filterTitle, subscriber.getId(), null, subject);
+            writer.write(subscriber, recipientEmail);
         }
     }
 
