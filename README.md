@@ -48,6 +48,7 @@ A full-stack application that lets users subscribe to email digest notifications
     - [Filter Templates](#filter-templates)
       - [Filter Examples](#filter-examples)
     - [Notification Polling](#notification-polling)
+    - [Resilient Digest Jobs](#resilient-digest-jobs)
     - [OTP Lifecycle](#otp-lifecycle)
 
 ---
@@ -101,7 +102,7 @@ All Octane SDK requests include header `hpeclienttype=HPE_MQM_UI` to simulate Oc
 | Security  | Spring Security, JWT (HMAC-SHA256), BCrypt password hashing, role-based access (ADMIN, WORKSPACE_ADMIN, MEMBER) |
 | Email     | Dynamic SMTP via DB-stored NotificationPreferences (DynamicMailSenderService) |
 | AI        | Spring AI (OpenAI) — optional AI-generated ticket summaries; credentials stored in DB via AiPreferences (DynamicAiClientService) |
-| Scheduling | Spring `@Scheduled` — cron-based hourly trigger dispatches to subscribers by schedule type and configured hours |
+| Scheduling | Spring `@Scheduled` — cron-based hourly trigger, plus a dedicated retry driver tick (see [Resilient Digest Jobs](#resilient-digest-jobs)); `spring.task.scheduling.pool-size=4` |
 | Octane SDK | Microfocus ALM Octane SDK 25.4                                     |
 | Build     | Maven (backend), npm (frontend)                                     |
 | Containers | Nginx + Docker multi-stage (frontend)                              |
@@ -116,7 +117,7 @@ ve-mailer/
 │   ├── src/main/java/com/anushibinj/veemailer/
 │   │   ├── NotificationBrokerApplication.java
 │   │   ├── config/
-│   │   │   ├── AppConfig.java        # Async + Scheduling enablement, RestTemplate bean
+│   │   │   ├── AppConfig.java        # Async + Scheduling enablement, RestTemplate (bounded timeouts) + Clock + octaneExecutor beans
 │   │   │   ├── Auth403AccessDeniedHandler.java # Returns HTTP 403 JSON for filter-level access denial
 │   │   │   ├── Auth401EntryPoint.java # Returns HTTP 401 JSON for unauthenticated requests
 │   │   │   ├── GlobalExceptionHandler.java # Centralized REST exception handling
@@ -165,8 +166,11 @@ ve-mailer/
 │   │   │   ├── Role.java             # Role entity (ADMIN, MEMBER, WORKSPACE_ADMIN)
 │   │   │   ├── RefreshToken.java     # Refresh token entity (revocable, per-user)
 │   │   │   ├── NotificationPreferences.java # SMTP config entity (host, port, username, password, TLS)
-│   │   │   ├── DeliveryStatus.java          # Enum: SUCCESS | FAILED | SKIPPED
-│   │   │   ├── MailAuditLog.java            # Mail delivery audit record entity
+│   │   │   ├── DeliveryStatus.java          # Enum: SUCCESS | FAILED | SKIPPED | RETRYING
+│   │   │   ├── MailAuditLog.java            # Mail delivery audit record entity (jobRunId-correlated)
+│   │   │   ├── ScheduledJobRun.java         # One (workspace, filter, slot) job instance — creation/claim/dispatch gates
+│   │   │   ├── JobRunStatus.java            # Enum: PENDING | RUNNING | DISPATCHING | AWAITING_RETRY | SUCCEEDED | FAILED | SUPPRESSED
+│   │   │   ├── JobTriggerType.java          # Enum: SCHEDULED | MANUAL
 │   │   │   ├── Workspace.java
 │   │   │   ├── WorkspaceAdminMapping.java   # Maps users to workspaces they administer
 │   │   │   ├── Filter.java                 # title, description, entityType, fields (JSON), criteria (JSON), orderBy, orderByDirection
@@ -204,18 +208,23 @@ ve-mailer/
 │   │       ├── GeneralSettingsService.java  # DB-first query limit with property fallback
 │   │       ├── JwtService.java       # JWT token generation and validation
 │   │       ├── MailAnalyticsService.java     # Analytics aggregation + paginated history
-│   │       ├── MailAuditService.java         # Async audit logging for mail dispatches
+│   │       ├── MailAuditService.java         # Async audit logging + synchronous job-run-aware upserts (retry/suppress)
 │   │       ├── NotificationPreferencesService.java # Admin SMTP settings CRUD
-│   │       ├── NotificationService.java # Async digest email sender
-│   │       ├── OctaneCacheService.java  # In-memory Octane client cache
+│   │       ├── NotificationService.java # prepare() (AI summaries + HTML) / dispatch() (gated recipient fan-out)
+│   │       ├── OctaneCacheService.java  # ConcurrentHashMap Octane client cache with evict()
 │   │       ├── InviteMagicLinkService.java # Single-use invite token generation + validation
 │   │       ├── OtpService.java       # OTP generation, hashing, validation (signup/reset/subscriptions)
-│   │       ├── PollingService.java   # Hourly cron trigger — dispatches by schedule
+│   │       ├── PollingService.java   # Hourly cron trigger — groups subscribers, creates/executes job runs
 │   │       ├── RecipientGroupService.java # Recipient group CRUD + member management
 │   │       ├── RefreshTokenService.java # Refresh token lifecycle + single-session enforcement
 │   │       ├── ScheduleMigrationRunner.java # Startup migration: converts legacy Frequency records
 │   │       ├── SubscriptionService.java # Subscription business logic
 │   │       ├── WorkspaceAdminService.java # Workspace admin permission checks and CRUD
+│   │       ├── job/
+│   │       │   ├── ScheduledJobRunService.java     # create/claim/supersede/recovery-sweep on ScheduledJobRun
+│   │       │   ├── ScheduledJobExecutor.java       # claim -> fetch -> classify -> dispatch-gate -> prepare/dispatch
+│   │       │   ├── ScheduledJobRetryService.java   # @Scheduled retry driver + stale-DISPATCHING recovery sweep
+│   │       │   └── TransientFailureClassifier.java # Decides which fetch failures are worth retrying
 │   │       └── ve/
 │   │           └── VeUtils.java              # Octane client factory
 │   └── src/main/resources/
@@ -367,6 +376,7 @@ NotificationPreferences
 MailAuditLog
   id (UUID PK)
   workspaceId         -- nullable, workspace that triggered the mail
+  jobRunId            -- nullable, FK -> ScheduledJobRun; correlates every retry attempt's rows
   workspaceTitle      -- denormalized workspace name
   recipientEmail      -- recipient address
   filterTemplateId    -- nullable, filter template used
@@ -375,10 +385,30 @@ MailAuditLog
   userId              -- nullable, user who owns the subscription
   mailSubject         -- email subject line
   ticketCount         -- number of tickets in digest
-  deliveryStatus      -- SUCCESS | FAILED | SKIPPED
-  failureReason       -- nullable, error message on failure (max 2000 chars)
+  deliveryStatus      -- SUCCESS | FAILED | SKIPPED | RETRYING
+  failureReason       -- nullable, error message, retry progress, or suppression reason (max 2000 chars)
   sentAt              -- timestamp of dispatch (indexed)
   durationMs          -- time to send in milliseconds
+  -- UNIQUE (jobRunId, subscriptionId, recipientEmail) WHERE jobRunId IS NOT NULL:
+  -- a job's retry attempts update the same recipient row in place instead of inserting a new one.
+
+ScheduledJobRun
+  id (UUID PK)
+  jobKey (UNIQUE)     -- "SCHEDULED:{workspaceId}:{filterId}:{slotEpochSecond}" or "MANUAL:{subscriptionId}:{epochMillis}"
+  workspaceId, filterId, subscriptionId (subscriptionId set only for MANUAL runs)
+  slotAt              -- the job instance's identity timestamp
+  triggerType         -- SCHEDULED | MANUAL
+  status              -- PENDING | RUNNING | DISPATCHING | AWAITING_RETRY | SUCCEEDED | FAILED | SUPPRESSED
+  attemptCount, maxAttempts
+  claimedAt           -- set by the claim gate; also the in-flight-check staleness marker
+  nextRetryAt         -- when AWAITING_RETRY, the next retry driver tick that may claim this run
+  dispatchStartedAt, dispatchCompletedAt -- the dispatch gate: dispatchStartedAt is never re-claimable
+  lastError           -- nullable, most recent failure/supersede reason (max 2000 chars)
+  createdAt, updatedAt
+
+scheduled_job_run_subscriber_ids (element collection)
+  job_run_id          -- FK -> ScheduledJobRun
+  subscriber_id       -- an EmailSubscriber id this run must notify, reloaded live from the DB on every attempt
 
 IssueReport
   id (UUID PK)
@@ -730,7 +760,7 @@ All mail analytics endpoints require the `ADMIN` role. They provide aggregated s
 | `workspaceId`    | —       | Filter by workspace UUID           |
 | `recipientEmail` | —       | Filter by recipient (substring)    |
 | `filterTitle`    | —       | Filter by filter template title    |
-| `status`         | —       | `SUCCESS`, `FAILED`, or `SKIPPED`  |
+| `status`         | —       | `SUCCESS`, `FAILED`, `SKIPPED`, or `RETRYING` |
 | `from`           | —       | Start date (ISO date)              |
 | `to`             | —       | End date (ISO date)                |
 | `page`           | `0`     | Page number (0-indexed)            |
@@ -872,6 +902,16 @@ veemailer.issues.max-screenshot-bytes=1048576
 veemailer.issues.max-upload-bytes=5242880
 spring.servlet.multipart.max-file-size=10MB
 spring.servlet.multipart.max-request-size=10MB
+
+# Resilient digest jobs — retry, idempotency, minimum dispatch gap (see "Resilient Digest Jobs" below)
+veemailer.jobs.retry.interval-minutes=15
+veemailer.jobs.retry.max-attempts=4
+veemailer.jobs.retry.poll-interval-ms=60000
+veemailer.jobs.retry.stale-claim-minutes=30
+veemailer.jobs.min-dispatch-gap-minutes=30
+veemailer.octane.connect-timeout-ms=10000
+veemailer.octane.read-timeout-ms=60000
+spring.task.scheduling.pool-size=4
 
 # Authentication
 app.auth.allowed-domains=company.com,int-company.com
@@ -1241,7 +1281,7 @@ The same dynamic query building is used by `PollingService` when sending schedul
 
 ### Notification Polling
 
-`PollingService` runs on a single cron schedule that fires at the top of every hour (`0 0 * * * *`). Each run:
+`PollingService` runs on a single cron schedule that fires at the top of every hour (`0 0 * * * *`). It only decides *what* runs and *when* — all fetch/retry/dispatch logic lives in `ScheduledJobExecutor` (see [Resilient Digest Jobs](#resilient-digest-jobs) below). Each run:
 
 | Step | What happens |
 |------|-------------|
@@ -1249,8 +1289,8 @@ The same dynamic query building is used by `PollingService` when sending schedul
 | 2 | Queries `DAILY` subscribers whose `scheduledHours` contains the current hour |
 | 3 | Queries `WEEKLY` subscribers whose `scheduledHours` contains the current hour — **only on Mondays** |
 | 4 | Groups matching subscribers by `(workspaceId, filterId)` to avoid duplicate API calls |
-| 5 | Calls `FilterService.executeFilter()` once per group |
-| 6 | Passes results to `NotificationService`; when a filter returns 0 tickets, no email is sent and an audit "skipped (no tickets)" record is stored per intended recipient |
+| 5 | Supersedes any older non-terminal job run for the same `(workspaceId, filterId)`, then creates one `ScheduledJobRun` per group for this hour's slot |
+| 6 | Hands the new run to `ScheduledJobExecutor.execute()`, which fetches once, dispatches once, and records one `mail_audit_log` row per recipient per job run |
 
 On startup, `ScheduleMigrationRunner` converts any legacy `Frequency`-based subscribers to the new `scheduleType` + `scheduledHours` model:
 
@@ -1259,6 +1299,40 @@ On startup, `ScheduleMigrationRunner` converts any legacy `Frequency`-based subs
 | `HOURLY` | `DAILY` @ hours 0, 6, 12, 18 |
 | `DAILY` | `DAILY` @ hour 8 |
 | `WEEKLY` | `WEEKLY` @ hour 8 |
+
+### Resilient Digest Jobs
+
+A ValueEdge outage used to silently drop that hour's digest with no audit trail at all. `ScheduledJobRun`
+(Flyway `V29`) tracks one row per `(workspaceId, filterId, slotAt)` job instance — one Octane fetch, one
+rendered digest — through a status machine (`PENDING → RUNNING → DISPATCHING → SUCCEEDED`, with
+`AWAITING_RETRY`, `FAILED`, and `SUPPRESSED` side branches) enforced entirely in the database so it
+survives restarts:
+
+- **Creation gate** — `job_key` (`SCHEDULED:{workspaceId}:{filterId}:{slotEpochSecond}` or
+  `MANUAL:{subscriptionId}:{epochMillis}`) is `UNIQUE`, so a duplicate tick can never create a second run.
+- **Claim gate** — a conditional update (`... WHERE status IN (PENDING, AWAITING_RETRY)`) means only one
+  caller ever executes a given attempt.
+- **Dispatch gate** — `RUNNING → DISPATCHING` is committed *before* the first email is sent and is never
+  re-claimable, so a retried job can never re-send mail that already went out — the Octane fetch (the only
+  thing retried) always happens strictly before any SMTP traffic.
+
+`TransientFailureClassifier` decides whether a fetch failure (timeout, 5xx/408/429, connection errors) is
+worth retrying (`ScheduledJobRetryService`, every `veemailer.jobs.retry.poll-interval-ms`, default 1 minute)
+up to `veemailer.jobs.retry.max-attempts` (default 4) at `veemailer.jobs.retry.interval-minutes` (default
+15) apart; a permanent classification (bad filter criteria, non-retryable 4xx) fails immediately. Every
+attempt writes/updates a `RETRYING` `mail_audit_log` row per recipient (`"Failed - Retried N times. Next
+retry in M minutes."`) so the Mail Analytics page shows live retry state instead of nothing.
+
+Two additional checks stop a late retry from colliding with the next scheduled tick and double-sending:
+in-flight check **A** refuses to dispatch while another run for the same `(workspaceId, filterId)` is
+actively `RUNNING`/`DISPATCHING`; recency check **B** skips any subscription that already has a `SUCCESS`
+row newer than `veemailer.jobs.min-dispatch-gap-minutes` (default 30, keep below 60). Either check
+suppresses the affected send(s), marking the job `SUPPRESSED` and writing `SKIPPED` audit rows explaining
+why.
+
+The on-demand **Run** button (`PollingService.runNow`) goes through the exact same pipeline as a `MANUAL`
+run with `maxAttempts=1` (no retries), so a double-click or two admins clicking at once gets the same
+job-key/dispatch-gate/suppression protection against a duplicate send.
 
 ### OTP Lifecycle
 
