@@ -317,6 +317,23 @@
 - Backend: Role, RoleRepository
 - Database: roles
 
+## Scheduled_job_run_subscriber_ids
+
+- Database: scheduled_job_run_subscriber_ids
+
+## Scheduledjobexecutor
+
+- Backend: ScheduledJobExecutor
+
+## Scheduledjobretry
+
+- Backend: ScheduledJobRetryService
+
+## Scheduledjobrun
+
+- Backend: ScheduledJobRun, ScheduledJobRunRepository, ScheduledJobRunService
+- Database: scheduled_job_run
+
 ## Schedulemigrationrunner
 
 - Backend: ScheduleMigrationRunner
@@ -424,6 +441,10 @@
 ## Tooltip
 
 - Frontend: Tooltip
+
+## Transientfailureclassifier
+
+- Backend: TransientFailureClassifier
 
 ## User_roles
 

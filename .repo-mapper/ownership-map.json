@@ -621,6 +621,16 @@
     "feature": "Issues"
   },
   {
+    "component": "JobRunStatus",
+    "kind": "enum",
+    "file": "backend/src/main/java/com/anushibinj/veemailer/model/JobRunStatus.java"
+  },
+  {
+    "component": "JobTriggerType",
+    "kind": "enum",
+    "file": "backend/src/main/java/com/anushibinj/veemailer/model/JobTriggerType.java"
+  },
+  {
     "component": "JwtAuthenticationFilter",
     "kind": "bean",
     "file": "backend/src/main/java/com/anushibinj/veemailer/config/JwtAuthenticationFilter.java",
@@ -720,6 +730,16 @@
     "component": "MailAuditServiceTest",
     "kind": "class",
     "file": "backend/src/test/java/com/anushibinj/veemailer/service/MailAuditServiceTest.java"
+  },
+  {
+    "component": "ManualRunIdempotencyTest",
+    "kind": "class",
+    "file": "backend/src/test/java/com/anushibinj/veemailer/service/job/ManualRunIdempotencyTest.java"
+  },
+  {
+    "component": "MinimumDispatchGapTest",
+    "kind": "class",
+    "file": "backend/src/test/java/com/anushibinj/veemailer/service/job/MinimumDispatchGapTest.java"
   },
   {
     "component": "NotificationBrokerApplication",
@@ -1043,6 +1063,51 @@
     "file": "backend/src/main/java/com/anushibinj/veemailer/model/ScheduleType.java"
   },
   {
+    "component": "ScheduledJobExecutor",
+    "kind": "service",
+    "file": "backend/src/main/java/com/anushibinj/veemailer/service/job/ScheduledJobExecutor.java",
+    "feature": "Scheduledjobexecutor"
+  },
+  {
+    "component": "ScheduledJobExecutorTest",
+    "kind": "class",
+    "file": "backend/src/test/java/com/anushibinj/veemailer/service/job/ScheduledJobExecutorTest.java"
+  },
+  {
+    "component": "ScheduledJobRetryService",
+    "kind": "service",
+    "file": "backend/src/main/java/com/anushibinj/veemailer/service/job/ScheduledJobRetryService.java",
+    "feature": "Scheduledjobretry"
+  },
+  {
+    "component": "ScheduledJobRetryServiceTest",
+    "kind": "class",
+    "file": "backend/src/test/java/com/anushibinj/veemailer/service/job/ScheduledJobRetryServiceTest.java"
+  },
+  {
+    "component": "ScheduledJobRun",
+    "kind": "entity",
+    "file": "backend/src/main/java/com/anushibinj/veemailer/model/ScheduledJobRun.java",
+    "feature": "Scheduledjobrun"
+  },
+  {
+    "component": "ScheduledJobRunRepository",
+    "kind": "repository",
+    "file": "backend/src/main/java/com/anushibinj/veemailer/repository/ScheduledJobRunRepository.java",
+    "feature": "Scheduledjobrun"
+  },
+  {
+    "component": "ScheduledJobRunService",
+    "kind": "service",
+    "file": "backend/src/main/java/com/anushibinj/veemailer/service/job/ScheduledJobRunService.java",
+    "feature": "Scheduledjobrun"
+  },
+  {
+    "component": "ScheduledJobRunServiceTest",
+    "kind": "class",
+    "file": "backend/src/test/java/com/anushibinj/veemailer/service/job/ScheduledJobRunServiceTest.java"
+  },
+  {
     "component": "SearchInput",
     "kind": "component",
     "file": "frontend/src/components/ui/SearchInput.tsx",
@@ -1263,6 +1328,17 @@
     "kind": "component",
     "file": "frontend/src/components/ui/Tooltip.tsx",
     "feature": "Tooltip"
+  },
+  {
+    "component": "TransientFailureClassifier",
+    "kind": "bean",
+    "file": "backend/src/main/java/com/anushibinj/veemailer/service/job/TransientFailureClassifier.java",
+    "feature": "Transientfailureclassifier"
+  },
+  {
+    "component": "TransientFailureClassifierTest",
+    "kind": "class",
+    "file": "backend/src/test/java/com/anushibinj/veemailer/service/job/TransientFailureClassifierTest.java"
   },
   {
     "component": "TriageSlaPolicy",

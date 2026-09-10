@@ -207,6 +207,41 @@ Mapped entity: `Role`
 
 Relates to: UUID
 
+## scheduled_job_run
+
+Mapped entity: `ScheduledJobRun`
+
+| Column | Type | PK | FK |
+|---|---|---|---|
+| attempt_count | INTEGER |  |  |
+| claimed_at | TIMESTAMP |  |  |
+| created_at | TIMESTAMP |  |  |
+| dispatch_completed_at | TIMESTAMP |  |  |
+| dispatch_started_at | TIMESTAMP |  |  |
+| filter_id | UUID |  |  |
+| id | UUID |  |  |
+| job_key | VARCHAR(255) |  |  |
+| last_error | VARCHAR(2000) |  |  |
+| max_attempts | INTEGER |  |  |
+| next_retry_at | TIMESTAMP |  |  |
+| slot_at | TIMESTAMP |  |  |
+| status | VARCHAR(20) |  |  |
+| subscription_id | UUID |  |  |
+| trigger_type | VARCHAR(20) |  |  |
+| updated_at | TIMESTAMP |  |  |
+| workspace_id | UUID |  |  |
+
+Relates to: JobRunStatus, JobTriggerType, UUID
+
+## scheduled_job_run_subscriber_ids
+
+| Column | Type | PK | FK |
+|---|---|---|---|
+| job_run_id | UUID |  |  |
+| subscriber_id | UUID |  |  |
+
+Relates to: scheduled_job_run
+
 ## subscriber_scheduled_hours
 
 | Column | Type | PK | FK |

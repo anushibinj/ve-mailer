@@ -112,6 +112,29 @@ erDiagram
         UUID id
         VARCHAR role_name
     }
+    scheduled_job_run {
+        INTEGER attempt_count
+        TIMESTAMP claimed_at
+        TIMESTAMP created_at
+        TIMESTAMP dispatch_completed_at
+        TIMESTAMP dispatch_started_at
+        UUID filter_id
+        UUID id
+        VARCHAR job_key
+        VARCHAR last_error
+        INTEGER max_attempts
+        TIMESTAMP next_retry_at
+        TIMESTAMP slot_at
+        VARCHAR status
+        UUID subscription_id
+        VARCHAR trigger_type
+        TIMESTAMP updated_at
+        UUID workspace_id
+    }
+    scheduled_job_run_subscriber_ids {
+        UUID job_run_id
+        UUID subscriber_id
+    }
     subscriber_scheduled_hours {
         INTEGER scheduled_hour
         UUID subscriber_id
@@ -165,6 +188,10 @@ erDiagram
     refresh_tokens ||--o{ UUID : "references"
     refresh_tokens ||--o{ app_users : "references"
     roles ||--o{ UUID : "references"
+    scheduled_job_run ||--o{ JobRunStatus : "references"
+    scheduled_job_run ||--o{ JobTriggerType : "references"
+    scheduled_job_run ||--o{ UUID : "references"
+    scheduled_job_run_subscriber_ids ||--o{ scheduled_job_run : "references"
     subscriber_scheduled_hours ||--o{ email_subscribers : "references"
     user_roles ||--o{ app_users : "references"
     user_roles ||--o{ roles : "references"

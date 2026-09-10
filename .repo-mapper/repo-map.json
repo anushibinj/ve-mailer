@@ -20,7 +20,7 @@
     },
     {
       "name": "Java",
-      "fileCount": 206
+      "fileCount": 220
     },
     {
       "name": "JavaScript",
@@ -36,7 +36,7 @@
     },
     {
       "name": "SQL",
-      "fileCount": 28
+      "fileCount": 30
     },
     {
       "name": "TypeScript",
@@ -612,6 +612,35 @@
       ]
     },
     {
+      "feature": "Scheduled_job_run_subscriber_ids",
+      "database": [
+        "scheduled_job_run_subscriber_ids"
+      ]
+    },
+    {
+      "feature": "Scheduledjobexecutor",
+      "backend": [
+        "ScheduledJobExecutor"
+      ]
+    },
+    {
+      "feature": "Scheduledjobretry",
+      "backend": [
+        "ScheduledJobRetryService"
+      ]
+    },
+    {
+      "feature": "Scheduledjobrun",
+      "backend": [
+        "ScheduledJobRun",
+        "ScheduledJobRunRepository",
+        "ScheduledJobRunService"
+      ],
+      "database": [
+        "scheduled_job_run"
+      ]
+    },
+    {
       "feature": "Schedulemigrationrunner",
       "backend": [
         "ScheduleMigrationRunner"
@@ -772,6 +801,12 @@
       "feature": "Tooltip",
       "frontend": [
         "Tooltip"
+      ]
+    },
+    {
+      "feature": "Transientfailureclassifier",
+      "backend": [
+        "TransientFailureClassifier"
       ]
     },
     {
@@ -1910,6 +1945,28 @@
       }
     },
     {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/model/JobRunStatus.java#JobRunStatus",
+      "name": "JobRunStatus",
+      "kind": "enum",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/model/JobRunStatus.java",
+      "package": "com.anushibinj.veemailer.model",
+      "attributes": {
+        "annotations": ""
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/model/JobTriggerType.java#JobTriggerType",
+      "name": "JobTriggerType",
+      "kind": "enum",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/model/JobTriggerType.java",
+      "package": "com.anushibinj.veemailer.model",
+      "attributes": {
+        "annotations": ""
+      }
+    },
+    {
       "id": "backend/src/main/java/com/anushibinj/veemailer/model/MailAuditLog.java#MailAuditLog",
       "name": "MailAuditLog",
       "kind": "entity",
@@ -1979,6 +2036,16 @@
       "package": "com.anushibinj.veemailer.model",
       "attributes": {
         "annotations": ""
+      }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/model/ScheduledJobRun.java#ScheduledJobRun",
+      "name": "ScheduledJobRun",
+      "kind": "entity",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/model/ScheduledJobRun.java",
+      "attributes": {
+        "table": "scheduled_job_run"
       }
     },
     {
@@ -2156,6 +2223,13 @@
       "kind": "repository",
       "language": "Java",
       "file": "backend/src/main/java/com/anushibinj/veemailer/repository/RoleRepository.java"
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/repository/ScheduledJobRunRepository.java#ScheduledJobRunRepository",
+      "name": "ScheduledJobRunRepository",
+      "kind": "repository",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/repository/ScheduledJobRunRepository.java"
     },
     {
       "id": "backend/src/main/java/com/anushibinj/veemailer/repository/WorkspaceAdminRepository.java#WorkspaceAdminRepository",
@@ -2445,6 +2519,34 @@
       "attributes": {
         "annotations": ""
       }
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/service/job/ScheduledJobExecutor.java#ScheduledJobExecutor",
+      "name": "ScheduledJobExecutor",
+      "kind": "service",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/service/job/ScheduledJobExecutor.java"
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/service/job/ScheduledJobRetryService.java#ScheduledJobRetryService",
+      "name": "ScheduledJobRetryService",
+      "kind": "service",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/service/job/ScheduledJobRetryService.java"
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/service/job/ScheduledJobRunService.java#ScheduledJobRunService",
+      "name": "ScheduledJobRunService",
+      "kind": "service",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/service/job/ScheduledJobRunService.java"
+    },
+    {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/service/job/TransientFailureClassifier.java#TransientFailureClassifier",
+      "name": "TransientFailureClassifier",
+      "kind": "bean",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/service/job/TransientFailureClassifier.java"
     },
     {
       "id": "backend/src/main/java/com/anushibinj/veemailer/service/ve/VeUtils.java#VeUtils",
@@ -2955,6 +3057,72 @@
       "language": "Java",
       "file": "backend/src/test/java/com/anushibinj/veemailer/service/extractor/FieldExtractorRegistryTest.java",
       "package": "com.anushibinj.veemailer.service.extractor",
+      "attributes": {
+        "annotations": ""
+      }
+    },
+    {
+      "id": "backend/src/test/java/com/anushibinj/veemailer/service/job/ManualRunIdempotencyTest.java#ManualRunIdempotencyTest",
+      "name": "ManualRunIdempotencyTest",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/test/java/com/anushibinj/veemailer/service/job/ManualRunIdempotencyTest.java",
+      "package": "com.anushibinj.veemailer.service.job",
+      "attributes": {
+        "annotations": "ExtendWith"
+      }
+    },
+    {
+      "id": "backend/src/test/java/com/anushibinj/veemailer/service/job/MinimumDispatchGapTest.java#MinimumDispatchGapTest",
+      "name": "MinimumDispatchGapTest",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/test/java/com/anushibinj/veemailer/service/job/MinimumDispatchGapTest.java",
+      "package": "com.anushibinj.veemailer.service.job",
+      "attributes": {
+        "annotations": "ExtendWith"
+      }
+    },
+    {
+      "id": "backend/src/test/java/com/anushibinj/veemailer/service/job/ScheduledJobExecutorTest.java#ScheduledJobExecutorTest",
+      "name": "ScheduledJobExecutorTest",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/test/java/com/anushibinj/veemailer/service/job/ScheduledJobExecutorTest.java",
+      "package": "com.anushibinj.veemailer.service.job",
+      "attributes": {
+        "annotations": "ExtendWith"
+      }
+    },
+    {
+      "id": "backend/src/test/java/com/anushibinj/veemailer/service/job/ScheduledJobRetryServiceTest.java#ScheduledJobRetryServiceTest",
+      "name": "ScheduledJobRetryServiceTest",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/test/java/com/anushibinj/veemailer/service/job/ScheduledJobRetryServiceTest.java",
+      "package": "com.anushibinj.veemailer.service.job",
+      "attributes": {
+        "annotations": "ExtendWith"
+      }
+    },
+    {
+      "id": "backend/src/test/java/com/anushibinj/veemailer/service/job/ScheduledJobRunServiceTest.java#ScheduledJobRunServiceTest",
+      "name": "ScheduledJobRunServiceTest",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/test/java/com/anushibinj/veemailer/service/job/ScheduledJobRunServiceTest.java",
+      "package": "com.anushibinj.veemailer.service.job",
+      "attributes": {
+        "annotations": "ExtendWith"
+      }
+    },
+    {
+      "id": "backend/src/test/java/com/anushibinj/veemailer/service/job/TransientFailureClassifierTest.java#TransientFailureClassifierTest",
+      "name": "TransientFailureClassifierTest",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/test/java/com/anushibinj/veemailer/service/job/TransientFailureClassifierTest.java",
+      "package": "com.anushibinj.veemailer.service.job",
       "attributes": {
         "annotations": ""
       }
@@ -4667,6 +4835,103 @@
       "sourceFile": "backend/src/main/java/com/anushibinj/veemailer/model/Role.java"
     },
     {
+      "name": "scheduled_job_run",
+      "entity": "ScheduledJobRun",
+      "columns": [
+        {
+          "name": "attempt_count",
+          "type": "INTEGER"
+        },
+        {
+          "name": "claimed_at",
+          "type": "TIMESTAMP"
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMP"
+        },
+        {
+          "name": "dispatch_completed_at",
+          "type": "TIMESTAMP"
+        },
+        {
+          "name": "dispatch_started_at",
+          "type": "TIMESTAMP"
+        },
+        {
+          "name": "filter_id",
+          "type": "UUID"
+        },
+        {
+          "name": "id",
+          "type": "UUID"
+        },
+        {
+          "name": "job_key",
+          "type": "VARCHAR(255)"
+        },
+        {
+          "name": "last_error",
+          "type": "VARCHAR(2000)"
+        },
+        {
+          "name": "max_attempts",
+          "type": "INTEGER"
+        },
+        {
+          "name": "next_retry_at",
+          "type": "TIMESTAMP"
+        },
+        {
+          "name": "slot_at",
+          "type": "TIMESTAMP"
+        },
+        {
+          "name": "status",
+          "type": "VARCHAR(20)"
+        },
+        {
+          "name": "subscription_id",
+          "type": "UUID"
+        },
+        {
+          "name": "trigger_type",
+          "type": "VARCHAR(20)"
+        },
+        {
+          "name": "updated_at",
+          "type": "TIMESTAMP"
+        },
+        {
+          "name": "workspace_id",
+          "type": "UUID"
+        }
+      ],
+      "relatesTo": [
+        "JobRunStatus",
+        "JobTriggerType",
+        "UUID"
+      ],
+      "sourceFile": "backend/src/main/java/com/anushibinj/veemailer/model/ScheduledJobRun.java"
+    },
+    {
+      "name": "scheduled_job_run_subscriber_ids",
+      "columns": [
+        {
+          "name": "job_run_id",
+          "type": "UUID"
+        },
+        {
+          "name": "subscriber_id",
+          "type": "UUID"
+        }
+      ],
+      "relatesTo": [
+        "scheduled_job_run"
+      ],
+      "sourceFile": "backend/src/main/resources/db/migration/V29__add_scheduled_job_run.sql"
+    },
+    {
       "name": "subscriber_scheduled_hours",
       "columns": [
         {
@@ -4764,6 +5029,6 @@
   ],
   "git": {
     "branch": "master",
-    "commitHash": "e69e62dcd5fd34b017d4b629ff677b6c48a509ca"
+    "commitHash": "c7e0f4d6a5f0bbf2ec63d563d51845f4d956ef61"
   }
 }

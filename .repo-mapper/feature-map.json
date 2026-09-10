@@ -552,6 +552,35 @@
     ]
   },
   {
+    "feature": "Scheduled_job_run_subscriber_ids",
+    "database": [
+      "scheduled_job_run_subscriber_ids"
+    ]
+  },
+  {
+    "feature": "Scheduledjobexecutor",
+    "backend": [
+      "ScheduledJobExecutor"
+    ]
+  },
+  {
+    "feature": "Scheduledjobretry",
+    "backend": [
+      "ScheduledJobRetryService"
+    ]
+  },
+  {
+    "feature": "Scheduledjobrun",
+    "backend": [
+      "ScheduledJobRun",
+      "ScheduledJobRunRepository",
+      "ScheduledJobRunService"
+    ],
+    "database": [
+      "scheduled_job_run"
+    ]
+  },
+  {
     "feature": "Schedulemigrationrunner",
     "backend": [
       "ScheduleMigrationRunner"
@@ -712,6 +741,12 @@
     "feature": "Tooltip",
     "frontend": [
       "Tooltip"
+    ]
+  },
+  {
+    "feature": "Transientfailureclassifier",
+    "backend": [
+      "TransientFailureClassifier"
     ]
   },
   {

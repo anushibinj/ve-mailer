@@ -49,6 +49,9 @@
 | WorkspaceConnectivityPollingService | backend/src/main/java/com/anushibinj/veemailer/service/WorkspaceConnectivityPollingService.java |  |
 | WorkspaceDiscoveryService | backend/src/main/java/com/anushibinj/veemailer/service/WorkspaceDiscoveryService.java |  |
 | WorkspaceService | backend/src/main/java/com/anushibinj/veemailer/service/WorkspaceService.java |  |
+| ScheduledJobExecutor | backend/src/main/java/com/anushibinj/veemailer/service/job/ScheduledJobExecutor.java |  |
+| ScheduledJobRetryService | backend/src/main/java/com/anushibinj/veemailer/service/job/ScheduledJobRetryService.java |  |
+| ScheduledJobRunService | backend/src/main/java/com/anushibinj/veemailer/service/job/ScheduledJobRunService.java |  |
 | VeUtils | backend/src/main/java/com/anushibinj/veemailer/service/ve/VeUtils.java |  |
 
 ## Repositories
@@ -66,6 +69,7 @@
 | RecipientGroupRepository | backend/src/main/java/com/anushibinj/veemailer/repository/RecipientGroupRepository.java |  |
 | RefreshTokenRepository | backend/src/main/java/com/anushibinj/veemailer/repository/RefreshTokenRepository.java |  |
 | RoleRepository | backend/src/main/java/com/anushibinj/veemailer/repository/RoleRepository.java |  |
+| ScheduledJobRunRepository | backend/src/main/java/com/anushibinj/veemailer/repository/ScheduledJobRunRepository.java |  |
 | WorkspaceAdminRepository | backend/src/main/java/com/anushibinj/veemailer/repository/WorkspaceAdminRepository.java |  |
 | WorkspaceRepository | backend/src/main/java/com/anushibinj/veemailer/repository/WorkspaceRepository.java |  |
 
@@ -85,6 +89,7 @@
 | OtpRequest | backend/src/main/java/com/anushibinj/veemailer/model/OtpRequest.java |  |
 | RefreshToken | backend/src/main/java/com/anushibinj/veemailer/model/RefreshToken.java |  |
 | Role | backend/src/main/java/com/anushibinj/veemailer/model/Role.java |  |
+| ScheduledJobRun | backend/src/main/java/com/anushibinj/veemailer/model/ScheduledJobRun.java |  |
 
 ## Beans
 
@@ -96,6 +101,7 @@
 | AdminBootstrapService | backend/src/main/java/com/anushibinj/veemailer/service/AdminBootstrapService.java |  |
 | ScheduleMigrationRunner | backend/src/main/java/com/anushibinj/veemailer/service/ScheduleMigrationRunner.java |  |
 | FieldExtractorRegistry | backend/src/main/java/com/anushibinj/veemailer/service/extractor/FieldExtractorRegistry.java |  |
+| TransientFailureClassifier | backend/src/main/java/com/anushibinj/veemailer/service/job/TransientFailureClassifier.java |  |
 
 ## API Endpoints
 
