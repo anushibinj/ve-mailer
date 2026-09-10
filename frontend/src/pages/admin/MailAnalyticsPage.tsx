@@ -232,7 +232,7 @@ export default function MailAnalyticsPage() {
             className="border border-gray-300 dark:border-gray-600 rounded-md px-3 py-1.5 text-sm dark:bg-gray-700 dark:text-gray-200"
             value={historyFilter.status ?? ''}
             onChange={(e) => {
-              const val = e.target.value as 'SUCCESS' | 'FAILED' | 'SKIPPED' | '';
+              const val = e.target.value as 'SUCCESS' | 'FAILED' | 'SKIPPED' | 'RETRYING' | '';
               setHistoryFilter((f) => ({ ...f, status: val || undefined }));
               setHistoryPage(0);
             }}
@@ -241,6 +241,7 @@ export default function MailAnalyticsPage() {
             <option value="SUCCESS">Success</option>
             <option value="FAILED">Failed</option>
             <option value="SKIPPED">Skipped</option>
+            <option value="RETRYING">Retrying</option>
           </select>
         </div>
 
@@ -270,18 +271,23 @@ export default function MailAnalyticsPage() {
                     <td className="py-2 px-3">{entry.filterTitle ?? '—'}</td>
                     <td className="py-2 px-3">{entry.ticketCount}</td>
                     <td className="py-2 px-3">
-                      <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${
-                        entry.deliveryStatus === 'SUCCESS'
-                          ? 'bg-green-100 text-green-700'
-                          : entry.deliveryStatus === 'FAILED'
-                            ? 'bg-red-100 text-red-700'
-                            : 'bg-amber-100 text-amber-700'
-                      }`}>
+                      <span
+                        title={entry.failureReason ?? undefined}
+                        className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${
+                          entry.deliveryStatus === 'SUCCESS'
+                            ? 'bg-green-100 text-green-700'
+                            : entry.deliveryStatus === 'FAILED'
+                              ? 'bg-red-100 text-red-700'
+                              : 'bg-amber-100 text-amber-700'
+                        }`}
+                      >
                         {entry.deliveryStatus === 'SUCCESS'
                           ? 'Success'
                           : entry.deliveryStatus === 'FAILED'
                             ? 'Failed'
-                            : 'Skipped'}
+                            : entry.deliveryStatus === 'RETRYING'
+                              ? 'Retrying'
+                              : 'Skipped'}
                       </span>
                     </td>
                     <td className="py-2 px-3">

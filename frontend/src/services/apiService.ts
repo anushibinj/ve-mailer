@@ -669,7 +669,7 @@ export interface MailAuditLogEntry {
   userId: string | null;
   mailSubject: string | null;
   ticketCount: number;
-  deliveryStatus: 'SUCCESS' | 'FAILED' | 'SKIPPED';
+  deliveryStatus: 'SUCCESS' | 'FAILED' | 'SKIPPED' | 'RETRYING';
   failureReason: string | null;
   sentAt: string;
   durationMs: number | null;
@@ -712,7 +712,7 @@ export interface MailHistoryParams {
   workspaceId?: string;
   recipientEmail?: string;
   filterTitle?: string;
-  status?: 'SUCCESS' | 'FAILED' | 'SKIPPED';
+  status?: 'SUCCESS' | 'FAILED' | 'SKIPPED' | 'RETRYING';
   from?: string;
   to?: string;
   page?: number;
