@@ -30,6 +30,14 @@ public class MailAuditLog {
 
     private UUID workspaceId;
 
+    /**
+     * Correlates every recipient row belonging to one job execution (one Octane fetch + one
+     * rendered digest), including all of its retry attempts. Null for rows written by callers
+     * that are not job-run-aware. See {@link com.anushibinj.veemailer.model.ScheduledJobRun}.
+     */
+    @Column(name = "job_run_id")
+    private UUID jobRunId;
+
     private String workspaceTitle;
 
     @Column(nullable = false)

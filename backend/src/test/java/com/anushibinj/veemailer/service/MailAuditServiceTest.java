@@ -10,6 +10,9 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.Clock;
+import java.time.Instant;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -21,8 +24,13 @@ class MailAuditServiceTest {
     @Mock
     private MailAuditLogRepository repository;
 
+    @Mock
+    private Clock clock;
+
     @InjectMocks
     private MailAuditService mailAuditService;
+
+    private final Instant fixedNow = Instant.parse("2026-01-01T09:00:00Z");
 
     @Test
     void recordSuccess_savesEntryWithCorrectStatus() {
@@ -111,5 +119,123 @@ class MailAuditServiceTest {
         assertThat(saved.getTicketCount()).isEqualTo(0);
         assertThat(saved.getDurationMs()).isEqualTo(0L);
         assertThat(saved.getFailureReason()).isEqualTo("Skipped sending email: no tickets matched the filter");
+    }
+
+    // ── Job-run-aware upserts ────────────────────────────────────────────────
+
+    @Test
+    void recordRetrying_firstAttempt_insertsNewRowWithSingularWording() {
+        UUID jobRunId = UUID.randomUUID();
+        UUID subId = UUID.randomUUID();
+        when(clock.instant()).thenReturn(fixedNow);
+        when(repository.findByJobRunIdAndSubscriptionIdAndRecipientEmail(jobRunId, subId, "a@b.com"))
+                .thenReturn(Optional.empty());
+
+        mailAuditService.recordRetrying(jobRunId, UUID.randomUUID(), "WS", "a@b.com",
+                UUID.randomUUID(), "Filter", subId, null, "Subject", 5, 1, 15);
+
+        ArgumentCaptor<MailAuditLog> captor = ArgumentCaptor.forClass(MailAuditLog.class);
+        verify(repository).save(captor.capture());
+        MailAuditLog saved = captor.getValue();
+        assertThat(saved.getJobRunId()).isEqualTo(jobRunId);
+        assertThat(saved.getDeliveryStatus()).isEqualTo(DeliveryStatus.RETRYING);
+        assertThat(saved.getFailureReason()).isEqualTo("Failed - Retried 1 time. Next retry in 15 minutes.");
+        assertThat(saved.getSentAt()).isEqualTo(fixedNow);
+    }
+
+    @Test
+    void recordRetrying_secondAttempt_updatesExistingRowWithPluralWording() {
+        UUID jobRunId = UUID.randomUUID();
+        UUID subId = UUID.randomUUID();
+        MailAuditLog existing = MailAuditLog.builder()
+                .id(UUID.randomUUID()).jobRunId(jobRunId).subscriptionId(subId).recipientEmail("a@b.com")
+                .deliveryStatus(DeliveryStatus.RETRYING).failureReason("Failed - Retried 1 time. Next retry in 15 minutes.")
+                .build();
+        when(clock.instant()).thenReturn(fixedNow);
+        when(repository.findByJobRunIdAndSubscriptionIdAndRecipientEmail(jobRunId, subId, "a@b.com"))
+                .thenReturn(Optional.of(existing));
+
+        mailAuditService.recordRetrying(jobRunId, UUID.randomUUID(), "WS", "a@b.com",
+                UUID.randomUUID(), "Filter", subId, null, "Subject", 5, 2, 15);
+
+        ArgumentCaptor<MailAuditLog> captor = ArgumentCaptor.forClass(MailAuditLog.class);
+        verify(repository).save(captor.capture());
+        assertThat(captor.getValue().getId()).isEqualTo(existing.getId());
+        assertThat(captor.getValue().getFailureReason()).isEqualTo("Failed - Retried 2 times. Next retry in 15 minutes.");
+    }
+
+    @Test
+    void recordSuccess_jobRunAware_updatesExistingRetryingRowInPlace() {
+        UUID jobRunId = UUID.randomUUID();
+        UUID subId = UUID.randomUUID();
+        MailAuditLog existing = MailAuditLog.builder()
+                .id(UUID.randomUUID()).jobRunId(jobRunId).subscriptionId(subId).recipientEmail("a@b.com")
+                .deliveryStatus(DeliveryStatus.RETRYING).build();
+        when(clock.instant()).thenReturn(fixedNow);
+        when(repository.findByJobRunIdAndSubscriptionIdAndRecipientEmail(jobRunId, subId, "a@b.com"))
+                .thenReturn(Optional.of(existing));
+
+        mailAuditService.recordSuccess(jobRunId, UUID.randomUUID(), "WS", "a@b.com",
+                UUID.randomUUID(), "Filter", subId, null, "Subject", 5, 120L);
+
+        ArgumentCaptor<MailAuditLog> captor = ArgumentCaptor.forClass(MailAuditLog.class);
+        verify(repository).save(captor.capture());
+        MailAuditLog saved = captor.getValue();
+        assertThat(saved.getId()).isEqualTo(existing.getId());
+        assertThat(saved.getDeliveryStatus()).isEqualTo(DeliveryStatus.SUCCESS);
+        assertThat(saved.getFailureReason()).isNull();
+        assertThat(saved.getDurationMs()).isEqualTo(120L);
+    }
+
+    @Test
+    void recordFailure_jobRunAware_insertsWhenNoExistingRow() {
+        UUID jobRunId = UUID.randomUUID();
+        UUID subId = UUID.randomUUID();
+        when(clock.instant()).thenReturn(fixedNow);
+        when(repository.findByJobRunIdAndSubscriptionIdAndRecipientEmail(any(), any(), any()))
+                .thenReturn(Optional.empty());
+
+        mailAuditService.recordFailure(jobRunId, UUID.randomUUID(), "WS", "a@b.com",
+                UUID.randomUUID(), "Filter", subId, null, "Subject", 5, 10L, "boom");
+
+        ArgumentCaptor<MailAuditLog> captor = ArgumentCaptor.forClass(MailAuditLog.class);
+        verify(repository).save(captor.capture());
+        assertThat(captor.getValue().getDeliveryStatus()).isEqualTo(DeliveryStatus.FAILED);
+        assertThat(captor.getValue().getFailureReason()).isEqualTo("boom");
+    }
+
+    @Test
+    void recordSuppressed_writesSkippedStatusWithGapMessage() {
+        UUID jobRunId = UUID.randomUUID();
+        UUID subId = UUID.randomUUID();
+        when(clock.instant()).thenReturn(fixedNow);
+        when(repository.findByJobRunIdAndSubscriptionIdAndRecipientEmail(any(), any(), any()))
+                .thenReturn(Optional.empty());
+
+        mailAuditService.recordSuppressed(jobRunId, UUID.randomUUID(), "WS", "a@b.com",
+                UUID.randomUUID(), "Filter", subId, null, "Subject", 12);
+
+        ArgumentCaptor<MailAuditLog> captor = ArgumentCaptor.forClass(MailAuditLog.class);
+        verify(repository).save(captor.capture());
+        MailAuditLog saved = captor.getValue();
+        assertThat(saved.getDeliveryStatus()).isEqualTo(DeliveryStatus.SKIPPED);
+        assertThat(saved.getFailureReason())
+                .isEqualTo("Suppressed: a digest for this subscription was delivered 12 minutes ago.");
+    }
+
+    @Test
+    void markJobRunTerminal_flipsRetryingRowsForJobRun() {
+        UUID jobRunId = UUID.randomUUID();
+
+        mailAuditService.markJobRunTerminal(jobRunId, DeliveryStatus.FAILED, "Superseded by the next scheduled run");
+
+        verify(repository).flipRetryingToTerminal(jobRunId, DeliveryStatus.FAILED, "Superseded by the next scheduled run");
+    }
+
+    @Test
+    void markJobRunTerminal_nullJobRunId_doesNothing() {
+        mailAuditService.markJobRunTerminal(null, DeliveryStatus.FAILED, "reason");
+
+        verifyNoInteractions(repository);
     }
 }

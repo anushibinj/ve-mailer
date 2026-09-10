@@ -1,9 +1,11 @@
 package com.anushibinj.veemailer.service.job;
 
+import com.anushibinj.veemailer.model.DeliveryStatus;
 import com.anushibinj.veemailer.model.JobRunStatus;
 import com.anushibinj.veemailer.model.JobTriggerType;
 import com.anushibinj.veemailer.model.ScheduledJobRun;
 import com.anushibinj.veemailer.repository.ScheduledJobRunRepository;
+import com.anushibinj.veemailer.service.MailAuditService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -31,6 +33,7 @@ import java.util.UUID;
 public class ScheduledJobRunService {
 
     private final ScheduledJobRunRepository repository;
+    private final MailAuditService mailAuditService;
     private final Clock clock;
 
     @Value("${veemailer.jobs.retry.stale-claim-minutes:30}")
@@ -109,6 +112,7 @@ public class ScheduledJobRunService {
             run.setLastError("Superseded by the next scheduled run");
             run.setUpdatedAt(now);
             repository.save(run);
+            mailAuditService.markJobRunTerminal(run.getId(), DeliveryStatus.FAILED, "Superseded by the next scheduled run");
         }
         return candidates;
     }

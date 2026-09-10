@@ -6,12 +6,14 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Repository
@@ -86,4 +88,21 @@ public interface MailAuditLogRepository extends JpaRepository<MailAuditLog, UUID
     // Dynamic filtering is done via JpaSpecificationExecutor in MailAuditLogSpecs.
     // This avoids the Hibernate 6 / PostgreSQL issue where (:param IS NULL OR ...) patterns
     // fail with "could not determine data type of parameter" for null bindings.
+
+    // --- Job-run-aware upserts: one row per (jobRunId, subscriptionId, recipientEmail) ---
+
+    Optional<MailAuditLog> findByJobRunIdAndSubscriptionIdAndRecipientEmail(
+            UUID jobRunId, UUID subscriptionId, String recipientEmail);
+
+    /** Flips every still-RETRYING row of a job run to a terminal status (supersede / max-attempts-reached). */
+    @Modifying
+    @Query("UPDATE MailAuditLog m SET m.deliveryStatus = :status, m.failureReason = :reason " +
+            "WHERE m.jobRunId = :jobRunId AND m.deliveryStatus = com.anushibinj.veemailer.model.DeliveryStatus.RETRYING")
+    int flipRetryingToTerminal(@Param("jobRunId") UUID jobRunId,
+                               @Param("status") DeliveryStatus status,
+                               @Param("reason") String reason);
+
+    /** Minimum-dispatch-gap recency check (B): has this subscription already received a digest recently? */
+    boolean existsBySubscriptionIdAndDeliveryStatusAndSentAtAfter(
+            UUID subscriptionId, DeliveryStatus deliveryStatus, Instant sentAfter);
 }

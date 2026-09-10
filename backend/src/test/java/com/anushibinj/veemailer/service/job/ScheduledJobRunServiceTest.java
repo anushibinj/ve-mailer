@@ -1,9 +1,11 @@
 package com.anushibinj.veemailer.service.job;
 
+import com.anushibinj.veemailer.model.DeliveryStatus;
 import com.anushibinj.veemailer.model.JobRunStatus;
 import com.anushibinj.veemailer.model.JobTriggerType;
 import com.anushibinj.veemailer.model.ScheduledJobRun;
 import com.anushibinj.veemailer.repository.ScheduledJobRunRepository;
+import com.anushibinj.veemailer.service.MailAuditService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -32,6 +34,9 @@ class ScheduledJobRunServiceTest {
     @Mock
     private ScheduledJobRunRepository repository;
 
+    @Mock
+    private MailAuditService mailAuditService;
+
     private Clock clock;
     private ScheduledJobRunService service;
 
@@ -42,7 +47,7 @@ class ScheduledJobRunServiceTest {
     @BeforeEach
     void setUp() {
         clock = Clock.fixed(fixedNow, ZoneOffset.UTC);
-        service = new ScheduledJobRunService(repository, clock);
+        service = new ScheduledJobRunService(repository, mailAuditService, clock);
         ReflectionTestUtils.setField(service, "staleClaimMinutes", 30L);
     }
 
@@ -144,6 +149,10 @@ class ScheduledJobRunServiceTest {
             assertThat(saved.getStatus()).isEqualTo(JobRunStatus.FAILED);
             assertThat(saved.getLastError()).isEqualTo("Superseded by the next scheduled run");
         }
+        verify(mailAuditService).markJobRunTerminal(
+                pending.getId(), DeliveryStatus.FAILED, "Superseded by the next scheduled run");
+        verify(mailAuditService).markJobRunTerminal(
+                awaitingRetry.getId(), DeliveryStatus.FAILED, "Superseded by the next scheduled run");
     }
 
     @Test
@@ -158,6 +167,7 @@ class ScheduledJobRunServiceTest {
 
         assertThat(superseded).isEmpty();
         verify(repository, never()).save(any());
+        verifyNoInteractions(mailAuditService);
     }
 
     @Test
