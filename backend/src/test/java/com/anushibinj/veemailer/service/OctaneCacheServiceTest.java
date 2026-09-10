@@ -101,4 +101,26 @@ class OctaneCacheServiceTest {
                 org.mockito.ArgumentMatchers.anyInt(),
                 org.mockito.ArgumentMatchers.anyInt());
     }
+
+    @Test
+    void testEvict_ForcesNextGetToRebuildClient() {
+        Octane first = mock(Octane.class);
+        Octane rebuilt = mock(Octane.class);
+        when(veUtils.createOctaneClient("client1", "secret1", "https://server", 1, 2))
+                .thenReturn(first, rebuilt);
+
+        Octane result1 = octaneCacheService.getOctaneClient("https://server", "client1", "secret1", 1, 2);
+        octaneCacheService.evict("https://server", "client1", "secret1", 1, 2);
+        Octane result2 = octaneCacheService.getOctaneClient("https://server", "client1", "secret1", 1, 2);
+
+        assertEquals(first, result1);
+        assertEquals(rebuilt, result2);
+        verify(veUtils, times(2)).createOctaneClient("client1", "secret1", "https://server", 1, 2);
+    }
+
+    @Test
+    void testEvict_UnknownKey_DoesNotThrow() {
+        octaneCacheService.evict("https://server", "unknown", "secret", 1, 2);
+        // no exception — nothing to assert beyond not throwing
+    }
 }

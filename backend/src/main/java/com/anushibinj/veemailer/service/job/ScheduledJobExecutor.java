@@ -12,6 +12,7 @@ import com.anushibinj.veemailer.repository.EmailSubscriberRepository;
 import com.anushibinj.veemailer.repository.MailAuditLogRepository;
 import com.anushibinj.veemailer.service.FilterService;
 import com.anushibinj.veemailer.service.NotificationService;
+import com.anushibinj.veemailer.service.OctaneCacheService;
 import com.anushibinj.veemailer.service.TriageSlaPolicy;
 import com.hpe.adm.nga.sdk.model.EntityModel;
 import lombok.RequiredArgsConstructor;
@@ -46,6 +47,7 @@ public class ScheduledJobExecutor {
     private final MailAuditLogRepository mailAuditLogRepository;
     private final FilterService filterService;
     private final NotificationService notificationService;
+    private final OctaneCacheService octaneCacheService;
     private final TransientFailureClassifier classifier;
     private final Clock clock;
 
@@ -84,6 +86,12 @@ public class ScheduledJobExecutor {
 
         Workspace workspace = subscribers.get(0).getWorkspace();
         String filterTitle = subscribers.get(0).getFilter() != null ? subscribers.get(0).getFilter().getTitle() : null;
+
+        // A retry (attempt > 1) evicts the cached Octane client first: a transient failure may
+        // mean its session no longer works, so the next fetch should rebuild it from scratch.
+        if (run.getAttemptCount() > 1) {
+            evictOctaneClient(workspace);
+        }
 
         List<EntityModel> results;
         List<String> fields;
@@ -238,6 +246,16 @@ public class ScheduledJobExecutor {
             notificationService.recordSuppressed(jobRunId, List.of(subscriber), workspace, filterTitle, reason);
         }
         return toSend;
+    }
+
+    private void evictOctaneClient(Workspace workspace) {
+        try {
+            octaneCacheService.evict(workspace.getRootUrl(), workspace.getClientId(), workspace.getClientKey(),
+                    Integer.parseInt(workspace.getSharedSpaceId()), Integer.parseInt(workspace.getWorkspaceId()));
+        } catch (Exception e) {
+            log.warn("Failed to evict cached Octane client for workspace {} before retry: {}",
+                    workspace.getId(), e.getMessage());
+        }
     }
 
     /**

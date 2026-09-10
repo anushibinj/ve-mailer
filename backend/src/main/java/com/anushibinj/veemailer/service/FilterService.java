@@ -12,12 +12,18 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -89,6 +95,10 @@ public class FilterService {
     private final AiSummaryService aiSummaryService;
     private final FieldExtractorRegistry fieldExtractorRegistry;
     private final WorkspaceService workspaceService;
+    private final ExecutorService octaneExecutor;
+
+    @Value("${veemailer.octane.read-timeout-ms:60000}")
+    private long octaneReadTimeoutMs;
 
     /**
      * Persist a new filter template associated with a workspace.
@@ -338,7 +348,10 @@ public class FilterService {
                     Integer.parseInt(workspace.getSharedSpaceId()),
                     Integer.parseInt(workspace.getWorkspaceId()));
 
-            Set<String> referenceFieldNames = resolveReferenceFieldNames(octaneClient, filter.getEntityType());
+            // The Octane SDK exposes no timeout of its own, so each network call below is bounded
+            // by running it on octaneExecutor and waiting at most octaneReadTimeoutMs — a hang
+            // becomes a TimeoutException instead of blocking the poller/retry thread indefinitely.
+            Set<String> referenceFieldNames = runWithTimeout(() -> resolveReferenceFieldNames(octaneClient, filter.getEntityType()));
             Query query = buildQuery(filter.getEntityType(), clauses, referenceFieldNames);
 
             int effectiveLimit = generalSettingsService.getQueryLimit();
@@ -355,7 +368,8 @@ public class FilterService {
             if (effectiveLimit > 0) {
                 getEntities = getEntities.limit(effectiveLimit);
             }
-            OctaneCollection<EntityModel> result = getEntities.execute();
+            GetEntities finalGetEntities = getEntities;
+            OctaneCollection<EntityModel> result = runWithTimeout(finalGetEntities::execute);
             List<EntityModel> entities = result.stream().toList();
             workspaceService.markWorkspaceOnline(workspaceId, !entities.isEmpty());
             return sortByTriageSlaAgeIfEnabled(entities, fields, orderByField);
@@ -365,6 +379,31 @@ public class FilterService {
             workspaceService.markWorkspaceOffline(workspaceId,
                     "Workspace became unreachable during filter execution: " + summarizeError(e));
             throw e;
+        }
+    }
+
+    /**
+     * Runs an Octane SDK call on {@link #octaneExecutor} and waits at most
+     * {@link #octaneReadTimeoutMs}. On timeout the cause chain carries a
+     * {@link java.util.concurrent.TimeoutException}, which {@code TransientFailureClassifier}
+     * reads as transient.
+     */
+    private <T> T runWithTimeout(Callable<T> call) {
+        Future<T> future = octaneExecutor.submit(call);
+        try {
+            return future.get(octaneReadTimeoutMs, TimeUnit.MILLISECONDS);
+        } catch (java.util.concurrent.TimeoutException e) {
+            future.cancel(true);
+            throw new RuntimeException("Octane request timed out after " + octaneReadTimeoutMs + "ms", e);
+        } catch (ExecutionException e) {
+            Throwable cause = e.getCause();
+            if (cause instanceof RuntimeException re) {
+                throw re;
+            }
+            throw new RuntimeException(cause != null ? cause.getMessage() : "Octane request failed", cause);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException("Octane request interrupted", e);
         }
     }
 

@@ -56,6 +56,9 @@ class ScheduledJobExecutorTest {
     private NotificationService notificationService;
 
     @Mock
+    private com.anushibinj.veemailer.service.OctaneCacheService octaneCacheService;
+
+    @Mock
     private TransientFailureClassifier classifier;
 
     private Clock clock;
@@ -71,7 +74,7 @@ class ScheduledJobExecutorTest {
     void setUp() {
         clock = Clock.fixed(fixedNow, ZoneOffset.UTC);
         executor = new ScheduledJobExecutor(scheduledJobRunService, emailSubscriberRepository, mailAuditLogRepository,
-                filterService, notificationService, classifier, clock);
+                filterService, notificationService, octaneCacheService, classifier, clock);
         ReflectionTestUtils.setField(executor, "retryIntervalMinutes", 15);
         ReflectionTestUtils.setField(executor, "minDispatchGapMinutes", 30);
 

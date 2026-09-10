@@ -17,6 +17,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.Executors;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -45,7 +46,8 @@ class FilterServiceTest {
         filterService = new FilterService(
                 filterRepository, workspaceRepository, emailSubscriberRepository,
                 octaneCacheService, new ObjectMapper(), generalSettingsService,
-                aiSummaryService, fieldExtractorRegistry, workspaceService);
+                aiSummaryService, fieldExtractorRegistry, workspaceService,
+                Executors.newSingleThreadExecutor());
     }
 
     @Test

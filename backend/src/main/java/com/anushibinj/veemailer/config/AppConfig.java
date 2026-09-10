@@ -12,6 +12,8 @@ import org.springframework.web.client.RestTemplate;
 import java.net.http.HttpClient;
 import java.time.Clock;
 import java.time.Duration;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 @Configuration
 @EnableAsync
@@ -28,6 +30,16 @@ public class AppConfig {
     @Bean
     public Clock clock() {
         return Clock.systemUTC();
+    }
+
+    /**
+     * Backs the bounded-fetch wrapper in FilterService: the Octane SDK's Octane.Builder exposes
+     * no timeout setting of its own, so a hung call is bounded by running it on this pool and
+     * calling Future.get(timeout) rather than by any SDK configuration.
+     */
+    @Bean(destroyMethod = "shutdown")
+    public ExecutorService octaneExecutor() {
+        return Executors.newFixedThreadPool(8);
     }
 
     /**
