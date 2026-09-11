@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -68,7 +69,11 @@ public class ScheduledJobRunService {
                 .status(JobRunStatus.PENDING)
                 .attemptCount(0)
                 .maxAttempts(maxAttempts)
-                .subscriberIds(subscriberIds)
+                // Always a fresh, mutable copy: an immutable list (e.g. List.of(...)) passed
+                // straight into a Hibernate-managed @ElementCollection gets reused as-is as the
+                // PersistentBag's backing store, so a later clear()/replace() during merge (e.g.
+                // markSucceeded's save() on a detached reload) throws UnsupportedOperationException.
+                .subscriberIds(subscriberIds == null ? new ArrayList<>() : new ArrayList<>(subscriberIds))
                 .createdAt(now)
                 .updatedAt(now)
                 .build();

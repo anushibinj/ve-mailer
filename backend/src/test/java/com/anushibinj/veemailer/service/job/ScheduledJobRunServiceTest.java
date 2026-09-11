@@ -23,6 +23,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
@@ -67,6 +68,38 @@ class ScheduledJobRunServiceTest {
         assertThat(run.getTriggerType()).isEqualTo(JobTriggerType.SCHEDULED);
         assertThat(run.getAttemptCount()).isZero();
         assertThat(run.getMaxAttempts()).isEqualTo(4);
+    }
+
+    /**
+     * Regression test: an immutable subscriberIds list (e.g. List.of(...), as PollingService.runNow
+     * passes) must never end up embedded directly in the entity. Hibernate's PersistentBag reuses a
+     * passed-in List instance as its backing store, so a later save()/merge() on a detached reload
+     * (e.g. ScheduledJobExecutor.markSucceeded) calls clear() on it and throws
+     * UnsupportedOperationException in production.
+     */
+    @Test
+    void createScheduledRun_immutableCallerList_isCopiedIntoAMutableList() {
+        when(repository.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
+        UUID subscriberId = UUID.randomUUID();
+        List<UUID> immutableInput = List.of(subscriberId);
+
+        ScheduledJobRun run = service.createScheduledRun(workspaceId, filterId, fixedNow, immutableInput, 4).orElseThrow();
+
+        assertThat(run.getSubscriberIds()).isNotSameAs(immutableInput);
+        assertThat(run.getSubscriberIds()).containsExactly(subscriberId);
+        assertThatCode(() -> run.getSubscriberIds().add(UUID.randomUUID())).doesNotThrowAnyException();
+        assertThatCode(() -> run.getSubscriberIds().clear()).doesNotThrowAnyException();
+    }
+
+    @Test
+    void createManualRun_immutableCallerList_isCopiedIntoAMutableList() {
+        when(repository.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
+        UUID subscriberId = UUID.randomUUID();
+
+        ScheduledJobRun run = service.createManualRun(UUID.randomUUID(), workspaceId, filterId, List.of(subscriberId))
+                .orElseThrow();
+
+        assertThatCode(() -> run.getSubscriberIds().clear()).doesNotThrowAnyException();
     }
 
     @Test
