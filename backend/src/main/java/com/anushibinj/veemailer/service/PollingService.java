@@ -20,6 +20,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -77,7 +78,7 @@ public class PollingService {
     public void runNow(EmailSubscriber subscriber) {
         UUID workspaceId = subscriber.getWorkspace().getId();
         UUID filterId = subscriber.getFilter().getId();
-        scheduledJobRunService.createManualRun(subscriber.getId(), workspaceId, filterId, List.of(subscriber.getId()))
+        scheduledJobRunService.createManualRun(subscriber.getId(), workspaceId, filterId, new ArrayList<>(List.of(subscriber.getId())))
                 .ifPresent(run -> scheduledJobExecutor.execute(run.getId()));
     }
 
