@@ -909,6 +909,7 @@ veemailer.jobs.retry.max-attempts=4
 veemailer.jobs.retry.poll-interval-ms=60000
 veemailer.jobs.retry.stale-claim-minutes=30
 veemailer.jobs.min-dispatch-gap-minutes=30
+veemailer.jobs.send-empty-digest-emails=true
 veemailer.octane.connect-timeout-ms=10000
 veemailer.octane.read-timeout-ms=60000
 spring.task.scheduling.pool-size=4
@@ -1333,6 +1334,12 @@ why.
 The on-demand **Run** button (`PollingService.runNow`) goes through the exact same pipeline as a `MANUAL`
 run with `maxAttempts=1` (no retries), so a double-click or two admins clicking at once gets the same
 job-key/dispatch-gate/suppression protection against a duplicate send.
+
+When a filter matches 0 tickets, `veemailer.jobs.send-empty-digest-emails` (default `true`) controls what
+happens: by default every subscriber still gets a digest email saying no tickets matched, going through the
+same in-flight/recency checks and dispatch gate as a normal send — a silent skip otherwise reads to users as
+a broken mail service. Set it to `false` to restore the old behavior of writing a `SKIPPED` audit row and
+sending nothing.
 
 ### OTP Lifecycle
 
