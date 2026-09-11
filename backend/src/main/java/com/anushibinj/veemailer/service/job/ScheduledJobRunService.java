@@ -84,12 +84,19 @@ public class ScheduledJobRunService {
         return repository.findById(runId);
     }
 
-    /** Claim gate: only the caller whose call returns true may execute this run. */
+    /**
+     * Claim gate: only the caller whose call returns true may execute this run. {@code @Transactional}
+     * is required here — {@code @Modifying} queries run non-transactionally unless the calling
+     * method opens a transaction (Spring Data does not do this automatically), so without it this
+     * throws {@code TransactionRequiredException} at runtime instead of failing at compile time.
+     */
+    @Transactional
     public boolean claim(UUID runId) {
         return repository.claim(runId, clock.instant()) == 1;
     }
 
-    /** Dispatch gate: RUNNING -> DISPATCHING, committed before any Transport.send. */
+    /** Dispatch gate: RUNNING -> DISPATCHING, committed before any Transport.send. See {@link #claim} for why this needs @Transactional. */
+    @Transactional
     public boolean beginDispatch(UUID runId) {
         return repository.beginDispatch(runId, clock.instant()) == 1;
     }
