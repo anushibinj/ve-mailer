@@ -58,6 +58,10 @@ public class ScheduledJobExecutor {
     @Value("${veemailer.jobs.min-dispatch-gap-minutes:30}")
     private int minDispatchGapMinutes;
 
+    /** When false, a filter that matches 0 tickets is skipped silently instead of mailed. */
+    @Value("${veemailer.jobs.send-empty-digest-emails:true}")
+    private boolean sendEmptyDigestEmails;
+
     /**
      * Attempts to run the given job. A no-op if the run cannot be found, or if the claim gate is
      * lost (someone else — a concurrent tick, a concurrent retry — already owns this attempt).
@@ -105,11 +109,14 @@ public class ScheduledJobExecutor {
             return;
         }
 
-        if (results.isEmpty()) {
+        if (results.isEmpty() && !sendEmptyDigestEmails) {
             notificationService.recordSkippedNoTickets(run.getId(), subscribers, workspace, filterTitle);
             scheduledJobRunService.markSucceeded(run);
             return;
         }
+        // Otherwise an empty result set still flows through the checks and dispatch gate below
+        // like a normal digest, so it respects in-flight/recency suppression — dispatchToSubscribers
+        // sends every subscriber a "no tickets matched" email rather than skipping them.
 
         // Check A — in-flight (job level): another run for this (workspace, filter) is actively
         // RUNNING/DISPATCHING right now. Its audit rows are not written yet, so check B below
@@ -180,7 +187,9 @@ public class ScheduledJobExecutor {
 
     private void dispatchToSubscribers(UUID jobRunId, List<EmailSubscriber> subscribers, List<EntityModel> results,
                                        List<String> fields, int limit, Workspace workspace, String filterTitle) {
-        if (!fields.contains(TriageSlaPolicy.TRIAGE_SLA_FIELD)) {
+        // An empty result set has nothing to split by SLA threshold — every subscriber gets the
+        // same "no tickets matched" digest regardless of their configured threshold.
+        if (results.isEmpty() || !fields.contains(TriageSlaPolicy.TRIAGE_SLA_FIELD)) {
             NotificationService.PreparedDigest digest = notificationService.prepare(results, fields, limit, workspace, filterTitle);
             notificationService.dispatch(jobRunId, subscribers, digest, workspace, filterTitle);
             return;

@@ -77,6 +77,7 @@ class ScheduledJobExecutorTest {
                 filterService, notificationService, octaneCacheService, classifier, clock);
         ReflectionTestUtils.setField(executor, "retryIntervalMinutes", 15);
         ReflectionTestUtils.setField(executor, "minDispatchGapMinutes", 30);
+        ReflectionTestUtils.setField(executor, "sendEmptyDigestEmails", true);
 
         workspace = new Workspace();
         workspace.setId(UUID.randomUUID());
@@ -205,7 +206,8 @@ class ScheduledJobExecutorTest {
     }
 
     @Test
-    void execute_emptyResults_recordsSkippedAndSucceedsWithoutDispatchGate() {
+    void execute_emptyResultsWithFlagDisabled_recordsSkippedAndSucceedsWithoutDispatchGate() {
+        ReflectionTestUtils.setField(executor, "sendEmptyDigestEmails", false);
         ScheduledJobRun run = buildRun(1, 4);
         stubClaimSucceeds(run);
         when(filterService.getFilterFields(filter.getId())).thenReturn(List.of("name"));
@@ -218,6 +220,24 @@ class ScheduledJobExecutorTest {
         verify(scheduledJobRunService).markSucceeded(run);
         verify(scheduledJobRunService, never()).beginDispatch(any());
         verify(notificationService, never()).dispatch(any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void execute_emptyResultsWithFlagEnabled_dispatchesEmptyDigestThroughDispatchGate() {
+        ScheduledJobRun run = buildRun(1, 4);
+        stubClaimSucceeds(run);
+        when(filterService.getFilterFields(filter.getId())).thenReturn(List.of("name"));
+        when(filterService.executeFilter(filter.getId(), workspace.getId())).thenReturn(Collections.emptyList());
+        when(filterService.getQueryLimit()).thenReturn(25);
+        when(scheduledJobRunService.beginDispatch(jobRunId)).thenReturn(true);
+        NotificationService.PreparedDigest digest = new NotificationService.PreparedDigest("<html/>", "[ve-mailer] 0 tickets", 0);
+        when(notificationService.prepare(Collections.emptyList(), List.of("name"), 25, workspace, "Open Defects")).thenReturn(digest);
+
+        executor.execute(jobRunId);
+
+        verify(notificationService).dispatch(jobRunId, List.of(subscriber), digest, workspace, "Open Defects");
+        verify(notificationService, never()).recordSkippedNoTickets(any(), any(), any(), any());
+        verify(scheduledJobRunService).markSucceeded(run);
     }
 
     @Test
