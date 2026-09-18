@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import ReactDOM from 'react-dom';
 import {
   fetchFilters,
@@ -18,10 +18,12 @@ import {
   type OctaneFieldDto
 } from '../services/apiService';
 import { useAuth } from '../hooks/useAuth';
-import { Loader2, ArrowLeft, Plus, Trash2, Eye, Pencil, Copy, ChevronDown, ChevronUp, SlidersHorizontal, Search, X } from 'lucide-react';
+import { Loader2, ArrowLeft, Plus, Trash2, Eye, Pencil, Copy, ChevronDown, ChevronUp, SlidersHorizontal, Search, X, Bell } from 'lucide-react';
 import toast from 'react-hot-toast';
 import ConfirmDialog from './ConfirmDialog';
 import { SmartFilterRow } from './SmartFilterRow';
+
+const SubscriptionFormModal = lazy(() => import('./SubscriptionFormModal'));
 
 interface FilterBuilderViewProps {
   workspaceId: string;
@@ -284,13 +286,14 @@ const FieldBadgeWithPopover: React.FC<FieldBadgeWithPopoverProps> = ({
 
 const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBack }) => {
   const allowCustomQueryString = String(import.meta.env.VITE_ALLOW_CUSTOM_QUERY_STRING ?? 'false').toLowerCase() === 'true';
-  const { isAdmin, isWorkspaceAdmin } = useAuth();
+  const { isAdmin, isWorkspaceAdmin, user } = useAuth();
   const canManageAllFilters = isAdmin || isWorkspaceAdmin;
   const canCreateFilters = true;
   const [filters, setFilters] = useState<Filter[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [editingFilter, setEditingFilter] = useState<Filter | null>(null);
+  const [subscribingFilter, setSubscribingFilter] = useState<Filter | null>(null);
 
   const [executeState, setExecuteState] = useState<Record<string, {
     isExecuting: boolean;
@@ -625,6 +628,14 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
       return filter.ownerEmail;
     }
     return 'Legacy admin template';
+  };
+
+  // Mirrors the backend's subscribable-filters rule: public/legacy filters, plus a private
+  // filter's own owner — a private filter can only ever be subscribed to by its owner, even for
+  // an admin who can otherwise manage every filter in the workspace (see FilterRepository#findVisibleForUser).
+  const canSubscribeToFilter = (filter: Filter): boolean => {
+    if (resolvePublicTemplate(filter)) return true;
+    return !!filter.ownerEmail && !!user?.email && filter.ownerEmail.toLowerCase() === user.email.toLowerCase();
   };
 
   if (isLoading) {
@@ -1265,6 +1276,14 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
                           : <><Eye className="h-3.5 w-3.5" />Preview</>
                         }
                       </button>
+                      {canSubscribeToFilter(f) && (
+                        <button
+                          onClick={() => setSubscribingFilter(f)}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-100 dark:border-indigo-500/20 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 transition-colors cursor-pointer"
+                        >
+                          <Bell className="h-3.5 w-3.5" />Subscribe
+                        </button>
+                      )}
                     </div>
                   </div>
                   {/* Show/hide toggle — bottom-right, only when preview returned results */}
@@ -1396,6 +1415,18 @@ const FilterBuilderView: React.FC<FilterBuilderViewProps> = ({ workspaceId, onBa
         isLoading={isDeleting}
         variant="danger"
       />
+
+      <Suspense fallback={null}>
+        <SubscriptionFormModal
+          isOpen={subscribingFilter !== null}
+          workspaceId={workspaceId}
+          filters={subscribingFilter ? [subscribingFilter] : []}
+          presetFilterId={subscribingFilter?.id}
+          canManage={canManageAllFilters}
+          onClose={() => setSubscribingFilter(null)}
+          onSuccess={() => setSubscribingFilter(null)}
+        />
+      </Suspense>
     </div>
   );
 };
