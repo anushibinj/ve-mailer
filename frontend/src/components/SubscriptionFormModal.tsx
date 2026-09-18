@@ -20,6 +20,8 @@ interface SubscriptionFormModalProps {
   workspaceId: string;
   filters: Filter[];
   canManage?: boolean;
+  /** When set, the Filter Template field is pre-selected to this filter id and locked (uneditable). */
+  presetFilterId?: string;
   onClose: () => void;
   onSuccess: () => void;
 }
@@ -70,7 +72,7 @@ function joinWithAnd(items: string[]): string {
 }
 
 const SubscriptionFormModal: React.FC<SubscriptionFormModalProps> = ({
-  isOpen, workspaceId, filters, canManage = false, onClose, onSuccess,
+  isOpen, workspaceId, filters, canManage = false, presetFilterId, onClose, onSuccess,
 }) => {
   const { user } = useAuth();
 
@@ -105,7 +107,9 @@ const SubscriptionFormModal: React.FC<SubscriptionFormModalProps> = ({
   // The `filters` prop is already restricted by the backend to only those the current user may
   // subscribe to (public/legacy filters plus their own private filters) — see fetchFilters(..., { subscribableOnly: true }).
   // Group subscriptions can only ever use public filters (server-enforced), even for the filter's owner.
-  const subscribableFilters = mode === 'group'
+  // When a filter is preset/locked, `filters` is already narrowed to just that one filter, so the
+  // group-mode restriction is skipped to keep the locked selection visible.
+  const subscribableFilters = mode === 'group' && !presetFilterId
     ? filters.filter(f => f.publicTemplate)
     : filters;
 
@@ -135,6 +139,13 @@ const SubscriptionFormModal: React.FC<SubscriptionFormModalProps> = ({
       .catch(() => toast.error('Could not load recipient groups.'))
       .finally(() => setGroupsLoading(false));
   }, [isOpen, canManage, workspaceId]);
+
+  // Pre-select the locked filter template whenever the modal opens with one.
+  useEffect(() => {
+    if (isOpen && presetFilterId) {
+      setSelectedFilter(presetFilterId);
+    }
+  }, [isOpen, presetFilterId]);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -319,7 +330,7 @@ const SubscriptionFormModal: React.FC<SubscriptionFormModalProps> = ({
               <div className="flex rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
                 <button
                   type="button"
-                  onClick={() => { setMode('individual'); setSelectedFilter(''); }}
+                  onClick={() => { setMode('individual'); if (!presetFilterId) setSelectedFilter(''); }}
                   className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-semibold transition-colors cursor-pointer ${
                     mode === 'individual'
                       ? 'bg-indigo-600 text-white'
@@ -331,7 +342,7 @@ const SubscriptionFormModal: React.FC<SubscriptionFormModalProps> = ({
                 </button>
                 <button
                   type="button"
-                  onClick={() => { setMode('group'); setSelectedFilter(''); }}
+                  onClick={() => { setMode('group'); if (!presetFilterId) setSelectedFilter(''); }}
                   className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-semibold transition-colors cursor-pointer ${
                     mode === 'group'
                       ? 'bg-indigo-600 text-white'
@@ -496,15 +507,22 @@ const SubscriptionFormModal: React.FC<SubscriptionFormModalProps> = ({
               </label>
               <select
                 id="sub-filter" required value={selectedFilter}
+                disabled={!!presetFilterId}
                 onChange={e => {
+                  if (presetFilterId) return;
                   setSelectedFilter(e.target.value);
                   setTriageSlaThreshold('GREEN');
                 }}
-                className={selectClass}
+                className={`${selectClass} ${presetFilterId ? 'opacity-70 cursor-not-allowed bg-slate-50 dark:bg-slate-800/40' : ''}`}
               >
                 <option value="" disabled>Select a filter…</option>
                 {subscribableFilters.map(f => <option key={f.id} value={f.id}>{f.title}</option>)}
               </select>
+              {presetFilterId && (
+                <p className="text-xs text-slate-400 dark:text-slate-500">
+                  Filter template is locked for this subscription.
+                </p>
+              )}
             </div>
 
             {triageEnabled && (
