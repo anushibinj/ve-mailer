@@ -44,7 +44,15 @@ public class DynamicAiClientService {
             throw new IllegalStateException(
                     "AI preferences are not configured. Please configure them in the Admin Control Panel.");
         }
+        return getChatClient(prefs);
+    }
 
+    /**
+     * Builds and returns a {@link ChatClient} from the given (possibly unsaved/transient)
+     * {@link AiPreferences}. Used to test connectivity with form values that have not
+     * been persisted yet.
+     */
+    public ChatClient getChatClient(AiPreferences prefs) {
         // Use JDK HTTP client to avoid Jetty classpath conflict (same reason as AppConfig)
         RestClient.Builder restClientBuilder = RestClient.builder()
                 .requestFactory(new JdkClientHttpRequestFactory());

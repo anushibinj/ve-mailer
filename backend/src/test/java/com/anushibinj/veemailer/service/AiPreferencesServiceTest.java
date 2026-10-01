@@ -1,14 +1,17 @@
 package com.anushibinj.veemailer.service;
 
+import com.anushibinj.veemailer.dto.AiConnectionTestResultDto;
 import com.anushibinj.veemailer.dto.AiPreferencesResponseDto;
 import com.anushibinj.veemailer.dto.AiPreferencesUpdateDto;
 import com.anushibinj.veemailer.model.AiPreferences;
 import com.anushibinj.veemailer.repository.AiPreferencesRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.ai.chat.client.ChatClient;
 
 import java.util.Collections;
 import java.util.List;
@@ -23,6 +26,9 @@ class AiPreferencesServiceTest {
 
     @Mock
     private AiPreferencesRepository repository;
+
+    @Mock
+    private DynamicAiClientService dynamicAiClientService;
 
     @InjectMocks
     private AiPreferencesService service;
@@ -153,6 +159,106 @@ class AiPreferencesServiceTest {
         service.update(dto);
 
         assertEquals("brand-new-api-key", existing.getApiKey());
+    }
+
+    @Test
+    void testConnection_WithUnsavedApiKey_UsesProvidedValuesAndReturnsReply() {
+        when(repository.findAll()).thenReturn(Collections.emptyList());
+        ChatClient chatClient = mock(ChatClient.class);
+        ChatClient.ChatClientRequestSpec requestSpec = mock(ChatClient.ChatClientRequestSpec.class);
+        ChatClient.CallResponseSpec callResponseSpec = mock(ChatClient.CallResponseSpec.class);
+        when(dynamicAiClientService.getChatClient(any(AiPreferences.class))).thenReturn(chatClient);
+        when(chatClient.prompt()).thenReturn(requestSpec);
+        when(requestSpec.system(anyString())).thenReturn(requestSpec);
+        when(requestSpec.user(anyString())).thenReturn(requestSpec);
+        when(requestSpec.call()).thenReturn(callResponseSpec);
+        when(callResponseSpec.content()).thenReturn("Hello!");
+
+        AiPreferencesUpdateDto dto = new AiPreferencesUpdateDto();
+        dto.setApiKey("sk-unsaved-key");
+        dto.setBaseUrl("https://api.openai.com");
+        dto.setChatCompletionsPath("/v1/chat/completions");
+        dto.setModel("gpt-4o");
+
+        AiConnectionTestResultDto result = service.testConnection(dto);
+
+        assertTrue(result.isSuccess());
+        assertEquals("Hello!", result.getReply());
+
+        ArgumentCaptor<AiPreferences> captor = ArgumentCaptor.forClass(AiPreferences.class);
+        verify(dynamicAiClientService).getChatClient(captor.capture());
+        assertEquals("sk-unsaved-key", captor.getValue().getApiKey());
+        assertEquals("https://api.openai.com", captor.getValue().getBaseUrl());
+    }
+
+    @Test
+    void testConnection_WithPlaceholderApiKey_FallsBackToSavedKey() {
+        AiPreferences existing = AiPreferences.builder()
+                .id(UUID.randomUUID())
+                .apiKey("existing-secret-key")
+                .baseUrl("https://old.api.com")
+                .chatCompletionsPath("/old/path")
+                .model("gpt-3.5-turbo")
+                .build();
+        when(repository.findAll()).thenReturn(List.of(existing));
+        ChatClient chatClient = mock(ChatClient.class);
+        ChatClient.ChatClientRequestSpec requestSpec = mock(ChatClient.ChatClientRequestSpec.class);
+        ChatClient.CallResponseSpec callResponseSpec = mock(ChatClient.CallResponseSpec.class);
+        when(dynamicAiClientService.getChatClient(any(AiPreferences.class))).thenReturn(chatClient);
+        when(chatClient.prompt()).thenReturn(requestSpec);
+        when(requestSpec.system(anyString())).thenReturn(requestSpec);
+        when(requestSpec.user(anyString())).thenReturn(requestSpec);
+        when(requestSpec.call()).thenReturn(callResponseSpec);
+        when(callResponseSpec.content()).thenReturn("Hi there");
+
+        AiPreferencesUpdateDto dto = new AiPreferencesUpdateDto();
+        dto.setApiKey("(unchanged)");
+        dto.setBaseUrl("https://api.openai.com");
+        dto.setChatCompletionsPath("/v1/chat/completions");
+        dto.setModel("gpt-4o");
+
+        AiConnectionTestResultDto result = service.testConnection(dto);
+
+        assertTrue(result.isSuccess());
+        ArgumentCaptor<AiPreferences> captor = ArgumentCaptor.forClass(AiPreferences.class);
+        verify(dynamicAiClientService).getChatClient(captor.capture());
+        assertEquals("existing-secret-key", captor.getValue().getApiKey());
+        assertEquals("https://api.openai.com", captor.getValue().getBaseUrl());
+    }
+
+    @Test
+    void testConnection_WithPlaceholderApiKeyAndNoSavedPreferences_ReturnsFailure() {
+        when(repository.findAll()).thenReturn(Collections.emptyList());
+
+        AiPreferencesUpdateDto dto = new AiPreferencesUpdateDto();
+        dto.setApiKey("(unchanged)");
+        dto.setBaseUrl("https://api.openai.com");
+        dto.setChatCompletionsPath("/v1/chat/completions");
+        dto.setModel("gpt-4o");
+
+        AiConnectionTestResultDto result = service.testConnection(dto);
+
+        assertFalse(result.isSuccess());
+        assertEquals("API key is required to test the connection.", result.getMessage());
+        verify(dynamicAiClientService, never()).getChatClient(any(AiPreferences.class));
+    }
+
+    @Test
+    void testConnection_WhenClientThrows_ReturnsFailure() {
+        when(repository.findAll()).thenReturn(Collections.emptyList());
+        when(dynamicAiClientService.getChatClient(any(AiPreferences.class)))
+                .thenThrow(new RuntimeException("boom"));
+
+        AiPreferencesUpdateDto dto = new AiPreferencesUpdateDto();
+        dto.setApiKey("sk-unsaved-key");
+        dto.setBaseUrl("https://api.openai.com");
+        dto.setChatCompletionsPath("/v1/chat/completions");
+        dto.setModel("gpt-4o");
+
+        AiConnectionTestResultDto result = service.testConnection(dto);
+
+        assertFalse(result.isSuccess());
+        assertTrue(result.getMessage().contains("boom"));
     }
 
     @Test

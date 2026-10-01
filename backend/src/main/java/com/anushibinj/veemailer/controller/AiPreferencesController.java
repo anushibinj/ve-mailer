@@ -35,7 +35,8 @@ public class AiPreferencesController {
     }
 
     @PostMapping("/test-connection")
-    public ResponseEntity<AiConnectionTestResultDto> testConnection() {
-        return ResponseEntity.ok(service.testConnection());
+    public ResponseEntity<AiConnectionTestResultDto> testConnection(
+            @Valid @RequestBody AiPreferencesUpdateDto dto) {
+        return ResponseEntity.ok(service.testConnection(dto));
     }
 }

@@ -82,22 +82,39 @@ public class AiPreferencesService {
     }
 
     /**
-     * Tests connectivity to the configured AI model by sending a simple "Hi" message
-     * with both a system prompt and a user prompt, then returning the model's reply.
+     * Tests connectivity to the AI model described by the given (possibly unsaved) form
+     * values, so admins can verify a connection before saving. If the API key is left as
+     * the placeholder/blank, the currently saved API key is reused; if none has ever been
+     * saved, a new API key must be provided.
+     *
+     * <p>Sends a simple "Hi" message with both a system prompt and a user prompt, then
+     * returns the model's reply.
      *
      * @return a result DTO with success=true and the model reply, or success=false with an error message
      */
-    public AiConnectionTestResultDto testConnection() {
-        AiPreferences prefs = getEntity();
-        if (prefs == null) {
-            return AiConnectionTestResultDto.builder()
-                    .success(false)
-                    .message("AI is not configured yet. Please save your preferences first.")
-                    .build();
+    public AiConnectionTestResultDto testConnection(AiPreferencesUpdateDto dto) {
+        AiPreferences saved = getEntity();
+
+        String apiKey = dto.getApiKey();
+        if (apiKey == null || apiKey.isBlank() || API_KEY_PLACEHOLDER.equals(apiKey)) {
+            if (saved == null) {
+                return AiConnectionTestResultDto.builder()
+                        .success(false)
+                        .message("API key is required to test the connection.")
+                        .build();
+            }
+            apiKey = saved.getApiKey();
         }
 
+        AiPreferences candidate = AiPreferences.builder()
+                .apiKey(apiKey)
+                .baseUrl(dto.getBaseUrl())
+                .chatCompletionsPath(dto.getChatCompletionsPath())
+                .model(dto.getModel())
+                .build();
+
         try {
-            ChatClient chatClient = dynamicAiClientService.getChatClient();
+            ChatClient chatClient = dynamicAiClientService.getChatClient(candidate);
             String reply = chatClient.prompt()
                     .system("You are a helpful assistant. Respond briefly and politely.")
                     .user("Hi")

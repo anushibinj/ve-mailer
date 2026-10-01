@@ -1,5 +1,6 @@
 package com.anushibinj.veemailer.controller;
 
+import com.anushibinj.veemailer.dto.AiConnectionTestResultDto;
 import com.anushibinj.veemailer.dto.AiPreferencesResponseDto;
 import com.anushibinj.veemailer.dto.AiPreferencesUpdateDto;
 import com.anushibinj.veemailer.service.AiPreferencesService;
@@ -17,6 +18,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -134,6 +136,42 @@ class AiPreferencesControllerTest {
         request.setModel("");
 
         mockMvc.perform(put("/api/admin/ai-preferences")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void testConnection_ReturnsSuccessResultForUnsavedFormValues() throws Exception {
+        when(service.testConnection(any())).thenReturn(AiConnectionTestResultDto.builder()
+                .success(true)
+                .message("Connection successful.")
+                .reply("Hello!")
+                .build());
+
+        AiPreferencesUpdateDto request = new AiPreferencesUpdateDto();
+        request.setApiKey("sk-unsaved-key");
+        request.setBaseUrl("https://api.openai.com");
+        request.setChatCompletionsPath("/v1/chat/completions");
+        request.setModel("gpt-4o");
+
+        mockMvc.perform(post("/api/admin/ai-preferences/test-connection")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.reply").value("Hello!"));
+    }
+
+    @Test
+    void testConnection_ValidationFailsWhenBaseUrlBlank() throws Exception {
+        AiPreferencesUpdateDto request = new AiPreferencesUpdateDto();
+        request.setApiKey("sk-unsaved-key");
+        request.setBaseUrl("");
+        request.setChatCompletionsPath("/v1/chat/completions");
+        request.setModel("gpt-4o");
+
+        mockMvc.perform(post("/api/admin/ai-preferences/test-connection")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest());

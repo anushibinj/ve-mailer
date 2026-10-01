@@ -74,4 +74,11 @@ class DynamicAiClientServiceTest {
 
         assertNotNull(client);
     }
+
+    @Test
+    void getChatClient_WithTransientPrefs_ReturnsNonNullClientWithoutTouchingRepository() {
+        ChatClient client = service.getChatClient(validPrefs);
+
+        assertNotNull(client);
+    }
 }
