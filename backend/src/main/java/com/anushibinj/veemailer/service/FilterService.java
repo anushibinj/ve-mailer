@@ -647,7 +647,12 @@ public class FilterService {
             QueryMethod idOperator = ("EQ".equals(operator) || "NEQ".equals(operator))
                     ? QueryMethod.EqualTo
                     : QueryMethod.In;
-            Object idValue = idOperator == QueryMethod.EqualTo ? values[0] : values;
+            // Octane entity IDs are numeric; the SDK quotes String values in the
+            // generated TQL (e.g. id EQ '1001'), which Octane then fails to parse
+            // back into a Long for the "id" field (ArrayList cannot be cast to Long).
+            // Parsing to Long keeps the id unquoted so the reference lookup matches.
+            Long[] idValues = Arrays.stream(values).map(this::parseReferenceId).toArray(Long[]::new);
+            Object idValue = idOperator == QueryMethod.EqualTo ? idValues[0] : idValues;
             Query.QueryBuilder idClause = Query.statement("id", idOperator, idValue);
             if ("NOT_IN".equals(operator) || "NEQ".equals(operator)) {
                 return Query.not(clause.getField(), QueryMethod.EqualTo, idClause);
@@ -659,8 +664,12 @@ public class FilterService {
         }
 
         return switch (operator) {
-            case "IN" -> Query.statement(clause.getField(), QueryMethod.In, values);
-            case "NOT_IN" -> Query.not(clause.getField(), QueryMethod.In, values);
+            // Coerce each value the same way EQ/NEQ do, so numeric/date fields aren't
+            // sent as quoted strings (which Octane can fail to parse back for comparison).
+            case "IN" -> Query.statement(clause.getField(), QueryMethod.In,
+                    Arrays.stream(values).map(this::coerceComparableValue).toArray());
+            case "NOT_IN" -> Query.not(clause.getField(), QueryMethod.In,
+                    Arrays.stream(values).map(this::coerceComparableValue).toArray());
             case "EQ" -> Query.statement(clause.getField(), QueryMethod.EqualTo, coerceComparableValue(values[0]));
             case "NEQ" -> Query.not(clause.getField(), QueryMethod.EqualTo, coerceComparableValue(values[0]));
             case "GT" -> Query.statement(clause.getField(), QueryMethod.GreaterThan, coerceComparableValue(values[0]));
@@ -715,6 +724,20 @@ public class FilterService {
         } catch (NumberFormatException ignored) {
         }
         return value;
+    }
+
+    /**
+     * Parses a reference clause value into the numeric Octane entity ID it represents.
+     * Reference IDs must be sent to the SDK as {@link Long}, not {@link String}, otherwise
+     * the generated TQL quotes them (e.g. {@code id EQ '1001'}) and Octane fails to cast
+     * the resulting value back to {@code Long} when resolving the "id" subquery.
+     */
+    private Long parseReferenceId(String rawId) {
+        try {
+            return Long.parseLong(rawId.trim());
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Invalid reference id value: " + rawId, e);
+        }
     }
 
     /** Heuristic fallback used only when explicit/metadata signal is not available. */
