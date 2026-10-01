@@ -143,6 +143,7 @@ const SubscriptionFormModal: React.FC<SubscriptionFormModalProps> = ({
   // Pre-select the locked filter template whenever the modal opens with one.
   useEffect(() => {
     if (isOpen && presetFilterId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSelectedFilter(presetFilterId);
     }
   }, [isOpen, presetFilterId]);
