@@ -48,40 +48,48 @@ export default function AiPreferencesPage() {
     loadPreferences();
   }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
+  /** Validates the form fields, showing a toast and returning null if invalid. */
+  const validateForm = (): AiPreferencesUpdatePayload | null => {
     if (!configured && (!apiKey || apiKey === API_KEY_PLACEHOLDER)) {
       toast.error('API key is required for initial configuration');
-      return;
+      return null;
     }
     if (!baseUrl.trim()) {
       toast.error('Base URL is required');
-      return;
+      return null;
     }
     if (!/^https?:\/\//.test(baseUrl.trim())) {
       toast.error('Base URL must start with http:// or https://');
-      return;
+      return null;
     }
     if (!chatCompletionsPath.trim()) {
       toast.error('Chat completions path is required');
-      return;
+      return null;
     }
     if (!chatCompletionsPath.trim().startsWith('/')) {
       toast.error('Chat completions path must start with /');
-      return;
+      return null;
     }
     if (!model.trim()) {
       toast.error('Model is required');
-      return;
+      return null;
     }
 
-    const payload: AiPreferencesUpdatePayload = {
+    return {
       apiKey,
       baseUrl: baseUrl.trim(),
       chatCompletionsPath: chatCompletionsPath.trim(),
       model: model.trim(),
     };
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const payload = validateForm();
+    if (!payload) {
+      return;
+    }
 
     try {
       setSaving(true);
@@ -99,10 +107,15 @@ export default function AiPreferencesPage() {
   };
 
   const handleTestConnection = async () => {
+    const payload = validateForm();
+    if (!payload) {
+      return;
+    }
+
     try {
       setTesting(true);
       setTestResult(null);
-      const result = await adminTestAiConnection();
+      const result = await adminTestAiConnection(payload);
       setTestResult(result);
       if (result.success) {
         toast.success('Connection successful!');
@@ -241,8 +254,8 @@ export default function AiPreferencesPage() {
           <button
             type="button"
             onClick={handleTestConnection}
-            disabled={saving || testing || !configured}
-            title={!configured ? 'Save your preferences first before testing the connection' : undefined}
+            disabled={saving || testing}
+            title="Tests the connection using the values currently entered in the form, whether or not they've been saved"
             className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {testing ? 'Testing...' : 'Test Connection'}

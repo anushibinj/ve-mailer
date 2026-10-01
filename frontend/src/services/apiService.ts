@@ -627,8 +627,10 @@ export interface AiConnectionTestResult {
   reply?: string;
 }
 
-export const adminTestAiConnection = async (): Promise<AiConnectionTestResult> => {
-  const response = await api.post('/api/admin/ai-preferences/test-connection');
+export const adminTestAiConnection = async (
+  payload: AiPreferencesUpdatePayload
+): Promise<AiConnectionTestResult> => {
+  const response = await api.post('/api/admin/ai-preferences/test-connection', payload);
   return response.data;
 };
 
