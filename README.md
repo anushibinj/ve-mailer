@@ -17,11 +17,14 @@ A full-stack application that lets users subscribe to email digest notifications
     - [Authentication (`/api/auth`)](#authentication-apiauth)
     - [Workspaces](#workspaces)
     - [Filters](#filters)
+    - [Octane Metadata (Easy Filter Builder)](#octane-metadata-easy-filter-builder)
     - [Subscriptions](#subscriptions)
     - [Public Issue Reporting](#public-issue-reporting)
     - [Admin — Issues Dashboard (`/api/admin/issues`)](#admin--issues-dashboard-apiadminissues)
+    - [Recipient Groups](#recipient-groups)
     - [Admin — Notification Preferences (`/api/admin`)](#admin--notification-preferences-apiadmin)
     - [Admin — Mail Analytics (`/api/admin/mail-analytics`)](#admin--mail-analytics-apiadminmail-analytics)
+    - [Admin — User Management (`/api/admin/users`)](#admin--user-management-apiadminusers)
   - [Running Locally](#running-locally)
     - [Prerequisites](#prerequisites)
     - [Backend](#backend)
@@ -46,6 +49,7 @@ A full-stack application that lets users subscribe to email digest notifications
   - [How It Works](#how-it-works)
     - [Subscription Flow](#subscription-flow)
     - [Filter Templates](#filter-templates)
+      - [Easy Filter Builder — How the metadata APIs work](#easy-filter-builder--how-the-metadata-apis-work)
       - [Filter Examples](#filter-examples)
     - [Notification Polling](#notification-polling)
     - [Resilient Digest Jobs](#resilient-digest-jobs)
@@ -897,7 +901,7 @@ spring.jpa.show-sql=true
 spring.flyway.enabled=true
 
 spring.application.name=veemailer
-veemailer.octane.ui-bundle-field-names=product_udf
+veemailer.octane.ui-bundle-field-names=product_udf,product_entity_udf
 veemailer.issues.max-screenshot-bytes=1048576
 veemailer.issues.max-upload-bytes=5242880
 spring.servlet.multipart.max-file-size=10MB

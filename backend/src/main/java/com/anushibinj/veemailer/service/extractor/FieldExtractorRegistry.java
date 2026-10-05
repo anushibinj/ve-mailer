@@ -45,6 +45,7 @@ public class FieldExtractorRegistry {
         // are known fields with no special handling needed.
         register("phase",        new ReferenceExtractor("name"));
         register("product_udf",  new ReferenceExtractor("name"));
+        register("product_entity_udf",  new ReferenceExtractor("name"));
         register("severity",     new ReferenceExtractor("name"));
         register("priority",     new ReferenceExtractor("name"));
         register("team",         new ReferenceExtractor("name"));

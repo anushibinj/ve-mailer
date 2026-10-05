@@ -56,7 +56,7 @@ public class OctaneMetadataService {
     private final WorkspaceRepository workspaceRepository;
     private final WorkspaceService workspaceService;
     private final ObjectMapper objectMapper;
-    @Value("${veemailer.octane.ui-bundle-field-names:product_udf}")
+    @Value("${veemailer.octane.ui-bundle-field-names:product_udf,product_entity_udf}")
     private String uiBundleFieldNamesCsv;
 
     // ------------------------------------------------------------------ //
