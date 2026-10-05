@@ -34,6 +34,7 @@
 | JwtService | backend/src/main/java/com/anushibinj/veemailer/service/JwtService.java |  |
 | MailAnalyticsService | backend/src/main/java/com/anushibinj/veemailer/service/MailAnalyticsService.java |  |
 | MailAuditService | backend/src/main/java/com/anushibinj/veemailer/service/MailAuditService.java |  |
+| MailFailureAlertService | backend/src/main/java/com/anushibinj/veemailer/service/MailFailureAlertService.java |  |
 | NotificationPreferencesService | backend/src/main/java/com/anushibinj/veemailer/service/NotificationPreferencesService.java |  |
 | NotificationService | backend/src/main/java/com/anushibinj/veemailer/service/NotificationService.java |  |
 | OctaneCacheService | backend/src/main/java/com/anushibinj/veemailer/service/OctaneCacheService.java |  |

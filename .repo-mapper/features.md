@@ -239,6 +239,10 @@
 - Backend: MailAuditLog, MailAuditLogRepository
 - Database: mail_audit_log
 
+## Mailfailurealert
+
+- Backend: MailFailureAlertService
+
 ## Notification
 
 - Backend: NotificationService

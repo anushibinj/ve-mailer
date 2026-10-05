@@ -20,7 +20,7 @@
     },
     {
       "name": "Java",
-      "fileCount": 220
+      "fileCount": 222
     },
     {
       "name": "JavaScript",
@@ -475,6 +475,12 @@
       ],
       "database": [
         "mail_audit_log"
+      ]
+    },
+    {
+      "feature": "Mailfailurealert",
+      "backend": [
+        "MailFailureAlertService"
       ]
     },
     {
@@ -2358,6 +2364,13 @@
       "file": "backend/src/main/java/com/anushibinj/veemailer/service/MailAuditService.java"
     },
     {
+      "id": "backend/src/main/java/com/anushibinj/veemailer/service/MailFailureAlertService.java#MailFailureAlertService",
+      "name": "MailFailureAlertService",
+      "kind": "service",
+      "language": "Java",
+      "file": "backend/src/main/java/com/anushibinj/veemailer/service/MailFailureAlertService.java"
+    },
+    {
       "id": "backend/src/main/java/com/anushibinj/veemailer/service/NotificationPreferencesService.java#NotificationPreferencesService",
       "name": "NotificationPreferencesService",
       "kind": "service",
@@ -2913,6 +2926,17 @@
       "kind": "class",
       "language": "Java",
       "file": "backend/src/test/java/com/anushibinj/veemailer/service/MailAuditServiceTest.java",
+      "package": "com.anushibinj.veemailer.service",
+      "attributes": {
+        "annotations": "ExtendWith"
+      }
+    },
+    {
+      "id": "backend/src/test/java/com/anushibinj/veemailer/service/MailFailureAlertServiceTest.java#MailFailureAlertServiceTest",
+      "name": "MailFailureAlertServiceTest",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/test/java/com/anushibinj/veemailer/service/MailFailureAlertServiceTest.java",
       "package": "com.anushibinj.veemailer.service",
       "attributes": {
         "annotations": "ExtendWith"
@@ -5029,6 +5053,6 @@
   ],
   "git": {
     "branch": "master",
-    "commitHash": "55e5bdc938f3bb20292c055ecc561b106ee3df8a"
+    "commitHash": "8413e0773de44ea2635643fe71d4e101e7a751fa"
   }
 }

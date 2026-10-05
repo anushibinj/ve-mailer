@@ -66,6 +66,7 @@ See [diagrams/system.mmd](diagrams/system.mmd) for the high-level system diagram
 - **Mailanalytics** — see [features.md](features.md)
 - **Mailaudit** — see [features.md](features.md)
 - **Mailauditlog** — see [features.md](features.md)
+- **Mailfailurealert** — see [features.md](features.md)
 - **Notification** — see [features.md](features.md)
 - **Notificationpreferences** — see [features.md](features.md)
 - **Octanecache** — see [features.md](features.md)
