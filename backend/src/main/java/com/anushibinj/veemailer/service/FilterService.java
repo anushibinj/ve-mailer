@@ -651,7 +651,9 @@ public class FilterService {
             // generated TQL (e.g. id EQ '1001'), which Octane then fails to parse
             // back into a Long for the "id" field (ArrayList cannot be cast to Long).
             // Parsing to Long keeps the id unquoted so the reference lookup matches.
-            Long[] idValues = Arrays.stream(values).map(this::parseReferenceId).toArray(Long[]::new);
+            // Some ids (e.g. list node ids like 'onym7rzjpy1xoa6o8m3mn415x') are alphanumeric
+            // and must stay Strings so they are quoted in the TQL.
+            Object[] idValues = Arrays.stream(values).map(this::parseReferenceId).toArray();
             Object idValue = idOperator == QueryMethod.EqualTo ? idValues[0] : idValues;
             Query.QueryBuilder idClause = Query.statement("id", idOperator, idValue);
             if ("NOT_IN".equals(operator) || "NEQ".equals(operator)) {
@@ -727,16 +729,21 @@ public class FilterService {
     }
 
     /**
-     * Parses a reference clause value into the numeric Octane entity ID it represents.
-     * Reference IDs must be sent to the SDK as {@link Long}, not {@link String}, otherwise
-     * the generated TQL quotes them (e.g. {@code id EQ '1001'}) and Octane fails to cast
-     * the resulting value back to {@code Long} when resolving the "id" subquery.
+     * Parses a reference clause value into the Octane entity ID it represents.
+     * Numeric IDs are sent to the SDK as {@link Long} (unquoted TQL), since a quoted numeric
+     * id (e.g. {@code id EQ '1001'}) fails to cast back to {@code Long} in Octane. Alphanumeric
+     * IDs (e.g. list node ids like {@code onym7rzjpy1xoa6o8m3mn415x}) stay Strings and are quoted.
      */
-    private Long parseReferenceId(String rawId) {
+    private Object parseReferenceId(String rawId) {
+        String trimmed = rawId == null ? "" : rawId.trim();
         try {
-            return Long.parseLong(rawId.trim());
+            return Long.parseLong(trimmed);
         } catch (NumberFormatException e) {
-            throw new IllegalArgumentException("Invalid reference id value (expected a numeric ID): " + rawId, e);
+            // Alphanumeric ids (e.g. list node ids) are legitimate; keep them quoted.
+            if (trimmed.isEmpty()) {
+                throw new IllegalArgumentException("Invalid reference id value: " + rawId, e);
+            }
+            return trimmed;
         }
     }
 
