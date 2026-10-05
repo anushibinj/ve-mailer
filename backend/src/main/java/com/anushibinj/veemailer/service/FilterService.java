@@ -736,7 +736,7 @@ public class FilterService {
         try {
             return Long.parseLong(rawId.trim());
         } catch (NumberFormatException e) {
-            throw new IllegalArgumentException("Invalid reference id value: " + rawId, e);
+            throw new IllegalArgumentException("Invalid reference id value (expected a numeric ID): " + rawId, e);
         }
     }
 
