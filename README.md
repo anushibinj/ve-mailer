@@ -76,7 +76,7 @@ Key capabilities:
 ```
 ┌─────────────────────┐        REST / JSON         ┌──────────────────────────┐
 │   React Frontend    │ ◄────────────────────────► │  Spring Boot Backend     │
-│   (Vite + TS)       │                            │  (Java 17, port 8080)    │
+│   (Vite + TS)       │                            │  (Java 21, port 8080)    │
 └─────────────────────┘                            └──────────┬───────────────┘
                                                               │
                                         ┌─────────────────────┼──────────────────┐
@@ -97,7 +97,7 @@ All Octane SDK requests include header `hpeclienttype=HPE_MQM_UI` to simulate Oc
 | Layer     | Technology                                                          |
 |-----------|---------------------------------------------------------------------|
 | Frontend  | React 19, TypeScript, Vite 7, Tailwind CSS 4, Axios, react-hot-toast, react-router-dom, Recharts |
-| Backend   | Java 17, Spring Boot 3.2.5                                          |
+| Backend   | Java 21, Spring Boot 3.2.5                                          |
 | Persistence | Spring Data JPA, H2 (dev), PostgreSQL (prod)                      |
 | Security  | Spring Security, JWT (HMAC-SHA256), BCrypt password hashing, role-based access (ADMIN, WORKSPACE_ADMIN, MEMBER) |
 | Email     | Dynamic SMTP via DB-stored NotificationPreferences (DynamicMailSenderService) |

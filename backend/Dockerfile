@@ -1,5 +1,5 @@
 # Build
-FROM maven:3.8.6-openjdk-18-slim AS builder
+FROM maven:3.9.9-eclipse-temurin-21 AS builder
 WORKDIR /tmp/staging-area
 
 ARG JAVA_OPTS
@@ -9,7 +9,7 @@ COPY . .
 RUN mvn clean test package
 
 # Package
-FROM eclipse-temurin:18-jre-alpine AS runner
+FROM eclipse-temurin:21-jre-alpine AS runner
 RUN apk add --no-cache curl tzdata
 
 # Timezone — override at runtime with: docker run -e TZ=Europe/London ...
