@@ -40,6 +40,10 @@ public class ScheduledJobRunService {
     @Value("${veemailer.jobs.retry.stale-claim-minutes:30}")
     private long staleClaimMinutes;
 
+    /** Runs whose slot is older than this are never resumed after a restart — they are failed instead. */
+    @Value("${veemailer.jobs.recovery.max-age-minutes:120}")
+    private long recoveryMaxAgeMinutes;
+
     /** Creates the one job instance for this (workspaceId, filterId, slotAt) triple, or empty if it already exists. */
     public Optional<ScheduledJobRun> createScheduledRun(UUID workspaceId, UUID filterId, Instant slotAt,
                                                          List<UUID> subscriberIds, int maxAttempts) {
@@ -176,13 +180,64 @@ public class ScheduledJobRunService {
      */
     @Transactional
     public List<ScheduledJobRun> sweepStaleDispatching() {
-        List<ScheduledJobRun> stale = repository.findStaleDispatching(staleClaimBefore());
+        return sweepStaleDispatching(staleClaimBefore());
+    }
+
+    /** Same as {@link #sweepStaleDispatching()} with an explicit cutoff (startup passes "now"). */
+    @Transactional
+    public List<ScheduledJobRun> sweepStaleDispatching(Instant cutoff) {
+        List<ScheduledJobRun> stale = repository.findStaleDispatching(cutoff);
         for (ScheduledJobRun run : stale) {
             log.error("Job run {} stuck in DISPATCHING since {} — marking FAILED without retry " +
                     "(process likely died mid-dispatch)", run.getId(), run.getDispatchStartedAt());
             markFailed(run, "Recovered: process died mid-dispatch; never retried to avoid duplicate sends");
         }
         return stale;
+    }
+
+    /**
+     * Recovers runs orphaned by a crash/restart before they reached the dispatch gate (PENDING or
+     * RUNNING, last touched before {@code cutoff}) so they cannot block their filter forever.
+     * Only runs whose slot is within the recovery max-age and with attempts left are re-queued
+     * (AWAITING_RETRY, due now); anything older or exhausted is marked FAILED so stale digests are
+     * never mailed late. DISPATCHING runs are never touched here — see {@link #sweepStaleDispatching}.
+     */
+    @Transactional
+    public List<ScheduledJobRun> recoverOrphanedRuns(Instant cutoff) {
+        Instant now = clock.instant();
+        Instant expiredBefore = expiredBefore();
+        List<ScheduledJobRun> orphaned = repository.findOrphanedPreDispatch(cutoff);
+        for (ScheduledJobRun run : orphaned) {
+            if (run.getSlotAt().isBefore(expiredBefore)) {
+                failRecovered(run, "Recovered: run interrupted by a restart and too old to resume safely");
+            } else if (run.getAttemptCount() >= run.getMaxAttempts()) {
+                failRecovered(run, "Recovered: run interrupted by a restart with no attempts left");
+            } else {
+                log.warn("Job run {} orphaned in {} — re-queuing for retry", run.getId(), run.getStatus());
+                markAwaitingRetry(run, "Recovered: run interrupted by a restart", now);
+            }
+        }
+        return orphaned;
+    }
+
+    /** Fails AWAITING_RETRY runs whose slot is older than the recovery max-age so they never fire late. */
+    @Transactional
+    public List<ScheduledJobRun> expireStaleRetries() {
+        List<ScheduledJobRun> expired = repository.findExpiredAwaitingRetry(expiredBefore());
+        for (ScheduledJobRun run : expired) {
+            failRecovered(run, "Expired: too old to retry safely");
+        }
+        return expired;
+    }
+
+    private void failRecovered(ScheduledJobRun run, String reason) {
+        log.warn("Job run {} (slot {}) marked FAILED: {}", run.getId(), run.getSlotAt(), reason);
+        markFailed(run, reason);
+        mailAuditService.markJobRunTerminal(run.getId(), DeliveryStatus.FAILED, reason);
+    }
+
+    private Instant expiredBefore() {
+        return clock.instant().minus(Duration.ofMinutes(recoveryMaxAgeMinutes));
     }
 
     private Instant staleClaimBefore() {

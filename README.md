@@ -908,6 +908,7 @@ veemailer.jobs.retry.interval-minutes=15
 veemailer.jobs.retry.max-attempts=4
 veemailer.jobs.retry.poll-interval-ms=60000
 veemailer.jobs.retry.stale-claim-minutes=30
+veemailer.jobs.recovery.max-age-minutes=120
 veemailer.jobs.min-dispatch-gap-minutes=30
 veemailer.jobs.send-empty-digest-emails=true
 veemailer.octane.connect-timeout-ms=10000
@@ -1330,6 +1331,14 @@ actively `RUNNING`/`DISPATCHING`; recency check **B** skips any subscription tha
 row newer than `veemailer.jobs.min-dispatch-gap-minutes` (default 30, keep below 60). Either check
 suppresses the affected send(s), marking the job `SUPPRESSED` and writing `SKIPPED` audit rows explaining
 why.
+
+**Restart recovery.** A crash or restart can strand a run in `PENDING`/`RUNNING` (never reaching dispatch),
+which would otherwise block its filter (check A) forever. On startup (`ApplicationReadyEvent`) and on every
+retry tick, `ScheduledJobRetryService` re-queues such orphans as `AWAITING_RETRY` — but **only** if their
+`slotAt` is within `veemailer.jobs.recovery.max-age-minutes` (default 120) and attempts remain. Older runs
+(and `AWAITING_RETRY` runs that aged past the window) are marked `FAILED`, never mailed, so recipients are
+not flooded with stale digests. Runs stuck in `DISPATCHING` are failed immediately on startup and never
+resumed, since some emails may already have gone out.
 
 The on-demand **Run** button (`PollingService.runNow`) goes through the exact same pipeline as a `MANUAL`
 run with `maxAttempts=1` (no retries), so a double-click or two admins clicking at once gets the same

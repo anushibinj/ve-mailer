@@ -50,6 +50,58 @@ class ScheduledJobRunServiceTest {
         clock = Clock.fixed(fixedNow, ZoneOffset.UTC);
         service = new ScheduledJobRunService(repository, mailAuditService, clock);
         ReflectionTestUtils.setField(service, "staleClaimMinutes", 30L);
+        ReflectionTestUtils.setField(service, "recoveryMaxAgeMinutes", 120L);
+    }
+
+    // ── restart recovery ─────────────────────────────────────────────────────
+
+    private ScheduledJobRun orphan(JobRunStatus status, Instant slotAt, int attempts, int max) {
+        return ScheduledJobRun.builder().id(UUID.randomUUID()).status(status).slotAt(slotAt)
+                .attemptCount(attempts).maxAttempts(max).build();
+    }
+
+    @Test
+    void recoverOrphanedRuns_recentRunWithAttemptsLeft_isRequeuedForImmediateRetry() {
+        ScheduledJobRun run = orphan(JobRunStatus.RUNNING, fixedNow.minusSeconds(600), 1, 4);
+        when(repository.findOrphanedPreDispatch(fixedNow)).thenReturn(List.of(run));
+
+        service.recoverOrphanedRuns(fixedNow);
+
+        assertThat(run.getStatus()).isEqualTo(JobRunStatus.AWAITING_RETRY);
+        assertThat(run.getNextRetryAt()).isEqualTo(fixedNow);
+        verify(mailAuditService, never()).markJobRunTerminal(any(), any(), any());
+    }
+
+    @Test
+    void recoverOrphanedRuns_oldRun_isFailedNotResumed() {
+        ScheduledJobRun run = orphan(JobRunStatus.PENDING, fixedNow.minusSeconds(60L * 24 * 60 * 60), 0, 4);
+        when(repository.findOrphanedPreDispatch(fixedNow)).thenReturn(List.of(run));
+
+        service.recoverOrphanedRuns(fixedNow);
+
+        assertThat(run.getStatus()).isEqualTo(JobRunStatus.FAILED);
+        verify(mailAuditService).markJobRunTerminal(eq(run.getId()), eq(DeliveryStatus.FAILED), any());
+    }
+
+    @Test
+    void recoverOrphanedRuns_attemptsExhausted_isFailed() {
+        ScheduledJobRun run = orphan(JobRunStatus.RUNNING, fixedNow.minusSeconds(60), 1, 1);
+        when(repository.findOrphanedPreDispatch(fixedNow)).thenReturn(List.of(run));
+
+        service.recoverOrphanedRuns(fixedNow);
+
+        assertThat(run.getStatus()).isEqualTo(JobRunStatus.FAILED);
+    }
+
+    @Test
+    void expireStaleRetries_failsAwaitingRetryRunsPastMaxAge() {
+        ScheduledJobRun run = orphan(JobRunStatus.AWAITING_RETRY, fixedNow.minusSeconds(60L * 24 * 60 * 60), 2, 4);
+        when(repository.findExpiredAwaitingRetry(fixedNow.minusSeconds(120 * 60))).thenReturn(List.of(run));
+
+        service.expireStaleRetries();
+
+        assertThat(run.getStatus()).isEqualTo(JobRunStatus.FAILED);
+        verify(mailAuditService).markJobRunTerminal(eq(run.getId()), eq(DeliveryStatus.FAILED), any());
     }
 
     // ── creation gate ────────────────────────────────────────────────────────

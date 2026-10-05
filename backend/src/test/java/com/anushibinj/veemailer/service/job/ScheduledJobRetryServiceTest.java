@@ -6,11 +6,16 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 /**
@@ -29,8 +34,37 @@ class ScheduledJobRetryServiceTest {
     @Mock
     private ScheduledJobExecutor scheduledJobExecutor;
 
+    @Spy
+    private Clock clock = Clock.fixed(Instant.parse("2026-01-01T09:00:00Z"), ZoneOffset.UTC);
+
     @InjectMocks
     private ScheduledJobRetryService retryService;
+
+    @Test
+    void recoverOnStartup_recoversEverythingOrphanedBeforeBootThenProcessesRetries() {
+        when(scheduledJobRunService.findDueForRetry()).thenReturn(List.of());
+        Instant boot = clock.instant();
+
+        retryService.recoverOnStartup();
+
+        var inOrder = inOrder(scheduledJobRunService);
+        inOrder.verify(scheduledJobRunService).sweepStaleDispatching(boot);
+        inOrder.verify(scheduledJobRunService).recoverOrphanedRuns(boot);
+        inOrder.verify(scheduledJobRunService).expireStaleRetries();
+        inOrder.verify(scheduledJobRunService).findDueForRetry();
+    }
+
+    @Test
+    void processDueRetries_expiresStaleRetriesBeforeSelectingDueOnes() {
+        when(scheduledJobRunService.findDueForRetry()).thenReturn(List.of());
+
+        retryService.processDueRetries();
+
+        var inOrder = inOrder(scheduledJobRunService);
+        inOrder.verify(scheduledJobRunService).recoverOrphanedRuns(any());
+        inOrder.verify(scheduledJobRunService).expireStaleRetries();
+        inOrder.verify(scheduledJobRunService).findDueForRetry();
+    }
 
     @Test
     void processDueRetries_sweepsStaleDispatchingBeforeProcessingRetries() {

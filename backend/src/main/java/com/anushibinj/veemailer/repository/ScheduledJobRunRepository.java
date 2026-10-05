@@ -77,5 +77,20 @@ public interface ScheduledJobRunRepository extends JpaRepository<ScheduledJobRun
             "AND r.dispatchStartedAt < :before")
     List<ScheduledJobRun> findStaleDispatching(@Param("before") Instant before);
 
+    /**
+     * Runs orphaned before reaching the dispatch gate: PENDING (process died between creation and
+     * execution) or RUNNING (process died mid-fetch) with no recent activity. Neither state has
+     * sent any email yet, so they are safe to re-attempt.
+     */
+    @Query("SELECT r FROM ScheduledJobRun r WHERE " +
+            "(r.status = com.anushibinj.veemailer.model.JobRunStatus.PENDING AND r.createdAt < :cutoff) " +
+            "OR (r.status = com.anushibinj.veemailer.model.JobRunStatus.RUNNING AND r.claimedAt < :cutoff)")
+    List<ScheduledJobRun> findOrphanedPreDispatch(@Param("cutoff") Instant cutoff);
+
+    /** AWAITING_RETRY runs whose slot is too old to still be worth sending. */
+    @Query("SELECT r FROM ScheduledJobRun r WHERE r.status = com.anushibinj.veemailer.model.JobRunStatus.AWAITING_RETRY " +
+            "AND r.slotAt < :expiredBefore")
+    List<ScheduledJobRun> findExpiredAwaitingRetry(@Param("expiredBefore") Instant expiredBefore);
+
     List<ScheduledJobRun> findByStatus(JobRunStatus status);
 }
