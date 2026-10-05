@@ -79,6 +79,7 @@ flowchart TD
             IMLS[Invite Magic Link Service<br/>single-use onboarding links]
             PS[Polling Service<br/>threshold-aware dispatch]
             NS[Notification Service]
+            MFA[Mail Failure Alert Service<br/>batched admin alert]
             AIS[AI Summary Service]
             TSP[Triage SLA Policy]
             TCS[Ticket Comment Service]
@@ -250,6 +251,8 @@ flowchart TD
     NS --> DMS
     DMS --> SMTP
     NS --> MAUS
+    NS --> MFA
+    MFA --> DMS
     MAUS --> MALR
     MACtrl --> MAS
     MAS --> MALR

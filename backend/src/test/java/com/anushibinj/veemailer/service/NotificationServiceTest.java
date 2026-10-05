@@ -39,6 +39,9 @@ class NotificationServiceTest {
     @Mock
     private MailAuditService mailAuditService;
 
+    @Mock
+    private MailFailureAlertService mailFailureAlertService;
+
     // Use a real registry so extractor behaviour is tested end-to-end.
     private final FieldExtractorRegistry registry = new FieldExtractorRegistry();
 
@@ -57,7 +60,7 @@ class NotificationServiceTest {
         lenient().when(dynamicMailSenderService.getSession()).thenReturn(Session.getInstance(new Properties()));
         lenient().when(dynamicMailSenderService.getFromAddress()).thenReturn("noreply@test.com");
         lenient().doNothing().when(dynamicMailSenderService).send(any(MimeMessage.class));
-        notificationService = new NotificationService(dynamicMailSenderService, registry, aiSummaryService, mailAuditService);
+        notificationService = new NotificationService(dynamicMailSenderService, registry, aiSummaryService, mailAuditService, mailFailureAlertService);
         ReflectionTestUtils.setField(notificationService, "frontendUrl", "http://localhost:5173");
     }
 

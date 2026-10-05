@@ -369,6 +369,62 @@ public class EmailService {
         }
     }
 
+    private static final int MAX_FAILURES_LISTED = 50;
+
+    /**
+     * Sends ONE consolidated alert to the admins covering every subscriber-mail failure in the
+     * batch. Runs synchronously: the caller ({@link MailFailureAlertService}) already runs on its
+     * own scheduler thread and handles any exception.
+     */
+    public void sendMailFailureAlertToAdmins(List<MailFailureAlertService.Failure> failures, List<String> adminEmails)
+            throws MessagingException {
+        if (failures == null || failures.isEmpty() || adminEmails == null || adminEmails.isEmpty()) {
+            return;
+        }
+        Session session = dynamicMailSenderService.getSession();
+        String from = dynamicMailSenderService.getFromAddress();
+
+        StringBuilder rows = new StringBuilder();
+        int listed = Math.min(failures.size(), MAX_FAILURES_LISTED);
+        for (int i = 0; i < listed; i++) {
+            MailFailureAlertService.Failure f = failures.get(i);
+            rows.append("<tr>")
+                .append(cell(f.workspaceTitle())).append(cell(f.filterTitle()))
+                .append(cell(f.recipientEmail())).append(cell(f.reason()))
+                .append("</tr>");
+        }
+        String more = failures.size() > listed
+                ? "<p style=\"margin:12px 0 0;font-size:12px;color:#64748b;\">&hellip; and "
+                  + (failures.size() - listed) + " more. See the mail audit log for the full list.</p>"
+                : "";
+        String body =
+            "<p style=\"margin:0 0 16px;font-size:14px;line-height:1.6;color:#334155;\">" +
+            failures.size() + " e-mail(s) could not be delivered to subscribers. Please check the " +
+            "SMTP configuration and the mail audit log at <a href=\"" + esc(frontendUrl) +
+            "\" style=\"color:#4f46e5;\">" + esc(frontendUrl) + "</a>.</p>" +
+            "<table border=\"0\" cellpadding=\"0\" cellspacing=\"0\" style=\"border-collapse:collapse;width:100%;\">" +
+            "<tr>" + headerCell("Workspace") + headerCell("Filter") + headerCell("Recipient") + headerCell("Reason") + "</tr>" +
+            rows + "</table>" + more;
+
+        MimeMessage message = new MimeMessage(session);
+        message.setFrom(new InternetAddress(from));
+        message.addRecipients(Message.RecipientType.TO, InternetAddress.parse(String.join(",", adminEmails)));
+        message.setSubject("[ve-mailer] ALERT: " + failures.size() + " subscriber e-mail(s) failed to send", "UTF-8");
+        message.setContent(buildEmailShell("Subscriber e-mail delivery failures", body), "text/html; charset=UTF-8");
+        message.saveChanges();
+        dynamicMailSenderService.send(message);
+    }
+
+    private String headerCell(String text) {
+        return "<th align=\"left\" style=\"padding:4px 8px;font-size:12px;color:#64748b;border-bottom:1px solid #e2e8f0;\">"
+                + esc(text) + "</th>";
+    }
+
+    private String cell(String text) {
+        return "<td style=\"padding:4px 8px;font-size:13px;color:#1e293b;vertical-align:top;word-break:break-word;\">"
+                + esc(text) + "</td>";
+    }
+
     /** Renders a single label/value row for the summary tables used by admin notification emails. */
     private String tableRow(String label, String value) {
         return "<tr><td style=\"padding:4px 16px 4px 0;font-size:12px;font-weight:600;color:#64748b;" +

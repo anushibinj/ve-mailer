@@ -78,6 +78,7 @@ public class NotificationService {
     private final FieldExtractorRegistry fieldExtractorRegistry;
     private final AiSummaryService aiSummaryService;
     private final MailAuditService mailAuditService;
+    private final MailFailureAlertService mailFailureAlertService;
 
     @Value("${app.frontend.url:http://localhost:5173}")
     private String frontendUrl;
@@ -219,6 +220,8 @@ public class NotificationService {
     private void recordFailureAudit(UUID jobRunId, UUID workspaceId, String workspaceTitle, String recipientEmail,
                                     UUID filterTemplateId, String filterTitle, UUID subscriptionId, UUID userId,
                                     String subject, int ticketCount, long durationMs, String failureReason) {
+        // Queued for the consolidated admin alert (one e-mail per flush window, not per failure).
+        mailFailureAlertService.recordFailure(workspaceTitle, filterTitle, recipientEmail, failureReason);
         if (jobRunId != null) {
             mailAuditService.recordFailure(jobRunId, workspaceId, workspaceTitle, recipientEmail,
                     filterTemplateId, filterTitle, subscriptionId, userId, subject, ticketCount, durationMs, failureReason);

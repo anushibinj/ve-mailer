@@ -915,6 +915,7 @@ veemailer.jobs.retry.stale-claim-minutes=30
 veemailer.jobs.recovery.max-age-minutes=120
 veemailer.jobs.min-dispatch-gap-minutes=30
 veemailer.jobs.send-empty-digest-emails=true
+veemailer.alerts.mail-failure.flush-interval-ms=60000   # batch window for the consolidated admin failure alert
 veemailer.octane.connect-timeout-ms=10000
 veemailer.octane.read-timeout-ms=60000
 spring.task.scheduling.pool-size=4
