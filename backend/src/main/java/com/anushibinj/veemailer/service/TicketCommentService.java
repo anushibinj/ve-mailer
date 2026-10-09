@@ -11,7 +11,6 @@ import com.hpe.adm.nga.sdk.query.Query;
 import com.hpe.adm.nga.sdk.query.QueryMethod;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -22,8 +21,7 @@ import java.util.List;
  * Fetches ticket comments from the Octane ticketing server.
  *
  * <p>Follows the same Octane client usage pattern as {@link FilterService}:
- * workspace/shared-space resolution, cached Octane client, query building,
- * and configurable limit via {@code veemailer.query.limit}.
+ * workspace/shared-space resolution, cached Octane client, and query building.
  *
  * <p>Octane comments are flat (no parent–child hierarchy). The returned DTOs
  * include a {@code children} list for forward-compatibility with threaded APIs,
@@ -34,14 +32,13 @@ import java.util.List;
 @RequiredArgsConstructor
 public class TicketCommentService {
 
+    private static final int MAX_COMMENTS = 20;
+
     private static final String[] COMMENT_FIELDS = {
             "id", "author", "text", "order_number", "creation_time"
     };
 
     private final OctaneCacheService octaneCacheService;
-
-    @Value("${veemailer.query.limit:25}")
-    private int queryLimit;
 
     /**
      * Fetches comments for the given ticket from the Octane workspace.
@@ -71,8 +68,8 @@ public class TicketCommentService {
                     .get()
                     .query(query)
                     .addFields(COMMENT_FIELDS)
-                    .addOrderBy("order_number", false) // descending — newest first
-                    .limit(queryLimit)
+                    .addOrderBy("creation_time", false) // descending — newest first
+                    .limit(MAX_COMMENTS)
                     .execute();
 
             List<TicketCommentDto> comments = new ArrayList<>();

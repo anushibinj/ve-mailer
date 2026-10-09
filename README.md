@@ -967,6 +967,7 @@ Located at `backend/src/main/resources/application-dev.properties`. Active when 
 ### AI Summary Configuration (Optional)
 
 The AI Summary feature uses Spring AI with OpenAI to generate concise ticket summaries in email digests.
+For each ticket, VE Mailer fetches up to the 20 newest comments, ordered by their creation timestamp.
 
 > **AI configuration is now database-backed.** No `spring.ai.openai.*` properties are required. Configure AI settings via the **Admin Control Panel → Configure AI Preferences** in the UI. Settings are stored in the `ai_preferences` database table.
 

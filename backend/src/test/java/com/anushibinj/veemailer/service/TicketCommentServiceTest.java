@@ -15,7 +15,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.*;
 
@@ -45,7 +44,6 @@ class TicketCommentServiceTest {
     @BeforeEach
     void setUp() {
         ticketCommentService = new TicketCommentService(octaneCacheService);
-        ReflectionTestUtils.setField(ticketCommentService, "queryLimit", 25);
 
         workspace = new Workspace();
         workspace.setId(UUID.randomUUID());
@@ -115,8 +113,7 @@ class TicketCommentServiceTest {
     }
 
     @Test
-    void testFetchComments_UsesCorrectQueryLimit() {
-        ReflectionTestUtils.setField(ticketCommentService, "queryLimit", 50);
+    void testFetchComments_LimitsResultsToTwentyComments() {
         when(octaneCacheService.getOctaneClient(anyString(), anyString(), anyString(), anyInt(), anyInt()))
                 .thenReturn(octaneClient);
 
@@ -127,16 +124,16 @@ class TicketCommentServiceTest {
         when(getEntities.query(any(Query.class))).thenReturn(getEntities);
         when(getEntities.addFields(any(String[].class))).thenReturn(getEntities);
         when(getEntities.addOrderBy(anyString(), anyBoolean())).thenReturn(getEntities);
-        when(getEntities.limit(50)).thenReturn(getEntities);
+        when(getEntities.limit(20)).thenReturn(getEntities);
         when(getEntities.execute()).thenReturn(emptyCollection);
 
         ticketCommentService.fetchComments("100", workspace);
 
-        verify(getEntities).limit(50);
+        verify(getEntities).limit(20);
     }
 
     @Test
-    void testFetchComments_OrdersByOrderNumberDescending() {
+    void testFetchComments_OrdersByCreationTimeDescending() {
         when(octaneCacheService.getOctaneClient(anyString(), anyString(), anyString(), anyInt(), anyInt()))
                 .thenReturn(octaneClient);
 
@@ -146,13 +143,13 @@ class TicketCommentServiceTest {
         when(entityList.get()).thenReturn(getEntities);
         when(getEntities.query(any(Query.class))).thenReturn(getEntities);
         when(getEntities.addFields(any(String[].class))).thenReturn(getEntities);
-        when(getEntities.addOrderBy("order_number", false)).thenReturn(getEntities);
+        when(getEntities.addOrderBy("creation_time", false)).thenReturn(getEntities);
         when(getEntities.limit(anyInt())).thenReturn(getEntities);
         when(getEntities.execute()).thenReturn(emptyCollection);
 
         ticketCommentService.fetchComments("100", workspace);
 
-        verify(getEntities).addOrderBy("order_number", false);
+        verify(getEntities).addOrderBy("creation_time", false);
     }
 
     // ── formatCommentsForAi ──────────────────────────────────────────────────
