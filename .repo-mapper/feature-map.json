@@ -418,6 +418,12 @@
     ]
   },
   {
+    "feature": "Mailfailurealert",
+    "backend": [
+      "MailFailureAlertService"
+    ]
+  },
+  {
     "feature": "Notification",
     "backend": [
       "NotificationService"

@@ -510,14 +510,14 @@
   },
   {
     "component": "GroupFormModal",
-    "kind": "component",
-    "file": "frontend/src/components/RecipientGroupsView.tsx",
+    "kind": "page",
+    "file": "frontend/src/pages/admin/RecipientGroupsPage.tsx",
     "feature": "Groupformmodal"
   },
   {
     "component": "GroupFormModal",
-    "kind": "page",
-    "file": "frontend/src/pages/admin/RecipientGroupsPage.tsx",
+    "kind": "component",
+    "file": "frontend/src/components/RecipientGroupsView.tsx",
     "feature": "Groupformmodal"
   },
   {
@@ -730,6 +730,17 @@
     "component": "MailAuditServiceTest",
     "kind": "class",
     "file": "backend/src/test/java/com/anushibinj/veemailer/service/MailAuditServiceTest.java"
+  },
+  {
+    "component": "MailFailureAlertService",
+    "kind": "service",
+    "file": "backend/src/main/java/com/anushibinj/veemailer/service/MailFailureAlertService.java",
+    "feature": "Mailfailurealert"
+  },
+  {
+    "component": "MailFailureAlertServiceTest",
+    "kind": "class",
+    "file": "backend/src/test/java/com/anushibinj/veemailer/service/MailFailureAlertServiceTest.java"
   },
   {
     "component": "ManualRunIdempotencyTest",
