@@ -20,7 +20,7 @@
     },
     {
       "name": "Java",
-      "fileCount": 222
+      "fileCount": 224
     },
     {
       "name": "JavaScript",
@@ -3086,6 +3086,17 @@
       }
     },
     {
+      "id": "backend/src/test/java/com/anushibinj/veemailer/service/job/DockerAvailableCondition.java#DockerAvailableCondition",
+      "name": "DockerAvailableCondition",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/test/java/com/anushibinj/veemailer/service/job/DockerAvailableCondition.java",
+      "package": "com.anushibinj.veemailer.service.job",
+      "attributes": {
+        "annotations": ""
+      }
+    },
+    {
       "id": "backend/src/test/java/com/anushibinj/veemailer/service/job/ManualRunIdempotencyTest.java#ManualRunIdempotencyTest",
       "name": "ManualRunIdempotencyTest",
       "kind": "class",
@@ -3116,6 +3127,17 @@
       "package": "com.anushibinj.veemailer.service.job",
       "attributes": {
         "annotations": "ExtendWith"
+      }
+    },
+    {
+      "id": "backend/src/test/java/com/anushibinj/veemailer/service/job/ScheduledJobFlowIT.java#ScheduledJobFlowIT",
+      "name": "ScheduledJobFlowIT",
+      "kind": "class",
+      "language": "Java",
+      "file": "backend/src/test/java/com/anushibinj/veemailer/service/job/ScheduledJobFlowIT.java",
+      "package": "com.anushibinj.veemailer.service.job",
+      "attributes": {
+        "annotations": ""
       }
     },
     {
@@ -5053,6 +5075,6 @@
   ],
   "git": {
     "branch": "master",
-    "commitHash": "8413e0773de44ea2635643fe71d4e101e7a751fa"
+    "commitHash": "de51cce89ec4afe85709b150a4f792b587ef5a07"
   }
 }
